@@ -1,0 +1,39 @@
+    □Compact mode
+    □Enable (enable twice: 1st: waiting for IL2CPP to complete, then enable again)
+        □Food never below #
+            □Min. number
+        □Split item set # (turn on when needed, require stack # of 3 or more)
+            □Min. value
+            □Destination address
+        □Freeze durability of held equip.
+        □Freeze durability of equips except held one
+        □Player basic data
+            □Base addr
+            □movementSpeed
+            □PlayerController
+        □Player HP
+            □HP damage option : Normal, Try to keep, 1pt, No damage
+        □HP recover multiplier
+            □Multiplier
+        □Spend skill point everywhere+
+            □Allow you to click skill point in any place, UI will display all as "5"
+            □Click to display as "all 5"
+        □Redirect XP from skill 1 to skill 2
+            □Skill 1 (only valid when not max) : Mining, Running, Melee, Vitality, Crafting, Range, Gardening, Fishing, Cooking, N/A
+            □Skill 2 : Mining, Running, Melee, Vitality, Crafting, Range, Gardening, Fishing, Cooking, N/A
+        □Skill XP multiplier
+            □XP multiplier
+        □Damage multiplier
+            □multiplier : 1.5, 2, 4, 8
+        □Monster damage to player
+            □Damage type : Normal, 1pt, No damage, Divide by divisor below
+            □Divisor
+        □Fast fishing - fish bite
+        □Fast fishing - can ignore red fishing line
+        □Fast fish struggle success
+        □_not working
+            □Move speed multiplier (Disable will cause crash)
+                □multiplier
+            □Inf. craft materials (No effect) (turn off when not use)
+    □*** Core Keeper 0.4.3-b0ed EA  /  https://opencheattables.org  /  CE 7.4+ ***
+ 
