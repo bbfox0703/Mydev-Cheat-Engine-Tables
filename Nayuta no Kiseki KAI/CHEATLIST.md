@@ -1,0 +1,94 @@
+    □Compact mode
+    □狀態 / Stats
+        □Base addr.
+        □目前金錢 / Money
+        □EXP
+        □Chain
+        □Skill gauge
+        □+基礎數值(唯讀) / Base stats (read only)
+            □??
+            □Level
+            □HP
+            □HP
+            □STR
+            □DEF
+            □??
+            □??
+            □INT
+            □??
+    □設定道具數 (使用：開啟選單->Item)/ set item count (Menu -> item)
+        □觸發最小值(必須大於此值才設定) / trigger value (must > this value)
+        □觸發後設定值 / set value to n, if triggered
+    □EXP取得倍率 / EXP multiplier
+        □倍率 / Multiplier
+    □金錢取得倍率 / Money multiplier
+        □倍率 / Multiplier
+    □四季魔法 / Magic count
+        □Count
+        □最小彈數 / Min. count
+    □戰技無限 / inf. skill gauge
+    □星星數 (切換區域) / Stars (Active: switch zone)
+        □值 / Value
+    □戰鬥傷害管控 / Battle: damage control
+        □無敵模式 / God mode ?  : No, Yes
+        □玩家所受傷害倍率 / Damage to player multiplier
+        □敵方所受傷害倍率 / Damage to enemy multiplier
+        □+最後受傷目標 / Last damaged target
+            □Addr.
+            □Name
+            □Target
+            □Level
+            □Max HP 
+            □HP 
+            □Base STR
+            □Base DEF
+            □??
+            □??
+            □Base INT
+            □??
+    □部份成就資料顯示值 (取得資料：殺敵/取得小型晶石) / Some achievements (Update: Kill enemy / get small crystal)
+        □完成「打倒5000個敵人」及「取得5000小型晶石」後，將無法取得資料
+        □Data will not be updated if "5000 kill" and "get 5000 small crystals" reached
+        □完成關卡10次 / Completed 10 zones
+        □完成關卡50次 / Completed 50 zones
+        □打倒200個敵人 / 200 Kill
+        □打倒2000個敵人 / 2000 Kill
+        □打倒5000個敵人 / 5000 Kill
+        □以魔法打倒1000個敵人 / Magic Kill 1000 times
+        □以劍技打倒1000個敵人 / Sword skill Kill 100 times
+        □防禦100次攻擊 / Defense 100 times
+        □掉落20次 / Fall down 20 times
+        □破壞物件1000次 / Objects broke 1000 times
+        □拾取5000小型晶石 / Get 5000 small crystals
+        □無傷完成關卡10次 / Completed zone without get hurt 10 times
+        □100 Chain (0 or 1)
+    □座標 / Coords.
+        □Base addr.
+        □X
+        □Y
+        □Z
+        □存入儲存點#1 / Save to #1 <Ctrl-2>
+        □存入儲存點#2 / Save to #2 <Ctrl-3>
+        □存入儲存點#3 / Save to #3 <Ctrl-4>
+        □傳送到儲存點#1 / Teleport to #1 <Alt-2>
+        □傳送到儲存點#2 / Teleport to #2 <Alt-3>
+        □傳送到儲存點#3 / Teleport to #3 <Alt-4>
+        □清除所有暫存點 / Clear all saved points
+        □座標傳送選項 / teleport options : Nothing, Save to #1, Save to #2, Save to #3, Teleport to #1, Teleport to #2, Teleport to #3
+        □+某些傳送點
+            □利玆維特神殿後半/最尾部 => #3
+        □+儲存點 / Saved coords
+            □X1
+            □Y1
+            □Z1
+            □X2
+            □Y2
+            □Z2
+            □X3
+            □Y3
+            □Z3
+    □_WIP
+        □(會卡牆) 移動速度調整 / (buggy) Move speed hack
+            □倍率 / Multiplier
+    □那由多之軌跡：改 / Nayuta no Kiseki:KAI  /  https://opencheattables.org  /  CE 7.4+
+ 
