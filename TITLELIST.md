@@ -35,3 +35,7 @@ zh-TW: 那由多之軌跡：改
 ###Old-World-CT
 Old World (Steam)
 zh-TW: 舊世界 Old World
+
+###The Legend of Heroes Zero no Kiseki KAI
+The Legend of Heroes: Zero no Kiseki Kai (Steam)
+zh-TW: 英雄傳說 零之軌跡：改

@@ -1,0 +1,57 @@
+    □Compact Mode
+    □正體中文 / English switch
+    □Battle: HP/EP/CP (when get hit)
+        □Player HP : Normal, Full, Low HP
+        □Full EP? : No, Yes
+        □Full CP?
+    □Battle: HP always full (choose one; method 2)
+    □Battle: when cast: full EP
+    □Battle: when cast: full CP
+    □Battle: when use CP: full CP
+    □Battle: XP multiplier
+        □Multiplier
+        □Recover HPEP after battle?
+    □Battle: Damage multiplier
+        □Multiplier to emeny
+        □Divisor to player
+    □Min. Sepith (active: open item menu)
+        □Min. value
+    □Min. item 50 (count must >= 2; to use: select tab in item menu / load save)
+    □Drop item from menu: # of item >= 80 (must >=2)
+    □Item Sell/Exchange: mira multiplier
+        □Mira (active: open menu)
+        □Sell/exchange multiplier
+    □Buy/Equip/Use item/Cook: stack# >= 70 (may not work if count = 1)
+        □Last item amount
+        □Last item ID
+    □DP
+        □Cur. DP (Open DP menu)
+        □Extra DP for each quest
+    □Teleport: the same map (***do not lock these values)
+        □**Warning: buggy
+        □Store into Set #1?
+        □Store into Set #2?
+        □Store into Set #3?
+        □Teleport to Set #1?
+        □Teleport to Set #2?
+        □Teleport to Set #3?
+        □Set #1.X
+        □Set #1.Y
+        □Set #1.Z
+        □Set #2.X
+        □Set #2.Y
+        □Set #2.Z
+        □Set #3.X
+        □Set #3.Y
+        □Set #3.Z
+    □Coord: X
+    □Coord: Y
+    □Coord: Z
+    □Preemptive attack / battle count
+        □Battle count
+        □Preemptive Count
+        □S-Break?
+        □??
+        □??
+    □====== https://opencheattables.org ======
+ 
