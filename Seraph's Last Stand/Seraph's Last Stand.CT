@@ -1,0 +1,925 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>82</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>86</ID>
+      <Description>"Enable (enable twice: 1st: waiting for IL2CPP to complete, then enable again)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end;if process==nil then ShowMessage('Process is not selected.')elseif readInteger(process)==0 then ShowMessage('Process cannot be opened.')else if monopipe~=nil and monopipe.ProcessID~=getOpenedProcessID()then monopipe.destroy()monopipe=nil end;if monopipe==nil then LaunchMonoDataCollector()end end;
+{$asm}
+define(PlayerStatsCheckHPProc,"PlayerStats.CheckHP")
+define(ProgresisonManagerUpdateProc,"ProgresisonManager.Update")
+define(PlayerStatsTakeDamageProc,"PlayerStats.TakeDamage")
+define(WaveManagerStartWaveProc,"WaveManager.StartWave")
+
+registersymbol(PlayerStatsCheckHPProc)
+registersymbol(ProgresisonManagerUpdateProc)
+registersymbol(PlayerStatsTakeDamageProc)
+registersymbol(WaveManagerStartWaveProc)
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end;
+
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>184</ID>
+          <Description>"Full HP"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Seraph's Last Stand.exe
+  Version: 
+  Date   : 2022-05-01
+  Author : bbfox @ https://opencheattables.org
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_TAKE_DAMAGE,GameAssembly.dll,F3 0F 11 43 44 C7) // should be unique
+aobscanregion(INJECT_TAKE_DAMAGE,PlayerStatsTakeDamageProc+b0,PlayerStatsTakeDamageProc+f0,F3 0F 11 43 44 C7) // should be unique
+
+alloc(newmem,$1000,INJECT_TAKE_DAMAGE)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm0, [rbx+40]
+
+  vmovss xmm15, [rbx+24]
+  vmovss xmm14, [vf_02]
+  vcomiss xmm15, xmm14
+  jbe code
+  vmovss [rbx+24], xmm14
+
+code:
+  movss [rbx+44],xmm0
+  jmp return
+
+align 10 cc
+  vf_02:
+  dd (float)0.2
+
+INJECT_TAKE_DAMAGE:
+  jmp newmem
+return:
+registersymbol(INJECT_TAKE_DAMAGE)
+
+[DISABLE]
+
+INJECT_TAKE_DAMAGE:
+  db F3 0F 11 43 44
+
+unregistersymbol(INJECT_TAKE_DAMAGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2EDDCE
+
+GameAssembly.dll+2EDDAC: F3 0F 5C C7                    - subss xmm0,xmm7
+GameAssembly.dll+2EDDB0: 0F 2F F0                       - comiss xmm6,xmm0
+GameAssembly.dll+2EDDB3: 77 0F                          - ja GameAssembly.dll+2EDDC4
+GameAssembly.dll+2EDDB5: F3 0F 10 4B 40                 - movss xmm1,[rbx+40]
+GameAssembly.dll+2EDDBA: 0F 2F C1                       - comiss xmm0,xmm1
+GameAssembly.dll+2EDDBD: 76 08                          - jna GameAssembly.dll+2EDDC7
+GameAssembly.dll+2EDDBF: 0F 28 C1                       - movaps xmm0,xmm1
+GameAssembly.dll+2EDDC2: EB 03                          - jmp GameAssembly.dll+2EDDC7
+GameAssembly.dll+2EDDC4: 0F 57 C0                       - xorps xmm0,xmm0
+GameAssembly.dll+2EDDC7: 48 8B 8B 28 01 00 00           - mov rcx,[rbx+00000128]
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+2EDDCE: F3 0F 11 43 44                 - movss [rbx+44],xmm0
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+2EDDD3: C7 83 F8 00 00 00 00 00 00 00  - mov [rbx+000000F8],00000000
+GameAssembly.dll+2EDDDD: 48 85 C9                       - test rcx,rcx
+GameAssembly.dll+2EDDE0: 74 29                          - je GameAssembly.dll+2EDE0B
+GameAssembly.dll+2EDDE2: 0F 28 05 47 A0 61 01           - movaps xmm0,[GameAssembly.dll+1907E30]
+GameAssembly.dll+2EDDE9: 48 8D 54 24 20                 - lea rdx,[rsp+20]
+GameAssembly.dll+2EDDEE: 45 33 C0                       - xor r8d,r8d
+GameAssembly.dll+2EDDF1: 0F 29 44 24 20                 - movaps [rsp+20],xmm0
+GameAssembly.dll+2EDDF6: E8 C5 EE 3D 01                 - call UnityEngine.SpriteRenderer.set_color
+GameAssembly.dll+2EDDFB: 0F 28 74 24 40                 - movaps xmm6,[rsp+40]
+GameAssembly.dll+2EDE00: 0F 28 7C 24 30                 - movaps xmm7,[rsp+30]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>169</ID>
+          <Description>"PlayerStats (HP Here)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Seraph's Last Stand.exe
+  Version: 
+  Date   : 2022-04-25
+  Author : bbfox @ https://opencheattables.org/
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_PLAYER_STATS,GameAssembly.dll,F3 0F 10 4F 40) // should be unique
+aobscanregion(INJECT_PLAYER_STATS,PlayerStatsCheckHPProc+a0,PlayerStatsCheckHPProc+2b0,F3 0F 10 4F 40) // should be unique
+
+alloc(newmem,$1000,INJECT_PLAYER_STATS)
+
+label(code)
+label(return)
+label(i_base_playerstat_addr)
+
+newmem:
+  mov [i_base_playerstat_addr], rdi
+
+code:
+  movss xmm1,[rdi+40]
+  jmp return
+
+align 10 cc
+  i_base_playerstat_addr:
+  dq 0
+
+INJECT_PLAYER_STATS:
+  jmp newmem
+return:
+registersymbol(i_base_playerstat_addr)
+registersymbol(INJECT_PLAYER_STATS)
+
+[DISABLE]
+
+INJECT_PLAYER_STATS:
+  db F3 0F 10 4F 40
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+281D89
+
+GameAssembly.dll+281D4D: E8 EE 4F F9 FF        - call GameAssembly.DllGetActivationFactory+5150
+GameAssembly.dll+281D52: 48 8D 0D 9F B9 BD 01  - lea rcx,[GameAssembly.dll+1E5D6F8]
+GameAssembly.dll+281D59: E8 E2 4F F9 FF        - call GameAssembly.DllGetActivationFactory+5150
+GameAssembly.dll+281D5E: 48 8D 0D 63 54 BB 01  - lea rcx,[GameAssembly.dll+1E371C8]
+GameAssembly.dll+281D65: E8 D6 4F F9 FF        - call GameAssembly.DllGetActivationFactory+5150
+GameAssembly.dll+281D6A: 48 8D 0D 67 C7 BD 01  - lea rcx,[GameAssembly.dll+1E5E4D8]
+GameAssembly.dll+281D71: E8 CA 4F F9 FF        - call GameAssembly.DllGetActivationFactory+5150
+GameAssembly.dll+281D76: 48 8D 0D 4B 08 B9 01  - lea rcx,[GameAssembly.dll+1E125C8]
+GameAssembly.dll+281D7D: E8 BE 4F F9 FF        - call GameAssembly.DllGetActivationFactory+5150
+GameAssembly.dll+281D82: C6 05 3B 95 CE 01 01  - mov byte ptr [GameAssembly.dll+1F6B2C4],01
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+281D89: F3 0F 10 4F 40        - movss xmm1,[rdi+40]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+281D8E: F3 0F 10 47 44        - movss xmm0,[rdi+44]
+GameAssembly.dll+281D93: 0F 2F C1              - comiss xmm0,xmm1
+GameAssembly.dll+281D96: 76 05                 - jna GameAssembly.dll+281D9D
+GameAssembly.dll+281D98: F3 0F 11 4F 44        - movss [rdi+44],xmm1
+GameAssembly.dll+281D9D: 80 7F 18 00           - cmp byte ptr [rdi+18],00
+GameAssembly.dll+281DA1: 0F 84 A1 03 00 00     - je GameAssembly.dll+282148
+GameAssembly.dll+281DA7: 48 89 5C 24 48        - mov [rsp+48],rbx
+GameAssembly.dll+281DAC: 48 89 74 24 58        - mov [rsp+58],rsi
+GameAssembly.dll+281DB1: 0F 29 74 24 20        - movaps [rsp+20],xmm6
+GameAssembly.dll+281DB6: 48 8B 8F 18 01 00 00  - mov rcx,[rdi+00000118]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>170</ID>
+              <Description>"Base addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_playerstat_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>98</ID>
+              <Description>"hp"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+44</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>97</ID>
+              <Description>"max_hp"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+40</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>94</ID>
+              <Description>"critical_chance"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+34</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>95</ID>
+              <Description>"critical_multiplier"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+38</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>88</ID>
+              <Description>"speed"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+1C</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>89</ID>
+              <Description>"speed_stacks"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_base_playerstat_addr]+20</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>90</ID>
+              <Description>"atk_speed"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+24</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>91</ID>
+              <Description>"atk_speed_stacks"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_base_playerstat_addr]+28</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>92</ID>
+              <Description>"atk_damage"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+2C</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>93</ID>
+              <Description>"atk_stacks"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_base_playerstat_addr]+30</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>108</ID>
+              <Description>"proj_size"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+6C</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>109</ID>
+              <Description>"proj_fragments"</Description>
+              <VariableType>Float</VariableType>
+              <Address>[i_base_playerstat_addr]+70</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>171</ID>
+              <Description>"Stats+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>87</ID>
+                  <Description>"isAlive"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+18</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>96</ID>
+                  <Description>"life_steal"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+3C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>99</ID>
+                  <Description>"hp_stacks"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+48</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>100</ID>
+                  <Description>"hp_regen"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+4C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>101</ID>
+                  <Description>"renew_stacks"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+50</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>102</ID>
+                  <Description>"armor"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+54</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>103</ID>
+                  <Description>"revive_count"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+58</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>104</ID>
+                  <Description>"revive_cd"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+5C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>105</ID>
+                  <Description>"i_window"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+60</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>106</ID>
+                  <Description>"jump_force"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+64</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>107</ID>
+                  <Description>"impulse_stacks"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+68</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>110</ID>
+                  <Description>"body_damage"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+74</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>111</ID>
+                  <Description>"burning_cd"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+78</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>112</ID>
+                  <Description>"proj_hits"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+7C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>113</ID>
+                  <Description>"jump_number"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+80</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>114</ID>
+                  <Description>"projectile_acceleration"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+84</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>115</ID>
+                  <Description>"thunder_projs"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+88</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>116</ID>
+                  <Description>"cards_plus"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+8C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>117</ID>
+                  <Description>"shield_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+90</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>118</ID>
+                  <Description>"shield_up"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+94</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>119</ID>
+                  <Description>"healing_orb_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+98</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>120</ID>
+                  <Description>"orb_charge"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+9C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>121</ID>
+                  <Description>"focus_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+A0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>122</ID>
+                  <Description>"tome_lvl"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+A4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>123</ID>
+                  <Description>"friction_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+A8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>124</ID>
+                  <Description>"rage_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+AC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>125</ID>
+                  <Description>"rage_damage"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+B0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>126</ID>
+                  <Description>"rage_body_damage"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+B4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>127</ID>
+                  <Description>"wound_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+B8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>128</ID>
+                  <Description>"willo_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+BC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>129</ID>
+                  <Description>"willowisp"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+C0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>130</ID>
+                  <Description>"shrink_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+C8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>131</ID>
+                  <Description>"soul_orb_level"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+CC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>132</ID>
+                  <Description>"charge_stacks"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+D0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>133</ID>
+                  <Description>"cold_lvl"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_playerstat_addr]+D4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>134</ID>
+                  <Description>"thundergod"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+D8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>135</ID>
+                  <Description>"vampire"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+D9</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>136</ID>
+                  <Description>"ram_destroyer"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+DA</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>137</ID>
+                  <Description>"bloody_mage"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+DB</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>138</ID>
+                  <Description>"anti_air"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+DC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>139</ID>
+                  <Description>"flying"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+DD</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>140</ID>
+                  <Description>"colossus"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+DE</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>141</ID>
+                  <Description>"gnome"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+DF</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>142</ID>
+                  <Description>"hoarder"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>143</ID>
+                  <Description>"protector"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E1</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>144</ID>
+                  <Description>"sadistic"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E2</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>145</ID>
+                  <Description>"marksman"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E3</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>146</ID>
+                  <Description>"dealer"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>147</ID>
+                  <Description>"blessed"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E5</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>148</ID>
+                  <Description>"white_dwarf"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E6</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>149</ID>
+                  <Description>"burning_man"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E7</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>150</ID>
+                  <Description>"exorcist"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>151</ID>
+                  <Description>"comet"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+E9</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>152</ID>
+                  <Description>"streamer"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+EA</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>153</ID>
+                  <Description>"pacman"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+EB</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>154</ID>
+                  <Description>"absorbent"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+EC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>155</ID>
+                  <Description>"plague_spreader"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+ED</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>156</ID>
+                  <Description>"speculator"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+EE</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>157</ID>
+                  <Description>"bunker"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+EF</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>158</ID>
+                  <Description>"desperate"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>159</ID>
+                  <Description>"enchanter"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F1</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>160</ID>
+                  <Description>"avenger"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F2</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>161</ID>
+                  <Description>"nerd"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F3</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>162</ID>
+                  <Description>"tryhard"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>163</ID>
+                  <Description>"bulldozer"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F5</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>164</ID>
+                  <Description>"freezer"</Description>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_playerstat_addr]+F6</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>165</ID>
+                  <Description>"i_window_timer"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>166</ID>
+                  <Description>"regen_ticker"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+FC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>167</ID>
+                  <Description>"shield_cooldown"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+100</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>168</ID>
+                  <Description>"black_hole_cooldown"</Description>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_playerstat_addr]+110</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>79</ID>
+          <Description>"Inf. soul"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Seraph's Last Stand.exe
+  Version: 
+  Date   : 2022-03-24
+  Author : bbfox @ https://opencheattables.org/
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_INF_SOUL,GameAssembly.dll,8B 83 AC 00 00 00 39) // should be unique
+aobscanregion(INJECT_INF_SOUL,ProgresisonManagerUpdateProc+90,ProgresisonManagerUpdateProc+190,8B 83 AC 00 00 00 39) // should be unique
+
+
+alloc(newmem,$1000,INJECT_INF_SOUL)
+
+label(code)
+label(return)
+label(i_prog_base_addr)
+label(is_inf_soul)
+
+newmem:
+  push rax
+  lea rax, [rbx]
+  mov [i_prog_base_addr], rax
+  pop rax
+  cmp [is_inf_soul], 1
+  jne code
+  push rax
+  mov eax, [rbx+18]
+  cmp eax, #200
+  jge next1
+  mov eax, #200
+  mov [rbx+18], eax
+next1:
+  pop rax
+
+code:
+  mov eax,[rbx+000000AC]
+  jmp return
+
+align 10 cc
+  i_prog_base_addr:
+  dq 0
+  is_inf_soul:
+  dd 1
+
+INJECT_INF_SOUL:
+  jmp newmem
+  nop
+return:
+registersymbol(i_prog_base_addr)
+registersymbol(is_inf_soul)
+registersymbol(INJECT_INF_SOUL)
+
+[DISABLE]
+
+INJECT_INF_SOUL:
+  db 8B 83 AC 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+A84447
+
+GameAssembly.dll+A8441C: 48 8D 4B 18           - lea rcx,[rbx+18]
+GameAssembly.dll+A84420: 33 D2                 - xor edx,edx
+GameAssembly.dll+A84422: E8 79 3B B6 FF        - call GameAssembly.dll+5E7FA0
+GameAssembly.dll+A84427: 48 85 F6              - test rsi,rsi
+GameAssembly.dll+A8442A: 0F 84 4A 01 00 00     - je GameAssembly.dll+A8457A
+GameAssembly.dll+A84430: 4C 8B 0E              - mov r9,[rsi]
+GameAssembly.dll+A84433: 48 8B D0              - mov rdx,rax
+GameAssembly.dll+A84436: 48 8B CE              - mov rcx,rsi
+GameAssembly.dll+A84439: 4D 8B 81 F0 05 00 00  - mov r8,[r9+000005F0]
+GameAssembly.dll+A84440: 41 FF 91 E8 05 00 00  - call qword ptr [r9+000005E8]
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+A84447: 8B 83 AC 00 00 00     - mov eax,[rbx+000000AC]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+A8444D: 39 43 18              - cmp [rbx+18],eax
+GameAssembly.dll+A84450: 0F 8C CE 00 00 00     - jl GameAssembly.dll+A84524
+GameAssembly.dll+A84456: 48 8B 0D CB 3A 3E 00  - mov rcx,[GameAssembly.dll+E67F28]
+GameAssembly.dll+A8445D: 48 8B BB C8 00 00 00  - mov rdi,[rbx+000000C8]
+GameAssembly.dll+A84464: F6 81 33 01 00 00 02  - test byte ptr [rcx+00000133],02
+GameAssembly.dll+A8446B: 74 0E                 - je GameAssembly.dll+A8447B
+GameAssembly.dll+A8446D: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+A84474: 75 05                 - jne GameAssembly.dll+A8447B
+GameAssembly.dll+A84476: E8 25 F0 62 FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+A8447B: 33 D2                 - xor edx,edx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>80</ID>
+              <Description>"Base address"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_prog_base_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>81</ID>
+              <Description>"Inf soul?"</Description>
+              <DropDownListLink>Inf. HP?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_inf_soul</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>78</ID>
+              <Description>"ProgresionManager+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"soul_orbs"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+18</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>172</ID>
+                  <Description>"atk_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+28</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>173</ID>
+                  <Description>"atk_speed_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+38</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>174</ID>
+                  <Description>"speed_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+48</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>175</ID>
+                  <Description>"armor_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+58</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>176</ID>
+                  <Description>"stability_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+68</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>177</ID>
+                  <Description>"hp_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+78</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>178</ID>
+                  <Description>"soul_orb_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+88</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>179</ID>
+                  <Description>"crit_lvl"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+98</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>180</ID>
+                  <Description>"selected_upgrade"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+A8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>181</ID>
+                  <Description>"upgrade_price"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+AC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>182</ID>
+                  <Description>"base_price"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_prog_base_addr]+C0</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>AddressList.Header.OnSectionClick = nil
+</LuaScript>
+</CheatTable>
