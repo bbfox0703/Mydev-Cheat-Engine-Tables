@@ -6,4 +6,4 @@ Old World (Steam)
 ## Release
 Cheat Engine: [7.4 or newer](https://github.com/cheat-engine/cheat-engine/releases)  
 
-Game: App ver. Release Update 06.08.2022
+Game: App ver. 1.0.61443
