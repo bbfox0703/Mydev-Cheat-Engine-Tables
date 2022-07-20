@@ -31,6 +31,12 @@ zh-TW: 蘇菲的鍊金工房２ ～不可思議夢的鍊金術士～
 
 ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～
 
+## Brigandine The Legend of Runersia
+
+[Brigandine The Legend of Runersia (Steam)](https://store.steampowered.com/app/1843940/Brigandine_The_Legend_of_Runersia/)
+
+ja-JP: ブリガンダイン ルーナジア戦記
+
 ## CoreKeeper
 
 [Core Keeper (Steam)](https://store.steampowered.com/app/1621690/Core_Keeper/)
