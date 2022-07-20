@@ -2,7 +2,9 @@
 
 ## Atelier Firis DX
 Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)
+
 zh-TW: 菲莉絲的鍊金工房 ～不可思議旅的鍊金術士～ DX
+
 ja-JP: フィリスのアトリエ ～不思議な旅の錬金術士～ DX
 
 ## Atelier Lydie & Suelle DX
@@ -69,4 +71,4 @@ zh-TW: 英雄傳說 零之軌跡：改
 
 ## Tower of Time
 
-(Steam) [Tower of Time ] (https://store.steampowered.com/app/617480/Tower_of_Time/)
+[Tower of Time (Steam)](https://store.steampowered.com/app/617480/Tower_of_Time/)
