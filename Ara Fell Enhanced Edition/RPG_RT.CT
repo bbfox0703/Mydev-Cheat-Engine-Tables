@@ -1,0 +1,1579 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>18</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Enable"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if process == nil then ShowMessage('Process is not selected.')
+elseif readInteger(process) == 0 then ShowMessage('Process cannot be opened.')
+else
+  if (monopipe~=nil) and (monopipe.ProcessID~=getOpenedProcessID()) then
+    monopipe.destroy()
+    monopipe=nil
+  end
+  if (monopipe==nil) then
+    LaunchMonoDataCollector()
+  end
+end
+
+{$asm}
+//Assets.Scripts.Player.CharacterStats
+define(lbl_charstats,"Assets.Scripts.Player.CharacterStats")
+registersymbol(lbl_charstats)
+
+
+[DISABLE]
+{$lua}
+if not syntaxcheck and monopipe then monopipe = nil,monopipe.Destroy()end
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>65</ID>
+          <Description>"Levelup: Allocation point always &gt;= 1 (used in levelup screen; at least use 1pt to enable / disable to finish)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>define(address,Assets.Scripts.LevelUpScreen:Update+1287)
+define(bytes,48 89 47 44 89 3C 24)
+
+[ENABLE]
+assert(address,bytes)
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  dec eax
+  cmp eax, #1
+  jg @F
+  mov eax, #1
+@@:
+  mov [edi+44],eax
+  mov [esp],edi
+  jmp return
+
+address:
+  jmp newmem
+  nop 2
+return:
+
+[DISABLE]
+
+address:
+  db bytes
+
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Assets.Scripts.LevelUpScreen:Update+1287
+
+Assets.Scripts.LevelUpScreen:Update+1265: 39 1B                    - cmp [ebx],ebx
+Assets.Scripts.LevelUpScreen:Update+1267: 0F B6 43 68              - movzx eax,byte ptr [ebx+68]
+Assets.Scripts.LevelUpScreen:Update+126b: 85 C0                    - test eax,eax
+Assets.Scripts.LevelUpScreen:Update+126d: 0F 85 51 04 00 00        - jne Assets.Scripts.LevelUpScreen:Update+16c4
+Assets.Scripts.LevelUpScreen:Update+1273: E8 30 BA E5 1F           - call Assets.Scripts.Audio.SoundEffects:PlayDecision
+Assets.Scripts.LevelUpScreen:Update+1278: 89 1C 24                 - mov [esp],ebx
+Assets.Scripts.LevelUpScreen:Update+127b: 39 1B                    - cmp [ebx],ebx
+Assets.Scripts.LevelUpScreen:Update+127d: 8B C0                    - mov eax,eax
+Assets.Scripts.LevelUpScreen:Update+127f: E8 14 06 00 00           - call Assets.Scripts.UI.Windows.LevelUpStatDisplay:IncreaseStat
+Assets.Scripts.LevelUpScreen:Update+1284: 8B 47 44                 - mov eax,[edi+44]
+// ---------- INJECTING HERE ----------
+Assets.Scripts.LevelUpScreen:Update+1287: 48                       - dec eax
+// ---------- DONE INJECTING  ----------
+Assets.Scripts.LevelUpScreen:Update+1288: 89 47 44                 - mov [edi+44],eax
+Assets.Scripts.LevelUpScreen:Update+128b: 89 3C 24                 - mov [esp],edi
+Assets.Scripts.LevelUpScreen:Update+128e: 90                       - nop 
+Assets.Scripts.LevelUpScreen:Update+128f: E8 14 A5 FF FF           - call Assets.Scripts.LevelUpScreen:UpdateStatPointsRemainingText
+Assets.Scripts.LevelUpScreen:Update+1294: E9 2B 04 00 00           - jmp Assets.Scripts.LevelUpScreen:Update+16c4
+Assets.Scripts.LevelUpScreen:Update+1299: 8B 05 D0 36 07 06        - mov eax,[060736D0]
+Assets.Scripts.LevelUpScreen:Update+129f: C7 44 24 04 09 00 00 00  - mov [esp+04],00000009
+Assets.Scripts.LevelUpScreen:Update+12a7: 89 04 24                 - mov [esp],eax
+Assets.Scripts.LevelUpScreen:Update+12aa: 39 00                    - cmp [eax],eax
+Assets.Scripts.LevelUpScreen:Update+12ac: 8D 6D 00                 - lea ebp,[ebp+00]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Get max HP script (MUST on; load game save first)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : RPG_RT.exe
+  Version: 
+  Date   : 2022-03-09
+  Author :
+}
+
+[ENABLE]
+
+aobscan(INJECT_MAX_HP,89 44 24 08 C7 44 24 04 00 00 00 00 8B 45 0C 89 04 24 90) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(cur_max_hp)
+
+newmem:
+  mov [cur_max_hp], eax
+
+code:
+  mov [esp+08],eax
+  mov [esp+04],00000000
+  jmp return
+
+align 10 cc
+  cur_max_hp:
+  dd #100
+
+INJECT_MAX_HP:
+  jmp newmem
+  nop 7
+return:
+registersymbol(cur_max_hp)
+registersymbol(INJECT_MAX_HP)
+
+[DISABLE]
+
+INJECT_MAX_HP:
+  db 89 44 24 08 C7 44 24 04 00 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Assets.Scripts.Player.CharacterStats:set_Hp+14
+
+Assets.Scripts.Battle.StatModifier[]:System.Collections.Generic.ICollection`1.get_Count+c: C9                       - leave 
+Assets.Scripts.Battle.StatModifier[]:System.Collections.Generic.ICollection`1.get_Count+d: C3                       - ret 
+234ADB4E: 00 00                    - add [eax],al
+Assets.Scripts.Player.CharacterStats:set_Hp: 55                       - push ebp
+Assets.Scripts.Player.CharacterStats:set_Hp+1: 8B EC                    - mov ebp,esp
+Assets.Scripts.Player.CharacterStats:set_Hp+3: 83 EC 18                 - sub esp,18
+Assets.Scripts.Player.CharacterStats:set_Hp+6: 8B 45 08                 - mov eax,[ebp+08]
+Assets.Scripts.Player.CharacterStats:set_Hp+9: 89 04 24                 - mov [esp],eax
+Assets.Scripts.Player.CharacterStats:set_Hp+c: 8D 6D 00                 - lea ebp,[ebp+00]
+Assets.Scripts.Player.CharacterStats:set_Hp+f: E8 34 00 00 00           - call Assets.Scripts.Player.CharacterStats:get_MaxHp
+// ---------- INJECTING HERE ----------
+Assets.Scripts.Player.CharacterStats:set_Hp+14: 89 44 24 08              - mov [esp+08],eax
+// ---------- DONE INJECTING  ----------
+Assets.Scripts.Player.CharacterStats:set_Hp+18: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Assets.Scripts.Player.CharacterStats:set_Hp+20: 8B 45 0C                 - mov eax,[ebp+0C]
+Assets.Scripts.Player.CharacterStats:set_Hp+23: 89 04 24                 - mov [esp],eax
+Assets.Scripts.Player.CharacterStats:set_Hp+26: 90                       - nop 
+Assets.Scripts.Player.CharacterStats:set_Hp+27: E8 84 A6 F6 F0           - call UnityEngine.Mathf:Clamp
+Assets.Scripts.Player.CharacterStats:set_Hp+2c: 8B C8                    - mov ecx,eax
+Assets.Scripts.Player.CharacterStats:set_Hp+2e: 8B 45 08                 - mov eax,[ebp+08]
+INJECT_PLAYER_HP: E9 7A 24 DD DD           - jmp 01280000
+234ADB86: 00 00                    - add [eax],al
+234ADB88: 68 80 CF AF 13           - push 13AFCF80
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>2</ID>
+              <Description>"HP Control  (hit by normal attack)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : RPG_RT.exe
+  Version: 
+  Date   : 2022-03-09
+  Author :
+}
+
+[ENABLE]
+
+aobscan(INJECT_PLAYER_HP,89 48 64 C9 C3 00) // should be unique
+//aobscanregion(INJECT_PLAYER_HP, lbl_charstats, lbl_charstats+35, 89 48 64 C9 C3 00) // should be unique
+//aobscanregion(INJECT_PLAYER_HP, lbl_charstats, lbl_charstats+35, 89 48 64 C9 C3 00) // should be unique
+
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(char_stats_base_addr)
+label(is_char_hp_full)
+label(is_char_mp_full)
+label(is_full_stat)
+label(is_1hit_kill)
+label(is_enemy_mp_0)
+label(char_max_hp)
+label(enemy_stats_base_addr)
+
+newmem:
+  push rbx
+
+
+  cmp dword ptr [eax+8C], FF  // player: &lt;Name&gt;k__BackingField, enemy: &lt;Level&gt;k__BackingField
+  jle to_enemy
+
+  lea rbx, [eax]
+  mov [char_stats_base_addr], rbx
+
+to_player:
+  cmp dword ptr [is_char_hp_full], 0
+  je check_char_mp
+  mov ebx, [cur_max_hp]
+  //mov ebx, #999
+  mov [eax+64], ebx //_hp
+  mov ecx, ebx
+
+check_char_mp:
+  cmp dword ptr [is_char_mp_full], 0
+  je check_full_stat
+  mov ebx, #999
+  mov [eax+70], ebx //_mp
+
+check_full_stat: // crash
+  cmp dword ptr [is_full_stat], 0
+  je endp
+  mov ebx, #20
+  mov [eax+78], ebx //&lt;BasePower&gt;k__BackingField
+  mov [eax+7C], ebx //&lt;BaseWisdom&gt;k__BackingField
+  mov [eax+80], ebx //&lt;BaseDefense&gt;k__BackingField
+  mov [ebx+84], ebx //&lt;BaseAgility&gt;k__BackingField
+  jmp endp
+
+to_enemy:
+  lea rbx, [eax]
+  mov [enemy_stats_base_addr], rbx
+
+  cmp dword ptr [is_1hit_kill], 0
+  je enemy_mp
+  cmp dword ptr [eax+64], 1
+  jle enemy_mp
+  mov ebx, 0
+  mov ecx, ebx
+  mov [eax+64], ebx //_hp
+  jmp endp
+
+enemy_mp:
+  cmp dword ptr [is_enemy_mp_0], 0
+  je endp
+  mov ebx, 0
+  mov [rax+70], ebx //_mp
+
+endp:
+  pop rbx
+
+code:
+  mov [eax+64],ecx
+  leave 
+  ret 
+  jmp return
+
+align 10 cc
+  char_stats_base_addr:
+  dq 0
+  enemy_stats_base_addr:
+  dq 0
+  is_char_hp_full:
+  dd 1
+  is_char_mp_full:
+  dd 1
+  is_full_stat: // set will crash game
+  dd 0
+  is_1hit_kill:
+  dd 0
+  is_enemy_mp_0:
+  dd 0
+  char_max_hp:
+  dd #100
+
+INJECT_PLAYER_HP:
+  jmp newmem
+return:
+
+registersymbol(enemy_stats_base_addr)
+registersymbol(char_stats_base_addr)
+registersymbol(is_char_hp_full)
+registersymbol(is_char_mp_full)
+registersymbol(is_full_stat)
+registersymbol(is_1hit_kill)
+registersymbol(is_enemy_mp_0)
+registersymbol(INJECT_PLAYER_HP)
+
+[DISABLE]
+
+INJECT_PLAYER_HP:
+  db 89 48 64 C9 C3
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Assets.Scripts.Player.CharacterStats:set_Hp+31
+
+Assets.Scripts.Player.CharacterStats:set_Hp+c: 8D 6D 00                 - lea ebp,[ebp+00]
+Assets.Scripts.Player.CharacterStats:set_Hp+f: E8 5C F9 FF FF           - call Assets.Scripts.Player.CharacterStats:get_MaxHp
+Assets.Scripts.Player.CharacterStats:set_Hp+14: 89 44 24 08              - mov [esp+08],eax
+Assets.Scripts.Player.CharacterStats:set_Hp+18: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Assets.Scripts.Player.CharacterStats:set_Hp+20: 8B 45 0C                 - mov eax,[ebp+0C]
+Assets.Scripts.Player.CharacterStats:set_Hp+23: 89 04 24                 - mov [esp],eax
+Assets.Scripts.Player.CharacterStats:set_Hp+26: 90                       - nop 
+Assets.Scripts.Player.CharacterStats:set_Hp+27: E8 F4 63 47 13           - call UnityEngine.Mathf:Clamp
+Assets.Scripts.Player.CharacterStats:set_Hp+2c: 8B C8                    - mov ecx,eax
+Assets.Scripts.Player.CharacterStats:set_Hp+2e: 8B 45 08                 - mov eax,[ebp+08]
+// ---------- INJECTING HERE ----------
+Assets.Scripts.Player.CharacterStats:set_Hp+31: 89 48 64                 - mov [eax+64],ecx
+// ---------- DONE INJECTING  ----------
+Assets.Scripts.Player.CharacterStats:set_Hp+34: C9                       - leave 
+Assets.Scripts.Player.CharacterStats:set_Hp+35: C3                       - ret 
+01111E16: 00 00                    - add [eax],al
+Assets.Scripts.Player.CharacterStats:get_MaxMp: 55                       - push ebp
+Assets.Scripts.Player.CharacterStats:get_MaxMp+1: 8B EC                    - mov ebp,esp
+Assets.Scripts.Player.CharacterStats:get_MaxMp+3: 53                       - push ebx
+Assets.Scripts.Player.CharacterStats:get_MaxMp+4: 57                       - push edi
+Assets.Scripts.Player.CharacterStats:get_MaxMp+5: 56                       - push esi
+Assets.Scripts.Player.CharacterStats:get_MaxMp+6: 83 EC 6C                 - sub esp,6C
+Assets.Scripts.Player.CharacterStats:get_MaxMp+9: 8B 7D 08                 - mov edi,[ebp+08]
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>4</ID>
+                  <Description>"HP full?"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_char_hp_full</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>7</ID>
+                  <Description>"One hit kill?"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_1hit_kill</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>8</ID>
+                  <Description>"Enemy MP Zero?"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_mp_0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>9</ID>
+                  <Description>"Last char+ (hit by normal attack)"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>3</ID>
+                      <Description>"HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>64</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>10</ID>
+                      <Description>"MP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>70</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>11</ID>
+                      <Description>"Base Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>78</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>12</ID>
+                      <Description>"Base Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>7C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>13</ID>
+                      <Description>"Base Defense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>80</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>14</ID>
+                      <Description>"Base Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>84</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>15</ID>
+                      <Description>"Level"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>A0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>16</ID>
+                      <Description>"Max Level"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>char_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>A4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>20</ID>
+                  <Description>"Last enemy+ (hit by normal attack)"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>19</ID>
+                      <Description>"HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>64</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>21</ID>
+                      <Description>"MP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>70</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>22</ID>
+                      <Description>"Base Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>78</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>23</ID>
+                      <Description>"Base Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>7C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>24</ID>
+                      <Description>"Base Defense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>80</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>25</ID>
+                      <Description>"Base Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>84</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>26</ID>
+                      <Description>"Level"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>enemy_stats_base_addr</Address>
+                      <Offsets>
+                        <Offset>8C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>61</ID>
+          <Description>"Min. Gold 10,000"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>define(address,Assets.Scripts.BattleScene:ShowVictoryWindow+c0d)
+define(bytes,8B 48 50 03 4D 80)
+
+[ENABLE]
+
+assert(address,bytes)
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+
+newmem:
+  cmp ecx, #10000
+  jg code
+  mov ecx, #10000
+code:
+  mov ecx,[eax+50]
+  add ecx,[ebp-80]
+  jmp return
+
+address:
+  jmp newmem
+  nop
+return:
+
+[DISABLE]
+
+address:
+  db bytes
+  // mov ecx,[eax+50]
+  // add ecx,[ebp-80]
+
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Assets.Scripts.BattleScene:ShowVictoryWindow+c0d
+
+Assets.Scripts.BattleScene:ShowVictoryWindow+bdc: C7 04 24 30 FC 56 17  - mov [esp],1756FC30
+Assets.Scripts.BattleScene:ShowVictoryWindow+be3: E8 70 14 12 03        - call System.Object:__icall_wrapper_ves_icall_object_new_specific
+Assets.Scripts.BattleScene:ShowVictoryWindow+be8: C7 40 08 E8 04 00 00  - mov [eax+08],000004E8
+Assets.Scripts.BattleScene:ShowVictoryWindow+bef: C7 40 0C 01 00 00 00  - mov [eax+0C],00000001
+Assets.Scripts.BattleScene:ShowVictoryWindow+bf6: 89 44 24 04           - mov [esp+04],eax
+Assets.Scripts.BattleScene:ShowVictoryWindow+bfa: 89 1C 24              - mov [esp],ebx
+Assets.Scripts.BattleScene:ShowVictoryWindow+bfd: 39 1B                 - cmp [ebx],ebx
+Assets.Scripts.BattleScene:ShowVictoryWindow+bff: E8 64 D2 EC 1F        - call 20A6CDF0
+Assets.Scripts.BattleScene:ShowVictoryWindow+c04: 8B 05 C4 7E 07 06     - mov eax,[06077EC4]
+Assets.Scripts.BattleScene:ShowVictoryWindow+c0a: 8B 40 34              - mov eax,[eax+34]
+// ---------- INJECTING HERE ----------
+Assets.Scripts.BattleScene:ShowVictoryWindow+c0d: 8B 48 50              - mov ecx,[eax+50]
+// ---------- DONE INJECTING  ----------
+Assets.Scripts.BattleScene:ShowVictoryWindow+c10: 03 4D 80              - add ecx,[ebp-80]
+Assets.Scripts.BattleScene:ShowVictoryWindow+c13: 89 48 50              - mov [eax+50],ecx
+Assets.Scripts.BattleScene:ShowVictoryWindow+c16: 8B 45 08              - mov eax,[ebp+08]
+Assets.Scripts.BattleScene:ShowVictoryWindow+c19: 8B 50 3C              - mov edx,[eax+3C]
+Assets.Scripts.BattleScene:ShowVictoryWindow+c1c: 8B 0D 40 EF 5D 1F     - mov ecx,[1F5DEF40]
+Assets.Scripts.BattleScene:ShowVictoryWindow+c22: 89 8D 3C FF FF FF     - mov [ebp-000000C4],ecx
+Assets.Scripts.BattleScene:ShowVictoryWindow+c28: 8B F0                 - mov esi,eax
+Assets.Scripts.BattleScene:ShowVictoryWindow+c2a: 8B 45 80              - mov eax,[ebp-80]
+Assets.Scripts.BattleScene:ShowVictoryWindow+c2d: 89 45 88              - mov [ebp-78],eax
+Assets.Scripts.BattleScene:ShowVictoryWindow+c30: 8B 45 A8              - mov eax,[ebp-58]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>63</ID>
+          <Description>"Player data (Active: Open menu)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>define(address,Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+9)
+define(bytes,8B 40 50 C9 C3)
+
+[ENABLE]
+
+assert(address,bytes)
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(player_data_addr)
+
+newmem:
+  push rbx
+  lea rbx, [eax]
+  mov [player_data_addr], rbx
+  pop rbx
+code:
+  mov eax,[eax+50]
+  leave 
+  ret 
+  jmp return
+
+align 10 cc
+  player_data_addr:
+  dq 0
+
+address:
+  jmp newmem
+return:
+registersymbol(player_data_addr)
+[DISABLE]
+
+address:
+  db bytes
+  // mov eax,[eax+50]
+  // leave 
+  // ret 
+
+dealloc(newmem)
+unregistersymbol(player_data_addr)
+{
+// ORIGINAL CODE - INJECTION POINT: Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+9
+
+System.Threading.Thread:Finalize+33: E8 90 FF FF FF        - call System.Runtime.ConstrainedExecution.CriticalFinalizerObject:Finalize
+System.Threading.Thread:Finalize+38: 8B 65 FC              - mov esp,[ebp-04]
+System.Threading.Thread:Finalize+3b: C3                    - ret 
+System.Threading.Thread:Finalize+3c: C9                    - leave 
+System.Threading.Thread:Finalize+3d: C3                    - ret 
+0C6A1796: 00 00                 - add [eax],al
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3: 55                    - push ebp
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+1: 8B EC                 - mov ebp,esp
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+3: 83 EC 08              - sub esp,08
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+6: 8B 45 0C              - mov eax,[ebp+0C]
+// ---------- INJECTING HERE ----------
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+9: 8B 40 50              - mov eax,[eax+50]
+// ---------- DONE INJECTING  ----------
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+c: C9                    - leave 
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:&lt;Start&gt;b__8_3+d: C3                    - ret 
+0C6A17A6: 00 00                 - add [eax],al
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor: 55                    - push ebp
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor+1: 8B EC                 - mov ebp,esp
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor+3: 83 EC 28              - sub esp,28
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor+6: C7 04 24 88 22 0F 18  - mov [esp],180F2288
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor+d: 8B C0                 - mov eax,eax
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor+f: E8 24 F8 61 F7        - call System.Object:__icall_wrapper_ves_icall_object_new_specific
+Assets.Scripts.UI.Menus.PartyMenu+&lt;&gt;c:.cctor+14: 89 45 FC              - mov [ebp-04],eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>30</ID>
+              <Description>"Edit Character Data"</Description>
+              <Options moHideChildren="1"/>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>70</ID>
+                  <Description>"Char1"</Description>
+                  <Options moHideChildren="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>player_data_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>10</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>102</ID>
+                      <Description>"Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>20</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+8c</Address>
+                      <Offsets>
+                        <Offset>+c</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>71</ID>
+                      <Description>"HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+64</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>72</ID>
+                      <Description>"MP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Double</VariableType>
+                      <Address>+70</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>73</ID>
+                      <Description>"XP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>86</ID>
+                      <Description>"Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+78</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>87</ID>
+                      <Description>"Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+7C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>88</ID>
+                      <Description>"Defense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+80</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>89</ID>
+                      <Description>"Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+84</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>106</ID>
+                      <Description>"BonusDefense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+34</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>107</ID>
+                      <Description>"Bonus Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+38</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>108</ID>
+                      <Description>"Bonus Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+3c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>109</ID>
+                      <Description>"Bonus Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+40</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>111</ID>
+                      <Description>" Bonus HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+44</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>112</ID>
+                      <Description>"Bonus Critrate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>113</ID>
+                      <Description>"Bonus Mana Regen"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>114</ID>
+                      <Description>"Bonus Speed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>115</ID>
+                      <Description>"Bonus Dodge Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+54</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>116</ID>
+                      <Description>"Bonus Block Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+58</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>74</ID>
+                  <Description>"Char2"</Description>
+                  <Options moHideChildren="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>player_data_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>14</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>104</ID>
+                      <Description>"Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>20</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+8c</Address>
+                      <Offsets>
+                        <Offset>+c</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>75</ID>
+                      <Description>"HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+64</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>76</ID>
+                      <Description>"MP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Double</VariableType>
+                      <Address>+70</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>77</ID>
+                      <Description>"XP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>90</ID>
+                      <Description>"Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+78</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>91</ID>
+                      <Description>"Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+7C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>92</ID>
+                      <Description>"Defense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+80</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>93</ID>
+                      <Description>"Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+84</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>117</ID>
+                      <Description>"BonusDefense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+34</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>118</ID>
+                      <Description>"Bonus Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+38</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>119</ID>
+                      <Description>"Bonus Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+3c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>120</ID>
+                      <Description>"Bonus Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+40</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>121</ID>
+                      <Description>" Bonus HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+44</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>122</ID>
+                      <Description>"Bonus Critrate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>123</ID>
+                      <Description>"Bonus Mana Regen"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>124</ID>
+                      <Description>"Bonus Speed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>125</ID>
+                      <Description>"Bonus Dodge Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+54</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>126</ID>
+                      <Description>"Bonus Block Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+58</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>78</ID>
+                  <Description>"Char3"</Description>
+                  <Options moHideChildren="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>player_data_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>18</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>103</ID>
+                      <Description>"Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>20</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+8c</Address>
+                      <Offsets>
+                        <Offset>+c</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>79</ID>
+                      <Description>"HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+64</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>80</ID>
+                      <Description>"MP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Double</VariableType>
+                      <Address>+70</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>81</ID>
+                      <Description>"XP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>94</ID>
+                      <Description>"Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+78</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>95</ID>
+                      <Description>"Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+7C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>96</ID>
+                      <Description>"Defense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+80</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>97</ID>
+                      <Description>"Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+84</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>127</ID>
+                      <Description>"BonusDefense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+34</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>128</ID>
+                      <Description>"Bonus Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+38</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>129</ID>
+                      <Description>"Bonus Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+3c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>130</ID>
+                      <Description>"Bonus Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+40</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>131</ID>
+                      <Description>" Bonus HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+44</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>132</ID>
+                      <Description>"Bonus Critrate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>133</ID>
+                      <Description>"Bonus Mana Regen"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>134</ID>
+                      <Description>"Bonus Speed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>135</ID>
+                      <Description>"Bonus Dodge Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+54</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>136</ID>
+                      <Description>"Bonus Block Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+58</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>82</ID>
+                  <Description>"Char4"</Description>
+                  <Options moHideChildren="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>player_data_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>1C</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>105</ID>
+                      <Description>"Name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>String</VariableType>
+                      <Length>20</Length>
+                      <Unicode>1</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>+8c</Address>
+                      <Offsets>
+                        <Offset>+c</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>83</ID>
+                      <Description>"HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+64</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>84</ID>
+                      <Description>"MP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Double</VariableType>
+                      <Address>+70</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>85</ID>
+                      <Description>"XP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>98</ID>
+                      <Description>"Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+78</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>99</ID>
+                      <Description>"Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+7C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>100</ID>
+                      <Description>"Defense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+80</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>101</ID>
+                      <Description>"Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+84</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>137</ID>
+                      <Description>"BonusDefense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+34</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>138</ID>
+                      <Description>"Bonus Power"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+38</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>139</ID>
+                      <Description>"Bonus Wisdom"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+3c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>140</ID>
+                      <Description>"Bonus Agility"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+40</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>141</ID>
+                      <Description>" Bonus HP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+44</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>142</ID>
+                      <Description>"Bonus Critrate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>143</ID>
+                      <Description>"Bonus Mana Regen"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4c</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>144</ID>
+                      <Description>"Bonus Speed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>145</ID>
+                      <Description>"Bonus Dodge Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+54</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>146</ID>
+                      <Description>"Bonus Block Rate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+58</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>35</ID>
+              <Description>"Chapter+"</Description>
+              <Options moHideChildren="1"/>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>30</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>33</ID>
+                  <Description>"Chapter.Length"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>player_data_addr</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>34</ID>
+                  <Description>"Chapter.Value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>String</VariableType>
+                  <Length>128</Length>
+                  <Unicode>1</Unicode>
+                  <CodePage>0</CodePage>
+                  <ZeroTerminate>1</ZeroTerminate>
+                  <Address>player_data_addr</Address>
+                  <Offsets>
+                    <Offset>C</Offset>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>57</ID>
+              <Description>"ElvenArtifactStatus"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>44</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>58</ID>
+              <Description>"ExpertModeAchievementIneligible"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>48</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>36</ID>
+              <Description>"StatResetCost"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>4C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"Gold"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>50</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>38</ID>
+              <Description>"LearnedTier1Potions"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>54</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>39</ID>
+              <Description>"LearnedTier2Potions"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>55</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>40</ID>
+              <Description>"LearnedTier3Potions"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>56</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>41</ID>
+              <Description>"LearnedTier4Potions"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>57</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>42</ID>
+              <Description>"DiveCount"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>58</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>43</ID>
+              <Description>"DifficultyMode"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>5C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>44</ID>
+              <Description>"MapDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>60</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>45</ID>
+              <Description>"CraftingDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>61</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>46</ID>
+              <Description>"SkillsDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>62</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>47</ID>
+              <Description>"StatusDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>63</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>48</ID>
+              <Description>"ItemsDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>64</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>49</ID>
+              <Description>"CrawlingDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>65</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>50</ID>
+              <Description>"SwimmingDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>66</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>51</ID>
+              <Description>"WadingDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>67</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>52</ID>
+              <Description>"ActionsDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>68</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>53</ID>
+              <Description>"FlyingDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>69</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>54</ID>
+              <Description>"AutosaveDisabled"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>6A</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>55</ID>
+              <Description>"IsEpilogue"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>6B</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>56</ID>
+              <Description>"UltBarChargePercentage"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>player_data_addr</Address>
+              <Offsets>
+                <Offset>70</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

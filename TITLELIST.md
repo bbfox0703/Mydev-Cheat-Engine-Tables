@@ -1,6 +1,13 @@
 # Titles list
 
+## Ara Fell Enhanced Edition
+
+[Ara Fell: Enhanced Edition (Steam)](https://store.steampowered.com/app/440540/_/)
+
+ja-JP: エアラフェル （拡張版）
+
 ## Atelier Firis DX
+
 [Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)](https://store.steampowered.com/app/1502980/__DX/)
 
 zh-TW: 菲莉絲的鍊金工房 ～不可思議旅的鍊金術士～ DX
