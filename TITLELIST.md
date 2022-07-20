@@ -41,6 +41,9 @@ ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～
 
 zh-TW: 同級生Remake
 
+## Final Fantasy VII Remake Intergrade
+[Final Fantasy VII Remake Intergrade(Steam)](https://store.steampowered.com/app/1462040/FINAL_FANTASY_VII_REMAKE_INTERGRADE/)
+
 ## Hatsune Miku Project DIVA Mega Mix+
 
 [Hatsune Miku: Project DIVA Mega Mix+ (Steam)](https://store.steampowered.com/app/1761390/_Project_DIVA_MEGA39s/)
