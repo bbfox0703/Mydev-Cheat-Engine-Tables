@@ -62,6 +62,9 @@ zh-TW: 那由多之軌跡：改
 
 zh-TW: 舊世界 Old World
 
+## Rabi-Ribi
+[Rabi-Ribi (Steam)](https://store.steampowered.com/app/400910/RabiRibi/)
+
 ## Seraph's Last Stand
 
 [Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)
