@@ -48,7 +48,12 @@ ja-JP: ブリガンダイン ルーナジア戦記
 zh-TW: 同級生Remake
 
 ## Final Fantasy VII Remake Intergrade
+
 [Final Fantasy VII Remake Intergrade(Steam)](https://store.steampowered.com/app/1462040/FINAL_FANTASY_VII_REMAKE_INTERGRADE/)
+
+## Gold Wiper / NSFW
+
+[Gold Wiper (Steam)](https://store.steampowered.com/app/1926870/Gold_Wiper/)
 
 ## Hatsune Miku Project DIVA Mega Mix+
 
