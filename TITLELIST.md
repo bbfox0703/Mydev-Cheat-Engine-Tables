@@ -32,6 +32,10 @@ CoreKeeper  (Steam)
 Dōkyūsei Bangin' Summer  (Steam)
 zh-TW: 同級生Remake
 
+###Hatsune Miku Project DIVA Mega Mix+
+Hatsune Miku: Project DIVA Mega Mix+ (Steam)
+zh-TW: 初音未來 Project DIVA MEGA39’s＋
+
 ###Nayuta no Kiseki KAI
 Nayuta no Kiseki: KAI (Steam)
 zh-TW: 那由多之軌跡：改
@@ -46,3 +50,6 @@ Seraph's Last Stand (Steam)
 ###The Legend of Heroes Zero no Kiseki KAI
 The Legend of Heroes: Zero no Kiseki Kai (Steam)
 zh-TW: 英雄傳說 零之軌跡：改
+
+###Tower of Time
+[Tower of Time (Steam)] (https://store.steampowered.com/app/617480/Tower_of_Time/)
