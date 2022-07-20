@@ -72,6 +72,10 @@ zh-TW: 舊世界 Old World
 
 zh-TW: 英雄傳說 零之軌跡：改
 
+## The Planet Crafter
+
+[(The Planet Crafter (Steam)](https://store.steampowered.com/app/1284190/The_Planet_Crafter/)
+
 ## Tower of Time
 
 [Tower of Time (Steam)](https://store.steampowered.com/app/617480/Tower_of_Time/)
