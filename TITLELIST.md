@@ -69,6 +69,12 @@ zh-TW: 舊世界 Old World
 
 [Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)
 
+# The Legend of Heroes: Trails of Cold Steel Japanese ver. Cheat Engine table
+
+The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)
+
+[ja-JP: 英雄伝説 閃の軌跡](https://store.steampowered.com/app/538680/_/?l=japanese)
+
 ## The Legend of Heroes Zero no Kiseki KAI
 
 [The Legend of Heroes: Zero no Kiseki Kai (Steam)](https://store.steampowered.com/app/1457520/_/)
