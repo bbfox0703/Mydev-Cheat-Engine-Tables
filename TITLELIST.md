@@ -1,11 +1,5 @@
 # Titles list
 
-## Format
-
-## Folder name	
-
-## English / Traditional Chinese / Japanese
-
 ## Atelier Firis DX
 
 Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)
