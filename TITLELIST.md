@@ -75,6 +75,14 @@ zh-TW: 舊世界 Old World
 
 zh-TW: 英雄傳說 零之軌跡：改
 
+## The Legend of Tianding
+
+[The Legend of Tianding (Steam)](https://store.steampowered.com/app/1406850/_/)
+
+zh-TW: 廖添丁 - 稀代兇賊の最期
+
+ja-JP: 添丁の伝説
+
 ## The Planet Crafter
 
 [(The Planet Crafter (Steam)](https://store.steampowered.com/app/1284190/The_Planet_Crafter/)
