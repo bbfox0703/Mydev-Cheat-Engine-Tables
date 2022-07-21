@@ -1,4 +1,4 @@
-# Seraph's Last Stand Cheat Engine table
+# Seraph's Last Stand Cheat Engine table  
 Seraph's Last Stand (Steam)
  
 ## Release
