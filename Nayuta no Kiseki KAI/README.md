@@ -1,4 +1,4 @@
-# Nayuta no Kiseki: KAI Cheat Engine table
+# Nayuta no Kiseki: KAI Cheat Engine table  
 Nayuta no Kiseki: KAI (Steam)
 
 zh-TW: 那由多之軌跡：改
