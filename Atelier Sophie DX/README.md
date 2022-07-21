@@ -1,4 +1,4 @@
-# Atelier Sophie DX CT
+# Atelier Sophie DX  
  Cheat Table for Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)
  
  zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX (修改器)
