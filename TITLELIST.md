@@ -48,6 +48,10 @@ ja-JP: ブリガンダイン ルーナジア戦記
 
 [Core Keeper (Steam)](https://store.steampowered.com/app/1621690/Core_Keeper/)
 
+## Distant Worlds 2
+
+[Distant Worlds 2 (Steam)](https://store.steampowered.com/app/1531540/Distant_Worlds_2/)
+
 ## Dōkyūsei Bangin' Summer
 
 [Dōkyūsei Bangin' Summer  (Steam)](https://store.steampowered.com/app/1689910/Remake/)
