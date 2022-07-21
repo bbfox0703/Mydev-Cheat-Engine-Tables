@@ -1,4 +1,4 @@
-# Dōkyūsei: Bangin' Summer Cheat Engine table
+# Dōkyūsei: Bangin' Summer Cheat Engine table  
 Dōkyūsei: Bangin' Summer (Steam)
 
 zh-TW: 同級生Remake
