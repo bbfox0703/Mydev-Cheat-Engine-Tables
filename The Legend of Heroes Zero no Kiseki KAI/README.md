@@ -1,4 +1,4 @@
-# The Legend of Heroes: Zero no Kiseki Kai Cheat Engine table
+# The Legend of Heroes: Zero no Kiseki Kai Cheat Engine table  
 The Legend of Heroes: Zero no Kiseki Kai (Steam)
 zh-TW: 英雄傳說 零之軌跡：改
  
