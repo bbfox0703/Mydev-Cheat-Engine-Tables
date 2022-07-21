@@ -10,33 +10,29 @@ ja-JP: エアラフェル （拡張版）
 
 [Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)](https://store.steampowered.com/app/1502980/__DX/)
 
-zh-TW: 菲莉絲的鍊金工房 ～不可思議旅的鍊金術士～ DX
-
-ja-JP: フィリスのアトリエ ～不思議な旅の錬金術士～ DX
+zh-TW: 菲莉絲的鍊金工房 ～不可思議旅的鍊金術士～ DX  
+ja-JP: フィリスのアトリエ ～不思議な旅の錬金術士～ DX  
 
 ## Atelier Lydie & Suelle DX
 
 [Atelier Lydie & Suelle: The Alchemists and the Mysterious Paintings DX (Steam)](https://store.steampowered.com/app/1502990/__DX/)
 
-zh-TW: 莉迪＆蘇瑞的鍊金工房 ～不可思議繪畫的鍊金術士～ DX
-
-ja-JP: リディー＆スールのアトリエ ～不思議な絵画の錬金術士～ DX
+zh-TW: 莉迪＆蘇瑞的鍊金工房 ～不可思議繪畫的鍊金術士～ DX  
+ja-JP: リディー＆スールのアトリエ ～不思議な絵画の錬金術士～ DX  
 
 ## Atelier Sophie DX
 
 [Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)](https://store.steampowered.com/app/1502970/__DX/)
 
-zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX
-
-ja-JP: ソフィーのアトリエ ～不思議な本の錬金術士～ DX
+zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX  
+ja-JP: ソフィーのアトリエ ～不思議な本の錬金術士～ DX  
 
 ## Atelier Sophie2 CT
 
 [Atelier Sophie 2: The Alchemist of the Mysterious Dream (Steam)](https://store.steampowered.com/app/1621310/_/)
 
-zh-TW: 蘇菲的鍊金工房２ ～不可思議夢的鍊金術士～
-
-ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～
+zh-TW: 蘇菲的鍊金工房２ ～不可思議夢的鍊金術士～  
+ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～  
 
 ## Brigandine The Legend of Runersia
 
@@ -118,9 +114,8 @@ zh-TW: 英雄傳說 零之軌跡：改
 
 [The Legend of Tianding (Steam)](https://store.steampowered.com/app/1406850/_/)
 
-zh-TW: 廖添丁 - 稀代兇賊の最期
-
-ja-JP: 添丁の伝説
+zh-TW: 廖添丁 - 稀代兇賊の最期  
+ja-JP: 添丁の伝説  
 
 ## The Planet Crafter
 
