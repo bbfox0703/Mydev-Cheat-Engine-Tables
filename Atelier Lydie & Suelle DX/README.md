@@ -1,4 +1,4 @@
-# Atelier Lydie & Suelle: The Alchemists and the Mysterious Paintings DX Cheat Engine table
+# Atelier Lydie & Suelle: The Alchemists and the Mysterious Paintings DX Cheat Engine table  
 Atelier Lydie & Suelle: The Alchemists and the Mysterious Paintings DX (Steam)
 
  zh-TW: 莉迪＆蘇瑞的鍊金工房 ～不可思議繪畫的鍊金術士～ DX
