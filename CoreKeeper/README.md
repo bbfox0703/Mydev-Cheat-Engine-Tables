@@ -1,5 +1,5 @@
-# CoreKeeper Cheat Engine table
-CoreKeeper Cheat Engine table (Steam)
+# CoreKeeper Cheat Engine table  
+Core Keeper Cheat Engine table (Steam)
 
 
 ## Release
