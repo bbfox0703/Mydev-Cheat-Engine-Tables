@@ -95,6 +95,13 @@ zh-TW: 舊世界 Old World
 
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)
 
+## THE IDOLM@STER STARLIT SEASON
+
+[THE IDOLM@STER STARLIT SEASON (Steam)](https://store.steampowered.com/app/1046480/_/)
+
+zh-TW: 偶像大師 星耀季節  
+ja-JP: アイドルマスター スターリットシーズン  
+
 ## The Legend of Heroes: Trails of Cold Steel Japanese ver. 
 
 The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)
