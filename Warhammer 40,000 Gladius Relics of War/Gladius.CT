@@ -1,0 +1,960 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>19</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>21</ID>
+      <Description>"Enable &lt;-- click me first"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$asm}
+define(GladiusgladiusguitipOutOfResourcesisValidProc,"Gladius.gladius::gui::tip::OutOfResources::isValid")
+define(GladiusgladiusworldUnitgetMovementProc,"Gladius.gladius::world::Unit::getMovement")
+define(GladiusgladiusworldUnitisIdleProc,"Gladius.gladius::world::Unit::isIdle")
+define(GladiusgladiusworldUnitsetExperienceProc,"Gladius.gladius::world::Unit::setExperience")
+define(GladiusgladiusworldActorprocessProc,"Gladius.gladius::world::Actor::process")
+define(GladiusgladiusworldactionActionprocessCooldownProc,"Gladius.gladius::world::action::Action::processCooldown")
+define(GladiusgladiusworldWeapongetPropertiesProc,"Gladius.gladius::world::Weapon::getProperties")
+define(GladiusgladiusworldUnitsetHitpointsProc,"Gladius.gladius::world::Unit::setHitpoints")
+
+
+
+registersymbol(GladiusgladiusguitipOutOfResourcesisValidProc)
+registersymbol(GladiusgladiusworldUnitgetMovementProc)
+registersymbol(GladiusgladiusworldUnitisIdleProc)
+registersymbol(GladiusgladiusworldUnitsetExperienceProc)
+registersymbol(GladiusgladiusworldActorprocessProc)
+registersymbol(GladiusgladiusworldactionActionprocessCooldownProc)
+registersymbol(GladiusgladiusworldWeapongetPropertiesProc)
+registersymbol(GladiusgladiusworldUnitsetHitpointsProc)
+
+[DISABLE]
+
+{$asm}
+unregistersymbol(*)e cheat
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"Base resources"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author : bbfox @ https://opencheattables.org
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_RESOURCES,Gladius.exe,66 0F 2F 81 80 03 00 00) // should be unique
+aobscanregion(INJECT_RESOURCES,GladiusgladiusguitipOutOfResourcesisValidProc+b,GladiusgladiusguitipOutOfResourcesisValidProc+4b,66 0F 2F 81 80 03 00 00) // should be unique
+alloc(newmem,$1000,INJECT_RESOURCES)
+
+label(code)
+label(return)
+label(i_base_resource_addr)
+label(is_keep_min_resource)
+label(vd_min_req)
+label(vd_min_energy)
+label(vd_min_influence)
+label(vd_min_research)
+
+newmem:
+  push rax
+  mov rax, [rcx+400]
+  test rax, rax
+  pop rax
+  je code
+
+  push rax
+  mov rax, [rcx+400]
+  mov eax, [rax+8]
+  test eax, eax
+  pop rax
+  jne code
+
+
+  mov [i_base_resource_addr], rcx
+  cmp dword ptr [is_keep_min_resource], 1
+  jne code
+  // 380 Energy
+  // 3E0 Influence
+  // 410 Requisitions
+  // 420 Research
+
+  vmovsd xmm15, [rcx+00000380]
+  vmovsd xmm14, [vd_min_energy]
+  vcomisd xmm15, xmm14
+  jae @F
+  vmovsd [rcx+00000380], xmm14
+@@:
+
+  vmovsd xmm15, [rcx+000003E0]
+  vmovsd xmm14, [vd_min_influence]
+  vcomisd xmm15, xmm14
+  jae @F
+  vmovsd [rcx+000003E0], xmm14
+@@:
+
+  vmovsd xmm15, [rcx+00000410]
+  vmovsd xmm14, [vd_min_req]
+  vcomisd xmm15, xmm14
+  jae @F
+  vmovsd [rcx+00000410], xmm14
+@@:
+
+  vmovsd xmm15, [rcx+00000420]
+  vmovsd xmm14, [vd_min_research]
+  vcomisd xmm15, xmm14
+  jae @F
+  vmovsd [rcx+00000420], xmm14
+@@:
+
+code:
+  comisd xmm0,[rcx+00000380]
+  jmp return
+
+align 10 cc
+  i_base_resource_addr:
+  dq 0
+  is_keep_min_resource:
+  dd 0
+  vd_100:
+  dq (Double)100
+  vd_300:
+  dq (Double)300
+  vd_2000:
+  dq (Double)2000
+  vd_min_req:
+  dq (Double)2000
+  vd_min_energy:
+  dq (Double)300
+  vd_min_influence:
+  dq (Double)100
+  vd_min_research:
+  dq (Double)100
+
+INJECT_RESOURCES:
+  jmp newmem
+  nop 3
+return:
+registersymbol(vd_min_req)
+registersymbol(vd_min_energy)
+registersymbol(vd_min_influence)
+registersymbol(vd_min_research)
+registersymbol(is_keep_min_resource)
+registersymbol(i_base_resource_addr)
+registersymbol(INJECT_RESOURCES)
+
+[DISABLE]
+
+INJECT_RESOURCES:
+  db 66 0F 2F 81 80 03 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+10A97D
+
+Gladius.exe+10A94F: CC                       - int 3 
+Gladius.gladius::gui::tip::OutOfResources::isValid: 48 83 EC 28              - sub rsp,28
+Gladius.exe+10A954: 48 8B 41 08              - mov rax,[rcx+08]
+Gladius.exe+10A958: 48 8B 88 58 06 00 00     - mov rcx,[rax+00000658]
+Gladius.exe+10A95F: 48 8B 89 78 03 00 00     - mov rcx,[rcx+00000378]
+Gladius.exe+10A966: E8 95 9F FD FF           - call Gladius.gladius::gui::world::WorldHUD::getWorld
+Gladius.exe+10A96B: 48 8B C8                 - mov rcx,rax
+Gladius.exe+10A96E: E8 BD 27 26 00           - call Gladius.gladius::world::World::getController
+Gladius.exe+10A973: 0F 57 C0                 - xorps xmm0,xmm0
+Gladius.exe+10A976: 48 8B 88 28 03 00 00     - mov rcx,[rax+00000328]
+// ---------- INJECTING HERE ----------
+Gladius.exe+10A97D: 66 0F 2F 81 80 03 00 00  - comisd xmm0,[rcx+00000380]
+// ---------- DONE INJECTING  ----------
+Gladius.exe+10A985: 77 2F                    - ja Gladius.exe+10A9B6
+Gladius.exe+10A987: 66 0F 2F 81 90 03 00 00  - comisd xmm0,[rcx+00000390]
+Gladius.exe+10A98F: 77 25                    - ja Gladius.exe+10A9B6
+Gladius.exe+10A991: 66 0F 2F 81 E0 03 00 00  - comisd xmm0,[rcx+000003E0]
+Gladius.exe+10A999: 77 1B                    - ja Gladius.exe+10A9B6
+Gladius.exe+10A99B: 66 0F 2F 81 F0 03 00 00  - comisd xmm0,[rcx+000003F0]
+Gladius.exe+10A9A3: 77 11                    - ja Gladius.exe+10A9B6
+Gladius.exe+10A9A5: 66 0F 2F 81 10 04 00 00  - comisd xmm0,[rcx+00000410]
+Gladius.exe+10A9AD: 77 07                    - ja Gladius.exe+10A9B6
+Gladius.exe+10A9AF: 32 C0                    - xor al,al
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"Base addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_resource_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"Keep min. resources?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_keep_min_resource</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>14</ID>
+                  <Description>"Min. Requisitions"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">100:100
+500:500
+1000:1000
+2000:2000
+8000:8000
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Double</VariableType>
+                  <Address>vd_min_req</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>15</ID>
+                  <Description>"Min. Energy"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">100:100
+300:300
+500:500
+1000:1000
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Double</VariableType>
+                  <Address>vd_min_energy</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>16</ID>
+                  <Description>"Min. Research"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">100:100
+500:500
+1000:1000
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Double</VariableType>
+                  <Address>vd_min_research</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17</ID>
+                  <Description>"Min. influence"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">100:100
+500:500
+1000:1000
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Double</VariableType>
+                  <Address>vd_min_influence</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"Cur. Requisitions"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>A00000</Color>
+              <VariableType>Double</VariableType>
+              <Address>i_base_resource_addr</Address>
+              <Offsets>
+                <Offset>410</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"Cur. Energy"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>A00000</Color>
+              <VariableType>Double</VariableType>
+              <Address>i_base_resource_addr</Address>
+              <Offsets>
+                <Offset>380</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"Cur. Research"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>A00000</Color>
+              <VariableType>Double</VariableType>
+              <Address>i_base_resource_addr</Address>
+              <Offsets>
+                <Offset>420</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>8</ID>
+              <Description>"Cur. Influence"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>A00000</Color>
+              <VariableType>Double</VariableType>
+              <Address>i_base_resource_addr</Address>
+              <Offsets>
+                <Offset>3E0</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"When Select: Unlimited Move/Action/HP+/Morale+"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author : bbfox @ https://opencheattables.org
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_UNIT_IS_IDLE,Gladius.exe,84 C0 74 3F F2 0F 10 83 F0 01 00 00) // should be unique
+aobscanregion(INJECT_UNIT_IS_IDLE,GladiusgladiusworldUnitisIdleProc+20,GladiusgladiusworldUnitisIdleProc+80,84 C0 74 3F F2 0F 10 83 F0 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_UNIT_IS_IDLE)
+
+label(code)
+label(return)
+
+newmem:
+  push rax
+  mov rax, [rbx+b0]
+  test rax, rax
+  pop rax
+  je code
+
+  push rax
+  mov rax, [rbx+b0]
+  mov eax, [rax+8]
+  test eax, eax
+  pop rax
+  jne code
+
+  mov al, 1
+  vmovsd xmm14, [vd_3] //movement
+  vmovsd [rbx+000001F0], xmm14
+  vmovsd xmm14, [vd_1]  //action
+  vmovsd [rbx+00000100], xmm14
+  vmovsd xmm14, [vd_24]  //morale
+  vmovsd [rbx+000001E0], xmm14
+  vmovsd xmm14, [vd_99]  //hp
+  vmovsd [rbx+000001A8], xmm14
+
+code:
+  test al,al
+  reassemble(INJECT_UNIT_IS_IDLE+2)
+  //je Gladius.exe+3D75AF
+  movsd xmm0,[rbx+000001F0]
+  jmp return
+
+align 10 cc
+  vd_3:
+  dq (Double)3
+  vd_1:
+  dq (Double)1
+  vd_24:
+  dq (Double)16
+  vd_99:
+  dq (Double)99
+
+INJECT_UNIT_IS_IDLE:
+  jmp newmem
+  nop 7
+return:
+registersymbol(INJECT_UNIT_IS_IDLE)
+
+[DISABLE]
+
+INJECT_UNIT_IS_IDLE:
+  db 84 C0 74 3F F2 0F 10 83 F0 01 00 00
+
+unregistersymbol(INJECT_UNIT_IS_IDLE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+3D756C
+
+Gladius.exe+3D7546: 0F 29 74 24 20           - movaps [rsp+20],xmm6
+Gladius.exe+3D754B: 48 8B D9                 - mov rbx,rcx
+Gladius.exe+3D754E: 0F 57 F6                 - xorps xmm6,xmm6
+Gladius.exe+3D7551: 66 0F 2F B1 A8 01 00 00  - comisd xmm6,[rcx+000001A8]
+Gladius.exe+3D7559: 73 54                    - jae Gladius.exe+3D75AF
+Gladius.exe+3D755B: E8 30 42 01 00           - call Gladius.gladius::world::Actor::hasQueuedOrderFromPreviousTurn
+Gladius.exe+3D7560: 84 C0                    - test al,al
+Gladius.exe+3D7562: 75 4B                    - jne Gladius.exe+3D75AF
+Gladius.exe+3D7564: 48 8B CB                 - mov rcx,rbx
+Gladius.exe+3D7567: E8 24 44 01 00           - call Gladius.gladius::world::Actor::isIdle
+// ---------- INJECTING HERE ----------
+Gladius.exe+3D756C: 84 C0                    - test al,al
+// ---------- DONE INJECTING  ----------
+Gladius.exe+3D756E: 74 3F                    - je Gladius.exe+3D75AF
+Gladius.exe+3D7570: F2 0F 10 83 F0 01 00 00  - movsd xmm0,[rbx+000001F0]
+Gladius.exe+3D7578: 66 0F 2F C6              - comisd xmm0,xmm6
+Gladius.exe+3D757C: 77 0D                    - ja Gladius.exe+3D758B
+Gladius.exe+3D757E: 48 8B 4B 70              - mov rcx,[rbx+70]
+Gladius.exe+3D7582: E8 D9 D3 FB FF           - call Gladius.gladius::world::action::Actions::hasAvailableAutocycleAction
+Gladius.exe+3D7587: 84 C0                    - test al,al
+Gladius.exe+3D7589: 74 24                    - je Gladius.exe+3D75AF
+Gladius.exe+3D758B: 48 8B 03                 - mov rax,[rbx]
+Gladius.exe+3D758E: 48 8B CB                 - mov rcx,rbx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>33</ID>
+              <Description>"***Need to end turn with hourglass icon or Ctrl-Space***"</Description>
+              <Color>400080</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"Unit XP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author : bbfox @ https://opencheattables.org
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_EXP_MULTI,Gladius.exe,F2 44 0F 11 8F 88 01 00 00) // should be unique
+aobscanregion(INJECT_EXP_MULTI,GladiusgladiusworldUnitsetExperienceProc+500,GladiusgladiusworldUnitsetExperienceProc+a00,F2 44 0F 11 8F 88 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_EXP_MULTI)
+
+label(code)
+label(return)
+label(vd_exp_multi)
+
+//B0, B8: Pointer to instance of gladius::world::Player
+
+
+newmem:
+  push rax
+  mov rax, [rdi+b0]
+  test rax, rax
+  pop rax
+  je code
+
+  push rax
+  mov rax, [rdi+b0]
+  mov eax, [rax+8]
+  test eax, eax
+  pop rax
+  jne code
+
+
+  vmovsd xmm14, [rdi+00000188]
+  movsd xmm15, xmm9
+  vsubsd xmm13, xmm15, xmm14
+  vmovsd xmm12, [vd_exp_multi]
+  vmulsd xmm13, xmm13, xmm12
+  vaddsd xmm9, xmm14, xmm13
+
+code:
+  movsd [rdi+00000188],xmm9
+  jmp return
+
+align 10 cc
+  vd_exp_multi:
+  dq (Double)3
+
+INJECT_EXP_MULTI:
+  jmp newmem
+  nop 4
+return:
+registersymbol(vd_exp_multi)
+registersymbol(INJECT_EXP_MULTI)
+
+[DISABLE]
+
+INJECT_EXP_MULTI:
+  db F2 44 0F 11 8F 88 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+3DC704
+
+Gladius.exe+3DC6C8: 66 41 0F 2E C1              - ucomisd xmm0,xmm9
+Gladius.exe+3DC6CD: 7A 06                       - jp Gladius.exe+3DC6D5
+Gladius.exe+3DC6CF: 0F 84 B8 05 00 00           - je Gladius.exe+3DCC8D
+Gladius.exe+3DC6D5: F2 0F 59 05 83 8A 2F 00     - mulsd xmm0,[Gladius.exe+6D5160]
+Gladius.exe+3DC6DD: F2 0F 58 05 C3 5C 2A 00     - addsd xmm0,[Gladius.exe+6823A8]
+Gladius.exe+3DC6E5: E8 7C D3 20 00              - call Gladius.sqrt
+Gladius.exe+3DC6EA: F2 0F 5C 05 F6 82 27 00     - subsd xmm0,[Gladius.exe+6549E8]
+Gladius.exe+3DC6F2: F2 0F 5E 05 76 4C 2A 00     - divsd xmm0,[Gladius.exe+681370]
+Gladius.exe+3DC6FA: E8 31 D3 20 00              - call Gladius.floor
+Gladius.exe+3DC6FF: F2 48 0F 2C D8              - cvttsd2si rbx,xmm0
+// ---------- INJECTING HERE ----------
+Gladius.exe+3DC704: F2 44 0F 11 8F 88 01 00 00  - movsd [rdi+00000188],xmm9
+// ---------- DONE INJECTING  ----------
+Gladius.exe+3DC70D: F2 44 0F 59 0D 4A 8A 2F 00  - mulsd xmm9,[Gladius.exe+6D5160]
+Gladius.exe+3DC716: F2 44 0F 58 0D 89 5C 2A 00  - addsd xmm9,[Gladius.exe+6823A8]
+Gladius.exe+3DC71F: 41 0F 28 C1                 - movaps xmm0,xmm9
+Gladius.exe+3DC723: E8 3E D3 20 00              - call Gladius.sqrt
+Gladius.exe+3DC728: F2 0F 5C 05 B8 82 27 00     - subsd xmm0,[Gladius.exe+6549E8]
+Gladius.exe+3DC730: F2 0F 5E 05 38 4C 2A 00     - divsd xmm0,[Gladius.exe+681370]
+Gladius.exe+3DC738: E8 F3 D2 20 00              - call Gladius.floor
+Gladius.exe+3DC73D: F2 4C 0F 2C F0              - cvttsd2si r14,xmm0
+Gladius.exe+3DC742: 44 2B F3                    - sub r14d,ebx
+Gladius.exe+3DC745: 0F 84 25 05 00 00           - je Gladius.exe+3DCC70
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>32</ID>
+              <Description>"Multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>vd_exp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"Fast construction"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author : bbfox @ https://opencheattables.org
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_CONSTRUCT_PROGRESS,Gladius.exe,F2 0F 10 4B 60 66) // should be unique
+aobscanregion(INJECT_CONSTRUCT_PROGRESS,GladiusgladiusworldActorprocessProc+d0,GladiusgladiusworldActorprocessProc+1d0,F2 0F 10 4B 60 66) // should be unique
+alloc(newmem,$1000,INJECT_CONSTRUCT_PROGRESS)
+
+label(code)
+label(return)
+
+newmem:
+  push rax
+  mov rax, [rbx+b0]
+  test rax, rax
+  pop rax
+  je code
+
+  push rax
+  mov rax, [rbx+b0]
+  mov eax, [rax+8]
+  test eax, eax
+  pop rax
+  jne code
+
+  vmovsd xmm1, [vd_1000000]
+  vmovsd [rbx+60], xmm1
+
+code:
+  movsd xmm1,[rbx+60]
+  jmp return
+
+align 10 cc
+  vd_1000000:
+  dq (Double)1000000
+
+INJECT_CONSTRUCT_PROGRESS:
+  jmp newmem
+return:
+registersymbol(INJECT_CONSTRUCT_PROGRESS)
+
+[DISABLE]
+
+INJECT_CONSTRUCT_PROGRESS:
+  db F2 0F 10 4B 60
+
+unregistersymbol(INJECT_CONSTRUCT_PROGRESS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+3EC316
+
+Gladius.exe+3EC2EA: E8 31 3F C6 FF     - call Gladius.gladius::world::Order::getAction
+Gladius.exe+3EC2EF: 48 8B 10           - mov rdx,[rax]
+Gladius.exe+3EC2F2: 48 8B C8           - mov rcx,rax
+Gladius.exe+3EC2F5: FF 92 D8 01 00 00  - call qword ptr [rdx+000001D8]
+Gladius.exe+3EC2FB: 48 8D 4B 78        - lea rcx,[rbx+78]
+Gladius.exe+3EC2FF: E8 1C 3F C6 FF     - call Gladius.gladius::world::Order::getAction
+Gladius.exe+3EC304: 48 8D 48 30        - lea rcx,[rax+30]
+Gladius.exe+3EC308: 48 8B 01           - mov rax,[rcx]
+Gladius.exe+3EC30B: 48 8D 54 24 30     - lea rdx,[rsp+30]
+Gladius.exe+3EC310: FF 90 D0 00 00 00  - call qword ptr [rax+000000D0]
+// ---------- INJECTING HERE ----------
+Gladius.exe+3EC316: F2 0F 10 4B 60     - movsd xmm1,[rbx+60]
+// ---------- DONE INJECTING  ----------
+Gladius.exe+3EC31B: 66 0F 2F C8        - comisd xmm1,xmm0
+Gladius.exe+3EC31F: 72 79              - jb Gladius.exe+3EC39A
+Gladius.exe+3EC321: 48 8D 4B 78        - lea rcx,[rbx+78]
+Gladius.exe+3EC325: E8 F6 3E C6 FF     - call Gladius.gladius::world::Order::getAction
+Gladius.exe+3EC32A: 48 8B 10           - mov rdx,[rax]
+Gladius.exe+3EC32D: 48 8B C8           - mov rcx,rax
+Gladius.exe+3EC330: FF 52 48           - call qword ptr [rdx+48]
+Gladius.exe+3EC333: 84 C0              - test al,al
+Gladius.exe+3EC335: 74 63              - je Gladius.exe+3EC39A
+Gladius.exe+3EC337: 48 8D 4B 78        - lea rcx,[rbx+78]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>36</ID>
+          <Description>"Fast cooldown"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author : bbfox @ https://opencheattables.org
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_PROCESS_COOLDOWN,Gladius.exe,F2 0F 10 91 E8 00 00 00) // should be unique
+aobscanregion(INJECT_PROCESS_COOLDOWN,GladiusgladiusworldactionActionprocessCooldownProc+2,GladiusgladiusworldactionActionprocessCooldownProc+22,F2 0F 10 91 E8 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_PROCESS_COOLDOWN)
+
+label(code)
+label(return)
+
+newmem:
+  mov dword ptr [is_checked_ok], 0
+  push rax
+  mov rax, [rcx+58]
+  test rax, rax
+  je check_endp
+
+  mov rax, [rax+b8]
+  test rax, rax
+  je check_endp
+
+  mov eax, [rax+8]
+  test eax, eax
+  jne check_endp
+
+  mov dword ptr [is_checked_ok], 1
+
+check_endp:
+  pop rax
+
+  cmp dword ptr [is_checked_ok], 1
+  jne code
+
+  vmovsd xmm15, [vd_0]
+  vmovsd [rcx+000000E8], xmm15
+
+code:
+  movsd xmm2,[rcx+000000E8]
+  jmp return
+
+align 10 cc
+  vd_0:
+  dq 0
+  is_checked_ok:
+  dd 0
+
+INJECT_PROCESS_COOLDOWN:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_PROCESS_COOLDOWN)
+
+[DISABLE]
+
+INJECT_PROCESS_COOLDOWN:
+  db F2 0F 10 91 E8 00 00 00
+
+unregistersymbol(INJECT_PROCESS_COOLDOWN)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+3FC386
+
+Gladius.exe+3FC378: CC                       - int 3 
+Gladius.exe+3FC379: CC                       - int 3 
+Gladius.exe+3FC37A: CC                       - int 3 
+Gladius.exe+3FC37B: CC                       - int 3 
+Gladius.exe+3FC37C: CC                       - int 3 
+Gladius.exe+3FC37D: CC                       - int 3 
+Gladius.exe+3FC37E: CC                       - int 3 
+Gladius.exe+3FC37F: CC                       - int 3 
+Gladius.gladius::world::action::Action::processCooldown: 40 53                    - push rbx
+Gladius.exe+3FC382: 48 83 EC 20              - sub rsp,20
+// ---------- INJECTING HERE ----------
+Gladius.exe+3FC386: F2 0F 10 91 E8 00 00 00  - movsd xmm2,[rcx+000000E8]
+// ---------- DONE INJECTING  ----------
+Gladius.exe+3FC38E: 0F 57 C9                 - xorps xmm1,xmm1
+Gladius.exe+3FC391: 0F 28 C2                 - movaps xmm0,xmm2
+Gladius.exe+3FC394: 48 8B D9                 - mov rbx,rcx
+Gladius.exe+3FC397: F2 0F 5C 05 C9 8B 22 00  - subsd xmm0,[Gladius.exe+624F68]
+Gladius.exe+3FC39F: 66 0F 2F C1              - comisd xmm0,xmm1
+Gladius.exe+3FC3A3: 77 03                    - ja Gladius.exe+3FC3A8
+Gladius.exe+3FC3A5: 0F 57 C0                 - xorps xmm0,xmm0
+Gladius.exe+3FC3A8: 66 0F 2E C1              - ucomisd xmm0,xmm1
+Gladius.exe+3FC3AC: F2 0F 11 81 E8 00 00 00  - movsd [rcx+000000E8],xmm0
+Gladius.exe+3FC3B4: 7A 66                    - jp Gladius.exe+3FC41C
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>41</ID>
+          <Description>"Damage multiplier to all non-player"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author :
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_DAMAGE_MULTI,Gladius.exe,F2 0F 11 BE A8 01 00 00) // should be unique
+aobscanregion(INJECT_DAMAGE_MULTI,GladiusgladiusworldUnitsetHitpointsProc+130,GladiusgladiusworldUnitsetHitpointsProc+330,F2 0F 11 BE A8 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
+
+label(code)
+label(return)
+label(vd_damage_multi)
+
+newmem:
+  mov dword ptr [is_non_player], 0
+
+  push rax
+  mov rax, [rsi+b0]
+  test rax, rax
+  je checked_endp
+
+  mov eax, [rax+8]
+  test eax, eax
+  je checked_endp
+
+  mov dword ptr [is_non_player], 1
+
+checked_endp:
+  pop rax
+
+  cmp dword ptr [is_non_player], 1
+  jne code
+
+  vmovsd xmm15, [rsi+000001A8]
+  vsubsd xmm14, xmm15, xmm7
+  vmovsd xmm13, [vd_damage_multi]
+  vmulsd xmm14, xmm13, xmm14
+  vsubsd xmm15, xmm15, xmm14
+  movsd xmm7, xmm15
+
+code:
+  movsd [rsi+000001A8],xmm7
+  jmp return
+
+align 10 cc
+  is_non_player:
+  dd 0
+  vd_damage_multi:
+  dq (double)2.5
+
+INJECT_DAMAGE_MULTI:
+  jmp newmem
+  nop 3
+return:
+
+registersymbol(vd_damage_multi)
+registersymbol(INJECT_DAMAGE_MULTI)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI:
+  db F2 0F 11 BE A8 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+3DCE09
+
+Gladius.exe+3DCDDF: 8B 48 70                    - mov ecx,[rax+70]
+Gladius.exe+3DCDE2: 85 C9                       - test ecx,ecx
+Gladius.exe+3DCDE4: 75 23                       - jne Gladius.exe+3DCE09
+Gladius.exe+3DCDE6: 48 8D 15 23 14 7A 00        - lea rdx,[Gladius.gladius::world::TraitType::HEADQUARTERS]
+Gladius.exe+3DCDED: 48 8B 4E 40                 - mov rcx,[rsi+40]
+Gladius.exe+3DCDF1: E8 5A 86 FE FF              - call Gladius.gladius::world::Traits::containsUnlocked
+Gladius.exe+3DCDF6: 48 85 C0                    - test rax,rax
+Gladius.exe+3DCDF9: 74 0E                       - je Gladius.exe+3DCE09
+Gladius.exe+3DCDFB: 48 8B 86 B8 00 00 00        - mov rax,[rsi+000000B8]
+Gladius.exe+3DCE02: C6 80 19 03 00 00 01        - mov byte ptr [rax+00000319],01
+// ---------- INJECTING HERE ----------
+Gladius.exe+3DCE09: F2 0F 11 BE A8 01 00 00     - movsd [rsi+000001A8],xmm7
+// ---------- DONE INJECTING  ----------
+Gladius.exe+3DCE11: 0F 57 F6                    - xorps xmm6,xmm6
+Gladius.exe+3DCE14: 84 DB                       - test bl,bl
+Gladius.exe+3DCE16: 0F 84 81 00 00 00           - je Gladius.exe+3DCE9D
+Gladius.exe+3DCE1C: F2 44 0F 10 86 C0 01 00 00  - movsd xmm8,[rsi+000001C0]
+Gladius.exe+3DCE25: 66 0F 2F F7                 - comisd xmm6,xmm7
+Gladius.exe+3DCE29: 72 15                       - jb Gladius.exe+3DCE40
+Gladius.exe+3DCE2B: 48 8D 15 3E 15 7A 00        - lea rdx,[Gladius.gladius::world::TraitType::IRON_WILL]
+Gladius.exe+3DCE32: 48 8B 4E 40                 - mov rcx,[rsi+40]
+Gladius.exe+3DCE36: E8 15 86 FE FF              - call Gladius.gladius::world::Traits::containsUnlocked
+Gladius.exe+3DCE3B: 48 85 C0                    - test rax,rax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>42</ID>
+              <Description>"Multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Double</VariableType>
+              <Address>vd_damage_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"_not working"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"Damage multiplier (at least on selected unit)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Gladius.exe
+  Version: 
+  Date   : 2022-04-25
+  Author :
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_DAMAGE_MULTI,Gladius.exe,44 0F 28 C0 45 0F 57 D2) // should be unique
+aobscanregion(INJECT_DAMAGE_MULTI,GladiusgladiusworldWeapongetPropertiesProc+3e0,GladiusgladiusworldWeapongetPropertiesProc+7e0,44 0F 28 C0 45 0F 57 D2) // should be unique
+alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
+
+label(code)
+label(return)
+label(vd_damage_multi)
+
+newmem:
+  mov dword ptr [is_checked_ok], 0
+  push rax
+  mov rax, [rsi+80]
+  test rax, rax
+  je check_endp
+
+  mov rax, [rax+b0]
+  test rax, rax
+  je check_endp
+
+  mov eax, [rax+8]
+  test eax, eax
+  jne check_endp
+
+  mov dword ptr [is_checked_ok], 1
+
+check_endp:
+  pop rax
+
+  cmp dword ptr [is_checked_ok], 1
+  jne code
+
+  vmovsd xmm14, [vd_damage_multi]
+  vmulsd xmm0, xmm0, xmm14
+
+code:
+  movaps xmm8,xmm0
+  xorps xmm10,xmm10
+  jmp return
+
+align 10 cc
+  is_checked_ok:
+  dd 0
+  vd_damage_multi:
+  dq (double)2.5
+
+
+INJECT_DAMAGE_MULTI:
+  jmp newmem
+  nop 3
+return:
+
+registersymbol(vd_damage_multi)
+registersymbol(INJECT_DAMAGE_MULTI)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI:
+  db 44 0F 28 C0 45 0F 57 D2
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Gladius.exe+402B59
+
+Gladius.exe+402B32: 80 B8 F0 00 00 00 00        - cmp byte ptr [rax+000000F0],00
+Gladius.exe+402B39: 75 13                       - jne Gladius.exe+402B4E
+Gladius.exe+402B3B: E8 F0 15 FD FF              - call Gladius.gladius::world::Unit::getGroupSize
+Gladius.exe+402B40: 8B C0                       - mov eax,eax
+Gladius.exe+402B42: 0F 57 C0                    - xorps xmm0,xmm0
+Gladius.exe+402B45: F2 48 0F 2A C0              - cvtsi2sd xmm0,rax
+Gladius.exe+402B4A: F2 0F 59 F0                 - mulsd xmm6,xmm0
+Gladius.exe+402B4E: 49 8B D4                    - mov rdx,r12
+Gladius.exe+402B51: 48 8B CE                    - mov rcx,rsi
+Gladius.exe+402B54: E8 B7 E3 FF FF              - call Gladius.gladius::world::Weapon::getDamage
+// ---------- INJECTING HERE ----------
+Gladius.exe+402B59: 44 0F 28 C0                 - movaps xmm8,xmm0
+// ---------- DONE INJECTING  ----------
+Gladius.exe+402B5D: 45 0F 57 D2                 - xorps xmm10,xmm10
+Gladius.exe+402B61: 48 83 BE 80 00 00 00 00     - cmp qword ptr [rsi+00000080],00
+Gladius.exe+402B69: 75 0B                       - jne Gladius.exe+402B76
+Gladius.exe+402B6B: 66 41 0F 2F C2              - comisd xmm0,xmm10
+Gladius.exe+402B70: 0F 86 41 01 00 00           - jbe Gladius.exe+402CB7
+Gladius.exe+402B76: 48 8D 44 24 58              - lea rax,[rsp+58]
+Gladius.exe+402B7B: 48 89 85 88 01 00 00        - mov [rbp+00000188],rax
+Gladius.exe+402B82: 4C 89 7C 24 68              - mov [rsp+68],r15
+Gladius.exe+402B87: 48 C7 44 24 70 0F 00 00 00  - mov qword ptr [rsp+70],0000000F
+Gladius.exe+402B90: C6 44 24 58 00              - mov byte ptr [rsp+58],00
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>38</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Double</VariableType>
+                  <Address>vd_damage_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>43</ID>
+      <Description>"Warhammer 40,000: Gladius Relics of War v1.10.01  /  opencheattables  /  CE 7.4+"</Description>
+      <Color>400080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
