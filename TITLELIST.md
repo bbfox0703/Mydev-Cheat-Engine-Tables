@@ -23,6 +23,11 @@ ja-JP: フィリスのアトリエ ～不思議な旅の錬金術士～ DX
 zh-TW: 莉迪＆蘇瑞的鍊金工房 ～不可思議繪畫的鍊金術士～ DX  
 ja-JP: リディー＆スールのアトリエ ～不思議な絵画の錬金術士～ DX  
 
+## Atelier Rorona DX (non-English)  
+[Atelier Rorona ~The Alchemist of Arland~ DX (non-English)(Steam)](https://store.steampowered.com/app/936160/__DX/)  
+zh-TW: 蘿樂娜的鍊金工房 ～亞蘭德之鍊金術士～ DX  
+ja-JP: ロロナのアトリエ ～アーランドの錬金術士～ DX  
+
 ## Atelier Sophie DX
 
 [Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)](https://store.steampowered.com/app/1502970/__DX/)
