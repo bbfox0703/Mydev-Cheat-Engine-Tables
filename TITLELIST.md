@@ -149,3 +149,7 @@ ja-JP: 聖剣伝説3 TRIALS of MANA
 ## Warhammer 40,000 Gladius Relics of War  
 
 [Warhammer 40,000: Gladius Relics of War (Steam)](https://store.steampowered.com/app/489630/Warhammer_40000_Gladius__Relics_of_War/)  
+
+## Warpips  
+[Warpips (Steam)](https://store.steampowered.com/app/1291010/__Warpips/)  
+zh-TW: 戰爭迷你兵 - Warpips  
