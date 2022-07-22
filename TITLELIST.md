@@ -58,7 +58,12 @@ ja-JP: ブリガンダイン ルーナジア戦記
 
 [Dōkyūsei Bangin' Summer  (Steam)](https://store.steampowered.com/app/1689910/Remake/)
 
-zh-TW: 同級生Remake
+zh-TW: 同級生Remake  
+
+## FINAL FANTASY VI
+[FINAL FANTASY VI (Steam)] (https://store.steampowered.com/app/1173820/FINAL_FANTASY_VI/)  
+zh-TW: 太空戰士VI 像素複刻版  
+ja-JP: ファイナルファンタジーVI ピクセルリマスター  
 
 ## Final Fantasy VII Remake Intergrade
 
