@@ -95,6 +95,10 @@ zh-TW: 舊世界 Old World
 ## Rabi-Ribi
 [Rabi-Ribi (Steam)](https://store.steampowered.com/app/400910/RabiRibi/)
 
+## SaGa Frontier Remastered  
+[SaGa Frontier Remastered (Steam)](https://store.steampowered.com/app/1295270/SaGa_Frontier_Remastered/)
+ja-JP: サガ フロンティア リマスター  
+
 ## Seraph's Last Stand
 
 [Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)
