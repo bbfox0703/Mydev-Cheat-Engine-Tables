@@ -137,6 +137,11 @@ ja-JP: 添丁の伝説
 
 [Tower of Time (Steam)](https://store.steampowered.com/app/617480/Tower_of_Time/)
 
+## Trials of Mana
+[Trials of Mana (Steam)](https://store.steampowered.com/app/924980/3_TRIALS_of_MANA/)  
+zh-TW: 聖劍傳說3 TRIALS of MANA  
+ja-JP: 聖剣伝説3 TRIALS of MANA  
+
 ## Warhammer 40,000 Gladius Relics of War  
 
 [Warhammer 40,000: Gladius Relics of War (Steam)](https://store.steampowered.com/app/489630/Warhammer_40000_Gladius__Relics_of_War/)  
