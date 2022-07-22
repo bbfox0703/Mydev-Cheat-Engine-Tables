@@ -66,7 +66,13 @@ zh-TW: 同級生Remake
 
 [Hatsune Miku: Project DIVA Mega Mix+ (Steam)](https://store.steampowered.com/app/1761390/_Project_DIVA_MEGA39s/)
 
-zh-TW: 初音未來 Project DIVA MEGA39’s＋
+zh-TW: 初音未來 Project DIVA MEGA39’s＋  
+
+## Langrisser I & II
+
+[Langrisser I & II (Steam)](https://store.steampowered.com/app/1060220/Langrisser_I__II/)  
+zh-TW:夢幻模擬戰 I & II  
+ja-JP:ラングリッサーI&II  
 
 ## Nayuta no Kiseki KAI
 
