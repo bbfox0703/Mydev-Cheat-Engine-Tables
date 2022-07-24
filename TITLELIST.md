@@ -91,7 +91,7 @@ zh-TW:夢幻模擬戰 I & II
 ja-JP:ラングリッサーI&II  
 
 ## Monster Hunter Rise
-[Monster Hunter Rise (Steam)](https://store.steampowered.com/app/1446780/MONSTER_HUNTER_RISE/)  
+[MMONSTER HUNTER RISE (Steam)](https://store.steampowered.com/app/1446780/MONSTER_HUNTER_RISE/)  
 zh-TW:魔物獵人崛起  
 ja-JP:モンスターハンターライズ  
 
