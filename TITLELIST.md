@@ -80,9 +80,15 @@ ja-JP: ファイナルファンタジーVI ピクセルリマスター
 
 ## Hatsune Miku Project DIVA Mega Mix+
 
-[Hatsune Miku: Project DIVA Mega Mix+ (Steam)](https://store.steampowered.com/app/1761390/_Project_DIVA_MEGA39s/)
-
+[Hatsune Miku: Project DIVA Mega Mix+ (Steam)](https://store.steampowered.com/app/1761390/_Project_DIVA_MEGA39s/)  
 zh-TW: 初音未來 Project DIVA MEGA39’s＋  
+ja-JP: 初音ミク Project DIVA MEGA39’s＋  
+
+## Kemono Friends Cellien May Cry  
+[Kemono Friends Cellien May Cry (Steam)](https://store.steampowered.com/app/1962920/_Cellien_May_Cry/)
+zh-TW: 動物朋友 Cellien May Cry   
+ja-JP: けものフレンズ Cellien May Cry   
+
 
 ## Langrisser I & II
 
