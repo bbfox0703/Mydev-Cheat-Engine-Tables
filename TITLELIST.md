@@ -90,6 +90,11 @@ zh-TW: 初音未來 Project DIVA MEGA39’s＋
 zh-TW:夢幻模擬戰 I & II  
 ja-JP:ラングリッサーI&II  
 
+## Monster Hunter Rise
+[Monster Hunter Rise (Steam)](https://store.steampowered.com/app/1446780/MONSTER_HUNTER_RISE/)  
+zh-TW:魔物獵人崛起  
+ja-JP:モンスターハンターライズ  
+
 ## Nayuta no Kiseki KAI
 
 [Nayuta no Kiseki: KAI (Steam)](https://store.steampowered.com/app/1732390/_/)
