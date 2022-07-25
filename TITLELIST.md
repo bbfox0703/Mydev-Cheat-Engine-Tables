@@ -173,4 +173,4 @@ ja-JP: 聖剣伝説3 TRIALS of MANA
 
 ## Warpips  
 [Warpips (Steam)](https://store.steampowered.com/app/1291010/__Warpips/)  
-zh-TW: 戰爭迷你兵 - Warpips  
+	
