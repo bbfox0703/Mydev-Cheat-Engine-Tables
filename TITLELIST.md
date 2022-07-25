@@ -113,6 +113,9 @@ zh-TW: 那由多之軌跡：改
 
 zh-TW: 舊世界 Old World
 
+## Orbital Bullet  
+[Orbital Bullet – The 360° Rogue-lite (Steam)](https://store.steampowered.com/app/1167680/Orbital_Bullet__The_360_Roguelite/)  
+
 ## Rabi-Ribi
 [Rabi-Ribi (Steam)](https://store.steampowered.com/app/400910/RabiRibi/)
 

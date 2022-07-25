@@ -1,0 +1,2749 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>58</ID>
+      <Description>"Compact mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"Enable (enable twice before load save / new game)"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+--code credit to MarianaRoses
+if syntaxcheck then return end
+if process == nil then ShowMessage('Process is not selected.')
+elseif readInteger(process) == 0 then ShowMessage('Process cannot be opened.')
+else
+  if (monopipe~=nil) and (monopipe.ProcessID~=getOpenedProcessID()) then
+    monopipe.destroy()
+    monopipe=nil
+  end
+  if (monopipe==nil) then
+    LaunchMonoDataCollector()
+  end
+end
+
+{$asm}
+//Author: @https://opencheattables.org/
+define(GameManagerProc,"GameManager:Awake")
+define(PlayerHealthProc,"PlayerHealth:set_CurrentHealth")
+define(SkillTreeProc,"SkillTree:Update")
+define(AmmoHUDProc,"AmmoHUD:DecreaseAmmo")
+define(Currency_MetalProc, "Currency:AddMetalShardsToCurrentRun")
+define(EnemyHealthProc,"EnemyHealth:TakeDamage")
+
+registersymbol(GameManagerProc)
+registersymbol(PlayerHealthProc)
+registersymbol(SkillTreeProc)
+registersymbol(AmmoHUDProc)
+registersymbol(Currency_MetalProc)
+registersymbol(EnemyHealthProc)
+
+[DISABLE]
+{$lua}
+if not syntaxcheck and monopipe then monopipe = nil,monopipe.Destroy()end
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Step. 1: (Optional) Game manager detection (Active before load game save / new game)"</Description>
+          <Color>008000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : OrbitalBullet.exe
+  Version: 
+  Date   : 2022-03-27
+  Author : bbfox @ https: //opencheattables.org/
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GAME_MANAGER_INIT,GameManagerProc+320, GameManagerProc+620,48 8B 46 58 48 8B C8 83 38 00 90 49 BB) // should be unique
+alloc(newmem,$1000,INJECT_GAME_MANAGER_INIT)
+
+label(code)
+label(return)
+label(i_game_manager_addr)
+
+newmem:
+  mov [i_game_manager_addr], rsi
+
+code:
+  mov rax,[rsi+58]
+  mov rcx,rax
+  jmp return
+
+align 10 cc
+  i_game_manager_addr:
+  dq 0
+
+
+INJECT_GAME_MANAGER_INIT:
+  jmp newmem
+  nop 2
+return:
+registersymbol(i_game_manager_addr)
+registersymbol(INJECT_GAME_MANAGER_INIT)
+
+[DISABLE]
+
+INJECT_GAME_MANAGER_INIT:
+  db 48 8B 46 58 48 8B C8
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameManager:Awake+323
+
+GameManager:Awake+2f6: 83 38 00                       - cmp dword ptr [rax],00
+GameManager:Awake+2f9: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+GameManager:Awake+2fe: 49 BB D0 66 C1 5B CE 01 00 00  - mov r11,Missions:Init
+GameManager:Awake+308: 41 FF D3                       - call r11
+GameManager:Awake+30b: 48 8B 46 50                    - mov rax,[rsi+50]
+GameManager:Awake+30f: 48 8B C8                       - mov rcx,rax
+GameManager:Awake+312: 83 38 00                       - cmp dword ptr [rax],00
+GameManager:Awake+315: 90                             - nop 
+GameManager:Awake+316: 49 BB 50 A3 C1 5B CE 01 00 00  - mov r11,PlayerControl:Init
+GameManager:Awake+320: 41 FF D3                       - call r11
+// ---------- INJECTING HERE ----------
+GameManager:Awake+323: 48 8B 46 58                    - mov rax,[rsi+58]
+// ---------- DONE INJECTING  ----------
+GameManager:Awake+327: 48 8B C8                       - mov rcx,rax
+GameManager:Awake+32a: 83 38 00                       - cmp dword ptr [rax],00
+GameManager:Awake+32d: 90                             - nop 
+GameManager:Awake+32e: 49 BB F0 B7 C1 5B CE 01 00 00  - mov r11,PlayerStats:Init
+GameManager:Awake+338: 41 FF D3                       - call r11
+GameManager:Awake+33b: 48 B9 D0 15 2B 2A CE 01 00 00  - mov rcx,000001CE2A2B15D0
+GameManager:Awake+345: 90                             - nop 
+GameManager:Awake+346: 49 BB C0 A8 3D 2A CE 01 00 00  - mov r11,ES3:FileExists
+GameManager:Awake+350: 41 FF D3                       - call r11
+GameManager:Awake+353: 85 C0                          - test eax,eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>22</ID>
+              <Description>"GameManager addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_game_manager_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>254</ID>
+              <Description>"GameManager+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>107</ID>
+                  <Description>"Currency+"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>96</ID>
+                      <Description>"currentShardPieces"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>D8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>97</ID>
+                      <Description>"&lt;MetalShardsInCurrentRun&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>DC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>98</ID>
+                      <Description>"&lt;NanoBytesInCurrentRun&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>E0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>99</ID>
+                      <Description>"&lt;NanoBytesInSafe&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>E4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>100</ID>
+                      <Description>"&lt;NanoBytesSafeCap&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>E8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>101</ID>
+                      <Description>"&lt;KeycardsInCurrentRun&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>EC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>102</ID>
+                      <Description>"&lt;BatteryKeysInCurrentRun&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>F0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>103</ID>
+                      <Description>"&lt;EternityShardsInCurrentRun&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>F4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>104</ID>
+                      <Description>"&lt;OverchargeFragmentsInCurrentRun&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>F8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>105</ID>
+                      <Description>"currentNeuropods"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>FC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>106</ID>
+                      <Description>"currentWeaponParts"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+40</Address>
+                      <Offsets>
+                        <Offset>100</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>116</ID>
+                  <Description>"AmmoHUD+"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>108</ID>
+                      <Description>"&lt;MaxBulletAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>F0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>109</ID>
+                      <Description>"&lt;MaxShellAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>F4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>110</ID>
+                      <Description>"&lt;MaxEnergyAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>F8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>111</ID>
+                      <Description>"&lt;MaxExplosiveAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>FC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>112</ID>
+                      <Description>"&lt;CurrentBulletAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>100</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>113</ID>
+                      <Description>"&lt;CurrentShellAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>104</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>114</ID>
+                      <Description>"&lt;CurrentEnergyAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>108</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>115</ID>
+                      <Description>"&lt;CurrentExplosiveAmmo&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+38</Address>
+                      <Offsets>
+                        <Offset>10C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>253</ID>
+                  <Description>"playerStat+"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>177</ID>
+                      <Description>"chanceToSpawnGrenadeOnShoot"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>138</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>178</ID>
+                      <Description>"reducedExplosiveDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>13C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>179</ID>
+                      <Description>"increasedExplosiveDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>140</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>180</ID>
+                      <Description>"increasedEnergyDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>144</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>181</ID>
+                      <Description>"increasedBulletDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>148</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>182</ID>
+                      <Description>"increasedShellDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>14C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>183</ID>
+                      <Description>"increasedExplosionRadius"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>150</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>184</ID>
+                      <Description>"increasedMovementSpeed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>154</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>185</ID>
+                      <Description>"increasedDMGperMovementSpeed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>158</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>186</ID>
+                      <Description>"reducedRecoil"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>15C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>187</ID>
+                      <Description>"reducedRechargeTimeAfterKill"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>160</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>188</ID>
+                      <Description>"stunChanceOnHit"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>164</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>189</ID>
+                      <Description>"increasedHealth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>168</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>190</ID>
+                      <Description>"increasedDamagePercentage"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>16C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>191</ID>
+                      <Description>"increasedCritChanceWithBulletTypeAmmo"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>170</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>192</ID>
+                      <Description>"increasedCloseRangeDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>174</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>193</ID>
+                      <Description>"increasedLongRangeDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>178</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>194</ID>
+                      <Description>"increasedDMGonLowHealth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>17C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>195</ID>
+                      <Description>"comboStreakIncreasedIRCurrencyFind"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>180</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>196</ID>
+                      <Description>"comboStreakIncreasedFlatDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>184</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>197</ID>
+                      <Description>"comboReduceTakenDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>188</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>198</ID>
+                      <Description>"comboIncreasedTimeDuration"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>18C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>199</ID>
+                      <Description>"increasedChanceToFindIRCurrency"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>190</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>200</ID>
+                      <Description>"increasedChanceToFindORCurrency"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>194</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>201</ID>
+                      <Description>"chanceOnDoubleDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>198</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>202</ID>
+                      <Description>"chanceOnCritTwice"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>19C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>203</ID>
+                      <Description>"chanceToChainLighting"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1A0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>204</ID>
+                      <Description>"chanceToPreventDMG"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1A4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>205</ID>
+                      <Description>"chanceToLifestealOnKill"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1A8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>206</ID>
+                      <Description>"increasedDamageWhenNoEnemyIsClose"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1AC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>207</ID>
+                      <Description>"increasedCritChancePerDistance"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1B0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>208</ID>
+                      <Description>"increasedAmmoCapacity"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1B4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>209</ID>
+                      <Description>"comboShieldAmount"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1B8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>210</ID>
+                      <Description>"chanceForShopSale"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1BC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>211</ID>
+                      <Description>"reduceCritDamage"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1C0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>212</ID>
+                      <Description>"chanceToCauseBleeding"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1C4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>213</ID>
+                      <Description>"healAmount"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1C8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>214</ID>
+                      <Description>"healPotLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1CC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>215</ID>
+                      <Description>"increasedHealPotCharges"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1D0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>216</ID>
+                      <Description>"startMetalShards"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1D4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>217</ID>
+                      <Description>"damageGainedFromMaxHealth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1D8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>218</ID>
+                      <Description>"laserBootsLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1DC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>219</ID>
+                      <Description>"critShurikenLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1E0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>220</ID>
+                      <Description>"critDamageModifier"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1E4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>221</ID>
+                      <Description>"droneLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1E8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>222</ID>
+                      <Description>"itemStackCharges"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1EC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>223</ID>
+                      <Description>"laserWallLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1F0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>224</ID>
+                      <Description>"droneArmorLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1F4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>225</ID>
+                      <Description>"slowTrailDodgeLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1F8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>226</ID>
+                      <Description>"meleeSwingLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>1FC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>227</ID>
+                      <Description>"shieldStartValue"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>200</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>228</ID>
+                      <Description>"experienceMultiplier"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>204</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>229</ID>
+                      <Description>"comboExperienceMultiplier"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>208</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>230</ID>
+                      <Description>"itemCooldownRecovery"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>20C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>231</ID>
+                      <Description>"spikedBootsDamage"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>210</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>232</ID>
+                      <Description>"cashDamageIncrease"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>214</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>233</ID>
+                      <Description>"hackingAttempts"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>218</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>234</ID>
+                      <Description>"classIncreasedCritRate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>21C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>235</ID>
+                      <Description>"classIncreasedCritDamage"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>220</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>236</ID>
+                      <Description>"classIncreasedExplosiveRange"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>224</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>237</ID>
+                      <Description>"classReducedItemCooldown"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>228</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>238</ID>
+                      <Description>"isComboSystemRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>22C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>239</ID>
+                      <Description>"isWeaponSwapBuffActive"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>22D</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>240</ID>
+                      <Description>"weaponSwapBuffTicker"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>230</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>241</ID>
+                      <Description>"weaponSwapBuffThreshold"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>234</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>242</ID>
+                      <Description>"weaponSwapBuffDamageIncrease"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>238</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>243</ID>
+                      <Description>"healthPerkLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>23C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>244</ID>
+                      <Description>"critPerkLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>240</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>245</ID>
+                      <Description>"stunPerkLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>244</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>246</ID>
+                      <Description>"currencyChancePerkLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>248</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>247</ID>
+                      <Description>"lifestealPerkLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>24C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>248</ID>
+                      <Description>"damagePerkLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>250</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>249</ID>
+                      <Description>"currentExperienceLevel"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>254</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>250</ID>
+                      <Description>"currentExperience"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>258</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>251</ID>
+                      <Description>"experienceNeededForLevelUp"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>25C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>252</ID>
+                      <Description>"currentClassRef"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+58</Address>
+                      <Offsets>
+                        <Offset>260</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>151</ID>
+                  <Description>"playerHealth+"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>117</ID>
+                      <Description>"&lt;MaxHealth&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>B0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>118</ID>
+                      <Description>"startHealth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>B4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>119</ID>
+                      <Description>"currentHealth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>B8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>120</ID>
+                      <Description>"isAlive"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>BC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>121</ID>
+                      <Description>"&lt;IsLowLife&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>BD</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>122</ID>
+                      <Description>"&lt;IsFullLife&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>BE</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>123</ID>
+                      <Description>"deathCalled"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>BF</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>124</ID>
+                      <Description>"isInvulnerableRoutineRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>C0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>125</ID>
+                      <Description>"isVisualizeHitRoutineRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>C1</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>126</ID>
+                      <Description>"invincibilityTime"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>C4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>127</ID>
+                      <Description>"invincibilityFlashCounter"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>C8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>128</ID>
+                      <Description>"lastTimeHitted"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>CC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>129</ID>
+                      <Description>"&lt;PlayerIsImmortal&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>D0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>130</ID>
+                      <Description>"isBuzzsawArmorRoutineRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>D1</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>131</ID>
+                      <Description>"isFireArmorRoutineRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>D2</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>132</ID>
+                      <Description>"buzzsawArmorRoutineHandle"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>D4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>133</ID>
+                      <Description>"fireArmorRoutineHandle"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>D8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>134</ID>
+                      <Description>"wasLastStandTriggered"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>DC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>135</ID>
+                      <Description>"lifeStealCounter"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>E0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>136</ID>
+                      <Description>"guaranteedLifeStealThreshold"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>E4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>137</ID>
+                      <Description>"lifeStealHealValue"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>E8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>138</ID>
+                      <Description>"isEnemyFreezeRoutineRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>EC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>139</ID>
+                      <Description>"deathParameterLerpTimer"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>F8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>140</ID>
+                      <Description>"lerpDeathParameter"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>FC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>141</ID>
+                      <Description>"allSoundsFaded"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>FD</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>142</ID>
+                      <Description>"invulnerableRoutine"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>100</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>143</ID>
+                      <Description>"&lt;CanTakeDamage&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>104</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>144</ID>
+                      <Description>"healthRegenTicker"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>108</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>145</ID>
+                      <Description>"healthRegenThreshhold"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>10C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>146</ID>
+                      <Description>"isOneHitChallengeRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>110</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>147</ID>
+                      <Description>"currentShield"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>114</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>148</ID>
+                      <Description>"maxShield"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>118</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>149</ID>
+                      <Description>"poisonDamage"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>11C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>150</ID>
+                      <Description>"poisonRunning"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+60</Address>
+                      <Offsets>
+                        <Offset>120</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>176</ID>
+                  <Description>"General+"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>152</ID>
+                      <Description>"wasStageCleared_10"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+D4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>153</ID>
+                      <Description>"wasStageCleared_15"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+D5</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>154</ID>
+                      <Description>"wasStageCleared_20"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+D6</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>155</ID>
+                      <Description>"wasStageCleared_25"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+D7</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>156</ID>
+                      <Description>"wasStageCleared_30"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+D8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>157</ID>
+                      <Description>"wasStageCleared_35"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+D9</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>158</ID>
+                      <Description>"wasStageCleared_40"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+DA</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>159</ID>
+                      <Description>"wasStageCleared_45"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+DB</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>160</ID>
+                      <Description>"wasStageCleared_50"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+DC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>161</ID>
+                      <Description>"wasStageCleared_55"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+DD</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>162</ID>
+                      <Description>"wasStageCleared_60"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+DE</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>163</ID>
+                      <Description>"wasStageCleared_65"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+DF</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>164</ID>
+                      <Description>"wasStageCleared_70"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>165</ID>
+                      <Description>"wasStageCleared_75"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E1</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>166</ID>
+                      <Description>"wasStageCleared_80"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E2</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>167</ID>
+                      <Description>"wasStageCleared_85"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E3</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>168</ID>
+                      <Description>"wasStageCleared_90"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>169</ID>
+                      <Description>"wasStageCleared_95"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E5</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>170</ID>
+                      <Description>"wasStageCleared_100"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+E6</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>171</ID>
+                      <Description>"currentStreak"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>172</ID>
+                      <Description>"unlockedDifficulties"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+EC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>173</ID>
+                      <Description>"isUsingStreakSystem"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_game_manager_addr]+F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>174</ID>
+                      <Description>"maxDifficulty"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+F4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>175</ID>
+                      <Description>"enemiesKilledInRun"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_game_manager_addr]+F8</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Player Health (active: get hit)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : OrbitalBullet.exe
+  Version: 
+  Date   : 2022-03-27
+}
+
+[ENABLE]
+
+aobscanregion(OPEN_CHEAT_TABLES,PlayerHealthProc+b, PlayerHealthProc+10b, 89 87 B8 00 00 00 83 F8 14) // should be unique
+alloc(newmem,$1000,OPEN_CHEAT_TABLES)
+
+label(code)
+label(return)
+label(i_player_health_addr)
+label(min_player_health)
+label(i_game_manager_addr_h)
+
+newmem:
+  push rbx
+  mov [i_player_health_addr], rdi
+  mov rbx, [rdi-60]
+  mov [i_game_manager_addr_h], rbx
+  pop rbx
+  cmp eax, [min_player_health]
+  ja code
+  mov eax, [min_player_health]
+
+
+code:
+  mov [rdi+000000B8],eax
+  jmp return
+  i_player_health_addr:
+  dq 0
+  min_player_health:
+  dd #50
+  i_game_manager_addr_h:
+  dq 0
+
+OPEN_CHEAT_TABLES:
+  jmp newmem
+  nop
+return:
+
+registersymbol(i_game_manager_addr_h)
+registersymbol(min_player_health)
+registersymbol(i_player_health_addr)
+registersymbol(OPEN_CHEAT_TABLES)
+
+[DISABLE]
+
+OPEN_CHEAT_TABLES:
+  db 89 87 B8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerHealth:set_CurrentHealth+13
+
+21E43EB5FF7: 00 00                 - add [rax],al
+21E43EB5FF9: 00 00                 - add [rax],al
+21E43EB5FFB: 00 00                 - add [rax],al
+21E43EB5FFD: 00 00                 - add [rax],al
+21E43EB5FFF: 00 48 83              - add [rax-7D],cl
+PlayerHealth:set_CurrentHealth+2: EC                    - in al,dx
+PlayerHealth:set_CurrentHealth+3: 18 48 89              - sbb [rax-77],cl
+PlayerHealth:set_CurrentHealth+6: 3C 24                 - cmp al,24
+PlayerHealth:set_CurrentHealth+8: 48 8B F9              - mov rdi,rcx
+PlayerHealth:set_CurrentHealth+b: 48 89 54 24 08        - mov [rsp+08],rdx
+// ---------- INJECTING HERE ----------
+PlayerHealth:set_CurrentHealth+10: 48 8B C2              - mov rax,rdx
+// ---------- DONE INJECTING  ----------
+PlayerHealth:set_CurrentHealth+13: 89 87 B8 00 00 00     - mov [rdi+000000B8],eax
+PlayerHealth:set_CurrentHealth+19: 83 F8 14              - cmp eax,14
+PlayerHealth:set_CurrentHealth+1c: 7F 09                 - jg PlayerHealth:set_CurrentHealth+27
+PlayerHealth:set_CurrentHealth+1e: C6 87 BD 00 00 00 01  - mov byte ptr [rdi+000000BD],01
+PlayerHealth:set_CurrentHealth+25: EB 07                 - jmp PlayerHealth:set_CurrentHealth+2e
+PlayerHealth:set_CurrentHealth+27: C6 87 BD 00 00 00 00  - mov byte ptr [rdi+000000BD],00
+PlayerHealth:set_CurrentHealth+2e: 48 63 87 B8 00 00 00  - movsxd  rax,dword ptr [rdi+000000B8]
+PlayerHealth:set_CurrentHealth+35: 48 63 8F B0 00 00 00  - movsxd  rcx,dword ptr [rdi+000000B0]
+PlayerHealth:set_CurrentHealth+3c: 3B C1                 - cmp eax,ecx
+PlayerHealth:set_CurrentHealth+3e: 75 09                 - jne PlayerHealth:set_CurrentHealth+49
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"Player health addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_player_health_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"Min. health threshold"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>min_player_health</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>38</ID>
+              <Description>"&lt;MaxHealth&gt;k__BackingField"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_player_health_addr]+B0</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>39</ID>
+              <Description>"startHealth"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_player_health_addr]+B4</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>40</ID>
+              <Description>"currentHealth"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_player_health_addr]+B8</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>57</ID>
+              <Description>"Values+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>41</ID>
+                  <Description>"isAlive"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_player_health_addr]+BC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>42</ID>
+                  <Description>"invincibilityTime"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_player_health_addr]+C4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>43</ID>
+                  <Description>"invincibilityFlashCounter"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_player_health_addr]+C8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>44</ID>
+                  <Description>"lifeStealCounter"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_player_health_addr]+E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>45</ID>
+                  <Description>"guaranteedLifeStealThreshold"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_player_health_addr]+E4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>46</ID>
+                  <Description>"lifeStealHealValue"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_player_health_addr]+E8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>47</ID>
+                  <Description>"healthRegenTicker"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_player_health_addr]+108</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>48</ID>
+                  <Description>"healthRegenThreshhold"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_player_health_addr]+10C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>49</ID>
+                  <Description>"isOneHitChallengeRunning"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_player_health_addr]+110</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>50</ID>
+                  <Description>"currentShield"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_player_health_addr]+114</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>51</ID>
+                  <Description>"maxShield"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_player_health_addr]+118</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>52</ID>
+                  <Description>"poisonDamage"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_player_health_addr]+11C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>53</ID>
+                  <Description>"poisonRunning"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_player_health_addr]+120</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>54</ID>
+                  <Description>"&lt;IsLowLife&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_player_health_addr]+BD</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>55</ID>
+                  <Description>"&lt;IsFullLife&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_player_health_addr]+BE</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>56</ID>
+                  <Description>"deathCalled"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_player_health_addr]+BF</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>25</ID>
+          <Description>"Min. ammo"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : OrbitalBullet.exe
+  Version: 
+  Date   : 2022-03-27
+  Author : bbfox @ https://opencheat tables.org/
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_MIN_AMMO,"AmmoHUDProc"+1b, "AmmoHUDProc"+11b, 4C 8B F9 48 8B FA 49 8B F0 FF CF 83 FF 04) // should be unique
+alloc(newmem,$1000,INJECT_MIN_AMMO)
+
+label(code)
+label(return)
+label(i_ammohud_addr)
+label(i_min_ammo)
+
+newmem:
+  mov [i_ammohud_addr], rcx
+  push rax
+  push rbx
+
+  mov ebx, [i_min_ammo]
+
+  mov eax, [rcx+100]
+  cmp eax, ebx
+  cmovl eax, ebx
+  mov [rcx+100], eax
+
+  mov eax, [rcx+104]
+  cmp eax, ebx
+  cmovl eax, ebx
+  mov [rcx+100], eax
+
+  mov eax, [rcx+108]
+  cmp eax, ebx
+  cmovl eax, ebx
+  mov [rcx+100], eax
+
+  mov eax, [rcx+10C]
+  cmp eax, ebx
+  cmovl eax, ebx
+  mov [rcx+100], eax
+
+  pop rbx
+  pop rax
+
+code:
+  mov r15,rcx
+  mov rdi,rdx
+  jmp return
+
+align 10 cc
+  i_ammohud_addr:
+  dq 0
+  i_min_ammo:
+  dd 1
+
+
+INJECT_MIN_AMMO:
+  jmp newmem
+  nop
+return:
+
+registersymbol(i_ammohud_addr)
+registersymbol(i_min_ammo)
+registersymbol(INJECT_MIN_AMMO)
+
+[DISABLE]
+
+INJECT_MIN_AMMO:
+  db 4C 8B F9 48 8B FA
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: AmmoHUD:DecreaseAmmo+1b
+
+15FD1459B9C: 5F                             - pop rdi
+15FD1459B9D: 01 00                          - add [rax],eax
+15FD1459B9F: 00 55 48                       - add [rbp+48],dl
+AmmoHUD:DecreaseAmmo+2: 8B EC                          - mov ebp,esp
+AmmoHUD:DecreaseAmmo+4: 48 81 EC 90 00 00 00           - sub rsp,00000090
+AmmoHUD:DecreaseAmmo+b: 48 89 75 E0                    - mov [rbp-20],rsi
+AmmoHUD:DecreaseAmmo+f: 48 89 7D E8                    - mov [rbp-18],rdi
+AmmoHUD:DecreaseAmmo+13: 4C 89 75 F0                    - mov [rbp-10],r14
+AmmoHUD:DecreaseAmmo+17: 4C 89 7D F8                    - mov [rbp-08],r15
+AmmoHUD:DecreaseAmmo+1b: 4C 8B F9                       - mov r15,rcx
+// ---------- INJECTING HERE ----------
+AmmoHUD:DecreaseAmmo+1e: 48 8B FA                       - mov rdi,rdx
+// ---------- DONE INJECTING  ----------
+AmmoHUD:DecreaseAmmo+21: 49 8B F0                       - mov rsi,r8
+AmmoHUD:DecreaseAmmo+24: FF CF                          - dec edi
+AmmoHUD:DecreaseAmmo+26: 83 FF 04                       - cmp edi,04
+AmmoHUD:DecreaseAmmo+29: 0F 83 16 02 00 00              - jae AmmoHUD:DecreaseAmmo+245
+AmmoHUD:DecreaseAmmo+2f: 48 8B C7                       - mov rax,rdi
+AmmoHUD:DecreaseAmmo+32: 48 C1 E0 03                    - shl rax,03
+AmmoHUD:DecreaseAmmo+36: 8B C8                          - mov ecx,eax
+AmmoHUD:DecreaseAmmo+38: 48 B8 90 9E 45 D1 5F 01 00 00  - mov rax,0000015FD1459E90
+AmmoHUD:DecreaseAmmo+42: 48 03 C1                       - add rax,rcx
+AmmoHUD:DecreaseAmmo+45: 48 8B 00                       - mov rax,[rax]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>26</ID>
+              <Description>"Base addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_ammohud_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>27</ID>
+              <Description>"Min. ammo"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_ammo</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>36</ID>
+              <Description>"Cur. Value+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>28</ID>
+                  <Description>"&lt;MaxBulletAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>29</ID>
+                  <Description>"&lt;MaxShellAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>30</ID>
+                  <Description>"&lt;MaxEnergyAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>31</ID>
+                  <Description>"&lt;MaxExplosiveAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+FC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>32</ID>
+                  <Description>"&lt;CurrentBulletAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+100</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>33</ID>
+                  <Description>"&lt;CurrentShellAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+104</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>34</ID>
+                  <Description>"&lt;CurrentEnergyAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+108</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>35</ID>
+                  <Description>"&lt;CurrentExplosiveAmmo&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_ammohud_addr]+10C</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>0</ID>
+          <Description>"Skill tree (Active: open skill tree)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : OrbitalBullet.exe
+  Version: 
+  Date   : 2022-03-27
+  Author : bbfox @ https://opencheattables.org/
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SKILL_TREE_UPDATE,SkillTreeProc+5d, SkillTreeProc+25d,0F B6 86 E9 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SKILL_TREE_UPDATE)
+
+label(code)
+label(return)
+label(i_skill_tree_base_addr)
+
+newmem:
+  mov [i_skill_tree_base_addr], rsi
+
+code:
+  movzx eax,byte ptr [rsi+000001E9]
+  jmp return
+
+align 10 cc
+  i_skill_tree_base_addr:
+  dq 0
+
+INJECT_SKILL_TREE_UPDATE:
+  jmp newmem
+  nop 2
+return:
+
+registersymbol(i_skill_tree_base_addr)
+registersymbol(INJECT_SKILL_TREE_UPDATE)
+
+[DISABLE]
+
+INJECT_SKILL_TREE_UPDATE:
+  db 0F B6 86 E9 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: SkillTree:Update+5d
+
+SkillTree:Update+30: 41 FF D3                       - call r11
+SkillTree:Update+33: 85 C0                          - test eax,eax
+SkillTree:Update+35: 0F 84 B0 05 00 00              - je SkillTree:Update+5eb
+SkillTree:Update+3b: 48 B8 50 FE C9 D9 61 01 00 00  - mov rax,00000161D9C9FE50
+SkillTree:Update+45: 48 8B 00                       - mov rax,[rax]
+SkillTree:Update+48: 48 8B C8                       - mov rcx,rax
+SkillTree:Update+4b: 83 39 00                       - cmp dword ptr [rcx],00
+SkillTree:Update+4e: 0F B6 80 B0 00 00 00           - movzx eax,byte ptr [rax+000000B0]
+SkillTree:Update+55: 85 C0                          - test eax,eax
+SkillTree:Update+57: 0F 84 8E 05 00 00              - je SkillTree:Update+5eb
+// ---------- INJECTING HERE ----------
+SkillTree:Update+5d: 0F B6 86 E9 01 00 00           - movzx eax,byte ptr [rsi+000001E9]
+// ---------- DONE INJECTING  ----------
+SkillTree:Update+64: 85 C0                          - test eax,eax
+SkillTree:Update+66: 0F 84 0C 03 00 00              - je SkillTree:Update+378
+SkillTree:Update+6c: 48 B8 48 C6 84 D9 61 01 00 00  - mov rax,00000161D984C648
+SkillTree:Update+76: 48 8B 00                       - mov rax,[rax]
+SkillTree:Update+79: 48 8B 40 30                    - mov rax,[rax+30]
+SkillTree:Update+7d: 48 8B C8                       - mov rcx,rax
+SkillTree:Update+80: 48 BA 90 FC 9C AF 61 01 00 00  - mov rdx,00000161AF9CFC90
+SkillTree:Update+8a: 83 38 00                       - cmp dword ptr [rax],00
+SkillTree:Update+8d: 90                             - nop
+SkillTree:Update+8e: 49 BB 06 90 42 B0 61 01 00 00  - mov r11,00000161B0429006
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1</ID>
+              <Description>"base addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_skill_tree_base_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"availableSkillPoints"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_skill_tree_base_addr]+1F4</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"Values+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>2</ID>
+                  <Description>"skillPatternXPos"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>3</ID>
+                  <Description>"skillPatternYPos"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1E4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4</ID>
+                  <Description>"isDoingSkillTreeUpgrade"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1E8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5</ID>
+                  <Description>"isInPatternSelection"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1E9</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>6</ID>
+                  <Description>"isDoingOvercharge"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1EA</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>7</ID>
+                  <Description>"canSkillUpgrades"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1EB</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>8</ID>
+                  <Description>"hasSelectedANewPattern"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1EC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>9</ID>
+                  <Description>"skillPointsPerUpgradeStation"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>255</ID>
+                  <Description>"availableSkillPoints"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>11</ID>
+                  <Description>"tierOneSkillsSet"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"currentSkillTreeRow"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1FC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>13</ID>
+                  <Description>"isTopPatternSelected"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+201</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>14</ID>
+                  <Description>"firstTimeOpened"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_skill_tree_base_addr]+1F9</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>15</ID>
+                  <Description>"randomSeed"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_skill_tree_base_addr]+204</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"Get currency data (active: get metal shard) "</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : OrbitalBullet.exe
+  Version: 
+  Date   : 2022-03-27
+  Author : bbfox @ https:// open cheat tables.org /
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_CURRENCY_DATA,Currency_MetalProc+1a, Currency_MetalProc+11a,48 8B 47 18 48 8B C8 83 38 00) // should be unique
+alloc(newmem,$1000,INJECT_CURRENCY_DATA)
+
+label(code)
+label(return)
+label(i_base_currency_metal_addr)
+
+newmem:
+  mov [i_base_currency_metal_addr], rdi
+
+code:
+  mov rax,[rdi+18]
+  mov rcx,rax
+  jmp return
+
+align 10 cc
+  i_base_currency_metal_addr:
+  dq 0
+
+INJECT_CURRENCY_DATA:
+  jmp newmem
+  nop 2
+return:
+
+registersymbol(i_base_currency_metal_addr)
+registersymbol(INJECT_CURRENCY_DATA)
+
+[DISABLE]
+
+INJECT_CURRENCY_DATA:
+  db 48 8B 47 18 48 8B C8
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Currency:AddMetalShardsToCurrentRun+1a
+
+15FD14C19CA: 00 00                          - add [rax],al
+15FD14C19CC: 00 00                          - add [rax],al
+15FD14C19CE: 00 00                          - add [rax],al
+Currency:AddMetalShardsToCurrentRun: 55                             - push rbp
+Currency:AddMetalShardsToCurrentRun+1: 48 8B EC                       - mov rbp,rsp
+Currency:AddMetalShardsToCurrentRun+4: 48 83 EC 40                    - sub rsp,40
+Currency:AddMetalShardsToCurrentRun+8: 48 89 7D F8                    - mov [rbp-08],rdi
+Currency:AddMetalShardsToCurrentRun+c: 48 8B F9                       - mov rdi,rcx
+Currency:AddMetalShardsToCurrentRun+f: 48 89 55 E8                    - mov [rbp-18],rdx
+Currency:AddMetalShardsToCurrentRun+13: C7 45 F0 00 00 00 00           - mov [rbp-10],00000000
+// ---------- INJECTING HERE ----------
+Currency:AddMetalShardsToCurrentRun+1a: 48 8B 47 18                    - mov rax,[rdi+18]
+// ---------- DONE INJECTING  ----------
+Currency:AddMetalShardsToCurrentRun+1e: 48 8B C8                       - mov rcx,rax
+Currency:AddMetalShardsToCurrentRun+21: 83 38 00                       - cmp dword ptr [rax],00
+Currency:AddMetalShardsToCurrentRun+24: 66 90                          - nop 2
+Currency:AddMetalShardsToCurrentRun+26: 49 BB E0 68 C0 FF 5F 01 00 00  - mov r11,UnityEngine.GameObject:get_activeSelf
+Currency:AddMetalShardsToCurrentRun+30: 41 FF D3                       - call r11
+Currency:AddMetalShardsToCurrentRun+33: 85 C0                          - test eax,eax
+Currency:AddMetalShardsToCurrentRun+35: 75 1C                          - jne Currency:AddMetalShardsToCurrentRun+53
+Currency:AddMetalShardsToCurrentRun+37: 48 8B 47 18                    - mov rax,[rdi+18]
+Currency:AddMetalShardsToCurrentRun+3b: 48 8B C8                       - mov rcx,rax
+Currency:AddMetalShardsToCurrentRun+3e: BA 01 00 00 00                 - mov edx,00000001
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>61</ID>
+              <Description>"Base addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_currency_metal_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>73</ID>
+              <Description>"Values+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>62</ID>
+                  <Description>"currentShardPieces"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+D8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>63</ID>
+                  <Description>"&lt;MetalShardsInCurrentRun&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+DC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>64</ID>
+                  <Description>"&lt;NanoBytesInCurrentRun&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>65</ID>
+                  <Description>"&lt;NanoBytesInSafe&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+E4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"&lt;NanoBytesSafeCap&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+E8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>67</ID>
+                  <Description>"&lt;KeycardsInCurrentRun&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+EC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>68</ID>
+                  <Description>"&lt;BatteryKeysInCurrentRun&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>69</ID>
+                  <Description>"&lt;EternityShardsInCurrentRun&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>70</ID>
+                  <Description>"&lt;OverchargeFragmentsInCurrentRun&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>71</ID>
+                  <Description>"currentNeuropods"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+FC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>72</ID>
+                  <Description>"currentWeaponParts"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_currency_metal_addr]+100</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>75</ID>
+          <Description>"Damage multiplier / drop"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : OrbitalBullet.exe
+  Version: 
+  Date   : 2022-03-27
+  Author : bbfox @ https://opencheattables.org/
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_ENEMY_DAGAME_MULTI,EnemyHealthProc+14eb, EnemyHealthProc+16eb,F3 0F 5A C0 F2 0F 2C C8 2B C1 41) // should be unique
+alloc(newmem,$1000,INJECT_ENEMY_DAGAME_MULTI)
+
+label(code)
+label(return)
+label(vf_damage_multi)
+label(vf_drop_multi)
+label(i_enemy_base_addr)
+
+newmem:
+  mov [i_enemy_base_addr], r12
+
+  vmovss xmm15, [vf_damage_multi]
+  mulss xmm0, xmm15
+
+  push rax
+  push rbx
+  push rcx
+  push rdx
+  push r15
+
+  mov ebx, #100
+  vmovss xmm14, [vf_drop_multi]
+  xor rcx, rcx
+  mov ecx, 6
+
+loop_drop:
+  xor rax, rax
+  xor rdx, rdx
+  mov eax, 4
+  mul ecx
+  add eax, 148
+
+  mov r15d, [r12+eax]
+  cmp r15d, 0
+  je next1
+  cvtsi2ss xmm15, r15d
+  vmulss xmm15, xmm15, xmm14
+  cvtss2si r15d, xmm15
+  cmp r15d, ebx
+  cmovg r15d, ebx
+  mov [r12+eax], r15d
+
+next1:
+  loop loop_drop
+  pop r15
+  pop rdx
+  pop rcx
+  pop rbx
+  pop rax
+
+code:
+  cvtss2sd xmm0,xmm0
+  cvttsd2si ecx,xmm0
+  jmp return
+
+align 10 cc
+  i_enemy_base_addr:
+  dq 0
+  vf_damage_multi:
+  dd (float)1.5
+  vf_drop_multi:
+  dd (float)1.1
+
+INJECT_ENEMY_DAGAME_MULTI:
+  jmp newmem
+  nop 3
+return:
+
+registersymbol(i_enemy_base_addr)
+registersymbol(vf_drop_multi)
+registersymbol(vf_damage_multi)
+registersymbol(INJECT_ENEMY_DAGAME_MULTI)
+
+[DISABLE]
+
+INJECT_ENEMY_DAGAME_MULTI:
+  db F3 0F 5A C0 F2 0F 2C C8
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: EnemyHealth:TakeDamage+14f3
+
+EnemyHealth:TakeDamage+14b9: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+EnemyHealth:TakeDamage+14be: 49 BB 26 C4 42 B0 61 01 00 00  - mov r11,00000161B042C426
+EnemyHealth:TakeDamage+14c8: 41 FF D3                       - call r11
+EnemyHealth:TakeDamage+14cb: 48 8B C8                       - mov rcx,rax
+EnemyHealth:TakeDamage+14ce: BA 08 00 00 00                 - mov edx,00000008
+EnemyHealth:TakeDamage+14d3: 83 38 00                       - cmp dword ptr [rax],00
+EnemyHealth:TakeDamage+14d6: 49 BB FA C3 42 B0 61 01 00 00  - mov r11,00000161B042C3FA
+EnemyHealth:TakeDamage+14e0: 41 FF D3                       - call r11
+EnemyHealth:TakeDamage+14e3: 49 63 84 24 84 01 00 00        - movsxd  rax,dword ptr [r12+00000184]
+EnemyHealth:TakeDamage+14eb: F3 0F 10 85 34 FC FF FF        - movss xmm0,[rbp-000003CC]
+// ---------- INJECTING HERE ----------
+EnemyHealth:TakeDamage+14f3: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+// ---------- DONE INJECTING  ----------
+EnemyHealth:TakeDamage+14f7: F2 0F 2C C8                    - cvttsd2si ecx,xmm0
+EnemyHealth:TakeDamage+14fb: 2B C1                          - sub eax,ecx
+EnemyHealth:TakeDamage+14fd: 41 89 84 24 84 01 00 00        - mov [r12+00000184],eax
+EnemyHealth:TakeDamage+1505: 49 8B 84 24 00 01 00 00        - mov rax,[r12+00000100]
+EnemyHealth:TakeDamage+150d: 49 63 8C 24 84 01 00 00        - movsxd  rcx,dword ptr [r12+00000184]
+EnemyHealth:TakeDamage+1515: F3 0F 2A C1                    - cvtsi2ss xmm0,ecx
+EnemyHealth:TakeDamage+1519: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+EnemyHealth:TakeDamage+151d: 49 63 8C 24 50 01 00 00        - movsxd  rcx,dword ptr [r12+00000150]
+EnemyHealth:TakeDamage+1525: F3 0F 2A C9                    - cvtsi2ss xmm1,ecx
+EnemyHealth:TakeDamage+1529: F3 0F 5A C9                    - cvtss2sd xmm1,xmm1
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>76</ID>
+              <Description>"Base addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_enemy_base_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>77</ID>
+              <Description>"Damage multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>78</ID>
+              <Description>"Drop multiplier (every hit)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>vf_drop_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>95</ID>
+              <Description>"Values+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>79</ID>
+                  <Description>"enemy"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+148</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>80</ID>
+                  <Description>"unitType"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+14C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>81</ID>
+                  <Description>"maxHealth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+150</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>82</ID>
+                  <Description>"ammoDropChance"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+154</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>83</ID>
+                  <Description>"metalShardDropChance"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+158</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>84</ID>
+                  <Description>"keycardDropChance"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+15C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>85</ID>
+                  <Description>"blueprintDropChance"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+160</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>86</ID>
+                  <Description>"creditDropChance"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+164</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>87</ID>
+                  <Description>"weaponPartDropChance"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+168</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>88</ID>
+                  <Description>"canDropOverchargeFragment"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_enemy_base_addr]+16C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>89</ID>
+                  <Description>"minCreditShardsDrop"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+170</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>90</ID>
+                  <Description>"maxCreditShardsDrop"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+174</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>91</ID>
+                  <Description>"minBodyPartsDrop"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+178</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>92</ID>
+                  <Description>"maxBodyPartsDrop"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+17C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>93</ID>
+                  <Description>"preventEffectSpawn"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_enemy_base_addr]+180</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>94</ID>
+                  <Description>"&lt;CurrentHealth&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_enemy_base_addr]+184</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>256</ID>
+      <Description>"Orbital Bullet 1.04  /  https://opencheattables.com  /  CE 7.4"</Description>
+      <Color>400080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
