@@ -44,9 +44,9 @@ ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～
 
 ## Brigandine The Legend of Runersia
 
-[Brigandine The Legend of Runersia (Steam)](https://store.steampowered.com/app/1843940/Brigandine_The_Legend_of_Runersia/)
-
-ja-JP: ブリガンダイン ルーナジア戦記
+[Brigandine The Legend of Runersia (Steam)](https://store.steampowered.com/app/1843940/Brigandine_The_Legend_of_Runersia/)  
+zh-TW: 幻想大陸戰記：盧納基亞傳說  
+ja-JP: ブリガンダイン ルーナジア戦記  
 
 ## CoreKeeper
 
