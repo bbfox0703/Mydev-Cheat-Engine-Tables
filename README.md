@@ -1,6 +1,9 @@
 # Cheat Engine tables
 Contains some Cheat Engine tables
 
+# New OCT Site URL  
+https://opencheattables.com  
+
 # Repository for self-dev tables.  
 Original posts are in https://opencheattables.org; new OCT site: https://opencheattables.com.
 
