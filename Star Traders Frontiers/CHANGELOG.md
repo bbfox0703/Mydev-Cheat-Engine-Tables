@@ -1,6 +1,7 @@
 # Changelog
 
-##
+## 2022/07/25  
+Revise OCT URL
 
 ### Added
 Migrated from https://opencheattables.org
