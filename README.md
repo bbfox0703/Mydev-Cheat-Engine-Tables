@@ -1,11 +1,10 @@
-# Cheat Engine tables
-Contains some Cheat Engine tables
+# Repository for self-dev Cheat Engine tables
+Contains some self-dev. Cheat Engine tables
 
 # New OCT Site URL  
 https://opencheattables.com  
-
-# Repository for self-dev tables.  
-Original posts are in https://opencheattables.org; new OCT site: https://opencheattables.com.
+[New Forum Community Released](https://opencheattables.com/viewtopic.php?t=5)  
+Original posts are in https://opencheattables.org  
 
 ## Titles list  
 [Title list](https://github.com/bbfox0703/Mydev-Cheat-Engine-Tables/blob/main/TITLELIST.md)
