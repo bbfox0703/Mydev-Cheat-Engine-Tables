@@ -127,6 +127,10 @@ ja-JP: サガ フロンティア リマスター
 
 [Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)
 
+## Sid Meier's Civilization® V
+[Sid Meier's Civilization® V (Steam)](https://store.steampowered.com/app/8930/Sid_Meiers_Civilization_V/)  
+zh-TW: 文明帝國V  
+
 ## Star Traders Frontiers
 
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)
