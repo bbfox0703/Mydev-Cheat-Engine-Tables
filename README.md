@@ -3,7 +3,6 @@ Contains some self-dev. Cheat Engine tables
 
 # New OCT Site URL  
 https://opencheattables.com  
-[New Forum Community Released](https://opencheattables.com/viewtopic.php?t=5)  
 Original posts are in https://opencheattables.org  
 
 ## Titles list  
