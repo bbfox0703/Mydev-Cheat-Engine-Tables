@@ -58,6 +58,9 @@ ja-JP: ブリガンダイン ルーナジア戦記
 [Dōkyūsei Bangin' Summer  (Steam)](https://store.steampowered.com/app/1689910/Remake/)  
 zh-TW: 同級生Remake  
 
+## Endless Space 2    
+[Endless Space 2 (Steam)](https://store.steampowered.com/app/392110/ENDLESS_Space_2/)  
+
 ## FINAL FANTASY VI  
 [FINAL FANTASY VI (Steam)] (https://store.steampowered.com/app/1173820/FINAL_FANTASY_VI/)  
 zh-TW: 太空戰士VI 像素複刻版  

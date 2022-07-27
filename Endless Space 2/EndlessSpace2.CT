@@ -1,0 +1,842 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Enable (Enable twice) / 啟用 (請連續啟用二次)"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then
+    return
+end
+if process == nil then
+    ShowMessage("Process is not selected.")
+elseif readInteger(process) == 0 then
+    ShowMessage("Process cannot be opened.")
+else
+    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
+        monopipe.destroy()
+        monopipe = nil
+    end
+    if monopipe == nil then
+        LaunchMonoDataCollector()
+    end
+end
+
+{$asm}
+define(CustomFactionPanelset_SpentFactionPointsProc,"CustomFactionPanel:set_SpentFactionPoints")
+define(AmplitudeUnitySimulationSimulationProperty_DefaultPropertyget_ValueProc,"Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value")
+define(AmplitudeUnitySimulationPropertiesSimulationProperty_PropertyWithMinget_ValueProc,"Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value")
+define(EmpireBannerRefreshEmpireMoneyLabelProc,"EmpireBanner:RefreshEmpireMoneyLabel")
+define(Heroget_SkillPointsproc,"Hero:get_SkillPoints")
+
+registersymbol(CustomFactionPanelset_SpentFactionPointsProc)
+registersymbol(AmplitudeUnitySimulationSimulationProperty_DefaultPropertyget_ValueProc)
+registersymbol(AmplitudeUnitySimulationPropertiesSimulationProperty_PropertyWithMinget_ValueProc)
+registersymbol(EmpireBannerRefreshEmpireMoneyLabelProc)
+registersymbol(Heroget_SkillPointsproc)
+[DISABLE]
+{$lua}
+if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
+
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Empire, dust, incluence, strategic resource / 帝國,星塵,影響力和戰略資源"</Description>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"Enable during main screen / Re-enable if load save / new game"</Description>
+              <Color>400080</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"於主視窗啟用 / 重新讀檔 / 開新局 必須重新啟用"</Description>
+              <Color>400080</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"1. Get dust / influence (Active: in empire summary window, click on empire summary again / 於帝國概要中、再點擊帝國概要)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : EndlessSpace2.exe
+  Version: 
+  Date   : 2022-05-08
+  Author : bbfox @ https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_GET_VALUES,C1 F3 0F 10 40 60) // should be unique
+aobscanregion(INJECT_GET_VALUES,AmplitudeUnitySimulationSimulationProperty_DefaultPropertyget_ValueProc+b,AmplitudeUnitySimulationSimulationProperty_DefaultPropertyget_ValueProc+1b,F3 0F 10 40 60) // should be unique
+alloc(newmem,$1000,INJECT_GET_VALUES)
+
+label(code)
+label(return)
+label(i_dust_addr)
+label(i_influence_addr)
+
+
+newmem:
+  push rbx
+  mov ebx, [rax+38]
+  cmp ebx, #51640
+  je to_set_dust
+  cmp ebx, #51641
+  je to_set_influence
+
+  jmp endp
+to_set_dust:
+  cmp qword ptr [i_dust_addr], 0
+  jne endp
+  lea rbx, [rax+60]
+  mov [i_dust_addr], rbx
+  jmp endp
+
+to_set_influence:
+  cmp qword ptr [i_influence_addr], 0
+  jne endp
+  lea rbx, [rax+60]
+  mov [i_influence_addr], rbx
+  jmp endp
+
+endp:
+  pop rbx
+
+code:
+  movss xmm0,[rax+60]
+  jmp return
+
+align 10 cc
+  i_dust_addr:
+  dq 0
+  i_influence_addr:
+  dq 0
+
+INJECT_GET_VALUES:
+  jmp newmem
+return:
+
+
+registersymbol(i_dust_addr)
+registersymbol(i_influence_addr)
+registersymbol(INJECT_GET_VALUES)
+
+[DISABLE]
+
+INJECT_GET_VALUES:
+  db F3 0F 10 40 60
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+b
+
+2775D982: 00 00              - add [rax],al
+2775D984: 00 00              - add [rax],al
+2775D986: 00 00              - add [rax],al
+2775D988: 00 00              - add [rax],al
+2775D98A: 00 00              - add [rax],al
+2775D98C: 00 00              - add [rax],al
+2775D98E: 00 00              - add [rax],al
+AmplitudeUnitySimulationSimulationProperty_DefaultPropertyget_ValueProc: 48 83 EC 08        - sub rsp,08
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+4: 48 89 0C 24        - mov [rsp],rcx
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+8: 48 8B C1           - mov rax,rcx
+// ---------- INJECTING HERE ----------
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+b: F3 0F 10 40 60     - movss xmm0,[rax+60]
+// ---------- DONE INJECTING  ----------
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+10: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+14: F2 0F 5A C0        - cvtsd2ss xmm0,xmm0
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+18: 48 83 C4 08        - add rsp,08
+Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+1c: C3                 - ret 
+2775D9AD: 00 00              - add [rax],al
+2775D9AF: 00 00              - add [rax],al
+2775D9B1: 00 00              - add [rax],al
+2775D9B3: 00 1D 00 00 00 2C  - add [5375D9B9],bl
+2775D9B9: 00 00              - add [rax],al
+2775D9BB: 00 01              - add [rcx],al
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>4</ID>
+                  <Description>"Dust / 星塵"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_dust_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5</ID>
+                  <Description>"Influence / 影響力"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_influence_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"2. Get strategic resources (Active: in empire summary window, click on empire summary again / 於帝國概要中、再點擊帝國概要)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : EndlessSpace2.exe
+  Version: 
+  Date   : 2022-05-08
+  Author : bbfox @ https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_GET_MINRES_VALUE,ERROR: Could not find unique AOB, tried code "F3 0F 10 40 68") // should be unique
+aobscanregion(INJECT_GET_MINRES_VALUE,AmplitudeUnitySimulationPropertiesSimulationProperty_PropertyWithMinget_ValueProc+b,AmplitudeUnitySimulationPropertiesSimulationProperty_PropertyWithMinget_ValueProc+1b,F3 0F 10 40 68) // should be unique
+alloc(newmem,$1000,INJECT_GET_MINRES_VALUE)
+
+label(code)
+label(return)
+label(i_titanium_addr)
+label(i_hyperium_addr)
+label(i_adamantian_addr)
+label(i_antimatter_addr)
+label(i_orichalcix_addr)
+label(i_quadrinix_addr)
+label(i_human_resource_addr)
+
+newmem:
+  push rbx
+  mov ebx, [rax+38]
+  cmp ebx, #51688
+  je to_set_titanium
+  cmp ebx, #51689
+  je to_set_hyperium
+  cmp ebx, #51690
+  je to_set_adamantian
+  cmp ebx, #51691
+  je to_set_antimatter
+  cmp ebx, #51692
+  je to_set_orichalcix
+  cmp ebx, #51693
+  je to_set_quadrinix
+  cmp ebx, #50016
+  je to_set_human_resource
+  jmp endp
+
+to_set_titanium:
+  cmp qword ptr [i_titanium_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_titanium_addr], rbx
+  jmp endp
+to_set_hyperium:
+  cmp qword ptr [i_hyperium_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_hyperium_addr], rbx
+  jmp endp
+to_set_adamantian:
+  cmp qword ptr [i_adamantian_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_adamantian_addr], rbx
+  jmp endp
+to_set_antimatter:
+  cmp qword ptr [i_antimatter_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_antimatter_addr], rbx
+  jmp endp
+to_set_orichalcix:
+  cmp qword ptr [i_orichalcix_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_orichalcix_addr], rbx
+  jmp endp
+to_set_quadrinix:
+  cmp qword ptr [i_quadrinix_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_quadrinix_addr], rbx
+  jmp endp
+to_set_human_resource:
+  cmp qword ptr [i_human_resource_addr], 0
+  jne endp
+  lea rbx, [rax+68]
+  mov [i_human_resource_addr], rbx
+  jmp endp
+
+endp:
+  pop rbx
+
+code:
+  movss xmm0,[rax+68]
+  jmp return
+align 10 cc
+  i_titanium_addr:
+  dq 0
+  i_hyperium_addr:
+  dq 0
+  i_adamantian_addr:
+  dq 0
+  i_antimatter_addr:
+  dq 0
+  i_orichalcix_addr:
+  dq 0
+  i_quadrinix_addr:
+  dq 0
+  i_human_resource_addr:
+  dq 0
+
+INJECT_GET_MINRES_VALUE:
+  jmp newmem
+return:
+
+registersymbol(i_human_resource_addr)
+registersymbol(i_quadrinix_addr)
+registersymbol(i_orichalcix_addr)
+registersymbol(i_antimatter_addr)
+registersymbol(i_hyperium_addr)
+registersymbol(i_adamantian_addr)
+registersymbol(INJECT_GET_MINRES_VALUE)
+registersymbol(i_titanium_addr)
+[DISABLE]
+
+INJECT_GET_MINRES_VALUE:
+  db F3 0F 10 40 68
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+b
+
+308DC813: 00 00              - add [rax],al
+308DC815: 00 00              - add [rax],al
+308DC817: 00 00              - add [rax],al
+308DC819: 00 00              - add [rax],al
+308DC81B: 00 00              - add [rax],al
+308DC81D: 00 00              - add [rax],al
+308DC81F: 00 48 83           - add [rax-7D],cl
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+2: EC                 - in al,dx
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+3: 08 48 89           - or [rax-77],cl
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+6: 0C 24              - or al,24
+// ---------- INJECTING HERE ----------
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+8: 48 8B C1           - mov rax,rcx
+// ---------- DONE INJECTING  ----------
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+b: F3 0F 10 40 68     - movss xmm0,[rax+68]
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+10: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+14: F2 0F 5A C0        - cvtsd2ss xmm0,xmm0
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+18: 48 83 C4 08        - add rsp,08
+Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+1c: C3                 - ret 
+308DC83D: 00 00              - add [rax],al
+308DC83F: 00 00              - add [rax],al
+308DC841: 00 00              - add [rax],al
+308DC843: 00 1D 00 00 00 2C  - add [5C8DC849],bl
+308DC849: 00 00              - add [rax],al
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>11</ID>
+                  <Description>"Titanium / 鈦"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_titanium_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"hyperium"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_hyperium_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>13</ID>
+                  <Description>"Adamantian / 亞德曼合金"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_adamantian_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>14</ID>
+                  <Description>"Antimatter / 反物質"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_antimatter_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>15</ID>
+                  <Description>"Orichalcix / 銅鋅合金"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_orichalcix_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>16</ID>
+                  <Description>"Quadrinix / 相際質"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_quadrinix_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>46</ID>
+                  <Description>"Cur. human resource / 目前人力"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_human_resource_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>47</ID>
+                  <Description>"Computed human resource / 算出之人力"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_human_resource_addr</Address>
+                  <Offsets>
+                    <Offset>-18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>48</ID>
+                  <Description>"Base human resource / 基礎人力"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_human_resource_addr</Address>
+                  <Offsets>
+                    <Offset>-10</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>44</ID>
+              <Description>"3. Auto fill min. resources (afetr 1 &amp; 2 enabled) / 自動設定最小資源值(前二項必須先啟用)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+--  Author : bbfox @ https://opencheattables.org
+if syntaxcheck then return end
+TimerRefillRes=createTimer()
+  TimerRefillRes.Interval=5000
+
+  local m1 = nil
+  local v1 = nil
+  local tt_i2 = nil
+  local Min_dust = 47200
+  local dust_id = 4
+
+  local Min_influence = 91023
+  local influence_id = 5
+
+  local Min_human_resource = 3800
+  local human_resource_id = 46
+
+  local a_res_id = {[1] = 11, [2] = 12, [3] = 13, [4] = 14, [5] = 15, [6] = 16, }
+
+  TimerRefillRes.OnTimer=function(aa)
+
+    tt_i2 = getAddressSafe("EndlessSpace2.exe")
+    if (tt_i2) then
+      m1 = getAddressList().getMemoryRecordByID(dust_id)
+      v1 = tonumber(m1.Value)
+      if (v1 and (v1 &lt; Min_dust)) then
+        m1.Value = "47201"
+      end
+
+      m1 = getAddressList().getMemoryRecordByID(influence_id)
+      v1 = tonumber(m1.Value)
+      if (v1 and (v1 &lt; Min_influence)) then
+        m1.Value = "91024"
+      end
+
+      for _, res_id in pairs(a_res_id) do
+        m1 = getAddressList().getMemoryRecordByID(res_id)
+        v1 = tonumber(m1.Value)
+        if (v1 and (v1 &lt; 200)) then
+          m1.Value = "201"
+        end
+      end
+
+      m1 = getAddressList().getMemoryRecordByID(human_resource_id)
+      v1 = tonumber(m1.Value)
+      if (v1 and (v1 &lt; Min_human_resource)) then
+        m1.Value = "3801"
+      end
+
+    end
+  end
+
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+TimerRefillRes.Destroy()
+
+
+
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"Get empire data (Active: click on empire summary / 點擊帝國概要)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : EndlessSpace2.exe
+  Version: 
+  Date   : 2022-05-08
+  Author : bbfox @ https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_GET_MAJOR_EMPIRE,80 DD 15 41 48 83 EC 20 48 8B 45 B0 48 8B 00 90 90 90 FF 90 D8 00 00 00) // should be unique
+aobscanregion(INJECT_GET_MAJOR_EMPIRE,EmpireBannerRefreshEmpireMoneyLabelProc+33,EmpireBannerRefreshEmpireMoneyLabelProc+53,FF 90 D8 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_MAJOR_EMPIRE)
+
+label(code)
+label(return)
+label(i_major_empire_base_addr)
+
+newmem:
+  mov [i_major_empire_base_addr], rax
+
+code:
+  call qword ptr [rax+000000D8]
+  jmp return
+
+align 10 cc
+  i_major_empire_base_addr:
+  dq 0
+
+INJECT_GET_MAJOR_EMPIRE:
+  jmp newmem
+  nop
+return:
+
+registersymbol(i_major_empire_base_addr)
+registersymbol(INJECT_GET_MAJOR_EMPIRE)
+
+[DISABLE]
+
+INJECT_GET_MAJOR_EMPIRE:
+  db FF 90 D8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: EmpireBanner:RefreshEmpireMoneyLabel+33
+
+EmpireBanner:RefreshEmpireMoneyLabel+15: 4C 89 45 B0        - mov [rbp-50],r8
+EmpireBanner:RefreshEmpireMoneyLabel+19: 4C 89 4D A8        - mov [rbp-58],r9
+EmpireBanner:RefreshEmpireMoneyLabel+1d: 49 8B C8           - mov rcx,r8
+EmpireBanner:RefreshEmpireMoneyLabel+20: BA 80 DD 15 41     - mov edx,4115DD80
+EmpireBanner:RefreshEmpireMoneyLabel+25: 48 83 EC 20        - sub rsp,20
+EmpireBanner:RefreshEmpireMoneyLabel+29: 48 8B 45 B0        - mov rax,[rbp-50]
+EmpireBanner:RefreshEmpireMoneyLabel+2d: 48 8B 00           - mov rax,[rax]
+EmpireBanner:RefreshEmpireMoneyLabel+30: 90                 - nop 
+EmpireBanner:RefreshEmpireMoneyLabel+31: 90                 - nop 
+EmpireBanner:RefreshEmpireMoneyLabel+32: 90                 - nop 
+// ---------- INJECTING HERE ----------
+EmpireBanner:RefreshEmpireMoneyLabel+33: FF 90 D8 00 00 00  - call qword ptr [rax+000000D8]
+// ---------- DONE INJECTING  ----------
+EmpireBanner:RefreshEmpireMoneyLabel+39: 48 83 C4 20        - add rsp,20
+EmpireBanner:RefreshEmpireMoneyLabel+3d: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
+EmpireBanner:RefreshEmpireMoneyLabel+41: F2 0F 5A E8        - cvtsd2ss xmm5,xmm0
+EmpireBanner:RefreshEmpireMoneyLabel+45: F3 0F 11 6D C4     - movss [rbp-3C],xmm5
+EmpireBanner:RefreshEmpireMoneyLabel+4a: 48 8B 4D B0        - mov rcx,[rbp-50]
+EmpireBanner:RefreshEmpireMoneyLabel+4e: BA A8 DF 15 41     - mov edx,4115DFA8
+EmpireBanner:RefreshEmpireMoneyLabel+53: 48 83 EC 20        - sub rsp,20
+EmpireBanner:RefreshEmpireMoneyLabel+57: 48 8B 45 B0        - mov rax,[rbp-50]
+EmpireBanner:RefreshEmpireMoneyLabel+5b: 48 8B 00           - mov rax,[rax]
+EmpireBanner:RefreshEmpireMoneyLabel+5e: 90                 - nop 
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>20</ID>
+                  <Description>"Base addr."</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_major_empire_base_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>43</ID>
+                  <Description>"MajorEmpire+"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>21</ID>
+                      <Description>"&lt;MarkedForElimination&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+B0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>22</ID>
+                      <Description>"&lt;GUID&gt;k__BackingField"</Description>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>[i_major_empire_base_addr]+B8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>23</ID>
+                      <Description>"&lt;IsControlledByAI&gt;k__BackingField"</Description>
+                      <Color>FF0000</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+CD</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>24</ID>
+                      <Description>"destroyed"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+CC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>25</ID>
+                      <Description>"&lt;BaseWarpSpeed&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+E0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>26</ID>
+                      <Description>"&lt;BaseWormholeSpeed&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+E4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>27</ID>
+                      <Description>"&lt;BasePortalMaximumCost&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28</ID>
+                      <Description>"&lt;BaseFreeMovementSpeed&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+EC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>29</ID>
+                      <Description>"&lt;HasGeneHunter&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>30</ID>
+                      <Description>"&lt;IgnoresColdWarRules&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F1</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>31</ID>
+                      <Description>"&lt;IgnoresColdWarTradingRouteBlockade&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F2</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>32</ID>
+                      <Description>"&lt;IgnoresTradingRouteBlockade&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F3</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>33</ID>
+                      <Description>"&lt;CanUsePortals&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>34</ID>
+                      <Description>"&lt;CannotUsePortals&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F5</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>35</ID>
+                      <Description>"&lt;CanUseHonor&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+F6</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>36</ID>
+                      <Description>"&lt;RootingIsolatedRadius&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+F8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>37</ID>
+                      <Description>"previousHappinessValue"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+150</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>38</ID>
+                      <Description>"&lt;GlobalScore&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+154</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>39</ID>
+                      <Description>"&lt;SeesAllFleets&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+158</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>40</ID>
+                      <Description>"&lt;SeesSomeEnemyFleets&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+159</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>41</ID>
+                      <Description>"&lt;FleetsCanBeSeenByEnemies&gt;k__BackingField"</Description>
+                      <VariableType>Byte</VariableType>
+                      <Address>[i_major_empire_base_addr]+15A</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>42</ID>
+                      <Description>"&lt;TotalAcademyMoneyGifted&gt;k__BackingField"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>[i_major_empire_base_addr]+15C</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>50</ID>
+              <Description>"Max hero available skill points / 英雄可用技能點最大"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : EndlessSpace2.exe
+  Version: 
+  Date   : 2022-05-08
+  Author : bbfox @ https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_HERO_GET_SPOINTS,ERROR: Could not find unique AOB, tried code "48 8B 75 F8 C9") // should be unique
+aobscanregion(INJECT_HERO_GET_SPOINTS,Heroget_SkillPointsproc+e0,Heroget_SkillPointsproc+119, 48 8B 75 F8 C9) // should be unique
+alloc(newmem,$1000,INJECT_HERO_GET_SPOINTS)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, 63
+code:
+  mov rsi,[rbp-08]
+  leave 
+  jmp return
+
+INJECT_HERO_GET_SPOINTS:
+  jmp newmem
+return:
+registersymbol(INJECT_HERO_GET_SPOINTS)
+
+[DISABLE]
+
+INJECT_HERO_GET_SPOINTS:
+  db 48 8B 75 F8 C9
+
+unregistersymbol(INJECT_HERO_GET_SPOINTS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Hero:get_SkillPoints+109
+
+Hero:get_SkillPoints+e0: 90                             - nop 
+Hero:get_SkillPoints+e1: 90                             - nop 
+Hero:get_SkillPoints+e2: FF 90 D8 00 00 00              - call qword ptr [rax+000000D8]
+Hero:get_SkillPoints+e8: 48 83 C4 20                    - add rsp,20
+Hero:get_SkillPoints+ec: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+Hero:get_SkillPoints+f0: 48 83 EC 20                    - sub rsp,20
+Hero:get_SkillPoints+f4: 49 BB E0 52 99 1F 00 00 00 00  - mov r11,System.Math:Floor
+Hero:get_SkillPoints+fe: 41 FF D3                       - call r11
+Hero:get_SkillPoints+101: 48 83 C4 20                    - add rsp,20
+Hero:get_SkillPoints+105: F2 0F 2C C0                    - cvttsd2si eax,xmm0
+// ---------- INJECTING HERE ----------
+Hero:get_SkillPoints+109: 48 8B 75 F8                    - mov rsi,[rbp-08]
+// ---------- DONE INJECTING  ----------
+Hero:get_SkillPoints+10d: C9                             - leave 
+Hero:get_SkillPoints+10e: C3                             - ret 
+1649A1A4F: 00 00                          - add [rax],al
+1649A1A51: 00 00                          - add [rax],al
+1649A1A53: 00 0F                          - add [rdi],cl
+1649A1A55: 01 00                          - add [rax],eax
+1649A1A57: 00 1C 01                       - add [rcx+rax],bl
+1649A1A5A: 00 00                          - add [rax],al
+1649A1A5C: 01 04 03                       - add [rbx+rax],eax
+1649A1A5F: 05 00 00 04 53                 - add eax,53040000
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>51</ID>
+                  <Description>"affects all heroes; turn off when not in use / 影響全英雄，不用時關掉"</Description>
+                  <Color>400080</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>49</ID>
+      <Description>"ENDLESS™ Space 2 v1.5.48 S5 GOLD-Public  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Color>800080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
