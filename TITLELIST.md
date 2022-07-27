@@ -107,6 +107,9 @@ zh-TW: 舊世界 Old World
 ## Rabi-Ribi  
 [Rabi-Ribi (Steam)](https://store.steampowered.com/app/400910/RabiRibi/)  
 
+## Rise of Industry  
+[Rise of Industry (Steam)](https://store.steampowered.com/app/671440/Rise_of_Industry/)  
+
 ## SaGa Frontier Remastered  
 [SaGa Frontier Remastered (Steam)](https://store.steampowered.com/app/1295270/SaGa_Frontier_Remastered/)  
 ja-JP: サガ フロンティア リマスター  
