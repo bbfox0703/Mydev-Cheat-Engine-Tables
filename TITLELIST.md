@@ -4,11 +4,16 @@
 [4 Elements II Special Edition (Microsoft Windows Store)](https://www.microsoft.com/zh-tw/p/4-elements-ii-special-edition/9wzdncrfhw7h?activetab=pivot:overviewtab)  
 
 ## Anno 1800
-[Anno 1800] (UPlay)](https://www.ubisoft.com/en-us/game/anno/1800)  [zh](https://www.ubisoft.com/zh-tw/game/anno/1800)  
+[Anno 1800 (UPlay)](https://www.ubisoft.com/en-us/game/anno/1800)  [zh](https://www.ubisoft.com/zh-tw/game/anno/1800)  
 
 ## Ara Fell Enhanced Edition  
 [Ara Fell: Enhanced Edition (Steam)](https://store.steampowered.com/app/440540/_/)  
 ja-JP: エアラフェル （拡張版）
+
+## Assassin's Creed Valhalla  
+[Assassin's Creed Valhalla (UPlay)](https://www.ubisoft.com/en-us/game/assassins-creed/valhalla)  [zh](https://www.ubisoft.com/zh-tw/game/assassins-creed/valhalla)  
+zh-TW: 刺客教條：維京紀元  
+ja-JP: アサシンクリードヴァルハラ  
 
 ## Atelier Firis DX  
 [Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)](https://store.steampowered.com/app/1502980/__DX/)  
