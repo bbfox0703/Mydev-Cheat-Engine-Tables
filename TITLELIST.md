@@ -129,7 +129,12 @@ zh-TW: 文明帝國V
 zh-TW: 偶像大師 星耀季節  
 ja-JP: アイドルマスター スターリットシーズン  
 
-## The Legend of Heroes: Trails of Cold Steel Japanese ver.  
+## The Legend of Heroes Kuro no Kiseki
+[The Legend of Heroes: Kuro no Kiseki (Steam)](https://store.steampowered.com/app/1811950/_/)
+zh-TW: 英雄傳說 黎之軌跡  
+ja-JP: 英雄伝説 黎の軌跡  
+
+## The Legend of Heroes Trails of Cold Steel Japanese ver.  
 The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)  
 [ja-JP: 英雄伝説 閃の軌跡](https://store.steampowered.com/app/538680/_/?l=japanese) 
 
