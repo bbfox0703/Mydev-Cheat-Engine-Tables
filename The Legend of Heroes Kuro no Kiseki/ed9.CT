@@ -37,9 +37,9 @@ newmem:
   mov [mira_base_addr], r8
 
   mov ebp 0
-  cmp ecx, #10000
+  cmp ecx, #50000
   jae @F
-  mov ecx, #10000
+  mov ecx, #50000
 
 code:
   sub ecx,ebp
@@ -307,6 +307,7 @@ ed9.exe+113E6D: 48 8D 15 30 40 5C 00  - lea rdx,[ed9.exe+6D7EA4]
     <CheatEntry>
       <ID>7</ID>
       <Description>"填充道具數量 (需大於1;使用方式：開啟道具選單)  / Fill items (must &gt; 1; usage: open item menu)"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ed9.exe
   Version: 
@@ -321,10 +322,77 @@ alloc(newmem,$1000,INJECT_FILL_ITEMS)
 
 label(code)
 label(return)
+label(is_fill_most_items)
 
 newmem:
   push rbx
   movzx ebx,byte ptr [rax+rcx*4+000B7078]
+
+  cmp dword ptr [is_fill_most_items], 0
+  je check_next
+  cmp rcx, 2F  // consumables
+  jbe fill_cnt
+
+  {
+  cmp rcx, 190 // Weapon
+  jb check_next
+  cmp rcx, 222
+  jbe fill_cnt
+
+  cmp rcx, 2BD  //weapon assoc
+  jb check_next
+  cmp rcx, 34C
+  jbe fill_cnt
+
+  cmp rcx, 3E8  //armor
+  jb check_next
+  cmp rcx, 3F6
+  jbe fill_cnt
+
+  cmp rcx, 44D  //armor
+  jb check_next
+  cmp rcx, 459
+  jbe fill_cnt
+
+  cmp rcx, 47F  //armor
+  jb check_next
+  cmp rcx, 487
+  jbe fill_cnt
+
+  cmp rcx, 4B0  //armor
+  jb check_next
+  cmp rcx, 4C1
+  jbe fill_cnt
+  }
+  cmp rcx, 640  //assoc
+  jb check_next
+  cmp rcx, 6E8
+  jbe fill_cnt
+
+  cmp rcx, 7D0  //food raw mat
+  jb check_next
+  cmp rcx, 7DD
+  jbe fill_cnt
+
+  cmp rcx, 834  //food
+  jb check_next
+  cmp rcx, 99F
+  jbe fill_cnt
+
+  cmp rcx, E74  //結晶迴路
+  jb check_next
+  cmp rcx, 1109
+  jbe fill_cnt
+
+
+
+  jmp check_next
+fill_cnt:
+  cmp bl, 2
+  jae check_next
+  mov bl, 2
+
+check_next:
   cmp bl, 2
   jb @F
   cmp bl, #75
@@ -338,19 +406,24 @@ newmem:
 code:
   movzx edx,byte ptr [rax+rcx*4+000B7078]
   jmp return
+align 10 cc
+  is_fill_most_items:
+  dd 0
+
 
 INJECT_FILL_ITEMS:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_FILL_ITEMS)
+registersymbol(is_fill_most_items)
 
 [DISABLE]
 
 INJECT_FILL_ITEMS:
   db 0F B6 94 88 78 70 0B 00
 
-unregistersymbol(INJECT_FILL_ITEMS)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -379,6 +452,345 @@ ed9.exe+345554: 45 85 F6                 - test r14d,r14d
 ed9.exe+345557: 74 13                    - je ed9.exe+34556C
 ed9.exe+345559: 41 83 FE 01              - cmp r14d,01
 ed9.exe+34555D: 74 1E                    - je ed9.exe+34557D
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"充填部份道具?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:否
+1:是
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_fill_most_items</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>63</ID>
+      <Description>"S-Boost不減"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2022-07-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_SBOOST,ed9.exe,F3 0F 11 81 0C 01 00 00 0F 28) // should be unique
+alloc(newmem,$1000,INJECT_INF_SBOOST)
+
+label(code)
+label(return)
+
+newmem:
+  movss xmm0,[rcx+00000108]
+
+code:
+  movss [rcx+0000010C],xmm0
+  jmp return
+
+INJECT_INF_SBOOST:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_INF_SBOOST)
+
+[DISABLE]
+
+INJECT_INF_SBOOST:
+  db F3 0F 11 81 0C 01 00 00
+
+unregistersymbol(INJECT_INF_SBOOST)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+3692E6
+
+ed9.exe+3692C8: 48 89 74 24 38           - mov [rsp+38],rsi
+ed9.exe+3692CD: 0F 28 C2                 - movaps xmm0,xmm2
+ed9.exe+3692D0: F7 E2                    - mul edx
+ed9.exe+3692D2: F3 0F 5C C1              - subss xmm0,xmm1
+ed9.exe+3692D6: F3 0F 5F C3              - maxss xmm0,xmm3
+ed9.exe+3692DA: 8B F2                    - mov esi,edx
+ed9.exe+3692DC: C1 EE 05                 - shr esi,05
+ed9.exe+3692DF: 0F 2E D0                 - ucomiss xmm2,xmm0
+ed9.exe+3692E2: 7A 02                    - jp ed9.exe+3692E6
+ed9.exe+3692E4: 74 12                    - je ed9.exe+3692F8
+// ---------- INJECTING HERE ----------
+ed9.exe+3692E6: F3 0F 11 81 0C 01 00 00  - movss [rcx+0000010C],xmm0
+// ---------- DONE INJECTING  ----------
+ed9.exe+3692EE: 0F 28 D0                 - movaps xmm2,xmm0
+ed9.exe+3692F1: C6 81 10 01 00 00 01     - mov byte ptr [rcx+00000110],01
+ed9.exe+3692F8: F3 48 0F 2C CA           - cvttss2si rcx,xmm2
+ed9.exe+3692FD: B8 1F 85 EB 51           - mov eax,51EB851F
+ed9.exe+369302: F7 E1                    - mul ecx
+ed9.exe+369304: 8B DA                    - mov ebx,edx
+ed9.exe+369306: C1 EB 05                 - shr ebx,05
+ed9.exe+369309: 3B DE                    - cmp ebx,esi
+ed9.exe+36930B: 73 16                    - jae ed9.exe+369323
+ed9.exe+36930D: 0F 1F 00                 - nop dword ptr [rax]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>57</ID>
+      <Description>"戰鬥中：取得S-Boost值 / Battle: Get S-Boost"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2022-07-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SBOOST,ed9.exe,F3 0F 10 87 0C 01 00 00 E8) // should be unique
+alloc(newmem,$1000,INJECT_GET_SBOOST)
+
+label(code)
+label(return)
+label(i_base_sboost_addr)
+
+newmem:
+  mov [i_base_sboost_addr], rdi
+
+code:
+  movss xmm0,[rdi+0000010C]
+  jmp return
+
+align 10 cc
+  i_base_sboost_addr:
+  dq 0
+
+INJECT_GET_SBOOST:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_SBOOST)
+registersymbol(i_base_sboost_addr)
+
+[DISABLE]
+
+INJECT_GET_SBOOST:
+  db F3 0F 10 87 0C 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+368160
+
+ed9.exe+36812F: 0F 28 C1                 - movaps xmm0,xmm1
+ed9.exe+368132: F3 0F 5C C2              - subss xmm0,xmm2
+ed9.exe+368136: F3 0F 5D C8              - minss xmm1,xmm0
+ed9.exe+36813A: F3 0F 11 4C 24 20        - movss [rsp+20],xmm1
+ed9.exe+368140: C7 44 24 24 00 00 80 3F  - mov [rsp+24],3F800000
+ed9.exe+368148: C7 44 24 28 00 00 80 3F  - mov [rsp+28],3F800000
+ed9.exe+368150: 45 33 C9                 - xor r9d,r9d
+ed9.exe+368153: 0F 57 D2                 - xorps xmm2,xmm2
+ed9.exe+368156: 48 8D 54 24 20           - lea rdx,[rsp+20]
+ed9.exe+36815B: E8 30 5F 00 00           - call ed9.exe+36E090
+// ---------- INJECTING HERE ----------
+ed9.exe+368160: F3 0F 10 87 0C 01 00 00  - movss xmm0,[rdi+0000010C]
+// ---------- DONE INJECTING  ----------
+ed9.exe+368168: E8 F7 6F 2D 00           - call ed9.exe+63F164
+ed9.exe+36816D: F3 0F 2C C8              - cvttss2si ecx,xmm0
+ed9.exe+368171: B8 1F 85 EB 51           - mov eax,51EB851F
+ed9.exe+368176: F7 E9                    - imul ecx
+ed9.exe+368178: 8B EA                    - mov ebp,edx
+ed9.exe+36817A: C1 FD 05                 - sar ebp,05
+ed9.exe+36817D: 8B CD                    - mov ecx,ebp
+ed9.exe+36817F: C1 E9 1F                 - shr ecx,1F
+ed9.exe+368182: 03 E9                    - add ebp,ecx
+ed9.exe+368184: F3 0F 10 87 08 01 00 00  - movss xmm0,[rdi+00000108]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>58</ID>
+          <Description>"Base addr"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_sboost_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>59</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_sboost_addr</Address>
+          <Offsets>
+            <Offset>100</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"Max"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sboost_addr</Address>
+          <Offsets>
+            <Offset>108</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>61</ID>
+          <Description>"Current"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sboost_addr</Address>
+          <Offsets>
+            <Offset>10C</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>65</ID>
+      <Description>"即時戰鬥：快速蓄力"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2022-07-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FIELD_BATT_CHARGE_ATK,ed9.exe,F3 0F 11 83 A8 02 00 00 E9) // should be unique
+alloc(newmem,$1000,INJECT_FIELD_BATT_CHARGE_ATK)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm15, [vf_85]
+  vcomiss xmm0, xmm15
+  jae code
+  vmovss xmm0, [vf_85]
+
+code:
+  movss [rbx+000002A8],xmm0
+  jmp return
+align 10 cc
+  vf_85:
+  dd (float)85
+
+INJECT_FIELD_BATT_CHARGE_ATK:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FIELD_BATT_CHARGE_ATK)
+
+[DISABLE]
+
+INJECT_FIELD_BATT_CHARGE_ATK:
+  db F3 0F 11 83 A8 02 00 00
+
+unregistersymbol(INJECT_FIELD_BATT_CHARGE_ATK)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+BFB61
+
+ed9.exe+BFB3A: 66 0F 6E 0F              - movd xmm1,[rdi]
+ed9.exe+BFB3E: 0F 5B C9                 - cvtdq2ps xmm1,xmm1
+ed9.exe+BFB41: F3 0F 58 8B A8 02 00 00  - addss xmm1,[rbx+000002A8]
+ed9.exe+BFB49: F3 0F 10 05 B3 55 64 00  - movss xmm0,[ed9.exe+705104]
+ed9.exe+BFB51: 0F 2F C8                 - comiss xmm1,xmm0
+ed9.exe+BFB54: 77 0B                    - ja ed9.exe+BFB61
+ed9.exe+BFB56: 0F 57 C0                 - xorps xmm0,xmm0
+ed9.exe+BFB59: 0F 2F C1                 - comiss xmm0,xmm1
+ed9.exe+BFB5C: 77 03                    - ja ed9.exe+BFB61
+ed9.exe+BFB5E: 0F 28 C1                 - movaps xmm0,xmm1
+// ---------- INJECTING HERE ----------
+ed9.exe+BFB61: F3 0F 11 83 A8 02 00 00  - movss [rbx+000002A8],xmm0
+// ---------- DONE INJECTING  ----------
+ed9.exe+BFB69: E9 E2 0F 00 00           - jmp ed9.exe+C0B50
+ed9.exe+BFB6E: 41 80 BE 38 36 00 00 00  - cmp byte ptr [r14+00003638],00
+ed9.exe+BFB76: 75 1E                    - jne ed9.exe+BFB96
+ed9.exe+BFB78: 4C 8D 0D 61 79 61 00     - lea r9,[ed9.exe+6D74E0]
+ed9.exe+BFB7F: 41 B8 F8 0B 00 00        - mov r8d,00000BF8
+ed9.exe+BFB85: 48 8D 15 44 78 61 00     - lea rdx,[ed9.exe+6D73D0]
+ed9.exe+BFB8C: B9 02 00 00 00           - mov ecx,00000002
+ed9.exe+BFB91: E8 9A A8 2A 00           - call ed9.exe+36A430
+ed9.exe+BFB96: 49 8B 5D 00              - mov rbx,[r13+00]
+ed9.exe+BFB9A: 4C 8B 74 24 58           - mov r14,[rsp+58]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>66</ID>
+      <Description>"即時戰門：蓄力攻擊不扣能量條"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2022-07-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FIELD_BATT_CHARGE_NO_DEC,ed9.exe,F3 0F 11 8B A8 02 00 00 48) // should be unique
+alloc(newmem,$1000,INJECT_FIELD_BATT_CHARGE_NO_DEC)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm1, [vf_100]
+code:
+  movss [rbx+000002A8],xmm1
+  jmp return
+align 10 cc
+  vf_100:
+  dd (float)100
+
+INJECT_FIELD_BATT_CHARGE_NO_DEC:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FIELD_BATT_CHARGE_NO_DEC)
+
+[DISABLE]
+
+INJECT_FIELD_BATT_CHARGE_NO_DEC:
+  db F3 0F 11 8B A8 02 00 00
+
+unregistersymbol(INJECT_FIELD_BATT_CHARGE_NO_DEC)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+198E99
+
+ed9.exe+198E7A: 66 0F 6E C1              - movd xmm0,ecx
+ed9.exe+198E7E: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+ed9.exe+198E81: F3 0F 5C C8              - subss xmm1,xmm0
+ed9.exe+198E85: 41 0F 2F C8              - comiss xmm1,xmm8
+ed9.exe+198E89: 76 06                    - jna ed9.exe+198E91
+ed9.exe+198E8B: 41 0F 28 C8              - movaps xmm1,xmm8
+ed9.exe+198E8F: EB 08                    - jmp ed9.exe+198E99
+ed9.exe+198E91: 0F 2F F9                 - comiss xmm7,xmm1
+ed9.exe+198E94: 76 03                    - jna ed9.exe+198E99
+ed9.exe+198E96: 0F 28 CF                 - movaps xmm1,xmm7
+// ---------- INJECTING HERE ----------
+ed9.exe+198E99: F3 0F 11 8B A8 02 00 00  - movss [rbx+000002A8],xmm1
+// ---------- DONE INJECTING  ----------
+ed9.exe+198EA1: 48 63 83 94 02 00 00     - movsxd  rax,dword ptr [rbx+00000294]
+ed9.exe+198EA8: 48 8D 0C 40              - lea rcx,[rax+rax*2]
+ed9.exe+198EAC: 89 B4 8B 64 02 00 00     - mov [rbx+rcx*4+00000264],esi
+ed9.exe+198EB3: 48 8B 0D 5E BE 60 00     - mov rcx,[ed9.exe+7A4D18]
+ed9.exe+198EBA: BA 02 00 00 00           - mov edx,00000002
+ed9.exe+198EBF: 44 0F B6 81 DD 55 0B 00  - movzx r8d,byte ptr [rcx+000B55DD]
+ed9.exe+198EC7: 41 FF C0                 - inc r8d
+ed9.exe+198ECA: E8 B1 C0 11 00           - call ed9.exe+2B4F80
+ed9.exe+198ECF: 48 8B 7D A7              - mov rdi,[rbp-59]
+ed9.exe+198ED3: BA 01 00 00 00           - mov edx,00000001
 }
 </AssemblerScript>
     </CheatEntry>
@@ -795,6 +1207,97 @@ ed9.exe+FD863: 83 FB 63              - cmp ebx,63
           <ShowAsSigned>0</ShowAsSigned>
           <VariableType>Float</VariableType>
           <Address>vf_xp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>67</ID>
+      <Description>"核心EXP倍率"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2022-07-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CORE_XP_MULTI,ed9.exe,89 1E 8B 55 08) // should be unique
+alloc(newmem,$1000,INJECT_CORE_XP_MULTI)
+
+label(code)
+label(return)
+label(vf_core_xp_multi)
+newmem:
+  push rax
+  mov eax, [rsi]
+  cvtsi2ss xmm15, eax
+  cvtsi2ss xmm14, ebx
+  vsubss xmm13, xmm14, xmm15
+  vmovss xmm12, [vf_core_xp_multi]
+  vmulss xmm13, xmm13, xmm12
+  vaddss xmm14, xmm15, xmm13
+  cvtss2si ebx, xmm14
+  pop rax
+
+code:
+  mov [rsi],ebx
+  mov edx,[rbp+08]
+  jmp return
+align 10 cc
+  vf_core_xp_multi:
+  dd (float)2.4
+
+INJECT_CORE_XP_MULTI:
+  jmp newmem
+return:
+registersymbol(INJECT_CORE_XP_MULTI)
+registersymbol(vf_core_xp_multi)
+
+[DISABLE]
+
+INJECT_CORE_XP_MULTI:
+  db 89 1E 8B 55 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+2B0D3D
+
+ed9.exe+2B0D20: 44 8B C3        - mov r8d,ebx
+ed9.exe+2B0D23: 41 8B D6        - mov edx,r14d
+ed9.exe+2B0D26: 49 8B CF        - mov rcx,r15
+ed9.exe+2B0D29: E8 62 D3 E0 FF  - call ed9.exe+BE090
+ed9.exe+2B0D2E: 8B D7           - mov edx,edi
+ed9.exe+2B0D30: 48 85 C0        - test rax,rax
+ed9.exe+2B0D33: 74 1A           - je ed9.exe+2B0D4F
+ed9.exe+2B0D35: 8B 48 08        - mov ecx,[rax+08]
+ed9.exe+2B0D38: 39 4E 04        - cmp [rsi+04],ecx
+ed9.exe+2B0D3B: 7C 12           - jl ed9.exe+2B0D4F
+// ---------- INJECTING HERE ----------
+ed9.exe+2B0D3D: 89 1E           - mov [rsi],ebx
+// ---------- DONE INJECTING  ----------
+ed9.exe+2B0D3F: 8B 55 08        - mov edx,[rbp+08]
+ed9.exe+2B0D42: 3B DA           - cmp ebx,edx
+ed9.exe+2B0D44: 75 09           - jne ed9.exe+2B0D4F
+ed9.exe+2B0D46: 8B 40 08        - mov eax,[rax+08]
+ed9.exe+2B0D49: 89 46 04        - mov [rsi+04],eax
+ed9.exe+2B0D4C: 8B 55 08        - mov edx,[rbp+08]
+ed9.exe+2B0D4F: FF C3           - inc ebx
+ed9.exe+2B0D51: 8B FA           - mov edi,edx
+ed9.exe+2B0D53: 3B DA           - cmp ebx,edx
+ed9.exe+2B0D55: 7E C9           - jle ed9.exe+2B0D20
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>68</ID>
+          <Description>"倍率"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_core_xp_multi</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
