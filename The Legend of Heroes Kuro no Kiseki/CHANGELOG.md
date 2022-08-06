@@ -1,5 +1,10 @@
 # Changelog
 
+## 2022/08/06
+Added: LGC value
+Fixed: item count
+
+
 ## 2022/08/06  
 Added: 親密度 / Closeness info
 
