@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022/08/07
+Added: Date info. in LGC script
+Revised: HP/EP/CP when get hit 
+
 ## 2022/08/06
 Added: LGC value
 Fixed: item count
