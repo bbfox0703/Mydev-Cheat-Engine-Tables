@@ -82,6 +82,9 @@ ja-JP: 初音ミク Project DIVA MEGA39’s＋
 zh-TW: 動物朋友 Cellien May Cry  
 ja-JP: けものフレンズ Cellien May Cry   
 
+## Kingdom Two Crowns  
+[Kingdom Two Crowns (Steam)](https://store.steampowered.com/app/701160/Kingdom_Two_Crowns/)  
+
 
 ## Langrisser I & II  
 [Langrisser I & II (Steam)](https://store.steampowered.com/app/1060220/Langrisser_I__II/)  

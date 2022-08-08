@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>30</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"Enable script+"</Description>
+      <Options moHideChildren="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Enabled 2 Times: First time: waiting after IL2CPP Scan Finish. 2nd time: really enable it"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1</ID>
+          <Description>"Enable me (enable twice, wait IL2CPP to complete)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if process == nil then ShowMessage('Process is not selected.')
+elseif readInteger(process) == 0 then ShowMessage('Process cannot be opened.')
+else
+  if (monopipe~=nil) and (monopipe.ProcessID~=getOpenedProcessID()) then
+    monopipe.destroy()
+    monopipe=nil
+  end
+  if (monopipe==nil) then
+    LaunchMonoDataCollector()
+  end
+end
+
+{$asm}
+define(wallet_proc,"Wallet.ShowCoinBag")
+define(wallet_proc2,"Wallet:set_coins")
+registersymbol(wallet_proc)
+registersymbol(wallet_proc2)
+ 
+ 
+[DISABLE]
+{$lua}
+if not syntaxcheck and monopipe then monopipe = nil,monopipe.Destroy()end
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"Get Coin &amp; Gem (Steam ver.; usage: gold change)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : KingdomTwoCrowns.exe
+  Version: 
+  Date   : 2022-03-08
+  Author : bbfox @ https://www.opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_WALLET_SHOWBAG,GameAssembly.dll,74 15 6A 00 FF 76 38) // should be unique
+aobscanregion(INJECT_WALLET_SHOWBAG,wallet_proc,wallet_proc+A1,74 15 6A 00 FF 76 38) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(i_gold_addr)
+label(i_gem_addr)
+label(is_fix_gold)
+label(is_fix_gem)
+label(fix_gold_value)
+label(fix_gem_value)
+
+newmem:
+
+code:
+  je GameAssembly.dll+398F0C
+  push 00
+
+  push rax
+  lea rax, [esi+34]
+  mov [i_gold_addr], rax
+  lea rax, [esi+38]
+  mov [i_gem_addr], rax
+  pop rax
+
+
+  push rax
+  push rbx
+  cmp dword ptr [is_fix_gold], 0
+  je next1
+  mov eax, [fix_gold_value]
+  mov [esi+34], eax
+
+
+next1:
+  cmp dword ptr [is_fix_gem], 0
+  je endp
+  mov eax, [fix_gem_value]
+  mov [esi+38], eax
+
+endp:
+  pop rbx
+  pop rax
+
+  push [esi+38]
+  jmp return
+
+align 10 cc
+  i_gold_addr:
+  dq 0
+  i_gem_addr:
+  dq 0
+  is_fix_gold:
+  dd 1
+  is_fix_gem:
+  dd 0
+  fix_gold_value:
+  dd 14
+  fix_gem_value:
+  dd 14
+
+INJECT_WALLET_SHOWBAG:
+  jmp newmem
+  nop 2
+return:
+
+
+registersymbol(is_fix_gold)
+registersymbol(is_fix_gem)
+registersymbol(fix_gold_value)
+registersymbol(fix_gem_value)
+registersymbol(i_gold_addr)
+registersymbol(i_gem_addr)
+registersymbol(INJECT_WALLET_SHOWBAG)
+
+[DISABLE]
+
+INJECT_WALLET_SHOWBAG:
+  db 74 15 6A 00 FF 76 38
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+398EF5
+
+GameAssembly.dll+398EDB: 74 2F           - je GameAssembly.dll+398F0C
+GameAssembly.dll+398EDD: 6A 00           - push 00
+GameAssembly.dll+398EDF: 6A 01           - push 01
+GameAssembly.dll+398EE1: 50              - push eax
+GameAssembly.dll+398EE2: E8 79 AF CC 00  - call UnityEngine.GameObject.SetActive
+GameAssembly.dll+398EE7: 83 C4 0C        - add esp,0C
+GameAssembly.dll+398EEA: 80 7E 33 00     - cmp byte ptr [esi+33],00
+GameAssembly.dll+398EEE: 74 18           - je GameAssembly.dll+398F08
+GameAssembly.dll+398EF0: 8B 46 3C        - mov eax,[esi+3C]
+GameAssembly.dll+398EF3: 85 C0           - test eax,eax
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+398EF5: 74 15           - je GameAssembly.dll+398F0C
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+398EF7: 6A 00           - push 00
+GameAssembly.dll+398EF9: FF 76 38        - push [esi+38]
+GameAssembly.dll+398EFC: FF 76 34        - push [esi+34]
+GameAssembly.dll+398EFF: 50              - push eax
+GameAssembly.dll+398F00: E8 4B 8D 15 00  - call CoinBag.ShowCoins
+GameAssembly.dll+398F05: 83 C4 10        - add esp,10
+GameAssembly.dll+398F08: 5F              - pop edi
+GameAssembly.dll+398F09: 5E              - pop esi
+GameAssembly.dll+398F0A: 5D              - pop ebp
+GameAssembly.dll+398F0B: C3              - ret 
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>5</ID>
+                  <Description>"Coin"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_gold_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>6</ID>
+                  <Description>"Gem"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_gem_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>11</ID>
+                  <Description>"Fix. Coin?(Turn on when needed)"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_fix_gold</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"Fix. Gem?  (Turn on when needed)"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_fix_gem</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"Get Coin &amp; Gem (itch DRM Free ver.; usage: gold change)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : KingdomTwoCrowns.exe
+  Version: 
+  Date   : 2022-03-10
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_WALLET_DRMFREE,89 46 44 8B 46 20 C7) // should be unique
+aobscanregion(INJECT_WALLET_DRMFREE,wallet_proc2,wallet_proc2+A0,89 46 44 8B 46 20 C7) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(i_gold_addr)
+label(i_gem_addr)
+label(is_fix_gold)
+label(is_fix_gem)
+label(fix_gold_value)
+label(fix_gem_value)
+
+newmem:
+  push rax
+  lea rax, [esi+44]
+  mov [i_gold_addr], rax
+  lea rax, [esi+48]
+  mov [i_gem_addr], rax
+  pop rax
+
+
+  push rax
+  push rbx
+  cmp dword ptr [is_fix_gold], 0
+  je next1
+  mov eax, [fix_gold_value]
+  mov [esi+44], eax
+
+
+next1:
+  cmp dword ptr [is_fix_gem], 0
+  je endp
+  mov eax, [fix_gem_value]
+  mov [esi+48], eax
+
+endp:
+  pop rbx
+  pop rax
+
+
+code:
+  mov [esi+44],eax
+  mov eax,[esi+20]
+  jmp return
+
+align 10 cc
+  i_gold_addr:
+  dq 0
+  i_gem_addr:
+  dq 0
+  is_fix_gold:
+  dd 1
+  is_fix_gem:
+  dd 0
+  fix_gold_value:
+  dd 14
+  fix_gem_value:
+  dd 14
+
+INJECT_WALLET_DRMFREE:
+  jmp newmem
+  nop
+return:
+registersymbol(is_fix_gold)
+registersymbol(is_fix_gem)
+registersymbol(fix_gold_value)
+registersymbol(fix_gem_value)
+registersymbol(i_gold_addr)
+registersymbol(i_gem_addr)
+registersymbol(INJECT_WALLET_DRMFREE)
+
+[DISABLE]
+
+INJECT_WALLET_DRMFREE:
+  db 89 46 44 8B 46 20
+
+unregistersymbol(INJECT_WALLET_DRMFREE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Wallet:set_coins+40
+
+Wallet:set_coins+17: E8 BC A8 4C DF           - call 142AED70
+Wallet:set_coins+1c: 85 C0                    - test eax,eax
+Wallet:set_coins+1e: 0F 84 C8 00 00 00        - je Wallet:set_coins+ec
+Wallet:set_coins+24: 8B 46 30                 - mov eax,[esi+30]
+Wallet:set_coins+27: 89 44 24 08              - mov [esp+08],eax
+Wallet:set_coins+2b: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Wallet:set_coins+33: 8B 45 0C                 - mov eax,[ebp+0C]
+Wallet:set_coins+36: 89 04 24                 - mov [esp],eax
+Wallet:set_coins+39: 8B C0                    - mov eax,eax
+Wallet:set_coins+3b: E8 50 84 E2 E3           - call UnityEngine.Mathf:Clamp
+// ---------- INJECTING HERE ----------
+Wallet:set_coins+40: 89 46 44                 - mov [esi+44],eax
+// ---------- DONE INJECTING  ----------
+Wallet:set_coins+43: 8B 46 20                 - mov eax,[esi+20]
+Wallet:set_coins+46: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Wallet:set_coins+4e: 89 04 24                 - mov [esp],eax
+Wallet:set_coins+51: 8B C0                    - mov eax,eax
+Wallet:set_coins+53: E8 48 82 02 DE           - call UnityEngine.Object:op_Inequality
+Wallet:set_coins+58: 85 C0                    - test eax,eax
+Wallet:set_coins+5a: 0F 84 8C 00 00 00        - je Wallet:set_coins+ec
+Wallet:set_coins+60: 8B 46 20                 - mov eax,[esi+20]
+Wallet:set_coins+63: 0F B6 80 F9 00 00 00     - movzx eax,byte ptr [eax+000000F9]
+Wallet:set_coins+6a: 85 C0                    - test eax,eax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>21</ID>
+                  <Description>"Fix gold?"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_fix_gold</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>22</ID>
+                  <Description>"Fix gem?"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_fix_gem</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>23</ID>
+                  <Description>"Fix gold value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>fix_gold_value</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>24</ID>
+                  <Description>"Fix gem value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>fix_gem_value</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>25</ID>
+                  <Description>"Gold address"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_gold_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>26</ID>
+                  <Description>"Gem address"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_gem_addr</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>34</ID>
+      <Description>"Kingdom Two Crowns 1.1.16  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Color>400080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols>
+    <SymbolEntry>
+      <Name>rage</Name>
+      <Address>1409552A7</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>weight</Name>
+      <Address>4039F908</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>unlimited</Name>
+      <Address>140DB8F24</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>player</Name>
+      <Address>1400F59C1</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>player_stats</Name>
+      <Address>1400F5AA3</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>keyboard</Name>
+      <Address>13F709090</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>global_game</Name>
+      <Address>14011D3A9</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>vtable</Name>
+      <Address>13F1550F5</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>durability</Name>
+      <Address>7FF74AA34F5C</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>freeze</Name>
+      <Address>7FF74A7C8CB6</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>mouseover</Name>
+      <Address>7FF74AC9F4AE</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>mouseover_ptr</Name>
+      <Address>7FF74A2E001B</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>console</Name>
+      <Address>7FF742253810</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>global_console_debug</Name>
+      <Address>7FF742D0E18A</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>use_console</Name>
+      <Address>7FF7426FB043</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>ItemEditorMaking</Name>
+      <Address>00710030</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>ItemEditor</Name>
+      <Address>021C0020</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>ItemEditorContainer</Name>
+      <Address>021C0010</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>MakingEditorContainer</Name>
+      <Address>00930000</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>MakingEditorContainerV2</Name>
+      <Address>021C0000</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>FinalMakingEditor</Name>
+      <Address>02290010</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>ItemSelContainer</Name>
+      <Address>008D0020</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>ItemSelMaking</Name>
+      <Address>008D0000</Address>
+    </SymbolEntry>
+  </UserdefinedSymbols>
+  <Comments>Info about this table:
+</Comments>
+</CheatTable>
