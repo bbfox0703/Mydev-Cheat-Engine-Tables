@@ -30,6 +30,11 @@ ja-JP: リディー＆スールのアトリエ ～不思議な絵画の錬金術
 zh-TW: 蘿樂娜的鍊金工房 ～亞蘭德之鍊金術士～ DX  
 ja-JP: ロロナのアトリエ ～アーランドの錬金術士～ DX  
 
+## Atelier Ryza 2
+[Atelier Ryza 2: Lost Legends & the Secret Fairy (Steam)](https://store.steampowered.com/app/1257290/_/)  
+ja-JP: ライザのアトリエ2 ～失われた伝承と秘密の妖精  
+zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～  
+
 ## Atelier Sophie DX  
 [Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)](https://store.steampowered.com/app/1502970/__DX/)  
 zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX  
