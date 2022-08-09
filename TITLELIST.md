@@ -66,6 +66,9 @@ zh-TW: 同級生Remake
 ## Endless Space 2    
 [Endless Space 2 (Steam)](https://store.steampowered.com/app/392110/ENDLESS_Space_2/)  
 
+## Factory Town
+[Factory Town (Steam)](https://store.steampowered.com/app/860890/Factory_Town/)  
+
 ## FINAL FANTASY VI  
 [FINAL FANTASY VI (Steam)] (https://store.steampowered.com/app/1173820/FINAL_FANTASY_VI/)  
 zh-TW: 太空戰士VI 像素複刻版  
