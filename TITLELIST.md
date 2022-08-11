@@ -90,6 +90,10 @@ ja-JP: 初音ミク Project DIVA MEGA39’s＋
 zh-TW: 動物朋友 Cellien May Cry  
 ja-JP: けものフレンズ Cellien May Cry   
 
+
+## Kingdom Classic
+[Kingdom: Classic (Steam)](https://store.steampowered.com/app/368230/Kingdom_Classic/)  
+
 ## Kingdom Two Crowns  
 [Kingdom Two Crowns (Steam)](https://store.steampowered.com/app/701160/Kingdom_Two_Crowns/)  
 

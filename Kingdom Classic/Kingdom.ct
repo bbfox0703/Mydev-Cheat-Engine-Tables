@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>7</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"Enable (Enable Twice)"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if process == nil then ShowMessage('Process is not selected.')
+elseif readInteger(process) == 0 then ShowMessage('Process cannot be opened.')
+else
+  if (monopipe~=nil) and (monopipe.ProcessID~=getOpenedProcessID()) then
+    monopipe.destroy()
+    monopipe=nil
+  end
+  if (monopipe==nil) then
+    LaunchMonoDataCollector()
+  end
+end
+
+{$asm}
+define(Walletset_coinsProc,"Wallet:set_coins")
+
+registersymbol(Walletset_coinsProc)
+
+
+
+[DISABLE]
+{$lua}
+if not syntaxcheck and monopipe then monopipe = nil,monopipe.Destroy()end
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1</ID>
+          <Description>"Gold info."</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : Kingdom.exe
+  Version: 
+  Date   : 2022-03-08
+  Author : bbfox @ www.opencheattables.org
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GOLD_SET,Walletset_coinsProc+20,Walletset_coinsProc+30,89 48 3C 83 EC 0C 50) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(i_min_gold)
+label(i_gold_addr)
+
+newmem:
+  push rbx
+  lea rbx, [eax+3C]
+  mov [i_gold_addr], rbx
+  pop rbx
+
+  cmp dword ptr [i_min_gold], 0
+  je code
+  cmp ecx, [i_min_gold]
+  jg code
+  mov ecx, [i_min_gold]
+
+code:
+  mov [eax+3C],ecx
+  sub esp,0C
+  jmp return
+align 10 cc
+  i_gold_addr:
+  dq 0
+  i_min_gold:
+  dd #10
+
+
+INJECT_GOLD_SET:
+  jmp newmem
+  nop
+return:
+
+registersymbol(i_min_gold)
+registersymbol(i_gold_addr)
+registersymbol(INJECT_GOLD_SET)
+
+[DISABLE]
+
+INJECT_GOLD_SET:
+  db 89 48 3C 83 EC 0C
+
+unregistersymbol(i_min_gold)
+unregistersymbol(i_gold_addr)
+unregistersymbol(INJECT_GOLD_SET)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Wallet:set_coins+20
+
+Wallet:set_coins+3: 83 EC 08        - sub esp,08
+Wallet:set_coins+6: 8B 45 08        - mov eax,[ebp+08]
+Wallet:set_coins+9: 8B 40 28        - mov eax,[eax+28]
+Wallet:set_coins+c: 83 EC 08        - sub esp,08
+Wallet:set_coins+f: FF 75 0C        - push [ebp+0C]
+Wallet:set_coins+12: 50              - push eax
+Wallet:set_coins+13: E8 58 E1 B1 E7  - call UnityEngine.Mathf:Min
+Wallet:set_coins+18: 83 C4 10        - add esp,10
+Wallet:set_coins+1b: 8B C8           - mov ecx,eax
+Wallet:set_coins+1d: 8B 45 08        - mov eax,[ebp+08]
+// ---------- INJECTING HERE ----------
+Wallet:set_coins+20: 89 48 3C        - mov [eax+3C],ecx
+// ---------- DONE INJECTING  ----------
+Wallet:set_coins+23: 83 EC 0C        - sub esp,0C
+Wallet:set_coins+26: 50              - push eax
+Wallet:set_coins+27: E8 94 94 B1 E7  - call Wallet:ShowCoinBag
+Wallet:set_coins+2c: 83 C4 10        - add esp,10
+Wallet:set_coins+2f: C9              - leave 
+Wallet:set_coins+30: C3              - ret 
+1DAF8AB9: 00 00           - add [eax],al
+1DAF8ABB: 00 00           - add [eax],al
+1DAF8ABD: 00 00           - add [eax],al
+1DAF8ABF: 00 55 8B        - add [ebp-75],dl
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>2</ID>
+              <Description>"Gold address (Enable: Gain gold)"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_gold_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"Gold (Active: Gain gold)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_gold_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"Set min. Gold"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_gold</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9</ID>
+      <Description>"Gold Pointers"</Description>
+      <Options moHideChildren="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Gold"</Description>
+          <VariableType>4 Bytes</VariableType>
+          <Address>"Kingdom.exe"+00EF22E0</Address>
+          <Offsets>
+            <Offset>8C</Offset>
+            <Offset>54</Offset>
+            <Offset>20</Offset>
+            <Offset>14</Offset>
+            <Offset>AEC</Offset>
+            <Offset>1C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>6</ID>
+          <Description>"Gold (pointer #2)"</Description>
+          <VariableType>4 Bytes</VariableType>
+          <Address>"mono.dll"+001F52F0</Address>
+          <Offsets>
+            <Offset>8C</Offset>
+            <Offset>54</Offset>
+            <Offset>40</Offset>
+            <Offset>8</Offset>
+            <Offset>2B4</Offset>
+            <Offset>50</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Kingdom: Classic 1.2.0  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Color>400080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"*** Enable Windows 8 compatibility mode if game not start under WIndows 11 ***"</Description>
+      <Color>808080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
