@@ -1,5 +1,10 @@
 # Changelog
 
+## 2022/08/14  
+1. Rename .CT filename  
+2. Added Anomaly Investigations list viewer / 傀異探究任務檢視器
+3. Revise Damage -> recovery bar / 受到傷害會變紅條
+
 ## 2022/08/13  
 1. Added some guild card data:  
 + Script: Get base guild card data (Usage: menu-> guild card -> confirm) / 取得基本公會名片資料 (公會名片->確認)  
