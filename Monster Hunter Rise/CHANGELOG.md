@@ -1,9 +1,12 @@
 # Changelog
+## 2022/08/15  
+1. Added "Get arena time record (Usage: Talk to arena NPC->list quest) / 取得鬥技場時間記錄 (於亞爾羅教官中點選相關任務)"  
+2. Moved old "Gte arena record" to \_not working section
 
 ## 2022/08/14  
 1. Rename .CT filename  
-2. Added Anomaly Investigations list viewer / 傀異探究任務檢視器
-3. Revise Damage -> recovery bar / 受到傷害會變紅條
+2. Added "Anomaly Investigations list viewer / 傀異探究任務檢視器"  
+3. Revise Damage -> recovery bar / 受到傷害會變紅條  
 
 ## 2022/08/13  
 1. Added some guild card data:  
