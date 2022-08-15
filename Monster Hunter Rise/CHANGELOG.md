@@ -1,7 +1,9 @@
 # Changelog
+
 ## 2022/08/15  
 1. Added "Get arena time record (Usage: Talk to arena NPC->list quest) / 取得鬥技場時間記錄 (於亞爾羅教官中點選相關任務)"  
-2. Moved old "Gte arena record" to \_not working section
+2. Revised "Get weapon usage / Not fully working (Guild card-View) / 取得武器使用次數資料；非完全有效"
+3. Added "Max some active skills (not sure if working)"
 
 ## 2022/08/14  
 1. Rename .CT filename  
