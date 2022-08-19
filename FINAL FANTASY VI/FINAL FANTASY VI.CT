@@ -45,9 +45,8 @@ define(LastBattleInstantiateManagerGetMonsterPartyProc,"Last.Battle.InstantiateM
 define(LastBattleFunctionFuncitonNormalAttackUpdateParameterProc,"Last.Battle.Function.FuncitonNormalAttack.UpdateParameter")
 define(LastBattleFunctionMagicFunctionUpdateParameterProc,"Last.Battle.Function.MagicFunction.UpdateParameter")
 define(LastBattleFunctionRecoveryFunctionUpdateParameterProc,"Last.Battle.Function.RecoveryFunction.UpdateParameter")
-
-
-
+define(LastBattleFunctionBattleFunction52FF6StealItemProc, "Last.Battle.Function.BattleFunction52FF6.StealItem")
+define(LastBattleBattleStealItemPlugStealItemProc, "Last.Battle.BattleStealItemPlug.StealItem")
 
 
 registersymbol(CharacterParameterBaseset_CurrentMPProc)
@@ -60,6 +59,8 @@ registersymbol(LastBattleInstantiateManagerGetMonsterPartyProc)
 registersymbol(LastBattleFunctionFuncitonNormalAttackUpdateParameterProc)
 registersymbol(LastBattleFunctionMagicFunctionUpdateParameterProc)
 registersymbol(LastBattleFunctionRecoveryFunctionUpdateParameterProc)
+registersymbol(LastBattleFunctionBattleFunction52FF6StealItemProc)
+registersymbol(LastBattleBattleStealItemPlugStealItemProc)
 [DISABLE]
 {$lua}
 if not syntaxcheck and monopipe then monopipe = nil,monopipe.Destroy()end
@@ -372,30 +373,7 @@ GameAssembly.dll+8E0F5F: 57                    - push rdi
             <CheatEntry>
               <ID>24</ID>
               <Description>"ID"</Description>
-              <DropDownList DisplayValueAsItem="1">0002:Potion
-0003:Hi Potion
-0004:X-Potion
-0005:Ether
-0006:Hi Ether
-0007:X-Ether
-0008:Elixir
-0009:Megalixir
-000A:Phoenix Down
-000B:Revivify
-000C:Antidote
-000D:Eye Drop
-000E:Soft
-000F:Remedy
-0010:Sleeping Bag
-0011:Tent
-0012:Green Cherry
-0013:Magicite
-0014:Super Ball
-0015:Echo Screen
-0016:Smoke Bomb
-0017:Warp Stone
-0018:Dried Meat
-</DropDownList>
+              <DropDownListLink>Item ID</DropDownListLink>
               <ShowAsHex>1</ShowAsHex>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>2 Bytes</VariableType>
@@ -799,6 +777,579 @@ GameAssembly.dll+15C238E: CC              - int 3
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
               <Address>i_ap_value</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>183</ID>
+          <Description>"100% Steal"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
+  Version: 
+  Date   : 2022-08-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_STEAL_ITEM,GameAssembly.dll,40 84 ED 0F 85 05 01 00 00) // should be unique
+aobscanregion(INJECT_STEAL_ITEM,LastBattleFunctionBattleFunction52FF6StealItemProc+0C, LastBattleFunctionBattleFunction52FF6StealItemProc+60,40 84 ED 0F 85 ?? ?? ?? ?? 48 85 F6) // should be unique
+alloc(newmem,$1000,INJECT_STEAL_ITEM)
+alloc(INJECT_STEAL_ITEMo,9)
+
+label(code)
+label(return)
+
+INJECT_STEAL_ITEMo:
+  readmem(INJECT_STEAL_ITEM, 9)
+
+newmem:
+  mov bpl, 1
+code:
+  test bpl,bpl
+  //jne GameAssembly.dll+12E1741
+  reassemble(INJECT_STEAL_ITEM+3)
+  jmp return
+
+INJECT_STEAL_ITEM:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_STEAL_ITEM)
+registersymbol(INJECT_STEAL_ITEMo)
+[DISABLE]
+
+INJECT_STEAL_ITEM:
+  //db 40 84 ED 0F 85 05 01 00 00
+  readmem(INJECT_STEAL_ITEMo, 9)
+
+unregistersymbol(INJECT_STEAL_ITEM)
+unregistersymbol(INJECT_STEAL_ITEMo)
+dealloc(newmem)
+dealloc(INJECT_STEAL_ITEMo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+12E1633
+
+GameAssembly.dll+12E1604: E8 57 E3 E5 FE           - call GameAssembly.dll+13F960
+GameAssembly.dll+12E1609: C6 05 F8 1E D0 00 01     - mov byte ptr [GameAssembly.dll+1FE3508],01
+GameAssembly.dll+12E1610: 48 8B 0D 39 A8 D5 00     - mov rcx,[GameAssembly.dll+203BE50]
+GameAssembly.dll+12E1617: 4C 89 74 24 40           - mov [rsp+40],r14
+GameAssembly.dll+12E161C: 4C 89 7C 24 48           - mov [rsp+48],r15
+GameAssembly.dll+12E1621: E8 6A E4 E5 FE           - call GameAssembly.dll+13FA90
+GameAssembly.dll+12E1626: 33 D2                    - xor edx,edx
+GameAssembly.dll+12E1628: 48 8B C8                 - mov rcx,rax
+GameAssembly.dll+12E162B: 48 8B F8                 - mov rdi,rax
+GameAssembly.dll+12E162E: E8 8D 10 DF FF           - call StealItemData..ctor
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+12E1633: 40 84 ED                 - test bpl,bpl
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+12E1636: 0F 85 05 01 00 00        - jne GameAssembly.dll+12E1741
+GameAssembly.dll+12E163C: 48 85 F6                 - test rsi,rsi
+GameAssembly.dll+12E163F: 0F 84 DD 05 00 00        - je GameAssembly.dll+12E1C22
+GameAssembly.dll+12E1645: 4C 8B 06                 - mov r8,[rsi]
+GameAssembly.dll+12E1648: 48 8B 15 E9 52 D6 00     - mov rdx,[GameAssembly.dll+2046938]
+GameAssembly.dll+12E164F: 45 0F B6 88 28 01 00 00  - movzx r9d,byte ptr [r8+00000128]
+GameAssembly.dll+12E1657: 0F B6 82 28 01 00 00     - movzx eax,byte ptr [rdx+00000128]
+GameAssembly.dll+12E165E: 44 3A C8                 - cmp r9l,al
+GameAssembly.dll+12E1661: 0F 82 BB 05 00 00        - jb GameAssembly.dll+12E1C22
+GameAssembly.dll+12E1667: 8B C8                    - mov ecx,eax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>187</ID>
+          <Description>"Steal rare item if available (need to confirm)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
+  Version: 
+  Date   : 2022-08-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_STEAL_RARE,GameAssembly.dll,41 8D 5E 01 83 F8 20) // should be unique
+aobscanregion(INJECT_STEAL_RARE,LastBattleFunctionBattleFunction52FF6StealItemProc+260,LastBattleFunctionBattleFunction52FF6StealItemProc+300,41 8D 5E 01 83 F8 20) // should be unique
+alloc(newmem,$1000,INJECT_STEAL_RARE)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, 10
+
+code:
+  lea ebx,[r14+01]
+  cmp eax,20
+  jmp return
+
+INJECT_STEAL_RARE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_STEAL_RARE)
+
+[DISABLE]
+
+INJECT_STEAL_RARE:
+  db 41 8D 5E 01 83 F8 20
+
+unregistersymbol(INJECT_STEAL_RARE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+12E1868
+
+GameAssembly.dll+12E183A: 48 8B 0D 6F 70 D6 00  - mov rcx,[GameAssembly.dll+20488B0]
+GameAssembly.dll+12E1841: F6 81 2F 01 00 00 02  - test byte ptr [rcx+0000012F],02
+GameAssembly.dll+12E1848: 74 0E                 - je GameAssembly.dll+12E1858
+GameAssembly.dll+12E184A: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+12E1851: 75 05                 - jne GameAssembly.dll+12E1858
+GameAssembly.dll+12E1853: E8 88 D5 DE FE        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+12E1858: 33 D2                 - xor edx,edx
+GameAssembly.dll+12E185A: B9 00 01 00 00        - mov ecx,00000100
+GameAssembly.dll+12E185F: 44 8D 72 01           - lea r14d,[rdx+01]
+GameAssembly.dll+12E1863: E8 D8 58 AC FF        - call CommonUtility.GetRand
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+12E1868: 41 8D 5E 01           - lea ebx,[r14+01]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+12E186C: 83 F8 20              - cmp eax,20
+GameAssembly.dll+12E186F: 7D 1D                 - jnl GameAssembly.dll+12E188E
+GameAssembly.dll+12E1871: 33 D2                 - xor edx,edx
+GameAssembly.dll+12E1873: 48 8B CD              - mov rcx,rbp
+GameAssembly.dll+12E1876: E8 75 92 2D 00        - call Last.Data.Master.Monster.get_StealContentId2
+GameAssembly.dll+12E187B: 85 C0                 - test eax,eax
+GameAssembly.dll+12E187D: 74 0F                 - je GameAssembly.dll+12E188E
+GameAssembly.dll+12E187F: 33 D2                 - xor edx,edx
+GameAssembly.dll+12E1881: 48 8B CD              - mov rcx,rbp
+GameAssembly.dll+12E1884: 44 8B F3              - mov r14d,ebx
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>184</ID>
+          <Description>"Steal - Set item - Specify ID &amp; count"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
+  Version: 
+  Date   : 2022-08-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_STEAL_EXTRA_ITEM,GameAssembly.dll,B5 D9 FE CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 48 89 5C 24 08) // should be unique
+aobscanregion(INJECT_STEAL_EXTRA_ITEM,LastBattleBattleStealItemPlugStealItemProc,LastBattleBattleStealItemPlugStealItemProc+12,48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20) //48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20
+alloc(newmem,$1000,INJECT_STEAL_EXTRA_ITEM)
+
+label(code)
+label(return)
+label(i_steal_item_count)
+label(i_steam_item_id)
+
+newmem:
+  mov rdx, [i_steam_item_id]
+  mov r8, [i_steal_item_count]
+
+code:
+  mov [rsp+08],rbx
+  jmp return
+align 10 cc
+  i_steal_item_count:
+  dd 1
+  i_steam_item_id:
+  dd 8
+
+
+INJECT_STEAL_EXTRA_ITEM:
+  jmp newmem
+return:
+registersymbol(INJECT_STEAL_EXTRA_ITEM)
+registersymbol(i_steal_item_count)
+registersymbol(i_steam_item_id)
+[DISABLE]
+
+INJECT_STEAL_EXTRA_ITEM:
+  db 48 89 5C 24 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: LastBattleBattleStealItemPlugStealItemProc
+
+GameAssembly.dll+13A45B6: CC                    - int 3 
+GameAssembly.dll+13A45B7: CC                    - int 3 
+GameAssembly.dll+13A45B8: CC                    - int 3 
+GameAssembly.dll+13A45B9: CC                    - int 3 
+GameAssembly.dll+13A45BA: CC                    - int 3 
+GameAssembly.dll+13A45BB: CC                    - int 3 
+GameAssembly.dll+13A45BC: CC                    - int 3 
+GameAssembly.dll+13A45BD: CC                    - int 3 
+GameAssembly.dll+13A45BE: CC                    - int 3 
+GameAssembly.dll+13A45BF: CC                    - int 3 
+// ---------- INJECTING HERE ----------
+LastBattleBattleStealItemPlugStealItemProc: 48 89 5C 24 08        - mov [rsp+08],rbx
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+13A45C5: 48 89 74 24 10        - mov [rsp+10],rsi
+GameAssembly.dll+13A45CA: 57                    - push rdi
+GameAssembly.dll+13A45CB: 48 83 EC 20           - sub rsp,20
+GameAssembly.dll+13A45CF: 80 3D 07 F6 C3 00 00  - cmp byte ptr [GameAssembly.dll+1FE3BDD],00
+GameAssembly.dll+13A45D6: 41 8B F0              - mov esi,r8d
+GameAssembly.dll+13A45D9: 8B FA                 - mov edi,edx
+GameAssembly.dll+13A45DB: 48 8B D9              - mov rbx,rcx
+GameAssembly.dll+13A45DE: 75 12                 - jne GameAssembly.dll+13A45F2
+GameAssembly.dll+13A45E0: 8B 0D 62 1A 58 00     - mov ecx,[GameAssembly.dll+1926048]
+GameAssembly.dll+13A45E6: E8 75 B3 D9 FE        - call GameAssembly.dll+13F960
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>185</ID>
+              <Description>"Item ID"</Description>
+              <DropDownList DisplayValueAsItem="1">1:?
+2:Potion
+3:Hi Potion
+4:X-Potion
+5:Ether
+6:Hi Ether
+7:X-Ether
+8:Elixir
+9:Megalixir
+10:Phoenix Down
+11:Holy Water
+12:Antidote
+13:Eye Drop
+14:Gold Needle
+15:Remedy
+16:Sleeping Bag
+17:Tent
+18:Green Cherry
+19:Magicite Shard
+20:Super Ball
+21:Echo Screen
+22:Smoke Bomb
+23:Teleport Stone
+24:Dried Meat
+25:Rename Card
+26:Flame Scroll
+27:Water Scroll
+28:Lightning Scroll
+29:Invisibility Scroll
+30:Shadow Scroll
+31:Noise Blaster
+32:Bioblaster
+33:Flash
+34:Chainsaw
+35:Debillitator
+36:Drill
+37:Air Anchor
+38:Auto Crossbow
+39:Cider
+40:Old Clock Key
+41:Fish
+42:Fish
+43:Fish
+44:Fish
+45:Lump of Metal
+46:Lola's Letter
+47:Coral
+48:Books
+49:Emperor's Letter
+50:Rust-Rid
+51:*Freeze
+52:*Freeze
+53:*Freeze
+54:*Assume Freeze
+55:*Assume Freeze
+56:*Assume Freeze
+57:*Assume Freeze
+58:*Assume Freeze
+59:*Assume Freeze
+60:*Freeze
+61:*Freeze
+62:Ramuh
+63:Kirin
+64:Siren
+65:Cait Sith
+66:Ifrit
+67:Shiva
+68:Unicorn
+69:Maduin
+70:Catoblepas
+71:Phantom
+72:Carbuncle
+73:Bismarck
+74:Golem
+75:Zona Seeker
+76:Seraph
+77:Quetzalli
+78:Fenrir
+79:Valigarmanda
+80:Midgardsormr
+81:Lakshmi
+82:Alexander
+83:Phoenix
+84:Odin
+85:Bahamut
+86:Ragnarok
+87:Crusader
+88:Raiden
+89:*Freeze
+90:*Assume Freeze
+91:*Assume Freeze
+92:*Freeze
+93:Empty
+94:Dagger
+95:Mythril Knife
+96:Main Gauche
+97:Air Knife
+98:Thief's Knife
+99:Assassin's Dagger
+100:Man-Eater
+101:SwordBreaker
+102:Gladius
+103:Valiant Knife
+104:Mythril Sword
+105:Great Sword
+106:Rune Blade
+107:Flametounge
+108:Icebrand
+109:Thunder Blade
+110:Bastard Sword
+111:Stone Blade
+112:Blood Sword
+113:Enhancer
+114:Crystal Sword
+115:Falchion
+116:Soul Sabre
+117:Ogrenyx
+118:Excalibur
+119:Zantetsuken
+120:Lightbringer
+121:Ragnarok
+122:Ultimate Weapon
+123:Mythril Spear
+124:Trident
+125:Heavy Lance
+126:Partisan
+127:Holy Lance
+128:Golden Spear
+129:Radiant Lance
+130:Impartisan
+131:Kunai
+132:Kodachi
+133:Sakura
+134:Sasuke
+135:Ichigeki
+136:Kagenui
+137:Ashura
+138:Kotetsu
+139:Kikuichimonji
+140:Kazekiri
+141:Murasame
+142:Masamune
+143:Murakumo
+144:Mutsunokami
+145:Healing Rod
+146:Mythril Rod
+147:Flame Rod
+148:Ice Rod
+149:Thunder Rod
+150:Poison Rod
+151:Holy Rod
+152:Gravity Rod
+153:Punisher
+154:Magus Rod
+155:Chocobo Brush
+156:Da Vinci Brush
+157:Magical Brush
+158:Rainbow Brush
+159:Shuriken
+160:Fuma Star
+161:Pinwheel
+162:Chain Flail
+163:Moonring Blade
+164:Morning Star
+165:Boomerang
+166:Rising Sun
+167:HawkEye
+168:Bone Club
+169:Sniper
+170:Wing Edge
+171:Cards
+172:Darts
+173:Death Tarrot
+174:Viper Darts
+175:Dice
+176:Fixed Dice
+177:Metal Knuckles
+178:Mythril Claws
+179:Kaiser Knuckles
+180:Venom Claws
+181:Burning Fist
+182:Dragon Claws
+183:Tigerfang
+184:*Freeze
+185:*Freeze
+186:*Assume Freeze
+187:*Assume Freeze
+188:*Assume Freeze
+189:*Assume Freeze
+190:*Assume Freeze
+191:*Assume Freeze
+192:*Assume Freeze
+193:*Assume Freeze
+194:*Assume Freeze
+195:*Assume Freeze
+196:*Freeze
+197:None
+198:None
+199:None
+200:*Freeze
+201:Buckler
+202:Heavy Shield
+203:Mythril Shield
+204:Golden Shield
+205:Aegis Shield
+206:Diamond Shield
+207:Flame Shield
+208:Ice Shield
+209:Thunder Shield
+210:Crystal Shield
+211:Genji Shield
+212:Tortoise Shield
+213:Cursed Shield
+214:Paladin's Shield
+215:Force Shield
+216:Leather Cap
+217:Hairband
+218:Plumed Hat
+219:Beret
+220:Magus Hat
+221:Bandana
+222:Iron Helmet
+223:Hypno Crown
+224:Priest's Miter
+225:Green Beret
+226:Twist Headband
+227:Mythril Helm
+228:Tiara
+229:Golden Helmet
+230:Tiger Mask
+231:Red Cap
+232:Mystery Veil
+233:Circlet
+234:Royal Crown
+235:Diamond Helm
+236:Black Cowl
+237:Crystal Helm
+238:Oath Veil
+239:Cat-Ear] Hood
+240:Genji Helmet
+241:Thornlet
+242:Saucer
+243:*Freeze
+244:Leather Armor
+245:Cotton Robe
+246:Kenpo Suit
+247:Iron Armor
+248:Silk Robe
+249:Mythril Vest
+250:Ninja Gear
+251:White Dress
+252:Mythril Mail
+253:Gaia Gear
+254:Mirage Vest
+255:Golden Armor
+256:Power Sash
+257:Luminous Robe
+258:Diamond Vest
+259:Red Jacket
+260:Force Armor
+261:Diamond Armor
+262:Black Garb
+263:Magus Robe
+264:Crystal Mail
+265:Regal Gown
+266:Genji Armor
+267:Reed Cloak
+268:Minerva Bustier
+269:Tabby Suit
+270:Chocobo Suit
+271:Moogle Suit
+272:Nutkin Suit
+273:Behemoth Suit
+274:Snow Scarf
+275:Silver Spectacles
+276:Star Pendant
+277:Peace Ring
+278:Amulet
+279:White Cape
+280:Jeweled Ring
+281:Fairy Ring
+282:Barrier Ring
+283:Mythril Glove
+284:Protect Ring
+285:Hermes Sandals
+286:Reflect Ring
+287:Angel Wings
+288:Angel Ring
+289:Knight's Code
+290:Dragoon Boots
+291:Zephyr Cape
+292:Princess Ring
+293:Cursed Ring
+294:Earrings
+295:Gigas Glove
+296:Blizzard Orb
+297:Berserker Ring
+298:Thief's Bracer
+299:Guard Bracelet
+300:Hero's Ring
+301:Ribbon
+302:Muscle Belt
+303:Crystal Orb
+304:Gold Hairpin
+305:Celestriad
+306:Brigand's Glove
+307:Gauntlet
+308:Genji Glove
+309:Hyper Wrist
+310:Master's Scroll
+311:Prayer Beads
+312:Black Belt
+313:Heiji's Jitte
+314:Fake Mustache
+315:Soul of Thamasa
+316:Dragon Horn
+317:Merit Award
+318:Memento Ring
+319:Safety Bit
+320:Lich Ring
+321:Molulu's Charm
+322:Ward Bangle
+323:Miracle Shoes
+324:Alarm Earring
+325:Gale Hairpin
+326:Sniper Eye
+327:Growth Egg
+328:Tintinnabulum
+329:Sprint Shoes
+330:*Freeze
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_steam_item_id</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>186</ID>
+              <Description>"Count"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_steal_item_count</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
