@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/08/20
+Added: 一次開啟/關閉多個修改器/ Turn most script On / Off
+
 ## 2022/08/18  
 Added: address for Chapter 4 free time count / 第四章閒暇時間次數
 
