@@ -3377,8 +3377,103 @@ MonsterHunterRise.exe+29FD794: 44 8B 40 10           - mov r8d,[rax+10]
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
+              <ID>1337096972</ID>
+              <Description>"Set min. HP (May dead still) / 設定最小HP (仍有可能被擊殺)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : MonsterHunterRise.exe
+  Version: 
+  Date   : 2022-08-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_HP_MIN,MonsterHunterRise.exe,F3 0F 10 45 20 F3 0F 11 45 20) // should be unique
+alloc(newmem,$1000,INJECT_SET_HP_MIN)
+
+label(code)
+label(return)
+label(vf_min_hp)
+newmem:
+
+code:
+  movss xmm0,[rbp+20]
+  // inject start
+  vmovss xmm15, [vf_min_hp]
+  vcomiss xmm0, xmm15
+  jae endp
+  vmovss xmm0, [vf_min_hp]
+  // inject end
+endp:
+  jmp return
+align 10 cc
+  vf_50:
+  dd (float)50
+  vf_min_hp:
+  dd (float)75
+
+INJECT_SET_HP_MIN:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_HP_MIN)
+registersymbol(vf_min_hp)
+[DISABLE]
+
+INJECT_SET_HP_MIN:
+  db F3 0F 10 45 20
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: MonsterHunterRise.exe+3D84588
+
+MonsterHunterRise.exe+3D8456B: 0F B6 45 33           - movzx eax,byte ptr [rbp+33]
+MonsterHunterRise.exe+3D8456F: 32 D1                 - xor dl,cl
+MonsterHunterRise.exe+3D84571: 6B C8 3F              - imul ecx,eax,3F
+MonsterHunterRise.exe+3D84574: 88 55 22              - mov [rbp+22],dl
+MonsterHunterRise.exe+3D84577: 0F B6 55 23           - movzx edx,byte ptr [rbp+23]
+MonsterHunterRise.exe+3D8457B: 02 D0                 - add dl,al
+MonsterHunterRise.exe+3D8457D: 32 D1                 - xor dl,cl
+MonsterHunterRise.exe+3D8457F: 48 8B CB              - mov rcx,rbx
+MonsterHunterRise.exe+3D84582: 88 55 23              - mov [rbp+23],dl
+MonsterHunterRise.exe+3D84585: 48 8B D7              - mov rdx,rdi
+// ---------- INJECTING HERE ----------
+MonsterHunterRise.exe+3D84588: F3 0F 10 45 20        - movss xmm0,[rbp+20]
+// ---------- DONE INJECTING  ----------
+MonsterHunterRise.exe+3D8458D: F3 0F 11 45 20        - movss [rbp+20],xmm0
+MonsterHunterRise.exe+3D84592: E8 F9 0E FE FF        - call MonsterHunterRise.exe+3D65490
+MonsterHunterRise.exe+3D84597: 48 8B 4F 08           - mov rcx,[rdi+08]
+MonsterHunterRise.exe+3D8459B: 48 8B F0              - mov rsi,rax
+MonsterHunterRise.exe+3D8459E: 48 C1 E9 26           - shr rcx,26
+MonsterHunterRise.exe+3D845A2: 81 E1 FF FF 03 00     - and ecx,0003FFFF
+MonsterHunterRise.exe+3D845A8: 48 8D 14 49           - lea rdx,[rcx+rcx*2]
+MonsterHunterRise.exe+3D845AC: 48 8B 0D 95 BD 1A 0B  - mov rcx,[MonsterHunterRise.exe+EF30348]
+MonsterHunterRise.exe+3D845B3: 48 03 D2              - add rdx,rdx
+MonsterHunterRise.exe+3D845B6: 44 8B 44 D1 08        - mov r8d,[rcx+rdx*8+08]
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>1337096974</ID>
+                  <Description>"If monster attack power &gt; current HP, you will dead / 如果魔物造成旳傷害大於目前HP，還是會死亡"</Description>
+                  <Color>400080</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337096973</ID>
+                  <Description>"Min. HP / 最小值"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_min_hp</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
               <ID>1337095479</ID>
-              <Description>"Stamina never below 2000/ 體力不低於2000"</Description>
+              <Description>"Stamina never below 3000/ 精力不低於3000"</Description>
+              <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : MonsterHunterRise.exe
   Version:
@@ -3395,8 +3490,9 @@ label(code)
 label(return)
 label(xmm_tmp10)
 label(fl_stemia_watermark)
-
+label(i_base_stam_addr)
 newmem:
+  mov [i_base_stam_addr], rax
 
 code:
   movq [xmm_tmp10], xmm10
@@ -3412,6 +3508,10 @@ code:
   movss [rax+28],xmm1
   movq xmm10, [xmm_tmp10]
   jmp return
+align 10 cc
+  i_base_stam_addr:
+  dq 0
+
 
 align 10 cc
   fl_stemia_watermark:
@@ -3423,13 +3523,14 @@ INJECT_MIN_STEMIA:
   jmp newmem
 return:
 registersymbol(INJECT_MIN_STEMIA)
+registersymbol(i_base_stam_addr)
 
 [DISABLE]
 
 INJECT_MIN_STEMIA:
   db F3 0F 11 48 28
 
-unregistersymbol(INJECT_MIN_STEMIA)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -3460,6 +3561,48 @@ MonsterHunterRise.exe+39DBE82: F3 0F 11 50 28        - movss [rax+28],xmm2
 MonsterHunterRise.exe+39DBE87: 0F 28 7C 24 30        - movaps xmm7,[rsp+30]
 }
 </AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>1337096967</ID>
+                  <Description>"Max HP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_stam_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337096966</ID>
+                  <Description>"??"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_stam_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337096965</ID>
+                  <Description>"Current HP, include recoverable"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_stam_addr</Address>
+                  <Offsets>
+                    <Offset>24</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337096964</ID>
+                  <Description>"Stamina"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_stam_addr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>1337096393</ID>
@@ -3590,7 +3733,9 @@ MonsterHunterRise.exe+3B136DB: 0F 5A C0                 - cvtps2pd xmm0,xmm0
 [ENABLE]
 
 aobscanmodule(INJECT_CRIT_TIME,MonsterHunterRise.exe,F3 0F 11 88 C4 00 00 00 E9) // should be unique
-alloc(newmem,$1000,INJECT_CRIT_TIME)
+alloc(newmem,$1000,INJECT_CRIT_TIME)  // triggered when get buff
+aobscanmodule(INJECT_GET_AFFINITY_TIME,MonsterHunterRise.exe,0F 2F B1 C4 00 00 00) // should be unique
+alloc(newmem1,$1000,INJECT_GET_AFFINITY_TIME)  // triggered everytime
 
 label(code)
 label(return)
@@ -3616,6 +3761,25 @@ return:
 registersymbol(INJECT_CRIT_TIME)
 registersymbol(i_base_crit_addr)
 
+
+label(code1)
+label(return1)
+
+newmem1:
+  cmp qword ptr [i_base_crit_addr], 0
+  jne code1
+  mov [i_base_crit_addr], rcx
+
+code1:
+  comiss xmm6,[rcx+000000C4]
+  jmp return1
+
+INJECT_GET_AFFINITY_TIME:
+  jmp newmem1
+  nop 2
+return1:
+registersymbol(INJECT_GET_AFFINITY_TIME)
+
 [DISABLE]
 
 INJECT_CRIT_TIME:
@@ -3623,6 +3787,12 @@ INJECT_CRIT_TIME:
 
 unregistersymbol(*)
 dealloc(newmem)
+
+INJECT_GET_AFFINITY_TIME:
+  db 0F 2F B1 C4 00 00 00
+
+unregistersymbol(INJECT_GET_AFFINITY_TIME)
+dealloc(newmem1)
 
 {
 // ORIGINAL CODE - INJECTION POINT: MonsterHunterRise.exe+3871AC7
@@ -3650,6 +3820,34 @@ MonsterHunterRise.exe+3871AE7: 32 C0                    - xor al,al
 MonsterHunterRise.exe+3871AE9: EB 02                    - jmp MonsterHunterRise.exe+3871AED
 MonsterHunterRise.exe+3871AEB: B0 01                    - mov al,01
 MonsterHunterRise.exe+3871AED: 0F B6 C0                 - movzx eax,al
+}
+
+{
+// ORIGINAL CODE - INJECTION POINT: MonsterHunterRise.exe+357D5A9
+
+MonsterHunterRise.exe+357D582: 8D 14 03              - lea edx,[rbx+rax]
+MonsterHunterRise.exe+357D585: 89 55 18              - mov [rbp+18],edx
+MonsterHunterRise.exe+357D588: EB 03                 - jmp MonsterHunterRise.exe+357D58D
+MonsterHunterRise.exe+357D58A: 8B 55 18              - mov edx,[rbp+18]
+MonsterHunterRise.exe+357D58D: 48 8B 8F 20 01 00 00  - mov rcx,[rdi+00000120]
+MonsterHunterRise.exe+357D594: 0F 57 F6              - xorps xmm6,xmm6
+MonsterHunterRise.exe+357D597: 0F 2F B1 B4 00 00 00  - comiss xmm6,[rcx+000000B4]
+MonsterHunterRise.exe+357D59E: 73 09                 - jae MonsterHunterRise.exe+357D5A9
+MonsterHunterRise.exe+357D5A0: 03 91 B8 00 00 00     - add edx,[rcx+000000B8]
+MonsterHunterRise.exe+357D5A6: 89 55 18              - mov [rbp+18],edx
+// ---------- INJECTING HERE ----------
+MonsterHunterRise.exe+357D5A9: 0F 2F B1 C4 00 00 00  - comiss xmm6,[rcx+000000C4]
+// ---------- DONE INJECTING  ----------
+MonsterHunterRise.exe+357D5B0: 73 06                 - jae MonsterHunterRise.exe+357D5B8
+MonsterHunterRise.exe+357D5B2: 83 C2 32              - add edx,32
+MonsterHunterRise.exe+357D5B5: 89 55 18              - mov [rbp+18],edx
+MonsterHunterRise.exe+357D5B8: 4C 8B 87 08 02 00 00  - mov r8,[rdi+00000208]
+MonsterHunterRise.exe+357D5BF: 49 8B 40 38           - mov rax,[r8+38]
+MonsterHunterRise.exe+357D5C3: 0F 2F 70 10           - comiss xmm6,[rax+10]
+MonsterHunterRise.exe+357D5C7: 72 0A                 - jb MonsterHunterRise.exe+357D5D3
+MonsterHunterRise.exe+357D5C9: 49 8B 40 50           - mov rax,[r8+50]
+MonsterHunterRise.exe+357D5CD: 0F 2F 70 10           - comiss xmm6,[rax+10]
+MonsterHunterRise.exe+357D5D1: 73 06                 - jae MonsterHunterRise.exe+357D5D9
 }
 </AssemblerScript>
               <CheatEntries>
@@ -3940,6 +4138,9 @@ MonsterHunterRise.exe+3888229: E8 22 93 E1 FC           - call MonsterHunterRise
 
 aobscanmodule(INJECT_MIGHT_SEED_BUFF,MonsterHunterRise.exe,F3 0F 11 98 90 00 00 00 C3) // should be unique
 alloc(newmem,$1000,INJECT_MIGHT_SEED_BUFF)
+aobscanmodule(INJECT_GET_MIGHT_SEED_TIME,MonsterHunterRise.exe,0F 2F B8 90 00 00 00) // should be unique
+alloc(newmem1,$1000,INJECT_GET_MIGHT_SEED_TIME)
+
 
 label(code)
 label(return)
@@ -3973,6 +4174,24 @@ registersymbol(i_might_seed)
 registersymbol(INJECT_MIGHT_SEED_BUFF)
 registersymbol(i_base_might_seed_addr)
 
+label(code1)
+label(return1)
+newmem1:
+  cmp qword ptr [i_base_might_seed_addr], 0
+  jne code1
+  mov [i_base_might_seed_addr], rax
+
+code1:
+  comiss xmm7,[rax+00000090]
+  jmp return1
+
+INJECT_GET_MIGHT_SEED_TIME:
+  jmp newmem1
+  nop 2
+return1:
+registersymbol(INJECT_GET_MIGHT_SEED_TIME)
+
+
 [DISABLE]
 
 INJECT_MIGHT_SEED_BUFF:
@@ -3982,6 +4201,13 @@ unregistersymbol(i_might_seed)
 unregistersymbol(i_base_might_seed_addr)
 unregistersymbol(INJECT_MIGHT_SEED_BUFF)
 dealloc(newmem)
+
+
+INJECT_GET_MIGHT_SEED_TIME:
+  db 0F 2F B8 90 00 00 00
+
+unregistersymbol(INJECT_GET_MIGHT_SEED_TIME)
+dealloc(newmem1)
 
 {
 // ORIGINAL CODE - INJECTION POINT: MonsterHunterRise.exe+38846BD
@@ -4009,6 +4235,33 @@ MonsterHunterRise.exe+38846CB: CC                       - int 3
 MonsterHunterRise.exe+38846CC: CC                       - int 3
 MonsterHunterRise.exe+38846CD: CC                       - int 3
 MonsterHunterRise.exe+38846CE: CC                       - int 3
+}
+{
+// ORIGINAL CODE - INJECTION POINT: MonsterHunterRise.exe+357E0B5
+
+MonsterHunterRise.exe+357E087: 41 FF 91 E8 02 00 00     - call qword ptr [r9+000002E8]
+MonsterHunterRise.exe+357E08E: 48 8B 83 20 01 00 00     - mov rax,[rbx+00000120]
+MonsterHunterRise.exe+357E095: F3 0F 10 4D 28           - movss xmm1,[rbp+28]
+MonsterHunterRise.exe+357E09A: 0F 5A C9                 - cvtps2pd xmm1,xmm1
+MonsterHunterRise.exe+357E09D: 66 0F 6E 40 7C           - movd xmm0,[rax+7C]
+MonsterHunterRise.exe+357E0A2: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+MonsterHunterRise.exe+357E0A5: 0F 5A D0                 - cvtps2pd xmm2,xmm0
+MonsterHunterRise.exe+357E0A8: F2 0F 58 D1              - addsd xmm2,xmm1
+MonsterHunterRise.exe+357E0AC: 66 0F 5A DA              - cvtpd2ps xmm3,xmm2
+MonsterHunterRise.exe+357E0B0: F3 0F 11 5D 28           - movss [rbp+28],xmm3
+// ---------- INJECTING HERE ----------
+MonsterHunterRise.exe+357E0B5: 0F 2F B8 90 00 00 00     - comiss xmm7,[rax+00000090]
+// ---------- DONE INJECTING  ----------
+MonsterHunterRise.exe+357E0BC: 73 1E                    - jae MonsterHunterRise.exe+357E0DC
+MonsterHunterRise.exe+357E0BE: 66 0F 6E 80 84 00 00 00  - movd xmm0,[rax+00000084]
+MonsterHunterRise.exe+357E0C6: 0F 5A CB                 - cvtps2pd xmm1,xmm3
+MonsterHunterRise.exe+357E0C9: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+MonsterHunterRise.exe+357E0CC: 0F 5A D0                 - cvtps2pd xmm2,xmm0
+MonsterHunterRise.exe+357E0CF: F2 0F 58 D1              - addsd xmm2,xmm1
+MonsterHunterRise.exe+357E0D3: 66 0F 5A DA              - cvtpd2ps xmm3,xmm2
+MonsterHunterRise.exe+357E0D7: F3 0F 11 5D 28           - movss [rbp+28],xmm3
+MonsterHunterRise.exe+357E0DC: 0F 2F B8 A8 00 00 00     - comiss xmm7,[rax+000000A8]
+MonsterHunterRise.exe+357E0E3: 73 1E                    - jae MonsterHunterRise.exe+357E103
 }
 </AssemblerScript>
               <CheatEntries>
@@ -4296,24 +4549,34 @@ MonsterHunterRise.exe+357C565: 44 8B FB                          - mov r15d,ebx
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>damage_base</Name>
-      <Address>1471957EC</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>defense_base</Name>
-      <Address>1471957F0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>wirebug3dur_base</Name>
-      <Address>1471920A8</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>itembuff_base</Name>
-      <Address>1471920B8</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :call MonsterHunterRise.exe+34771F0</Description>
+      <AddressString>MonsterHunterRise.exe+2348E03</AddressString>
+      <Before>
+        <Byte>00</Byte>
+        <Byte>48</Byte>
+        <Byte>8B</Byte>
+        <Byte>50</Byte>
+        <Byte>10</Byte>
+      </Before>
+      <Actual>
+        <Byte>E8</Byte>
+        <Byte>E8</Byte>
+        <Byte>E3</Byte>
+        <Byte>12</Byte>
+        <Byte>01</Byte>
+      </Actual>
+      <After>
+        <Byte>48</Byte>
+        <Byte>8B</Byte>
+        <Byte>8F</Byte>
+        <Byte>D8</Byte>
+        <Byte>00</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
+  <UserdefinedSymbols/>
   <LuaScript>function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
 	--checkArgType(moduleName, 1, 'string')
 	if not signature or not moduleName then return end

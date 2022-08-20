@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022/08/20
+1. Added Set min. HP (May dead still) / 設定最小HP (仍有可能被擊殺)
+2. Minor changes
+
 ## 2022/08/15  
 1. Added "Get arena time record (Usage: Talk to arena NPC->list quest) / 取得鬥技場時間記錄 (於亞爾羅教官中點選相關任務)"  
 2. Revised "Get weapon usage / Not fully working (Guild card-View) / 取得武器使用次數資料；非完全有效"
