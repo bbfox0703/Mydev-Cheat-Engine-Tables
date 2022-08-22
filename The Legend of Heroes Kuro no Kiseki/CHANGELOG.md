@@ -1,4 +1,13 @@
-# Changelog
+# Changelog  
+
+## 2022/08/21
+Added some attributes for 角色狀態 (開啟角色狀態選單) / Char. stats (usage: view char in menu)  
+*        □武器 ID / Weapon ID
+*        □副武器 ID / Sub ID
+*        □護甲 ID / Armor ID
+*        □鞋子 ID / Shoe ID
+*        □配件1 ID / Accessory ID 1
+*        □配件2 ID / Accessory ID 2
 
 ## 2022/08/20
 Added: 一次開啟/關閉多個修改器/ Turn most script On / Off
