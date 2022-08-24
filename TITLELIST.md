@@ -103,6 +103,10 @@ ja-JP: けものフレンズ Cellien May Cry
 zh-TW:夢幻模擬戰 I & II  
 ja-JP:ラングリッサーI&II  
 
+## Mahjong Nagomi
+[Mahjong Nagomi (Steam)] (https://store.steampowered.com/app/1356180/Mahjong_Nagomi/)
+ja-JP:麻雀 和 -Nagomi-  
+
 ## Monster Hunter Rise  
 [MONSTER HUNTER RISE (Steam)](https://store.steampowered.com/app/1446780/MONSTER_HUNTER_RISE/)  
 zh-TW:魔物獵人崛起  
