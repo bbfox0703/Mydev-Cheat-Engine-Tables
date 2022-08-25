@@ -90,7 +90,6 @@ ja-JP: 初音ミク Project DIVA MEGA39’s＋
 zh-TW: 動物朋友 Cellien May Cry  
 ja-JP: けものフレンズ Cellien May Cry   
 
-
 ## Kingdom Classic
 [Kingdom: Classic (Steam)](https://store.steampowered.com/app/368230/Kingdom_Classic/)  
 
@@ -135,6 +134,11 @@ ja-JP: サガ フロンティア リマスター
 
 ## Seraph's Last Stand  
 [Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)  
+
+## SD GUNDAM BATTLE ALLIANCE
+[SD GUNDAM BATTLE ALLIANCE (Steam)](https://store.steampowered.com/app/824550/SD_GUNDAM_BATTLE_ALLIANCE/)  
+zh-TW: SD GUNDAM 激鬥同盟  
+ja-JP: SDガンダム バトルアライアンス
 
 ## Sid Meier's Civilization® V  
 [Sid Meier's Civilization® V (Steam)](https://store.steampowered.com/app/8930/Sid_Meiers_Civilization_V/)  
