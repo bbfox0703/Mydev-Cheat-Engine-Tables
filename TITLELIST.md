@@ -132,13 +132,13 @@ zh-TW: 舊世界 Old World
 [SaGa Frontier Remastered (Steam)](https://store.steampowered.com/app/1295270/SaGa_Frontier_Remastered/)  
 ja-JP: サガ フロンティア リマスター  
 
-## Seraph's Last Stand  
-[Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)  
-
 ## SD GUNDAM BATTLE ALLIANCE
 [SD GUNDAM BATTLE ALLIANCE (Steam)](https://store.steampowered.com/app/824550/SD_GUNDAM_BATTLE_ALLIANCE/)  
 zh-TW: SD GUNDAM 激鬥同盟  
 ja-JP: SDガンダム バトルアライアンス
+
+## Seraph's Last Stand  
+[Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)  
 
 ## Sid Meier's Civilization® V  
 [Sid Meier's Civilization® V (Steam)](https://store.steampowered.com/app/8930/Sid_Meiers_Civilization_V/)  
