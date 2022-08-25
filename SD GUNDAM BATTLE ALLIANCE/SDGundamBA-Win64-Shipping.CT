@@ -2,6 +2,18 @@
 <CheatTable CheatEngineTableVersion="42">
   <CheatEntries>
     <CheatEntry>
+      <ID>32</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
       <ID>5</ID>
       <Description>"Battle: Player"</Description>
       <Options moHideChildren="1"/>
@@ -37,7 +49,7 @@ align 10 cc
   i_player_base_addr:
   dq 0
   player_min_hp_value:
-  dd (float)9
+  dd (float)200
 
 INJECT_GET_PLAYER_BATTLE_HP_1:
   jmp newmem
@@ -105,10 +117,91 @@ SDGundamBA-Win64-Shipping.exe+10E1DFE: 45 33 C0                 - xor r8d,r8d
         </CheatEntry>
         <CheatEntry>
           <ID>21</ID>
-          <Description>"Main+"</Description>
+          <Description>"Main+ (WIP)"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
+            <CheatEntry>
+              <ID>33</ID>
+              <Description>"Try to auto fill bullets (may affect enemy)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : SDGundamBA-Win64-Shipping.exe
+  Version: 
+  Date   : 2022-08-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_AUTO_FILL_WEAPON,SDGundamBA-Win64-Shipping.exe,45 89 48 78 41 3B CA) // should be unique
+alloc(newmem,$1000,INJECT_AUTO_FILL_WEAPON)
+
+label(code)
+label(return)
+
+newmem:
+  push rax
+  mov rax, [r8+90]
+  cmp rax, #10
+  jbe endp
+  mov eax, [r8+98]
+  cmp eax, #1000
+  ja endp
+
+
+  mov r9d, [r8+48]
+
+endp:
+  pop rax
+
+code:
+  mov [r8+78],r9d
+  cmp ecx,r10d
+  jmp return
+
+INJECT_AUTO_FILL_WEAPON:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_AUTO_FILL_WEAPON)
+
+[DISABLE]
+
+INJECT_AUTO_FILL_WEAPON:
+  db 45 89 48 78 41 3B CA
+
+unregistersymbol(INJECT_AUTO_FILL_WEAPON)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: SDGundamBA-Win64-Shipping.exe+1205116
+
+SDGundamBA-Win64-Shipping.exe+12050FC: 45 85 D2           - test r10d,r10d
+SDGundamBA-Win64-Shipping.exe+12050FF: 79 03              - jns SDGundamBA-Win64-Shipping.exe+1205104
+SDGundamBA-Win64-Shipping.exe+1205101: 32 C0              - xor al,al
+SDGundamBA-Win64-Shipping.exe+1205103: C3                 - ret 
+SDGundamBA-Win64-Shipping.exe+1205104: 8B 49 78           - mov ecx,[rcx+78]
+SDGundamBA-Win64-Shipping.exe+1205107: 41 3B CA           - cmp ecx,r10d
+SDGundamBA-Win64-Shipping.exe+120510A: 8B C1              - mov eax,ecx
+SDGundamBA-Win64-Shipping.exe+120510C: 0F 9D C2           - setge dl
+SDGundamBA-Win64-Shipping.exe+120510F: 41 2B C2           - sub eax,r10d
+SDGundamBA-Win64-Shipping.exe+1205112: 44 0F 49 C8        - cmovns r9d,eax
+// ---------- INJECTING HERE ----------
+SDGundamBA-Win64-Shipping.exe+1205116: 45 89 48 78        - mov [r8+78],r9d
+// ---------- DONE INJECTING  ----------
+SDGundamBA-Win64-Shipping.exe+120511A: 41 3B CA           - cmp ecx,r10d
+SDGundamBA-Win64-Shipping.exe+120511D: 7C 37              - jl SDGundamBA-Win64-Shipping.exe+1205156
+SDGundamBA-Win64-Shipping.exe+120511F: 66 41 0F 6E 40 48  - movd xmm0,[r8+48]
+SDGundamBA-Win64-Shipping.exe+1205125: 0F 57 DB           - xorps xmm3,xmm3
+SDGundamBA-Win64-Shipping.exe+1205128: F3 41 0F 10 50 54  - movss xmm2,[r8+54]
+SDGundamBA-Win64-Shipping.exe+120512E: 66 41 0F 6E C9     - movd xmm1,r9d
+SDGundamBA-Win64-Shipping.exe+1205133: 0F 5B C9           - cvtdq2ps xmm1,xmm1
+SDGundamBA-Win64-Shipping.exe+1205136: 0F 5B C0           - cvtdq2ps xmm0,xmm0
+SDGundamBA-Win64-Shipping.exe+1205139: F3 0F 59 CA        - mulss xmm1,xmm2
+SDGundamBA-Win64-Shipping.exe+120513D: F3 0F 5E C8        - divss xmm1,xmm0
+}
+</AssemblerScript>
+            </CheatEntry>
             <CheatEntry>
               <ID>18</ID>
               <Description>"# of bullets"</Description>
