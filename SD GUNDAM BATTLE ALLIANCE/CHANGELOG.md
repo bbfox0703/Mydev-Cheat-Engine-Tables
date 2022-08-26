@@ -4,6 +4,8 @@
 1. Added Get Partner data (Usage: Menu -> Partner Info)
 2. Added Get session time
 3. Added zh-TW / en-US description switch
+4. Added Sub weapon data
+5. Reised auto fill bullet scripts
 4. Minor improvements
 
 ## 2022/08/25  
