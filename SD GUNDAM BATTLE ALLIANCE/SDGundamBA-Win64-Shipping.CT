@@ -25,15 +25,24 @@ getLuaEngine().menuItem5.doClick()
 --getMemoryRecordByDescription
 getAddressList().getMemoryRecordByID(5).Description = '戰鬥：玩家資訊'
 getAddressList().getMemoryRecordByID(7).Description = '設定最小HP'
-getAddressList().getMemoryRecordByID(21).Description = '主射擊武器'
-getAddressList().getMemoryRecordByID(33).Description = '試著自動充填主射擊武器 (敵方可能也受惠)'
-getAddressList().getMemoryRecordByID(18).Description = '目前彈藥數'
+getAddressList().getMemoryRecordByID(21).Description = '主射擊武器+'
+getAddressList().getMemoryRecordByID(33).Description = '自動充填主副射擊武器'
+getAddressList().getMemoryRecordByID(18).Description = '彈藥數'
 getAddressList().getMemoryRecordByID(20).Description = '充能值'
 getAddressList().getMemoryRecordByID(14).Description = 'SPA可用倒數'
 getAddressList().getMemoryRecordByID(30).Description = '基本資料 (使用：選單 -&gt; 道具)'
 getAddressList().getMemoryRecordByID(41).Description = '取得僚機資料 (使用：選單 -&gt; 僚機情報'
 getAddressList().getMemoryRecordByID(44).Description = '友好度'
 getAddressList().getMemoryRecordByID(46).Description = '取得本次遊玩時間'
+
+getAddressList().getMemoryRecordByID(58).Description = '武器+'
+getAddressList().getMemoryRecordByID(50).Description = 'Sub+'
+getAddressList().getMemoryRecordByID(52).Description = 'Sub1: 彈藥數'
+getAddressList().getMemoryRecordByID(53).Description = 'Sub1: Flag'
+getAddressList().getMemoryRecordByID(54).Description = 'Sub1: 充能值'
+getAddressList().getMemoryRecordByID(55).Description = 'Sub2: 彈藥數'
+getAddressList().getMemoryRecordByID(56).Description = 'Sub2: Flag'
+getAddressList().getMemoryRecordByID(57).Description = 'Sub2: 充能值'
 getLuaEngine().close()
 
 [DISABLE]
@@ -44,8 +53,8 @@ getLuaEngine().menuItem5.doClick()
 
 getAddressList().getMemoryRecordByID(5).Description = 'Battle: Player'
 getAddressList().getMemoryRecordByID(7).Description = 'Set min. HP'
-getAddressList().getMemoryRecordByID(21).Description = 'Main+ (WIP)'
-getAddressList().getMemoryRecordByID(33).Description = 'Try to auto fill bullets (may affect enemy)'
+getAddressList().getMemoryRecordByID(21).Description = 'Main+'
+getAddressList().getMemoryRecordByID(33).Description = 'Auto fill bullets'
 getAddressList().getMemoryRecordByID(18).Description = '# of bullets'
 getAddressList().getMemoryRecordByID(20).Description = 'Charge'
 getAddressList().getMemoryRecordByID(14).Description = 'SPA Countdown'
@@ -53,6 +62,16 @@ getAddressList().getMemoryRecordByID(30).Description = 'Base data (Usage: Menu -
 getAddressList().getMemoryRecordByID(41).Description = 'Get Partner data (Usage: Menu -&gt; Partner Info)'
 getAddressList().getMemoryRecordByID(44).Description = 'Friendship'
 getAddressList().getMemoryRecordByID(46).Description = 'Get session time'
+
+getAddressList().getMemoryRecordByID(58).Description = 'Weapons+'
+getAddressList().getMemoryRecordByID(50).Description = 'Sub+'
+getAddressList().getMemoryRecordByID(52).Description = 'Sub1: # of bullets'
+getAddressList().getMemoryRecordByID(53).Description = 'Sub1: Flag'
+getAddressList().getMemoryRecordByID(54).Description = 'Sub1: Charge'
+getAddressList().getMemoryRecordByID(55).Description = 'Sub2: # of bullets'
+getAddressList().getMemoryRecordByID(56).Description = 'Sub2: Flag'
+getAddressList().getMemoryRecordByID(57).Description = 'Sub2: Charge'
+
 getLuaEngine().close()
 
 
@@ -61,7 +80,7 @@ getLuaEngine().close()
     <CheatEntry>
       <ID>5</ID>
       <Description>"Battle: Player"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : SDGundamBA-Win64-Shipping.exe
   Version: 
@@ -78,9 +97,26 @@ label(code)
 label(return)
 label(i_player_base_addr)
 label(player_min_hp_value)
+label(i_main_mark_addr)
+label(i_sub1_mark_addr)
+label(i_sub2_mark_addr)
 
 newmem:
   mov [i_player_base_addr], rbx
+
+  push rax
+  push rcx
+  mov rax, [rbx+158]
+  lea rcx, [rax+304]
+  mov [i_main_mark_addr], rcx
+  mov rax, [rax+394]
+  lea rcx, [rax+0]
+  mov [i_sub1_mark_addr], rcx
+  lea rcx, [rax+90]
+  mov [i_sub2_mark_addr], rcx
+  pop rcx
+  pop rax
+
   vmovss xmm14, [rbx+000000B0]
   vmovss xmm15, [player_min_hp_value]
   ucomiss xmm14, xmm15
@@ -95,6 +131,12 @@ align 10 cc
   dq 0
   player_min_hp_value:
   dd (float)200
+  i_main_mark_addr:
+  dq 0
+  i_sub1_mark_addr:
+  dq 0
+  i_sub2_mark_addr:
+  dq 0
 
 INJECT_GET_PLAYER_BATTLE_HP_1:
   jmp newmem
@@ -103,6 +145,9 @@ return:
 registersymbol(player_min_hp_value)
 registersymbol(INJECT_GET_PLAYER_BATTLE_HP_1)
 registersymbol(i_player_base_addr)
+registersymbol(i_main_mark_addr)
+registersymbol(i_sub1_mark_addr)
+registersymbol(i_sub2_mark_addr)
 [DISABLE]
 
 INJECT_GET_PLAYER_BATTLE_HP_1:
@@ -161,14 +206,41 @@ SDGundamBA-Win64-Shipping.exe+10E1DFE: 45 33 C0                 - xor r8d,r8d
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>21</ID>
-          <Description>"Main+ (WIP)"</Description>
-          <Options moHideChildren="1"/>
+          <ID>58</ID>
+          <Description>"Weapons+"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
+              <ID>59</ID>
+              <Description>"Main_mark"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_main_mark_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>60</ID>
+              <Description>"Sub1_mark"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_sub1_mark_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>61</ID>
+              <Description>"Sub2_mark"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_sub2_mark_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
               <ID>33</ID>
-              <Description>"Try to auto fill bullets (may affect enemy)"</Description>
+              <Description>"Auto fill bullets"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : SDGundamBA-Win64-Shipping.exe
   Version: 
@@ -186,14 +258,15 @@ label(return)
 
 newmem:
   push rax
-  mov rax, [r8+90]
-  cmp rax, #10
-  jbe endp
-  mov eax, [r8+98]
-  cmp eax, #1000
-  ja endp
+  cmp r8, [i_main_mark_addr]
+  je inf_bullet
+  cmp r8, [i_sub1_mark_addr]
+  je inf_bullet
+  cmp r8, [i_sub2_mark_addr]
+  je inf_bullet
+  jmp endp
 
-
+inf_bullet:
   mov r9d, [r8+48]
 
 endp:
@@ -248,37 +321,125 @@ SDGundamBA-Win64-Shipping.exe+120513D: F3 0F 5E C8        - divss xmm1,xmm0
 </AssemblerScript>
             </CheatEntry>
             <CheatEntry>
-              <ID>18</ID>
-              <Description>"# of bullets"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_player_base_addr</Address>
-              <Offsets>
-                <Offset>37C</Offset>
-                <Offset>158</Offset>
-              </Offsets>
+              <ID>21</ID>
+              <Description>"Main+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>18</ID>
+                  <Description>"# of bullets"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>37C</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>19</ID>
+                  <Description>"Flag"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>380</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>20</ID>
+                  <Description>"Charge"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>384</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>19</ID>
-              <Description>"Flag"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_player_base_addr</Address>
-              <Offsets>
-                <Offset>380</Offset>
-                <Offset>158</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>20</ID>
-              <Description>"Charge"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Float</VariableType>
-              <Address>i_player_base_addr</Address>
-              <Offsets>
-                <Offset>384</Offset>
-                <Offset>158</Offset>
-              </Offsets>
+              <ID>50</ID>
+              <Description>"Sub+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>52</ID>
+                  <Description>"Sub1: # of bullets"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>78</Offset>
+                    <Offset>394</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>53</ID>
+                  <Description>"Sub1: Flag"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>7C</Offset>
+                    <Offset>394</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>54</ID>
+                  <Description>"Sub1: Charge"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>80</Offset>
+                    <Offset>394</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>55</ID>
+                  <Description>"Sub2: # of bullets"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>108</Offset>
+                    <Offset>394</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>56</ID>
+                  <Description>"Sub2: Flag"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>10C</Offset>
+                    <Offset>394</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>57</ID>
+                  <Description>"Sub2: Charge"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_player_base_addr</Address>
+                  <Offsets>
+                    <Offset>110</Offset>
+                    <Offset>394</Offset>
+                    <Offset>158</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -721,29 +882,6 @@ SDGundamBA-Win64-Shipping.exe+80F81B: 0F 8F 3E 03 00 00        - jg SDGundamBA-W
     </CheatEntry>
   </CheatEntries>
   <CheatCodes>
-    <CodeEntry>
-      <Description>Code XP :mov esi,[rbx+60]</Description>
-      <AddressString>SDGundamBA-Win64-Shipping.exe+115FC58</AddressString>
-      <Before>
-        <Byte>48</Byte>
-        <Byte>85</Byte>
-        <Byte>DB</Byte>
-        <Byte>74</Byte>
-        <Byte>05</Byte>
-      </Before>
-      <Actual>
-        <Byte>8B</Byte>
-        <Byte>73</Byte>
-        <Byte>60</Byte>
-      </Actual>
-      <After>
-        <Byte>EB</Byte>
-        <Byte>03</Byte>
-        <Byte>41</Byte>
-        <Byte>8B</Byte>
-        <Byte>F7</Byte>
-      </After>
-    </CodeEntry>
     <CodeEntry>
       <Description>Code MSInfo :movss xmm2,[rdi]</Description>
       <AddressString>SDGundamBA-Win64-Shipping.exe+11BF7E1</AddressString>
