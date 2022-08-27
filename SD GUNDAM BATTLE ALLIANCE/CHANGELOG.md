@@ -5,8 +5,10 @@
 2. Added Get session time
 3. Added zh-TW / en-US description switch
 4. Added Sub weapon data
-5. Reised auto fill bullet scripts
-4. Minor improvements
+5. Revised auto fill bullet scripts
+6. Added Set material >= 70 (Usage: Menu -> Items)
+7. Added Uncap item => 75 (Usage: Menu -> MS Settings -> (select MS) -> Uncap)
+9. Minor improvements
 
 ## 2022/08/25  
 Init. ver:
