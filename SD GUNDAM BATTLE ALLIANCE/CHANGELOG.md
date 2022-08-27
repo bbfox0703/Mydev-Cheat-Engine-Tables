@@ -1,5 +1,9 @@
 # Change log
 
+## 2022/08/27
+1. Added Inf. Booster
+1. Added Faster SPA
+
 ## 2022/08/26  
 1. Added Get Partner data (Usage: Menu -> Partner Info)
 2. Added Get session time
