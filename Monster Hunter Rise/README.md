@@ -10,4 +10,4 @@ This table contains some basic scripts that all you can edit yourself in Marcus1
 ## Release
 Cheat Engine: [7.4 or newer](https://github.com/cheat-engine/cheat-engine/releases)  
 
-Game: App ver. 11.0.1.0
+Game: App ver. 11.0.2.0

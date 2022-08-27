@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/08/27
+1. Revised for game ver 11.0.2.0  
+
 ## 2022/08/20
 1. Added (Not working) Set min. HP (May dead still) / 設定最小HP (仍有可能被擊殺)
 2. Minor changes
