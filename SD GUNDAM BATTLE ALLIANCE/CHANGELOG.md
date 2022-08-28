@@ -1,5 +1,9 @@
 # Change log
 
+## 2022/08/28
+1. Added All damage multiplier to enemy MS
+1. Added Player Damage Reduction
+
 ## 2022/08/27
 1. Added Inf. Booster
 1. Added Faster SPA
