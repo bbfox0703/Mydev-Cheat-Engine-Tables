@@ -147,6 +147,9 @@ ja-JP: SDガンダム バトルアライアンス
 [Sid Meier's Civilization® V (Steam)](https://store.steampowered.com/app/8930/Sid_Meiers_Civilization_V/)  
 zh-TW: 文明帝國V  
 
+## Sid Meier's Pirates!  
+[Sid Meier's Pirates! (Steam)](https://store.steampowered.com/app/3920/Sid_Meiers_Pirates/)  
+
 ## Star Traders Frontiers  
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)  
 
