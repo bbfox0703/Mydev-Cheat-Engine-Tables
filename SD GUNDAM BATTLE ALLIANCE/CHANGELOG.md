@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/09/01  
+1. Revised for 09/01 game update (9416322)  
+
 ## 2022/08/28
 1. Added All damage multiplier to enemy MS
 1. Added Player Damage Reduction
