@@ -4,6 +4,7 @@
     <CheatEntry>
       <ID>6</ID>
       <Description>"HP"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DFC-Win64-Shipping.exe
   Version: 
@@ -18,20 +19,38 @@ alloc(newmem,$1000,INJECT_SET_HP)
 
 label(code)
 label(return)
+label(vf_damage_factor_multi)
 
 newmem:
   push r14
+
+  mov r14d, [r14+68]
+  cmp r14d, #16
+  ja endp
+
   mov r14, [rbx+28]
   test r14, r14
   jz endp
   mov r14d, [r14]
   mov [i_buf1], r14d
+
   mov r14, [rbx+38]
   test r14, r14
   jz endp
   mov r14d, [r14+10]
   cmp r14d, [i_buf1]
   jne endp
+
+  mov r14, [rbx+68]
+  test r14, r14
+  jz endp
+
+  //mov r14, [rbx+28]
+  //mov r14d, [rbx+10]
+  //cmp r14d, 006F004E
+  //jne endp
+
+
   {
   mov r14, [rbx+28]
   mov r14d, [r14]
@@ -41,6 +60,12 @@ newmem:
   cmp r14d, [i_buf2]
   jne endp
   }
+
+  cvtsi2ss xmm15, r11d
+  vmovss xmm14, [vf_damage_factor_multi]
+  vmulss xmm13, xmm14, xmm15
+  cvtss2si r11d, xmm13
+
   mov r11d, 0
 
 
@@ -56,19 +81,22 @@ align 10 cc
   dd 0
   i_buf2:
   dd 0
+  vf_damage_factor_multi:
+  dd (float)0.3222222222222222
 
 INJECT_SET_HP:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_SET_HP)
+registersymbol(vf_damage_factor_multi)
 
 [DISABLE]
 
 INJECT_SET_HP:
   db 48 8B 43 48 42 8B 0C 81
 
-unregistersymbol(INJECT_SET_HP)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -99,6 +127,15 @@ DFC-Win64-Shipping.exe+DC413B: EB 0F        - jmp DFC-Win64-Shipping.exe+DC414C
 DFC-Win64-Shipping.exe+DC413D: 44 3B C2     - cmp r8d,edx
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"Damage to player multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_damage_factor_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>9</ID>
