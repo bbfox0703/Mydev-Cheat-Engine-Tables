@@ -1,5 +1,9 @@
 # Change log
 
+## 2022/09/08  
+1. Added Char. Viewer (Usage: Menu -> Equip.)
+2. Revised some scripts
+
 ## 2022/09/06
 1. Added Min. 10 SP (When spend)
 1. Added Min. 20 AP (Usage: when spend)
