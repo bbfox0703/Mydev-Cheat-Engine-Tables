@@ -3,7 +3,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>6</ID>
-      <Description>"HP (may not fully work)"</Description>
+      <Description>"Battle: HP (may not fully work)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DFC-Win64-Shipping.exe
@@ -20,6 +20,7 @@ alloc(newmem,$1000,INJECT_SET_HP)
 label(code)
 label(return)
 label(vf_damage_factor_multi)
+label(i_player_id_threshold)
 
 label(endp)
 label(i_buf1)
@@ -32,7 +33,7 @@ newmem:
   test r14, r14
   jz endp
   mov r14d, [r14+28]
-  cmp r14d, #16
+  cmp r14d, [i_player_id_threshold]
   ja endp
 
   mov r14, [rbx+28]
@@ -88,6 +89,8 @@ align 10 cc
   dd 0
   vf_damage_factor_multi:
   dd (float)0.3222222222222222
+  i_player_id_threshold:
+  dd #20
 
 INJECT_SET_HP:
   jmp newmem
@@ -95,6 +98,7 @@ INJECT_SET_HP:
 return:
 registersymbol(INJECT_SET_HP)
 registersymbol(vf_damage_factor_multi)
+registersymbol(i_player_id_threshold)
 
 [DISABLE]
 
@@ -134,6 +138,13 @@ DFC-Win64-Shipping.exe+DC413D: 44 3B C2     - cmp r8d,edx
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>51</ID>
+          <Description>"Player ID check threshold (&lt;= set value = player chars.)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_player_id_threshold</Address>
+        </CheatEntry>
+        <CheatEntry>
           <ID>14</ID>
           <Description>"Damage to player multiplier"</Description>
           <ShowAsSigned>0</ShowAsSigned>
@@ -144,7 +155,7 @@ DFC-Win64-Shipping.exe+DC413D: 44 3B C2     - cmp r8d,edx
     </CheatEntry>
     <CheatEntry>
       <ID>9</ID>
-      <Description>"EP"</Description>
+      <Description>"Battle: EP"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DFC-Win64-Shipping.exe
   Version: 
@@ -224,6 +235,173 @@ DFC-Win64-Shipping.exe+DC498F: 44 8B 41 2C     - mov r8d,[rcx+2C]
 DFC-Win64-Shipping.exe+DC4993: 44 03 C2        - add r8d,edx
 }
 </AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>48</ID>
+      <Description>"Battle: Group skill (Usage: Open char. action menu during battle)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DFC-Win64-Shipping.exe
+  Version: 
+  Date   : 2022-09-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_PARTY_SKILL,DFC-Win64-Shipping.exe,F3 0F 10 43 44 F3 0F 5E) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_PARTY_SKILL)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm15,[rbx+44]
+  vmovss xmm14, [vf_2000]
+  vcomiss xmm15, xmm14
+  jae code
+  vmovss [rbx+44], xmm14
+
+
+code:
+  movss xmm0,[rbx+44]
+  jmp return
+align 10 cc
+  vf_2000:
+  dd (float)2000
+
+INJECT_BATTLE_PARTY_SKILL:
+  jmp newmem
+return:
+registersymbol(INJECT_BATTLE_PARTY_SKILL)
+
+[DISABLE]
+
+INJECT_BATTLE_PARTY_SKILL:
+  db F3 0F 10 43 44
+
+unregistersymbol(INJECT_BATTLE_PARTY_SKILL)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DFC-Win64-Shipping.exe+CB71569
+
+DFC-Win64-Shipping.exe+CB71546: C2 E2 8E              - ret 8EE2
+DFC-Win64-Shipping.exe+CB71549: 12 5D 69              - adc bl,byte ptr [rbp+69]
+DFC-Win64-Shipping.exe+CB7154C: 14 F5                 - adc al,-0B
+DFC-Win64-Shipping.exe+CB7154E: 66 90                 - nop 2
+DFC-Win64-Shipping.exe+CB71550: 40 53                 - push rbx
+DFC-Win64-Shipping.exe+CB71552: 48 83 EC 60           - sub rsp,60
+DFC-Win64-Shipping.exe+CB71556: 41 B8 01 00 00 00     - mov r8d,00000001
+DFC-Win64-Shipping.exe+CB7155C: 48 8D 54 24 20        - lea rdx,[rsp+20]
+DFC-Win64-Shipping.exe+CB71561: 48 89 CB              - mov rbx,rcx
+DFC-Win64-Shipping.exe+CB71564: E8 57 23 19 F4        - call DFC-Win64-Shipping.exe+D038C0
+// ---------- INJECTING HERE ----------
+DFC-Win64-Shipping.exe+CB71569: F3 0F 10 43 44        - movss xmm0,[rbx+44]
+// ---------- DONE INJECTING  ----------
+DFC-Win64-Shipping.exe+CB7156E: F3 0F 5E 44 24 28     - divss xmm0,[rsp+28]
+DFC-Win64-Shipping.exe+CB71574: F3 0F 2C C0           - cvttss2si eax,xmm0
+DFC-Win64-Shipping.exe+CB71578: 48 83 C4 60           - add rsp,60
+DFC-Win64-Shipping.exe+CB7157C: 5B                    - pop rbx
+DFC-Win64-Shipping.exe+CB7157D: C3                    - ret 
+DFC-Win64-Shipping.exe+CB7157E: CC                    - int 3 
+DFC-Win64-Shipping.exe+CB7157F: 48 8D 04 24           - lea rax,[rsp]
+DFC-Win64-Shipping.exe+CB71583: 48 8D 80 1B FB 6F 67  - lea rax,[rax+676FFB1B]
+DFC-Win64-Shipping.exe+CB7158A: 4C 8B 90 E5 04 90 98  - mov r10,[rax-676FFB1B]
+DFC-Win64-Shipping.exe+CB71591: 48 89 3C 24           - mov [rsp],rdi
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>49</ID>
+      <Description>"Battle: EXP Multiplier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DFC-Win64-Shipping.exe
+  Version: 
+  Date   : 2022-09-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_XP_MULTI,DFC-Win64-Shipping.exe,FB 89 59 08 48 8B 74 24 38) // should be unique
+alloc(newmem,$1000,INJECT_XP_MULTI)
+
+label(code)
+label(return)
+label(vf_xp_multi)
+
+newmem:
+  cvtsi2ss xmm15, [rcx+08]
+  cvtsi2ss xmm14, ebx
+  vucomiss xmm15, xmm14
+  jae code
+  vsubss xmm13, xmm14, xmm15
+  vmovss xmm12, [vf_xp_multi]
+  vmulss xmm13, xmm13, xmm12
+  vaddss xmm14, xmm15, xmm13
+  cvtss2si ebx, xmm14
+
+code:
+  mov [rcx+08],ebx
+  mov rsi,[rsp+38]
+  jmp return
+align 10 cc
+  vf_xp_multi:
+  dd (float)1.25
+
+INJECT_XP_MULTI+01:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_XP_MULTI)
+registersymbol(vf_xp_multi)
+
+[DISABLE]
+
+INJECT_XP_MULTI+01:
+  db 89 59 08 48 8B 74 24 38
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DFC-Win64-Shipping.exe+B3A4724
+
+DFC-Win64-Shipping.exe+B3A46FE: E8 CD DE 95 F5        - call DFC-Win64-Shipping.exe+D025D0
+DFC-Win64-Shipping.exe+B3A4703: 48 8B 90 08 02 00 00  - mov rdx,[rax+00000208]
+DFC-Win64-Shipping.exe+B3A470A: 48 6B CE 78           - imul rcx,rsi,78
+DFC-Win64-Shipping.exe+B3A470E: 48 03 8A 80 01 00 00  - add rcx,[rdx+00000180]
+DFC-Win64-Shipping.exe+B3A4715: 8B 51 08              - mov edx,[rcx+08]
+DFC-Win64-Shipping.exe+B3A4718: 44 01 F2              - add edx,r14d
+DFC-Win64-Shipping.exe+B3A471B: 78 07                 - js DFC-Win64-Shipping.exe+B3A4724
+DFC-Win64-Shipping.exe+B3A471D: 39 FA                 - cmp edx,edi
+DFC-Win64-Shipping.exe+B3A471F: 0F 4C FA              - cmovl edi,edx
+DFC-Win64-Shipping.exe+B3A4722: 89 FB                 - mov ebx,edi
+// ---------- INJECTING HERE ----------
+DFC-Win64-Shipping.exe+B3A4724: 89 59 08              - mov [rcx+08],ebx
+// ---------- DONE INJECTING  ----------
+DFC-Win64-Shipping.exe+B3A4727: 48 8B 74 24 38        - mov rsi,[rsp+38]
+DFC-Win64-Shipping.exe+B3A472C: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+DFC-Win64-Shipping.exe+B3A4731: 48 8B 7C 24 40        - mov rdi,[rsp+40]
+DFC-Win64-Shipping.exe+B3A4736: 48 83 C4 20           - add rsp,20
+DFC-Win64-Shipping.exe+B3A473A: 41 5E                 - pop r14
+DFC-Win64-Shipping.exe+B3A473C: C3                    - ret 
+DFC-Win64-Shipping.exe+B3A473D: CC                    - int 3 
+DFC-Win64-Shipping.exe+B3A473E: 40 BF B0 39 74 38     - mov edi,387439B0
+DFC-Win64-Shipping.exe+B3A4744: AD                    - lodsd 
+DFC-Win64-Shipping.exe+B3A4745: 61                    - popad (invalid) 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>50</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_xp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>20</ID>

@@ -2,6 +2,8 @@
 
 ## 2022/09/08  
 1. Added Char. Viewer (Usage: Menu -> Equip.)
+1. Added Battle: EXP Multiplier
+1. Added Battle: Group skill (Usage: Open char. action menu during battle)
 2. Revised some scripts
 
 ## 2022/09/06
