@@ -1,5 +1,5 @@
 # Repository for self-dev Cheat Engine tables
-Contains some self-dev. Cheat Engine tables
+Contains some simple self-dev. Cheat Engine tables
 
 # 
 OpenCheatTables site URL: https://opencheattables.com  
