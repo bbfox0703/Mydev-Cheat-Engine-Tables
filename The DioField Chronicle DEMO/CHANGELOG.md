@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/09/09
+1. Added Get money / SP (Usage: open menu)
+
 ## 2022/09/08  
 1. Added Char. Viewer (Usage: Menu -> Equip.)
 1. Added Battle: EXP Multiplier
