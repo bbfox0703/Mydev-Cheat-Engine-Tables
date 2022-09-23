@@ -3,6 +3,7 @@
 ## 2022/09/23
 1. Added Fill weapon count (at least 1; usage: Open sell menu)
 1. Added Fill equip count (at least 1; usage: Open sell menu)
+1. Added Fill resources (at least 1, usage: Open menu)
 
 ## 2022/09/09
 1. Added Get money / SP (Usage: open menu)
