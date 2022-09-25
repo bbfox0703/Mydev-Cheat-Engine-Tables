@@ -156,10 +156,10 @@ zh-TW: 文明帝國V
 ## Star Traders Frontiers  
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)  
 
-## The DioField Chronicle DEMO
-[Cheat Table for The DioField Chronicle (demo) (Steam)](https://store.steampowered.com/app/1399080/_The_DioField_Chronicle/)  
-zh-TW: 神領編年史 The DioField Chronicle 體驗版 (修改器)  
-ja-JP: 神領編年史 The DioField Chronicle 体験版(チートエンジン)  
+## The DioField Chronicle
+[Cheat Table for The DioField Chronicle ((Steam)](https://store.steampowered.com/app/1399080/_The_DioField_Chronicle/)  
+zh-TW: 神領編年史 The DioField Chronicle (修改器)  
+ja-JP: 神領編年史 The DioField Chronicle (チートエンジン)  
 
 ## THE IDOLM@STER STARLIT SEASON  
 [THE IDOLM@STER STARLIT SEASON (Steam)](https://store.steampowered.com/app/1046480/_/)  
