@@ -204,4 +204,8 @@ ja-JP: Voice of Cards できそこないの巫女
 
 ## Warpips  
 [Warpips (Steam)](https://store.steampowered.com/app/1291010/__Warpips/)  
+
+## WARRIORS OROCHI 3 Ultimate Definitive Edition
+[## WARRIORS OROCHI 3 Ultimate Definitive Edition (Steam)](https://store.steampowered.com/app/1879330/OROCHI__Ultimate/)
+
 	
