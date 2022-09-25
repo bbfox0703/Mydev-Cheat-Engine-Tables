@@ -199,13 +199,16 @@ ja-JP: 聖剣伝説3 TRIALS of MANA
 [Voice of Cards: The Forsaken Maiden (Steam)](https://store.steampowered.com/app/1748660/Voice_of_Cards_The_Forsaken_Maiden/)  
 ja-JP: Voice of Cards できそこないの巫女  
 
+## WARRIORS OROCHI 3 Ultimate Definitive Edition
+[WARRIORS OROCHI 3 Ultimate Definitive Edition (Steam)](https://store.steampowered.com/app/1879330/OROCHI__Ultimate/)
+zh-TW: 無雙OROCHI 蛇魔２ Ultimate 
+ja-JP: 無双OROCHI２ Ultimate  
+
 ## Warhammer 40,000 Gladius Relics of War  
 [Warhammer 40,000: Gladius Relics of War (Steam)](https://store.steampowered.com/app/489630/Warhammer_40000_Gladius__Relics_of_War/)  
 
 ## Warpips  
 [Warpips (Steam)](https://store.steampowered.com/app/1291010/__Warpips/)  
 
-## WARRIORS OROCHI 3 Ultimate Definitive Edition
-[## WARRIORS OROCHI 3 Ultimate Definitive Edition (Steam)](https://store.steampowered.com/app/1879330/OROCHI__Ultimate/)
 
 	
