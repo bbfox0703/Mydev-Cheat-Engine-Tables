@@ -15,7 +15,7 @@ LuaCall(cycleFullCompact(nil,false))
     </CheatEntry>
     <CheatEntry>
       <ID>16</ID>
-      <Description>"Min. stock EXP (Usage: spend EXP)"</Description>
+      <Description>"Min. growth points (Usage: spend points)"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : WO3U.exe
   Version: 
@@ -36,9 +36,9 @@ newmem:
 code:
   mov edx,[rax+00034ED8]
   //
-  cmp edx, #99999
+  cmp edx, #3000000
   jae endp
-  mov edx, #99999
+  mov edx, #3000000
   mov [rax+00034ED8], edx
 
 endp:
@@ -375,6 +375,83 @@ WO3U.exe+41B57D: 4C 8D 44 24 48                 - lea r8,[rsp+48]
 WO3U.exe+41B582: 45 8B CC                       - mov r9d,r12d
 WO3U.exe+41B585: C7 44 24 20 18 00 00 00        - mov [rsp+20],00000018
 WO3U.exe+41B58D: 48 8D 54 24 40                 - lea rdx,[rsp+40]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>103</ID>
+      <Description>"Min. upgrade stones. (must &gt;=1)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : WO3U.exe
+  Version: 
+  Date   : 2022-09-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_GROTH_ORB,WO3U.exe,45 0F B7 86 F2 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_GROTH_ORB)
+
+label(code)
+label(return)
+
+newmem:
+  push rax
+  mov ax, [r14+000000F2]
+  cmp ax, #500
+  jae endp
+  mov ax, #500
+  mov [r14+000000F2], ax
+
+endp:
+  pop rax
+
+
+code:
+  movzx r8d,word ptr [r14+000000F2]
+  jmp return
+
+INJECT_GET_GROTH_ORB:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_GROTH_ORB)
+
+[DISABLE]
+
+INJECT_GET_GROTH_ORB:
+  db 45 0F B7 86 F2 00 00 00
+
+unregistersymbol(INJECT_GET_GROTH_ORB)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: WO3U.exe+361276
+
+WO3U.exe+361240: 4C 8B C5                          - mov r8,rbp
+WO3U.exe+361243: 49 8B CF                          - mov rcx,r15
+WO3U.exe+361246: F3 0F 11 44 24 20                 - movss [rsp+20],xmm0
+WO3U.exe+36124C: 41 C7 87 34 4D 01 00 01 00 00 00  - mov [r15+00014D34],00000001
+WO3U.exe+361257: E8 E4 8A E8 FF                    - call WO3U.exe+1E9D40
+WO3U.exe+36125C: 33 D2                             - xor edx,edx
+WO3U.exe+36125E: 48 8D 4C 24 50                    - lea rcx,[rsp+50]
+WO3U.exe+361263: 41 B8 80 00 00 00                 - mov r8d,00000080
+WO3U.exe+361269: E8 22 47 3E 00                    - call WO3U.exe+745990
+WO3U.exe+36126E: F3 0F 58 3D 12 EC 77 00           - addss xmm7,[WO3U.exe+ADFE88]
+// ---------- INJECTING HERE ----------
+WO3U.exe+361276: 45 0F B7 86 F2 00 00 00           - movzx r8d,word ptr [r14+000000F2]
+// ---------- DONE INJECTING  ----------
+WO3U.exe+36127E: 48 8D 15 3B AC 76 00              - lea rdx,[WO3U.exe+ACBEC0]
+WO3U.exe+361285: F3 0F 11 74 24 44                 - movss [rsp+44],xmm6
+WO3U.exe+36128B: 48 8D 4C 24 50                    - lea rcx,[rsp+50]
+WO3U.exe+361290: F3 0F 11 7C 24 40                 - movss [rsp+40],xmm7
+WO3U.exe+361296: 48 8B 44 24 40                    - mov rax,[rsp+40]
+WO3U.exe+36129B: 48 89 44 24 48                    - mov [rsp+48],rax
+WO3U.exe+3612A0: E8 5B 4F E2 FF                    - call WO3U.exe+186200
+WO3U.exe+3612A5: 44 8B CB                          - mov r9d,ebx
+WO3U.exe+3612A8: C7 44 24 40 00 00 C0 41           - mov [rsp+40],41C00000
+WO3U.exe+3612B0: 4C 8D 44 24 40                    - lea r8,[rsp+40]
 }
 </AssemblerScript>
     </CheatEntry>
@@ -992,7 +1069,7 @@ check1:
   je do_set_hp
   cmp rax, [i_unlim_hp_addr5]
   je do_set_hp
-  jmp code
+  jmp to_enemy
 
   //push rdx
   //lea rdx, [rax+0000019C]
@@ -1005,6 +1082,19 @@ do_set_hp:
   vmovss xmm15, [rax+00000198]
   vmovss [rax+0000019C], xmm15
   vmovss [rax+000001A0], xmm15
+  jmp code
+
+to_enemy:
+  jmp code
+  vmovss xmm14, [rax+0000019C]
+  vmovss xmm15, [rax+0000019A]
+  vmovss xmm13, [vf_1]
+  vucomiss xmm13, xmm14
+  jae code
+  vucomiss xmm13, xmm15
+  jae code
+  vmovss [rax+0000019C], xmm13
+  vmovss [rax+0000019A], xmm13
 
 code:
   cvttss2si edx,[rax+00000198]
@@ -1024,6 +1114,8 @@ align 10 cc
   dq 0
   i_unlim_hp_reset:
   dd 0
+  vf_1:
+  dd (float)3
 
 INJECT_INF_HP_UNLIMITED_MODE:
   jmp newmem
@@ -1074,6 +1166,121 @@ WO3U.exe+235CA4: C3                          - ret
 WO3U.exe+235CA5: 41 8B C3                    - mov eax,r11d
 }
 </AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>97</ID>
+      <Description>"Gauntlet mode: Get zone unlcok stone (Usage: zone selection)"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : WO3U.exe
+  Version: 
+  Date   : 2022-09-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_GUNLET_UNLOCK_STONE,WO3U.exe,0F B6 82 00 93 36 00 66 89 81) // should be unique
+alloc(newmem,$1000,INJECT_GET_GUNLET_UNLOCK_STONE)
+
+label(code)
+label(return)
+label(i_base_gunlet_stone_addr)
+newmem:
+  mov [i_base_gunlet_stone_addr], rdx
+
+code:
+  movzx eax,byte ptr [rdx+00369300]
+  jmp return
+align 10 cc
+  i_base_gunlet_stone_addr:
+  dq 0
+
+INJECT_GET_GUNLET_UNLOCK_STONE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_GUNLET_UNLOCK_STONE)
+registersymbol(i_base_gunlet_stone_addr)
+
+[DISABLE]
+
+INJECT_GET_GUNLET_UNLOCK_STONE:
+  db 0F B6 82 00 93 36 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: WO3U.exe+4472D7
+
+WO3U.exe+4472C7: C3                    - ret 
+WO3U.exe+4472C8: CC                    - int 3 
+WO3U.exe+4472C9: CC                    - int 3 
+WO3U.exe+4472CA: CC                    - int 3 
+WO3U.exe+4472CB: CC                    - int 3 
+WO3U.exe+4472CC: CC                    - int 3 
+WO3U.exe+4472CD: CC                    - int 3 
+WO3U.exe+4472CE: CC                    - int 3 
+WO3U.exe+4472CF: CC                    - int 3 
+WO3U.exe+4472D0: 48 8B 15 71 DA 77 00  - mov rdx,[WO3U.exe+BC4D48]
+// ---------- INJECTING HERE ----------
+WO3U.exe+4472D7: 0F B6 82 00 93 36 00  - movzx eax,byte ptr [rdx+00369300]
+// ---------- DONE INJECTING  ----------
+WO3U.exe+4472DE: 66 89 81 A0 05 00 00  - mov [rcx+000005A0],ax
+WO3U.exe+4472E5: 0F B6 82 01 93 36 00  - movzx eax,byte ptr [rdx+00369301]
+WO3U.exe+4472EC: 66 89 81 A2 05 00 00  - mov [rcx+000005A2],ax
+WO3U.exe+4472F3: 0F B6 82 02 93 36 00  - movzx eax,byte ptr [rdx+00369302]
+WO3U.exe+4472FA: 66 89 81 A4 05 00 00  - mov [rcx+000005A4],ax
+WO3U.exe+447301: 0F B6 82 03 93 36 00  - movzx eax,byte ptr [rdx+00369303]
+WO3U.exe+447308: 66 89 81 A6 05 00 00  - mov [rcx+000005A6],ax
+WO3U.exe+44730F: C3                    - ret 
+WO3U.exe+447310: 4C 8B DC              - mov r11,rsp
+WO3U.exe+447313: 49 89 5B 18           - mov [r11+18],rbx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>98</ID>
+          <Description>"#1"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_gunlet_stone_addr</Address>
+          <Offsets>
+            <Offset>369300</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>99</ID>
+          <Description>"#2"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_gunlet_stone_addr</Address>
+          <Offsets>
+            <Offset>369301</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>100</ID>
+          <Description>"#3"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_gunlet_stone_addr</Address>
+          <Offsets>
+            <Offset>369302</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>101</ID>
+          <Description>"#4"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_gunlet_stone_addr</Address>
+          <Offsets>
+            <Offset>369303</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>29</ID>
@@ -1545,6 +1752,9 @@ WO3U.exe+207DCC: 44 8B C2                       - mov r8d,edx
 23:Diligence/磨練
 24:Industry/熟習
 25:Harmony/調和
+27:Echo/誘爆
+28:Typhoon/旋風
+38:Iceslay/冰斬
 255:N/A
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
