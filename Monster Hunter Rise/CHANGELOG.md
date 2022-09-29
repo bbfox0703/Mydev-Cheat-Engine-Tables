@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/09/29
+1. Revised for game ver 12.0.0.0  
+
 ## 2022/08/27
 1. Revised for game ver 11.0.2.0  
 
