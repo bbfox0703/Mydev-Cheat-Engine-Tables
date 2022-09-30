@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/09/30
+1. Revised "Get weapon usage / May not fully working (Guild card-View) / 取得武器使用次數資料；非完全有效"
+
 ## 2022/09/29
 1. Revised for game ver 12.0.0.0  
 
