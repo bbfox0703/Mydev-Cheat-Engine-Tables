@@ -8,19 +8,43 @@
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
     <CheatEntry>
-      <ID>3</ID>
-      <Description>"Coin, influence &amp; warehouse stock"</Description>
-      <Options moHideChildren="1"/>
+      <ID>47</ID>
+      <Description>"Active"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Anno1800.exe
+      <AssemblerScript>[ENABLE]
+{$asm}
+define(MAINEXE, $process)
+alloc(newmem, $3000, MAINEXE)
+label(i_warehouse_base)
+
+newmem:
+  i_warehouse_base:
+  dq 0
+  align 1000 0
+  db 0
+  align 1000 0
+
+registersymbol(i_warehouse_base)
+[DISABLE]
+unregistersymbol(i_warehouse_base)
+dealloc(newmem, $3000)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Coin, influence &amp; warehouse stock"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Anno1800.exe
   Version: 
   Date   : 2022-04-06
-  Author : bbfox @ https://opencheattables.org
+  Author : bbfox @ https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_MONEY_AND_WAREHOUSE_SLOT,Anno1800.exe,8B 48 20 48 8B C7 89 0F) // should be unique
+aobscanmodule(INJECT_MONEY_AND_WAREHOUSE_SLOT,$process,8B 48 20 48 8B C7 89 0F) // should be unique
 alloc(newmem,$1000,INJECT_MONEY_AND_WAREHOUSE_SLOT)
 
 label(code)
@@ -37,11 +61,15 @@ label(i_max_watermark)
 // 68 = 1
 // 18 = #1010017 = coin
 // 14 != 1A0
+
 newmem:
   mov ecx, [rax+20]
   test ecx, ecx
   je code
 
+  mov dword ptr [is_enemy], 0
+
+{
   push rdx
   push rbx
   xor rdx, rdx
@@ -68,6 +96,8 @@ check_if_player_endp:
 
   cmp dword ptr [is_enemy], 1
   je check_enemy
+}
+
 
   // check type, influence, coin for player
   mov ecx, [rax+18]
@@ -78,7 +108,7 @@ check_if_player_endp:
   je check_coin
 
   //start check warehouse
-  mov ecx, [rax+1C]
+  mov ecx, [rax+1C]  // max capacity
   test ecx, ecx
   je code
 
@@ -108,8 +138,8 @@ check_item_no:
   cmp ecx, 2
   jbe code
 
+  jmp to_warehouse
 
-jmp to_warehouse
 check_warehouse0:
   mov ecx, [rax+18]
   cmp ecx, #1010190
@@ -134,7 +164,7 @@ check_coin:
   xor rbx, rbx
   mov rbx, [rax+20]
   cmp rbx, FFFF
-  jle check_enemy:
+  jle go_check_enemy
 
 save_money_addr:
   mov ebx, [rax+2c]
@@ -145,7 +175,7 @@ save_money_addr:
   add edx, ebx
   cmp edx, 0
   lea rbx, [rax+20]
-  jne check_enemy
+  jne go_check_enemy
 
   mov [i_money_addr1], rbx
   mov ebx, [rax+20]
@@ -154,9 +184,17 @@ save_money_addr:
   cmovb ebx, edx
   mov [rax+20], ebx
   jmp endp_money
+
+go_check_enemy:
+  mov dword ptr [is_enemy], 1
+
 endp_money:
   pop rdx
   pop rbx
+
+  cmp dword ptr [is_enemy], 1
+  je check_enemy
+
   jmp code
 
 
@@ -178,6 +216,40 @@ to_warehouse:
 
   cmp dword ptr [is_keep_warehouse_slot], 1
   jne code
+
+  // check if warehouse data exists
+  cmp qword ptr [i_warehouse_base], 0
+  je code
+
+  // check if warehouse slot id saved in script "Click warehouse -&gt; set stock size"
+  push r14
+  push rdi
+  xor r14, r14
+  mov dword ptr [is_warehouse_id_found], 0
+
+loop1:
+  mov rdi, i_warehouse_base
+  lea rdi, [rdi+r14d*8]
+  cmp qword ptr [rdi], 0
+  je check_endp
+  cmp qword ptr [rdi], rax
+  je check_found
+  inc r14d
+  cmp r14d, #1000
+  jae check_endp
+  jmp loop1
+
+check_found:
+  mov dword ptr [is_warehouse_id_found], 1
+
+check_endp:
+  pop rdi
+  pop r14
+  //  --------------------------
+
+  cmp dword ptr [is_warehouse_id_found], 1
+  jne code
+
   push rcx
   push rbx
 
@@ -236,6 +308,8 @@ align 10 cc
   dd #55
   i_max_watermark:
   dd #10
+  is_warehouse_id_found:
+  dd 0
 
 
 INJECT_MONEY_AND_WAREHOUSE_SLOT:
@@ -261,106 +335,132 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+CA8EE2
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+752892
 
-Anno1800.exe+CA8EC6: 8B 48 1C        - mov ecx,[rax+1C]
-Anno1800.exe+CA8EC9: 2B D1           - sub edx,ecx
-Anno1800.exe+CA8ECB: 78 61           - js Anno1800.exe+CA8F2E
-Anno1800.exe+CA8ECD: 89 17           - mov [rdi],edx
-Anno1800.exe+CA8ECF: 48 8B C7        - mov rax,rdi
-Anno1800.exe+CA8ED2: 48 8B 5C 24 30  - mov rbx,[rsp+30]
-Anno1800.exe+CA8ED7: 48 8B 74 24 38  - mov rsi,[rsp+38]
-Anno1800.exe+CA8EDC: 48 83 C4 20     - add rsp,20
-Anno1800.exe+CA8EE0: 5F              - pop rdi
-Anno1800.exe+CA8EE1: C3              - ret 
+Anno1800.exe+752876: 8B 48 1C        - mov ecx,[rax+1C]
+Anno1800.exe+752879: 2B D1           - sub edx,ecx
+Anno1800.exe+75287B: 78 61           - js Anno1800.exe+7528DE
+Anno1800.exe+75287D: 89 17           - mov [rdi],edx
+Anno1800.exe+75287F: 48 8B C7        - mov rax,rdi
+Anno1800.exe+752882: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Anno1800.exe+752887: 48 8B 74 24 38  - mov rsi,[rsp+38]
+Anno1800.exe+75288C: 48 83 C4 20     - add rsp,20
+Anno1800.exe+752890: 5F              - pop rdi
+Anno1800.exe+752891: C3              - ret
 // ---------- INJECTING HERE ----------
-Anno1800.exe+CA8EE2: 8B 48 20        - mov ecx,[rax+20]
+Anno1800.exe+752892: 8B 48 20        - mov ecx,[rax+20]
 // ---------- DONE INJECTING  ----------
-Anno1800.exe+CA8EE5: 48 8B C7        - mov rax,rdi
-Anno1800.exe+CA8EE8: 89 0F           - mov [rdi],ecx
-Anno1800.exe+CA8EEA: 48 8B 5C 24 30  - mov rbx,[rsp+30]
-Anno1800.exe+CA8EEF: 48 8B 74 24 38  - mov rsi,[rsp+38]
-Anno1800.exe+CA8EF4: 48 83 C4 20     - add rsp,20
-Anno1800.exe+CA8EF8: 5F              - pop rdi
-Anno1800.exe+CA8EF9: C3              - ret 
-Anno1800.exe+CA8EFA: 48 8B 02        - mov rax,[rdx]
-Anno1800.exe+CA8EFD: 48 8B CA        - mov rcx,rdx
-Anno1800.exe+CA8F00: FF 50 40        - call qword ptr [rax+40]
+Anno1800.exe+752895: 48 8B C7        - mov rax,rdi
+Anno1800.exe+752898: 89 0F           - mov [rdi],ecx
+Anno1800.exe+75289A: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Anno1800.exe+75289F: 48 8B 74 24 38  - mov rsi,[rsp+38]
+Anno1800.exe+7528A4: 48 83 C4 20     - add rsp,20
+Anno1800.exe+7528A8: 5F              - pop rdi
+Anno1800.exe+7528A9: C3              - ret
+Anno1800.exe+7528AA: 48 8B 02        - mov rax,[rdx]
+Anno1800.exe+7528AD: 48 8B CA        - mov rcx,rdx
+Anno1800.exe+7528B0: FF 50 40        - call qword ptr [rax+40]
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>8</ID>
-          <Description>"Player coin"</Description>
-          <ShowAsSigned>1</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>[i_money_addr1]</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>9</ID>
-          <Description>"Min. coin"</Description>
-          <ShowAsSigned>1</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_min_money</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>11</ID>
-          <Description>"Influence total"</Description>
-          <ShowAsSigned>1</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>[i_influence_total_addr]</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>10</ID>
-          <Description>"Influence available"</Description>
-          <ShowAsSigned>1</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>[i_influence_avail_addr]</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>12</ID>
-          <Description>"*** not working*** Keep warehouse stock (at least &gt;=2; not fully tested)"</Description>
-          <Options moHideChildren="1"/>
-          <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>8000FF</Color>
-          <VariableType>4 Bytes</VariableType>
-          <Address>is_keep_warehouse_slot</Address>
           <CheatEntries>
             <CheatEntry>
-              <ID>13</ID>
-              <Description>"  Stock min. value"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
+              <ID>8</ID>
+              <Description>"Player coin"</Description>
+              <ShowAsSigned>1</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_min_watermark</Address>
+              <Address>[i_money_addr1]</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>14</ID>
-              <Description>"  Stock max value = (Capacity - X), X ="</Description>
-              <ShowAsSigned>0</ShowAsSigned>
+              <ID>9</ID>
+              <Description>"Min. coin"</Description>
+              <ShowAsSigned>1</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_max_watermark</Address>
+              <Address>i_min_money</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"Influence total"</Description>
+              <ShowAsSigned>1</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_influence_total_addr]</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"Influence available"</Description>
+              <ShowAsSigned>1</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_influence_avail_addr]</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>48</ID>
+              <Description>"Player warehouse stock#"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>49</ID>
+                  <Description>"1. "Click warehouse -&gt; set stock size" must be enabled"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>50</ID>
+                  <Description>"2. Then select any player warehouse"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>51</ID>
+                  <Description>"3. If any new good stocked, need to click warehouse again"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"Keep warehouse stock (at least &gt;=2; not fully tested)"</Description>
+                  <Options moHideChildren="1"/>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>804000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_keep_warehouse_slot</Address>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>13</ID>
+                      <Description>"  Stock min. value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_min_watermark</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>14</ID>
+                      <Description>"  Stock max value = (Capacity - X), X ="</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_max_watermark</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>16</ID>
-      <Description>"Ship HP (may affect buildings)"</Description>
-      <Options moHideChildren="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Anno1800.exe
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Ship HP (may affect buildings)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Anno1800.exe
   Version: 
   Date   : 2022-04-06
-  Author : bbfox @ https://opencheattables.org
+  Author : bbfox @ https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_SHIP_HP,Anno1800.exe,66 89 7B 56 66 85 FF) // should be unique
+aobscanmodule(INJECT_SHIP_HP,$process,66 89 7B 56 66 85 FF) // should be unique
 alloc(newmem,$1000,INJECT_SHIP_HP)
 
 label(code)
@@ -452,60 +552,60 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+E9BE6B
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+149A2B
 
-Anno1800.exe+E9BE44: 48 8B 4A 28     - mov rcx,[rdx+28]
-Anno1800.exe+E9BE48: 8B 42 08        - mov eax,[rdx+08]
-Anno1800.exe+E9BE4B: 89 44 24 28     - mov [rsp+28],eax
-Anno1800.exe+E9BE4F: 48 89 4C 24 20  - mov [rsp+20],rcx
-Anno1800.exe+E9BE54: E8 C7 A6 03 00  - call Anno1800.exe+ED6520
-Anno1800.exe+E9BE59: 33 C0           - xor eax,eax
-Anno1800.exe+E9BE5B: 66 3B C7        - cmp ax,di
-Anno1800.exe+E9BE5E: 66 0F 4D F8     - cmovge di,ax
-Anno1800.exe+E9BE62: 66 39 7B 58     - cmp [rbx+58],di
-Anno1800.exe+E9BE66: 66 0F 4C 7B 58  - cmovl di,[rbx+58]
+Anno1800.exe+149A04: 48 8B 4A 28     - mov rcx,[rdx+28]
+Anno1800.exe+149A08: 8B 42 08        - mov eax,[rdx+08]
+Anno1800.exe+149A0B: 89 44 24 28     - mov [rsp+28],eax
+Anno1800.exe+149A0F: 48 89 4C 24 20  - mov [rsp+20],rcx
+Anno1800.exe+149A14: E8 67 DC 04 00  - call Anno1800.exe+197680
+Anno1800.exe+149A19: 33 C0           - xor eax,eax
+Anno1800.exe+149A1B: 66 3B C7        - cmp ax,di
+Anno1800.exe+149A1E: 66 0F 4D F8     - cmovge di,ax
+Anno1800.exe+149A22: 66 39 7B 58     - cmp [rbx+58],di
+Anno1800.exe+149A26: 66 0F 4C 7B 58  - cmovl di,[rbx+58]
 // ---------- INJECTING HERE ----------
-Anno1800.exe+E9BE6B: 66 89 7B 56     - mov [rbx+56],di
+Anno1800.exe+149A2B: 66 89 7B 56     - mov [rbx+56],di
 // ---------- DONE INJECTING  ----------
-Anno1800.exe+E9BE6F: 66 85 FF        - test di,di
-Anno1800.exe+E9BE72: 7F 17           - jg Anno1800.exe+E9BE8B
-Anno1800.exe+E9BE74: 48 8B 43 08     - mov rax,[rbx+08]
-Anno1800.exe+E9BE78: 8B 48 58        - mov ecx,[rax+58]
-Anno1800.exe+E9BE7B: C1 E9 04        - shr ecx,04
-Anno1800.exe+E9BE7E: F6 C1 01        - test cl,01
-Anno1800.exe+E9BE81: 75 08           - jne Anno1800.exe+E9BE8B
-Anno1800.exe+E9BE83: 48 8B CB        - mov rcx,rbx
-Anno1800.exe+E9BE86: E8 25 D8 FF FF  - call Anno1800.exe+E996B0
-Anno1800.exe+E9BE8B: 48 8B CB        - mov rcx,rbx
+Anno1800.exe+149A2F: 66 85 FF        - test di,di
+Anno1800.exe+149A32: 7F 17           - jg Anno1800.exe+149A4B
+Anno1800.exe+149A34: 48 8B 43 08     - mov rax,[rbx+08]
+Anno1800.exe+149A38: 8B 48 58        - mov ecx,[rax+58]
+Anno1800.exe+149A3B: C1 E9 04        - shr ecx,04
+Anno1800.exe+149A3E: F6 C1 01        - test cl,01
+Anno1800.exe+149A41: 75 08           - jne Anno1800.exe+149A4B
+Anno1800.exe+149A43: 48 8B CB        - mov rcx,rbx
+Anno1800.exe+149A46: E8 75 D7 FF FF  - call Anno1800.exe+1471C0
+Anno1800.exe+149A4B: 48 8B CB        - mov rcx,rbx
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>17</ID>
-          <Description>"Non player ship half HP? (not recommended)"</Description>
-          <DropDownList DisplayValueAsItem="1">0:No
+          <CheatEntries>
+            <CheatEntry>
+              <ID>17</ID>
+              <Description>"Non player ship half HP? (not recommended)"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
 </DropDownList>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>is_lower_enemy_hp</Address>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_lower_enemy_hp</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>39</ID>
-      <Description>"Click ship cargo -&gt; set stock size"</Description>
-      <Options moHideChildren="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Anno1800.exe
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"Click ship cargo -&gt; set stock size"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Anno1800.exe
   Version: 
   Date   : 2022-04-21
-  Author :
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_CLICK_CARGO,Anno1800.exe,8B 78 20 85 FF 78 2C) // should be unique
+aobscanmodule(INJECT_CLICK_CARGO,$process,8B 78 20 85 FF 78 2C) // should be unique
 alloc(newmem,$1000,INJECT_CLICK_CARGO)
 
 label(code)
@@ -543,57 +643,57 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+1DA94C7
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+1FB0B98
 
-Anno1800.exe+1DA94AA: 74 05           - je Anno1800.exe+1DA94B1
-Anno1800.exe+1DA94AC: 8B 59 08        - mov ebx,[rcx+08]
-Anno1800.exe+1DA94AF: EB 03           - jmp Anno1800.exe+1DA94B4
-Anno1800.exe+1DA94B1: 41 8B DC        - mov ebx,r12d
-Anno1800.exe+1DA94B4: 48 8B 0F        - mov rcx,[rdi]
-Anno1800.exe+1DA94B7: 48 85 C9        - test rcx,rcx
-Anno1800.exe+1DA94BA: 74 3E           - je Anno1800.exe+1DA94FA
-Anno1800.exe+1DA94BC: 41 8B D6        - mov edx,r14d
-Anno1800.exe+1DA94BF: E8 0C 92 AC FE  - call Anno1800.exe+8726D0
-Anno1800.exe+1DA94C4: 48 8B C8        - mov rcx,rax
+Anno1800.exe+1FB0B7B: 74 05           - je Anno1800.exe+1FB0B82
+Anno1800.exe+1FB0B7D: 8B 59 08        - mov ebx,[rcx+08]
+Anno1800.exe+1FB0B80: EB 03           - jmp Anno1800.exe+1FB0B85
+Anno1800.exe+1FB0B82: 41 8B DF        - mov ebx,r15d
+Anno1800.exe+1FB0B85: 48 8B 0F        - mov rcx,[rdi]
+Anno1800.exe+1FB0B88: 48 85 C9        - test rcx,rcx
+Anno1800.exe+1FB0B8B: 74 3E           - je Anno1800.exe+1FB0BCB
+Anno1800.exe+1FB0B8D: 41 8B D6        - mov edx,r14d
+Anno1800.exe+1FB0B90: E8 9B F7 29 FE  - call Anno1800.exe+250330
+Anno1800.exe+1FB0B95: 48 8B C8        - mov rcx,rax
 // ---------- INJECTING HERE ----------
-Anno1800.exe+1DA94C7: 8B 78 20        - mov edi,[rax+20]
+Anno1800.exe+1FB0B98: 8B 78 20        - mov edi,[rax+20]
 // ---------- DONE INJECTING  ----------
-Anno1800.exe+1DA94CA: 85 FF           - test edi,edi
-Anno1800.exe+1DA94CC: 78 2C           - js Anno1800.exe+1DA94FA
-Anno1800.exe+1DA94CE: 74 16           - je Anno1800.exe+1DA94E6
-Anno1800.exe+1DA94D0: 48 8B 40 10     - mov rax,[rax+10]
-Anno1800.exe+1DA94D4: 48 2B 41 08     - sub rax,[rcx+08]
-Anno1800.exe+1DA94D8: 48 83 E0 F0     - and rax,-10
-Anno1800.exe+1DA94DC: 48 83 F8 10     - cmp rax,10
-Anno1800.exe+1DA94E0: 41 0F 45 FC     - cmovne edi,r12d
-Anno1800.exe+1DA94E4: EB 17           - jmp Anno1800.exe+1DA94FD
-Anno1800.exe+1DA94E6: 48 8B 78 10     - mov rdi,[rax+10]
+Anno1800.exe+1FB0B9B: 85 FF           - test edi,edi
+Anno1800.exe+1FB0B9D: 78 2C           - js Anno1800.exe+1FB0BCB
+Anno1800.exe+1FB0B9F: 74 16           - je Anno1800.exe+1FB0BB7
+Anno1800.exe+1FB0BA1: 48 8B 40 10     - mov rax,[rax+10]
+Anno1800.exe+1FB0BA5: 48 2B 41 08     - sub rax,[rcx+08]
+Anno1800.exe+1FB0BA9: 48 83 E0 F0     - and rax,-10
+Anno1800.exe+1FB0BAD: 48 83 F8 10     - cmp rax,10
+Anno1800.exe+1FB0BB1: 41 0F 45 FF     - cmovne edi,r15d
+Anno1800.exe+1FB0BB5: EB 17           - jmp Anno1800.exe+1FB0BCE
+Anno1800.exe+1FB0BB7: 48 8B 78 10     - mov rdi,[rax+10]
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>45</ID>
-          <Description>"Min. size"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_min_cargo_size</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>45</ID>
+              <Description>"Min. size"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_cargo_size</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>42</ID>
-      <Description>"Click warehouse -&gt; set stock size"</Description>
-      <Options moHideChildren="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Anno1800.exe
+        <CheatEntry>
+          <ID>42</ID>
+          <Description>"Click warehouse -&gt; set stock size"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Anno1800.exe
   Version: 
   Date   : 2022-04-21
-  Author :
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_CLICK_WAREHOUSE,Anno1800.exe,8B 48 20 89 4D 4F) // should be unique
+aobscanmodule(INJECT_CLICK_WAREHOUSE,$process,8B 48 20 89 4D 4F) // should be unique
 alloc(newmem,$1000,INJECT_CLICK_WAREHOUSE)
 
 label(code)
@@ -601,6 +701,34 @@ label(return)
 label(i_min_stock_size)
 
 newmem:
+  push r14
+  push rdi
+
+  xor r14, r14
+  //xor rdi, rdi
+
+loop1:
+  mov rdi, i_warehouse_base
+  lea rdi, [rdi+r14d*8]
+  cmp qword ptr [rdi], 0
+  je store_and_endp
+  cmp qword ptr [rdi], rax
+  je endp
+  inc r14d
+  cmp r14d, #1000
+  jae endp
+  jmp loop1
+
+
+store_and_endp:
+  mov [rdi], rax
+
+endp:
+
+  pop rdi
+  pop r14
+
+
   mov ecx,[rax+20]
   cmp ecx, [i_min_stock_size]
   jae code
@@ -614,7 +742,7 @@ code:
 
 align 10 cc
   i_min_stock_size:
-  dd #10000
+  dd #125
 
 INJECT_CLICK_WAREHOUSE:
   jmp newmem
@@ -622,7 +750,6 @@ INJECT_CLICK_WAREHOUSE:
 return:
 registersymbol(i_min_stock_size)
 registersymbol(INJECT_CLICK_WAREHOUSE)
-
 [DISABLE]
 
 INJECT_CLICK_WAREHOUSE:
@@ -632,284 +759,53 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+1E29013
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+1FD06A3
 
-Anno1800.exe+1E28FEF: 90                 - nop 
-Anno1800.exe+1E28FF0: 48 3B C2           - cmp rax,rdx
-Anno1800.exe+1E28FF3: 0F 84 C8 01 00 00  - je Anno1800.exe+1E291C1
-Anno1800.exe+1E28FF9: 48 8B 40 08        - mov rax,[rax+08]
-Anno1800.exe+1E28FFD: 44 3B 48 10        - cmp r9d,[rax+10]
-Anno1800.exe+1E29001: 75 ED              - jne Anno1800.exe+1E28FF0
-Anno1800.exe+1E29003: 48 85 C0           - test rax,rax
-Anno1800.exe+1E29006: 48 0F 44 C1        - cmove rax,rcx
-Anno1800.exe+1E2900A: 48 3B C1           - cmp rax,rcx
-Anno1800.exe+1E2900D: 0F 84 AE 01 00 00  - je Anno1800.exe+1E291C1
+Anno1800.exe+1FD067F: 90                 - nop
+Anno1800.exe+1FD0680: 48 3B C2           - cmp rax,rdx
+Anno1800.exe+1FD0683: 0F 84 C8 01 00 00  - je Anno1800.exe+1FD0851
+Anno1800.exe+1FD0689: 48 8B 40 08        - mov rax,[rax+08]
+Anno1800.exe+1FD068D: 44 3B 48 10        - cmp r9d,[rax+10]
+Anno1800.exe+1FD0691: 75 ED              - jne Anno1800.exe+1FD0680
+Anno1800.exe+1FD0693: 48 85 C0           - test rax,rax
+Anno1800.exe+1FD0696: 48 0F 44 C1        - cmove rax,rcx
+Anno1800.exe+1FD069A: 48 3B C1           - cmp rax,rcx
+Anno1800.exe+1FD069D: 0F 84 AE 01 00 00  - je Anno1800.exe+1FD0851
 // ---------- INJECTING HERE ----------
-Anno1800.exe+1E29013: 8B 48 20           - mov ecx,[rax+20]
+Anno1800.exe+1FD06A3: 8B 48 20           - mov ecx,[rax+20]
 // ---------- DONE INJECTING  ----------
-Anno1800.exe+1E29016: 89 4D 4F           - mov [rbp+4F],ecx
-Anno1800.exe+1E29019: 44 8B 58 1C        - mov r11d,[rax+1C]
-Anno1800.exe+1E2901D: 44 89 5D B3        - mov [rbp-4D],r11d
-Anno1800.exe+1E29021: 45 33 C0           - xor r8d,r8d
-Anno1800.exe+1E29024: 48 8B 50 48        - mov rdx,[rax+48]
-Anno1800.exe+1E29028: 4C 8B 50 50        - mov r10,[rax+50]
-Anno1800.exe+1E2902C: 49 3B D2           - cmp rdx,r10
-Anno1800.exe+1E2902F: 74 19              - je Anno1800.exe+1E2904A
-Anno1800.exe+1E29031: 80 7A 24 00        - cmp byte ptr [rdx+24],00
-Anno1800.exe+1E29035: 75 0F              - jne Anno1800.exe+1E29046
+Anno1800.exe+1FD06A6: 89 4D 4F           - mov [rbp+4F],ecx
+Anno1800.exe+1FD06A9: 44 8B 58 1C        - mov r11d,[rax+1C]
+Anno1800.exe+1FD06AD: 44 89 5D B3        - mov [rbp-4D],r11d
+Anno1800.exe+1FD06B1: 45 33 C0           - xor r8d,r8d
+Anno1800.exe+1FD06B4: 48 8B 50 48        - mov rdx,[rax+48]
+Anno1800.exe+1FD06B8: 4C 8B 50 50        - mov r10,[rax+50]
+Anno1800.exe+1FD06BC: 49 3B D2           - cmp rdx,r10
+Anno1800.exe+1FD06BF: 74 19              - je Anno1800.exe+1FD06DA
+Anno1800.exe+1FD06C1: 80 7A 24 00        - cmp byte ptr [rdx+24],00
+Anno1800.exe+1FD06C5: 75 0F              - jne Anno1800.exe+1FD06D6
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>44</ID>
-          <Description>"Min. size"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_min_stock_size</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>44</ID>
+              <Description>"Min. size"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_stock_size</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>46</ID>
-      <Description>"Anno 1800 14.3.1118176 /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Description>"Anno 1800 15.0.1156840 /  https://opencheattables.com  /  CE 7.4+"</Description>
       <Color>400080</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <CheatCodes>
-    <CodeEntry>
-      <Description>Money :mov ecx,[rax+20]</Description>
-      <AddressString>Anno1800.exe+CA8EE2</AddressString>
-      <Before>
-        <Byte>83</Byte>
-        <Byte>C4</Byte>
-        <Byte>20</Byte>
-        <Byte>5F</Byte>
-        <Byte>C3</Byte>
-      </Before>
-      <Actual>
-        <Byte>8B</Byte>
-        <Byte>48</Byte>
-        <Byte>20</Byte>
-      </Actual>
-      <After>
-        <Byte>48</Byte>
-        <Byte>8B</Byte>
-        <Byte>C7</Byte>
-        <Byte>89</Byte>
-        <Byte>0F</Byte>
-      </After>
-    </CodeEntry>
-    <CodeEntry>
-      <Description>Spend money :mov [r14+08],esi</Description>
-      <AddressString>Anno1800.exe+CAAD8E</AddressString>
-      <Before>
-        <Byte>8B</Byte>
-        <Byte>76</Byte>
-        <Byte>08</Byte>
-        <Byte>2B</Byte>
-        <Byte>F3</Byte>
-      </Before>
-      <Actual>
-        <Byte>41</Byte>
-        <Byte>89</Byte>
-        <Byte>76</Byte>
-        <Byte>08</Byte>
-      </Actual>
-      <After>
-        <Byte>8B</Byte>
-        <Byte>9D</Byte>
-        <Byte>F8</Byte>
-        <Byte>01</Byte>
-        <Byte>00</Byte>
-      </After>
-    </CodeEntry>
-    <CodeEntry>
-      <Description>Ship HP :mov [rbx+56],di</Description>
-      <AddressString>Anno1800.exe+E9BE6B</AddressString>
-      <Before>
-        <Byte>66</Byte>
-        <Byte>0F</Byte>
-        <Byte>4C</Byte>
-        <Byte>7B</Byte>
-        <Byte>58</Byte>
-      </Before>
-      <Actual>
-        <Byte>66</Byte>
-        <Byte>89</Byte>
-        <Byte>7B</Byte>
-        <Byte>56</Byte>
-      </Actual>
-      <After>
-        <Byte>66</Byte>
-        <Byte>85</Byte>
-        <Byte>FF</Byte>
-        <Byte>7F</Byte>
-        <Byte>17</Byte>
-      </After>
-    </CodeEntry>
-    <CodeEntry>
-      <Description>Load goods :mov [rdx],rax</Description>
-      <AddressString>Anno1800.exe+CBCD75</AddressString>
-      <Before>
-        <Byte>10</Byte>
-        <Byte>74</Byte>
-        <Byte>16</Byte>
-        <Byte>33</Byte>
-        <Byte>C0</Byte>
-      </Before>
-      <Actual>
-        <Byte>48</Byte>
-        <Byte>89</Byte>
-        <Byte>02</Byte>
-      </Actual>
-      <After>
-        <Byte>48</Byte>
-        <Byte>83</Byte>
-        <Byte>41</Byte>
-        <Byte>08</Byte>
-        <Byte>08</Byte>
-      </After>
-    </CodeEntry>
-  </CheatCodes>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>GI_newmem</Name>
-      <Address>206BF5A0000</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>infSupplies</Name>
-      <Address>184AD6B0000</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>infResources</Name>
-      <Address>184AD6C0000</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getWorld</Name>
-      <Address>7FF757263EF0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getEconomy</Name>
-      <Address>7FF757E8CC35</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getSkillSystem</Name>
-      <Address>7FF7576784B8</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getOxyBase</Name>
-      <Address>7FF755F2AAC7</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getWorldTimeScaleOFF</Name>
-      <Address>7FF756F22F35</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getNPCTimeScaleOFF</Name>
-      <Address>7FF756E965C5</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getWaypointBase</Name>
-      <Address>7FF758D5AAC4</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>infHealth</Name>
-      <Address>7FF757A33347</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>infStamMelee</Name>
-      <Address>7FF757E1C6E0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>infStamDodge</Name>
-      <Address>7FF757E0ECE0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>adrenalineMax</Name>
-      <Address>7FF7704F2815</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>oxygenUse</Name>
-      <Address>7FF75927FC40</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>getPlayerCompare</Name>
-      <Address>7FF7588AB41A</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>damageMult</Name>
-      <Address>7FF757AC6FB2</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>stunDamage</Name>
-      <Address>7FF75798DA40</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>expGain</Name>
-      <Address>7FF7582E8DAC</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>noCooldown</Name>
-      <Address>7FF757673AD0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>moveSpeed</Name>
-      <Address>7FF75936E717</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>craftCheck</Name>
-      <Address>7FF757E58DC6</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>hunterDelivery</Name>
-      <Address>7FF757E87DAF</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>drinkMiniGame</Name>
-      <Address>7FF758F61493</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>cairnMiniGame</Name>
-      <Address>7FF758A14ADD</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>stackingStoneGravity</Name>
-      <Address>7FF756817666</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>World</Name>
-      <Address>7FF75BBB0410</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>EconomicSystemSettings</Name>
-      <Address>7FF75BC8EB80</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>skillSystem</Name>
-      <Address>7FF75BC8BE00</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>oxyBase</Name>
-      <Address>7FF75B893520</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>waypointBase</Name>
-      <Address>7FF75BCE0F20</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>WorldTimeScaleOFF</Name>
-      <Address>1810</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>NPCTimeScaleOFF</Name>
-      <Address>1868</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>pEntity</Name>
-      <Address>12821B40000</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <Comments>ｂｂｆｏｘ＠ｈｔｔｐｓ：／／ｏｐｅｎｃｈｅａｔｔａｂｌｅｓ．ｏｒｇ
 </Comments>
 </CheatTable>
