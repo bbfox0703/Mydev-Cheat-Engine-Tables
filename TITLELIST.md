@@ -53,6 +53,9 @@ ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～
 zh-TW: 幻想大陸戰記：盧納基亞傳說  
 ja-JP: ブリガンダイン ルーナジア戦記  
 
+## Brotato
+[Brotato (Steam)](https://store.steampowered.com/app/1942280/Brotato/)  
+
 ## CoreKeeper  
 [Core Keeper (Steam)](https://store.steampowered.com/app/1621690/Core_Keeper/)  
 
