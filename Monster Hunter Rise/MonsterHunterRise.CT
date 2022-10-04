@@ -2526,6 +2526,78 @@ MonsterHunterRise.exe+1BBE701: 45 33 C0              - xor r8d,r8d
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>1337097261</ID>
+          <Description>"Fast wiredash cooldown"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : MonsterHunterRise.exe
+  Version: 
+  Date   : 2022-10-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_WIREDASH_CD,MonsterHunterRise.exe,F3 0F 11 49 14 F3 0F 11 49 10 C6 83 B0 04 00 00 01 85 D2 7E 29 48 8B 83 F0 03 00 00 0F 57 C9 66 0F 6E C2 0F 5B C0 4A 8B 0C 08 F3 0F 5A CE 0F 5A D0 F2 0F 59 D1 66 0F 5A C2 F3 0F 11 41 18 FF CA 49 83 E9 08 49 83 E8 01 79 92) // should be unique
+alloc(newmem,$1000,INJECT_FAST_WIREDASH_CD)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm15, [vf_10]
+  vmovaps xmm1, xmm15
+
+code:
+  movss [rcx+14],xmm1
+
+  jmp return
+align 10 cc
+  vf_10:
+  dd (float)10
+
+INJECT_FAST_WIREDASH_CD:
+  jmp newmem
+return:
+registersymbol(INJECT_FAST_WIREDASH_CD)
+
+[DISABLE]
+
+INJECT_FAST_WIREDASH_CD:
+  db F3 0F 11 49 14
+
+unregistersymbol(INJECT_FAST_WIREDASH_CD)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: MonsterHunterRise.exe+1A4452F
+
+MonsterHunterRise.exe+1A4450B: 85 D2                 - test edx,edx
+MonsterHunterRise.exe+1A4450D: 78 6A                 - js MonsterHunterRise.exe+1A44579
+MonsterHunterRise.exe+1A4450F: 48 8B 83 F0 03 00 00  - mov rax,[rbx+000003F0]
+MonsterHunterRise.exe+1A44516: 49 8B 0C 01           - mov rcx,[r9+rax]
+MonsterHunterRise.exe+1A4451A: F3 0F 10 41 10        - movss xmm0,[rcx+10]
+MonsterHunterRise.exe+1A4451F: 0F 2F C3              - comiss xmm0,xmm3
+MonsterHunterRise.exe+1A44522: 77 4B                 - ja MonsterHunterRise.exe+1A4456F
+MonsterHunterRise.exe+1A44524: 0F 57 C0              - xorps xmm0,xmm0
+MonsterHunterRise.exe+1A44527: F3 0F 5A C6           - cvtss2sd xmm0,xmm6
+MonsterHunterRise.exe+1A4452B: 66 0F 5A C8           - cvtpd2ps xmm1,xmm0
+// ---------- INJECTING HERE ----------
+MonsterHunterRise.exe+1A4452F: F3 0F 11 49 14        - movss [rcx+14],xmm1
+// ---------- DONE INJECTING  ----------
+MonsterHunterRise.exe+1A44534: F3 0F 11 49 10        - movss [rcx+10],xmm1
+MonsterHunterRise.exe+1A44539: C6 83 B0 04 00 00 01  - mov byte ptr [rbx+000004B0],01
+MonsterHunterRise.exe+1A44540: 85 D2                 - test edx,edx
+MonsterHunterRise.exe+1A44542: 7E 29                 - jle MonsterHunterRise.exe+1A4456D
+MonsterHunterRise.exe+1A44544: 48 8B 83 F0 03 00 00  - mov rax,[rbx+000003F0]
+MonsterHunterRise.exe+1A4454B: 0F 57 C9              - xorps xmm1,xmm1
+MonsterHunterRise.exe+1A4454E: 66 0F 6E C2           - movd xmm0,edx
+MonsterHunterRise.exe+1A44552: 0F 5B C0              - cvtdq2ps xmm0,xmm0
+MonsterHunterRise.exe+1A44555: 4A 8B 0C 08           - mov rcx,[rax+r9]
+MonsterHunterRise.exe+1A44559: F3 0F 5A CE           - cvtss2sd xmm1,xmm6
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>1337096385</ID>
           <Description>"Swap item in itembox (Manage Items -&gt; Sell Items) -&gt; fill count (turn off when not in use) / 管理道具-&gt;確認、出售道具中。交換道具可充填數量 (不用時馬上停用)"</Description>
           <Options moHideChildren="1"/>
@@ -4092,9 +4164,59 @@ alloc(newmem,$1000,INJECT_ANO_INVES_QUEST_LIST)
 label(code)
 label(return)
 label(i_ano_inves_quest_list_base_addr)
+label(i_valid_quest_check)
+label(is_valid_location)
 
 newmem:
   mov [i_ano_inves_quest_list_base_addr], r14
+  cmp dword ptr [i_valid_quest_check], 1
+  jne code
+  push rax
+  // check # of playrs
+  mov eax, [r14+80]
+  cmp eax, 2
+  je chk_duration
+  cmp eax, 4
+  je chk_duration
+  mov eax, 4
+  mov [r14+80], eax
+
+chk_duration:
+  // check duration
+  mov eax, [r14+78]
+  cmp eax, #50
+  je chk_retry
+  cmp eax, #35
+  je chk_retry
+  cmp eax, #30
+  je chk_retry
+  cmp eax, #25
+  je chk_retry
+  mov eax, #50
+  mov [r14+78], eax
+
+chk_retry:
+  // check retry count
+  mov eax, [r14+7C]
+  cmp eax, 5
+  jbe chk_location
+  mov eax, 5
+  mov [r14+7C], eax
+
+chk_location:
+  mov dword ptr [is_valid_location], 1
+  mov eax, [r14+24]
+  cmp eax, #13
+  je endp
+  cmp eax, #12
+  je endp
+  cmp eax, #5
+  jbe endp
+  mov dword ptr [is_valid_location], 0
+
+endp:
+  pop rax
+
 
 code:
   mov r8d,[r14+18]
@@ -4103,6 +4225,10 @@ code:
 align 10 cc
   i_ano_inves_quest_list_base_addr:
   dq 0
+  i_valid_quest_check:
+  dd 1
+  is_valid_location:
+  dd 1
 
 
 INJECT_ANO_INVES_QUEST_LIST:
@@ -4111,6 +4237,8 @@ INJECT_ANO_INVES_QUEST_LIST:
 return:
 registersymbol(INJECT_ANO_INVES_QUEST_LIST)
 registersymbol(i_ano_inves_quest_list_base_addr)
+registersymbol(i_valid_quest_check)
+registersymbol(is_valid_location)
 
 [DISABLE]
 
@@ -4149,6 +4277,17 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
 }
 </AssemblerScript>
           <CheatEntries>
+            <CheatEntry>
+              <ID>1337097256</ID>
+              <Description>"Check some quest validity rules?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_valid_quest_check</Address>
+            </CheatEntry>
             <CheatEntry>
               <ID>1337096783</ID>
               <Description>"Quest ID / 任務ID"</Description>
@@ -4196,6 +4335,17 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
               <Offsets>
                 <Offset>24</Offset>
               </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337097257</ID>
+              <Description>"(read only) Valid location?"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_valid_location</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>1337096785</ID>

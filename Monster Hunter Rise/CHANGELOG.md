@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/10/04
+1. Added Fast wiredash cooldown
+
 ## 2022/09/30
 1. Revised "Get weapon usage / May not fully working (Guild card-View) / 取得武器使用次數資料；非完全有效"
 
