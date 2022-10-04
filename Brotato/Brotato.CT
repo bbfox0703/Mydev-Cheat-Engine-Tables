@@ -211,25 +211,13 @@ newmem:
 
 {$try}
   mov rax, [rax+00]
-  jmp _test1
-{$except}
-  xor rax, rax
-
-_test1:
   test rax, rax
   je endp
 
-{$try}
   mov rax, [rax+00]
-  jmp _test2
-{$except}
-  xor rax, rax
-
-_test2:
   test rax, rax
   je endp
 
-{$try}
   mov rax, [rax+08]
   jmp _test3
 {$except}
@@ -358,15 +346,9 @@ chk_crit:
 
 {$try}
   mov rax, [rbx+18]
-  jmp _test5
-{$except}
-  xor rax,rax
-
-_test5:
   test rax, rax
   je endp2
 
-{$try}
   mov rax, [rbx+28]
   jmp _test6
 {$except}
@@ -437,15 +419,9 @@ chk_luck:
 
 {$try}
   mov rax, [rbx+18]
-  jmp _test7
-{$except}
-  xor rax,rax
-
-_test7:
   test rax, rax
   je endp3
 
-{$try}
   mov rax, [rbx+28]
   jmp _test8
 {$except}
@@ -930,6 +906,123 @@ Brotato.exe+1A97B21: 90                    - nop
           <Address>i_base_armor+18</Address>
           <Offsets>
             <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>56</ID>
+      <Description>"Get wave timer"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Brotato.exe
+  Version: 
+  Date   : 2022-10-04
+  Author : bbfox@https://opencheattablesc.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_WAVE_TIMER,Brotato.exe,F2 0F 5C C8 F2 0F 11 89 E0 01 00 00 0F 57 C0 66 0F 2F C1 0F 86 51) // should be unique
+alloc(newmem,$1000,INJECT_WAVE_TIMER)
+
+label(code)
+label(return)
+label(i_base_timer_addr)
+label(vf_timer_threshold)
+
+newmem:
+  vmovss xmm15, [rcx+000001D8]
+  vmovss xmm14, [vf_timer_threshold]
+  vucomiss xmm15, xmm14
+  jb code
+  // should be wave timer
+  push rax
+  mov ax, [rcx+000001DC]
+  cmp ax, 1
+  jne endp
+  mov ax, [rcx+000001DE]
+  cmp ax, 1
+  jne endp
+  mov eax, [rcx+000001E8]
+  cmp eax, 1
+  jne endp
+
+  mov [i_base_timer_addr], rcx
+
+endp:
+  pop rax
+
+code:
+  subsd xmm1,xmm0
+  movsd [rcx+000001E0],xmm1
+  jmp return
+align 10 cc
+  vf_timer_threshold:
+  dd (float)20
+  i_base_timer_addr:
+  dq 0
+
+INJECT_WAVE_TIMER:
+  jmp newmem
+  nop 7
+return:
+registersymbol(INJECT_WAVE_TIMER)
+registersymbol(i_base_timer_addr)
+registersymbol(vf_timer_threshold)
+
+[DISABLE]
+
+INJECT_WAVE_TIMER:
+  db F2 0F 5C C8 F2 0F 11 89 E0 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Brotato.exe+119D0A3
+
+Brotato.exe+119D072: F6 81 B8 01 00 00 08     - test byte ptr [rcx+000001B8],08
+Brotato.exe+119D079: 0F 84 8E 01 00 00        - je Brotato.exe+119D20D
+Brotato.exe+119D07F: 48 8B 81 38 01 00 00     - mov rax,[rcx+00000138]
+Brotato.exe+119D086: 48 85 C0                 - test rax,rax
+Brotato.exe+119D089: 74 0A                    - je Brotato.exe+119D095
+Brotato.exe+119D08B: F3 0F 10 80 5C 01 00 00  - movss xmm0,[rax+0000015C]
+Brotato.exe+119D093: EB 03                    - jmp Brotato.exe+119D098
+Brotato.exe+119D095: 0F 57 C0                 - xorps xmm0,xmm0
+Brotato.exe+119D098: 0F 5A C0                 - cvtps2pd xmm0,xmm0
+Brotato.exe+119D09B: F2 0F 10 89 E0 01 00 00  - movsd xmm1,[rcx+000001E0]
+// ---------- INJECTING HERE ----------
+Brotato.exe+119D0A3: F2 0F 5C C8              - subsd xmm1,xmm0
+// ---------- DONE INJECTING  ----------
+Brotato.exe+119D0A7: F2 0F 11 89 E0 01 00 00  - movsd [rcx+000001E0],xmm1
+Brotato.exe+119D0AF: 0F 57 C0                 - xorps xmm0,xmm0
+Brotato.exe+119D0B2: 66 0F 2F C1              - comisd xmm0,xmm1
+Brotato.exe+119D0B6: 0F 86 51 01 00 00        - jbe Brotato.exe+119D20D
+Brotato.exe+119D0BC: 80 B9 DC 01 00 00 00     - cmp byte ptr [rcx+000001DC],00
+Brotato.exe+119D0C3: 75 19                    - jne Brotato.exe+119D0DE
+Brotato.exe+119D0C5: F3 0F 10 81 D8 01 00 00  - movss xmm0,[rcx+000001D8]
+Brotato.exe+119D0CD: 0F 5A C0                 - cvtps2pd xmm0,xmm0
+Brotato.exe+119D0D0: F2 0F 58 C1              - addsd xmm0,xmm1
+Brotato.exe+119D0D4: F2 0F 11 81 E0 01 00 00  - movsd [rcx+000001E0],xmm0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>57</ID>
+          <Description>"Timer identify threshold"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_timer_threshold</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>54</ID>
+          <Description>"Timer"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Double</VariableType>
+          <Address>i_base_timer_addr</Address>
+          <Offsets>
+            <Offset>1E0</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
