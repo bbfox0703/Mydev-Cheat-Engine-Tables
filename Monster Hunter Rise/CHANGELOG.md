@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022/10/05
+1. Added easy to make monster stamina down
+1. Revised Stamina not below 3000
+
 ## 2022/10/04
 1. Added Fast wiredash cooldown
 
