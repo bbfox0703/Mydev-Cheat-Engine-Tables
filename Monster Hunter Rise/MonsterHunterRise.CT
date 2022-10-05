@@ -14,26 +14,8 @@ LuaCall(cycleFullCompact(nil,false))
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>1337096378</ID>
-      <Description>"Allow VEH"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{$LUA}
-if syntaxcheck then return end
-local symbolName = "KERNELBASE.SetThreadContext"
-
-[ENABLE]
-local bt = {195, 144, 144, 144} --C3 90 90 90 (ret nop nop nop)
-writeBytes(symbolName, bt)
-
-[DISABLE]
-local bt = {72, 131, 236, 40} --48 83 EC 28 (sub rsp, 28)
-writeBytes(symbolName, bt)
-</AssemblerScript>
-    </CheatEntry>
-    <CheatEntry>
       <ID>1337096379</ID>
       <Description>"+Scripts"</Description>
-      <Options moHideChildren="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
@@ -3269,8 +3251,28 @@ label(return)
 label(xmm_tmp10)
 label(fl_stemia_watermark)
 label(i_base_stam_addr)
+label(is_set_max_hp)
+
 newmem:
   mov [i_base_stam_addr], rax
+
+  cmp dword ptr [is_set_max_hp], 1
+  jne code
+
+  pushf
+  push rbx
+{$try}
+  mov ebx, [rax+18]
+  cmp ebx, #180
+  jae endp
+  mov ebx, E180
+  mov [rax+18], ebx
+  mov [rax+1C], ebx
+
+endp:
+{$except}
+  pop rbx
+  popf
 
 code:
   movq [xmm_tmp10], xmm10
@@ -3300,12 +3302,15 @@ align 10 cc
   dq (float)3000
   xmm_tmp10:
   dq 0
+  is_set_max_hp:
+  dd 1
 
 INJECT_MIN_STEMIA:
   jmp newmem
 return:
 registersymbol(INJECT_MIN_STEMIA)
 registersymbol(i_base_stam_addr)
+registersymbol(is_set_max_hp)
 
 [DISABLE]
 
@@ -3344,6 +3349,17 @@ MonsterHunterRise.exe+37AE997: 0F 28 7C 24 30        - movaps xmm7,[rsp+30]
 }
 </AssemblerScript>
               <CheatEntries>
+                <CheatEntry>
+                  <ID>1337097263</ID>
+                  <Description>"Set max HP?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF0080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_set_max_hp</Address>
+                </CheatEntry>
                 <CheatEntry>
                   <ID>1337096967</ID>
                   <Description>"Max HP"</Description>
@@ -3664,16 +3680,21 @@ alloc(newmem,$1000,INJECT_Hardshell_Powder)
 label(code)
 label(return)
 label(i_hardshell_atk)
+label(i_base_hardshell_atk_addr)
 
 newmem:
 
 code:
+  mov [i_base_hardshell_atk_addr], rax
+
   push rbx
+
   mov ebx, [i_hardshell_atk]
   mov [rax+000000A4],ebx
 
   mov rbx, (Double)324000
   movq xmm3, rbx
+
   pop rbx
 
   movss [rax+000000AC],xmm3
@@ -3682,6 +3703,8 @@ code:
 align 10 cc
   i_hardshell_atk:
   dd #500
+  i_base_hardshell_atk_addr:
+  dq 0
 
 INJECT_Hardshell_Powder:
   jmp newmem
@@ -3689,13 +3712,13 @@ INJECT_Hardshell_Powder:
 return:
 registersymbol(i_hardshell_atk)
 registersymbol(INJECT_Hardshell_Powder)
+registersymbol(i_base_hardshell_atk_addr)
 
 [DISABLE]
 
 INJECT_Hardshell_Powder:
   db F3 0F 11 98 AC 00 00 00
-unregistersymbol(i_hardshell_atk)
-unregistersymbol(INJECT_Hardshell_Powder)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -3741,6 +3764,16 @@ MonsterHunterRise.exe+3AB6DDD: CC                       - int 3
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>4 Bytes</VariableType>
                   <Address>i_hardshell_atk</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337097264</ID>
+                  <Description>"Duration"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_hardshell_atk_addr</Address>
+                  <Offsets>
+                    <Offset>AC</Offset>
+                  </Offsets>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -4309,9 +4342,7 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
             <CheatEntry>
               <ID>1337097256</ID>
               <Description>"Check some quest validity rules?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>Set max HP?</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF0080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -4409,6 +4440,24 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
           </CheatEntries>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337096378</ID>
+      <Description>"Allow VEH (only needed for making table)"</Description>
+      <Color>808080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{$LUA}
+if syntaxcheck then return end
+local symbolName = "KERNELBASE.SetThreadContext"
+
+[ENABLE]
+local bt = {195, 144, 144, 144} --C3 90 90 90 (ret nop nop nop)
+writeBytes(symbolName, bt)
+
+[DISABLE]
+local bt = {72, 131, 236, 40} --48 83 EC 28 (sub rsp, 28)
+writeBytes(symbolName, bt)
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>1337096452</ID>
