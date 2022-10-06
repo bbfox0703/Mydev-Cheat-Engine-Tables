@@ -1,5 +1,10 @@
 # Changelog
 
+## 2022/10/06
+1. Added Charm Viewer
+2. Revise scripts
+3. Added Skill ID list
+
 ## 2022/10/05
 1. Added easy to make monster stamina down
 1. Revised Stamina not below 3000
