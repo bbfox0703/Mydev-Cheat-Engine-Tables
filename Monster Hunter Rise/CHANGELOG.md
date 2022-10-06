@@ -4,6 +4,7 @@
 1. Added Charm Viewer
 2. Revise scripts
 3. Added Skill ID list
+4. Added Get Kamura Points
 
 ## 2022/10/05
 1. Added easy to make monster stamina down
