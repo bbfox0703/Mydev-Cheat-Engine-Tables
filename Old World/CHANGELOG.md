@@ -1,9 +1,13 @@
 # Changelog
 
-## For Release Update v1.0.61443 - 2022-07-19
-Fixed scripts
+## 2022/10/07
+1. Update for v1.0.63201 (2022/10/05)
 
-## For Release Update 06.08.2022 - 2022-07-18
+## 2022/07/19
+1. Update for 1.0.61443
+
+## 2022/07/18
+1. Update for Release Update 06.08.2022
 
 ### Added
 Migrated from https://opencheattables.org
