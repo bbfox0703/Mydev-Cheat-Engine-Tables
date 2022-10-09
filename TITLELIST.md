@@ -159,6 +159,9 @@ zh-TW: 文明帝國V
 ## Star Traders Frontiers  
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)  
 
+## Stellaris  
+[Stellaris (Steam)](https://store.steampowered.com/app/281990/Stellaris/)  
+
 ## The DioField Chronicle
 [Cheat Table for The DioField Chronicle ((Steam)](https://store.steampowered.com/app/1399080/_The_DioField_Chronicle/)  
 zh-TW: 神領編年史 The DioField Chronicle (修改器)  
