@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/10/09
+1. Revised Anomaly Investigations list viewer 
+
 ## 2022/10/06
 1. Added Charm Viewer
 2. Revise scripts

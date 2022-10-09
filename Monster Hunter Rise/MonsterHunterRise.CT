@@ -4521,7 +4521,7 @@ MonsterHunterRise.exe+1AEF451: 0F 5A D1                 - cvtps2pd xmm2,xmm1
         </CheatEntry>
         <CheatEntry>
           <ID>1337096782</ID>
-          <Description>"Anomaly Investigations list viewer / 傀異探究任務檢視器"</Description>
+          <Description>"Anomaly Investigations list viewer (Usage: Talk to NPC, Browse related quests) / 傀異探究任務檢視器 (和NPC交談)"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonsterHunterRise.exe
@@ -4540,6 +4540,7 @@ label(return)
 label(i_ano_inves_quest_list_base_addr)
 label(i_valid_quest_check)
 label(is_valid_location)
+label(is_valid_monsters_count)
 
 newmem:
 {$try}
@@ -4547,7 +4548,9 @@ newmem:
 {$except}
   cmp dword ptr [i_valid_quest_check], 1
   jne code
+
   push rax
+  push r15
 {$try}
   // check # of playrs
   mov eax, [r14+80]
@@ -4584,12 +4587,48 @@ chk_location:
   mov dword ptr [is_valid_location], 1
   mov eax, [r14+24]
   cmp eax, #13
-  je endp
+  je chk_number_of_monsters
   cmp eax, #12
-  je endp
+  je chk_number_of_monsters
   cmp eax, #5
-  jbe endp
+  jbe chk_number_of_monsters
   mov dword ptr [is_valid_location], 0
+
+chk_number_of_monsters:
+  mov dword ptr [is_valid_monsters_count], 1
+  mov eax, [r14+18]
+  mov r15d, [r14+38]
+  cmp r15d, 3
+  jne chk_mon_num_1
+  // 3 monsters -&gt; time must be 50
+  mov r15d, #50
+  mov [r14+78], r15d
+  mov r15d, 3
+
+chk_mon_num_1:
+  cmp eax, 14
+  ja chk_mon_num_2
+  cmp r15d, 1
+  je chk_mon_num_2
+  mov dword ptr [is_valid_monsters_count], 0
+  jmp endp
+
+chk_mon_num_2:
+  cmp eax, 28
+  ja chk_mon_num_3
+  cmp r15d, 2
+  jbe chk_mon_num_3
+  mov dword ptr [is_valid_monsters_count], 0
+  jmp endp
+
+chk_mon_num_3:
+  cmp r15d, 2
+  jne endp
+  mov eax, [r14+78]
+  cmp eax, #25
+  jne endp
+  mov dword ptr [is_valid_monsters_count], 0
+  jmp endp
 
 endp:
   db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D
@@ -4597,6 +4636,7 @@ endp:
   db 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E
   db 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
 {$except}
+  pop r15
   pop rax
 
 
@@ -4611,6 +4651,8 @@ align 10 cc
   dd 1
   is_valid_location:
   dd 1
+  is_valid_monsters_count:
+  dd 1
 
 
 INJECT_ANO_INVES_QUEST_LIST:
@@ -4621,6 +4663,7 @@ registersymbol(INJECT_ANO_INVES_QUEST_LIST)
 registersymbol(i_ano_inves_quest_list_base_addr)
 registersymbol(i_valid_quest_check)
 registersymbol(is_valid_location)
+registersymbol(is_valid_monsters_count)
 
 [DISABLE]
 
@@ -4661,7 +4704,7 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
           <CheatEntries>
             <CheatEntry>
               <ID>1337097256</ID>
-              <Description>"Check some quest validity rules?"</Description>
+              <Description>"Check some quest validity rules &amp; fix if possible?"</Description>
               <DropDownListLink>Set max HP?</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF0080</Color>
@@ -4697,6 +4740,27 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
               <Offsets>
                 <Offset>20</Offset>
               </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337097298</ID>
+              <Description>"# of monsters / 狩獵數"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_ano_inves_quest_list_base_addr</Address>
+              <Offsets>
+                <Offset>38</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337097299</ID>
+              <Description>"(read only) is # of monsters valid? / 狩獵數是否合理?"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_valid_monsters_count</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>1337096788</ID>
@@ -4761,7 +4825,7 @@ MonsterHunterRise.exe+3A2B5ED: 44 0F 28 D0           - movaps xmm10,xmm0
         </CheatEntry>
         <CheatEntry>
           <ID>1337097279</ID>
-          <Description>"Charm Viewer / 護石檢視器"</Description>
+          <Description>"Charm Viewer (Usage: change charm in equips window) / 護石檢視器 (變更護石)"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonsterHunterRise.exe
@@ -5241,24 +5305,7 @@ writeBytes(symbolName, bt)
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>damage_base</Name>
-      <Address>14728AE7C</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>defense_base</Name>
-      <Address>14728AE80</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>wirebug3dur_base</Name>
-      <Address>147289AE0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>itembuff_base</Name>
-      <Address>1472896B8</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <Comments>v1.1
 AOB Hardcore V1
 FA 00 00 00 64 00 00 00 19 00 00 00 00 60 EA 45 00 80 3B 45 00 80 3B 44 00 80 BB 44 1E 00 00 00
