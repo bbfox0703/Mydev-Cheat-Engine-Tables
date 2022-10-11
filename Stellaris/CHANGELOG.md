@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022/10/11
+1. Update to game ver. 3.5.3 (c1ba) 
+1. Added some scripts to help value input
+
 ## 2022/10/10
 1. Added Selected Sci-Ship research
 1. Added Selected Megastructure
