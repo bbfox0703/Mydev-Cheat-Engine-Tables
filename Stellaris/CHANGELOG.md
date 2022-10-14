@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2022/10/14
-1. Added get Federtion Data
+1. Added get Federation Data
 
 ## 2022/10/11
 1. Update to game ver. 3.5.3 (c1ba) 
