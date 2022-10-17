@@ -162,6 +162,11 @@ zh-TW: 文明帝國V
 ## Stellaris  
 [Stellaris (Steam)](https://store.steampowered.com/app/281990/Stellaris/)  
 
+## Sword Art Online Hollow Realization Deluxe Edition
+[Sword Art Online: Hollow Realization Deluxe Edition (Steam)](https://store.steampowered.com/app/607890/Sword_Art_Online_Hollow_Realization_Deluxe_Edition/)
+zh-TW: 刀劍神域 虛空幻界  
+ja-JP: ソードアート・オンライン -ホロウ・リアリゼーション-  
+
 ## The DioField Chronicle
 [Cheat Table for The DioField Chronicle ((Steam)](https://store.steampowered.com/app/1399080/_The_DioField_Chronicle/)  
 zh-TW: 神領編年史 The DioField Chronicle (修改器)  
