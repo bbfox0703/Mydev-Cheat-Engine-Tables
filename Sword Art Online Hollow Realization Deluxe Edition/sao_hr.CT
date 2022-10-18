@@ -166,6 +166,9 @@ sao_hr.exe+2A00A7: E8 14 2F F3 FF  - call sao_hr.exe+1D2FC0
         <CheatEntry>
           <ID>6</ID>
           <Description>"Multiplier / 倍率"</Description>
+          <DropDownList DisplayValueAsItem="1">8:8
+100:100
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <VariableType>Float</VariableType>
           <Address>vf_friendship_multi</Address>
@@ -451,7 +454,7 @@ sao_hr.exe+1B4633: 43 8D 04 08     - lea eax,[r8+r9]
     </CheatEntry>
     <CheatEntry>
       <ID>15</ID>
-      <Description>"Min. "use item" "</Description>
+      <Description>"Min. "use item"  / materials on use/pick up"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : sao_hr.exe
@@ -467,6 +470,7 @@ alloc(newmem,$1000,INJECT_USE_ITEM)
 
 label(code)
 label(return)
+label(i_min_use_item_count)
 
 newmem:
 
@@ -474,28 +478,33 @@ code:
   mov eax,[rbx+04]
 
   //
-  cmp eax, A
+  cmp eax, [i_min_use_item_count]
   jae @F
-  mov eax, A
+  mov eax, [i_min_use_item_count]
   mov [rbx+04], eax
 
   //
 @@:
   mov rdi,[rsp+30]
   jmp return
+align 10 cc
+  i_min_use_item_count:
+  dd 34
+
 
 INJECT_USE_ITEM:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_USE_ITEM)
+registersymbol(i_min_use_item_count)
 
 [DISABLE]
 
 INJECT_USE_ITEM:
   db 8B 43 04 48 8B 7C 24 30
 
-unregistersymbol(INJECT_USE_ITEM)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -526,6 +535,15 @@ sao_hr.exe+3680F0: 48 89 5C 24 20  - mov [rsp+20],rbx
 sao_hr.exe+3680F5: 55              - push rbp
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>84</ID>
+          <Description>"Min. count per action"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_min_use_item_count</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>18</ID>
@@ -923,7 +941,7 @@ code:
   jmp return
 align 10 cc
   vf_exp_multi:
-  dd (float)1.08
+  dd (float)1.12
 
 INJECT_EXP_MULTI:
   jmp newmem
@@ -971,7 +989,7 @@ sao_hr.exe+26A844: 40 B6 01              - mov sil,01
       <CheatEntries>
         <CheatEntry>
           <ID>40</ID>
-          <Description>"Multiplier (don't set too high)"</Description>
+          <Description>"Multiplier"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <VariableType>Float</VariableType>
           <Address>vf_exp_multi</Address>
@@ -1187,10 +1205,136 @@ sao_hr.exe+26A911: CC                 - int 3
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>102</ID>
+          <Description>"Base addr"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_player_hp_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
           <ID>46</ID>
           <Description>"Not god mode"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>49</ID>
+          <Description>"HP keep Factor (compared to max HP)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_hp_min_factor</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>101</ID>
+          <Description>"inf. HP for player"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sao_hr.exe
+  Version: 
+  Date   : 2022-10-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GOD_MODE,sao_hr.exe,39 01 0F 9E C0) // should be unique
+alloc(newmem,$1000,INJECT_GOD_MODE)
+
+label(code)
+label(return)
+label(is_party_hp_full)
+
+newmem:
+  push r15
+
+  mov r15, [i_base_player_hp_addr]
+  cmp r15, rcx
+
+  jne chk2
+  mov r15d, [rcx+4]
+  mov [rcx], r15d
+
+  mov r15d, [rcx+218]
+  mov [i_player_mark_value], r15d
+  jmp endp
+
+chk2:
+  cmp dword ptr [is_party_hp_full], 1
+  jne endp
+  mov r15d, [rcx+218]
+  cmp r15d, [i_player_mark_value]
+  jne endp
+  mov r15d, [rcx+4]
+  mov [rcx], r15d
+
+endp:
+  pop r15
+
+code:
+  cmp [rcx],eax
+  setle al
+  jmp return
+align 10 cc
+  i_player_mark_value:
+  dd 0
+  is_party_hp_full:
+  dd 0
+
+INJECT_GOD_MODE:
+  jmp newmem
+return:
+registersymbol(INJECT_GOD_MODE)
+registersymbol(is_party_hp_full)
+
+[DISABLE]
+
+INJECT_GOD_MODE:
+  db 39 01 0F 9E C0
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_hr.exe+2729B2
+
+sao_hr.exe+272992: E8 29 06 F6 FF        - call sao_hr.exe+1D2FC0
+sao_hr.exe+272997: 48 89 05 A2 81 87 00  - mov [sao_hr.exe+AEAB40],rax
+sao_hr.exe+27299E: 48 8D 4C 24 30        - lea rcx,[rsp+30]
+sao_hr.exe+2729A3: E8 F8 5D 43 00        - call sao_hr.exe+6A87A0
+sao_hr.exe+2729A8: 48 83 C4 78           - add rsp,78
+sao_hr.exe+2729AC: C3                    - ret 
+sao_hr.exe+2729AD: CC                    - int 3 
+sao_hr.exe+2729AE: CC                    - int 3 
+sao_hr.exe+2729AF: CC                    - int 3 
+sao_hr.exe+2729B0: 33 C0                 - xor eax,eax
+// ---------- INJECTING HERE ----------
+sao_hr.exe+2729B2: 39 01                 - cmp [rcx],eax
+// ---------- DONE INJECTING  ----------
+sao_hr.exe+2729B4: 0F 9E C0              - setle al
+sao_hr.exe+2729B7: C3                    - ret 
+sao_hr.exe+2729B8: CC                    - int 3 
+sao_hr.exe+2729B9: CC                    - int 3 
+sao_hr.exe+2729BA: CC                    - int 3 
+sao_hr.exe+2729BB: CC                    - int 3 
+sao_hr.exe+2729BC: CC                    - int 3 
+sao_hr.exe+2729BD: CC                    - int 3 
+sao_hr.exe+2729BE: CC                    - int 3 
+sao_hr.exe+2729BF: CC                    - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>103</ID>
+              <Description>"inf. HP for party?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_party_hp_full</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>59</ID>
@@ -1250,13 +1394,6 @@ sao_hr.exe+26A911: CC                 - int 3
               </Offsets>
             </CheatEntry>
           </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>49</ID>
-          <Description>"Factor (compared to max HP)"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>Float</VariableType>
-          <Address>vf_hp_min_factor</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -1339,6 +1476,7 @@ sao_hr.exe+3E6B1D: 41 0F BF 07                 - movsx eax,word ptr [r15]
     <CheatEntry>
       <ID>72</ID>
       <Description>"Battle: Slow chain countdown"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : sao_hr.exe
   Version: 
@@ -1353,9 +1491,10 @@ alloc(newmem,$1000,INJECT_SLOW_CHAIN_COUNTDOWN)
 
 label(code)
 label(return)
+label(vf_chain_slow_speed)
 
 newmem:
-  vmovss xmm15, [vf_2]
+  vmovss xmm15, [vf_chain_slow_speed]
   vdivss xmm0, xmm0, xmm15
 
 code:
@@ -1363,21 +1502,22 @@ code:
   comiss xmm6,xmm1
   jmp return
 align 10 cc
-  vf_2:
-  dd (float)2
+  vf_chain_slow_speed:
+  dd (float)3.33333
 
 INJECT_SLOW_CHAIN_COUNTDOWN:
   jmp newmem
   nop 2
 return:
 registersymbol(INJECT_SLOW_CHAIN_COUNTDOWN)
+registersymbol(vf_chain_slow_speed)
 
 [DISABLE]
 
 INJECT_SLOW_CHAIN_COUNTDOWN:
   db F3 0F 5C C8 0F 2F F1
 
-unregistersymbol(INJECT_SLOW_CHAIN_COUNTDOWN)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -1408,6 +1548,15 @@ sao_hr.exe+209C93: 80 BF C1 F8 00 00 00     - cmp byte ptr [rdi+0000F8C1],00
 sao_hr.exe+209C9A: 0F 28 B4 24 A0 00 00 00  - movaps xmm6,[rsp+000000A0]
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>83</ID>
+          <Description>"Slow speed"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_chain_slow_speed</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>69</ID>
@@ -1555,7 +1704,7 @@ code:
   jmp return
 align 10 cc
   vf_recast_time_multi:
-  dd (float)5.5
+  dd (float)7.5
 
 
 INJECT_SHORT_RECAST_TIME:
@@ -1608,6 +1757,110 @@ sao_hr.exe+20E588: 48 8D 0C 40        - lea rcx,[rax+rax*2]
           <ShowAsSigned>0</ShowAsSigned>
           <VariableType>Float</VariableType>
           <Address>vf_recast_time_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>87</ID>
+      <Description>"Blacksmith XP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_hr.exe
+  Version: 
+  Date   : 2022-10-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BLACKSMITH_EXP_MULTI,sao_hr.exe,03 D8 B8 9C 63 00 00) // should be unique
+alloc(newmem,$1000,INJECT_BLACKSMITH_EXP_MULTI)
+
+label(code)
+label(return)
+label(vf_blacksmith_exp_multi)
+label(i_base_blacksmith_exp_addr)
+
+newmem:
+  mov [i_base_blacksmith_exp_addr], rcx
+
+  cvtsi2ss xmm15, eax
+  vmovss xmm14, [vf_blacksmith_exp_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+code:
+  add ebx,eax
+  mov eax,0000639C
+  jmp return
+align 10 cc
+  vf_blacksmith_exp_multi:
+  dd (float)2.5
+  i_base_blacksmith_exp_addr:
+  dq 0
+
+
+INJECT_BLACKSMITH_EXP_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BLACKSMITH_EXP_MULTI)
+registersymbol(vf_blacksmith_exp_multi)
+registersymbol(i_base_blacksmith_exp_addr)
+
+[DISABLE]
+
+INJECT_BLACKSMITH_EXP_MULTI:
+  db 03 D8 B8 9C 63 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_hr.exe+184C96
+
+sao_hr.exe+184C7D: CC                       - int 3 
+sao_hr.exe+184C7E: CC                       - int 3 
+sao_hr.exe+184C7F: CC                       - int 3 
+sao_hr.exe+184C80: 48 85 C9                 - test rcx,rcx
+sao_hr.exe+184C83: 74 53                    - je sao_hr.exe+184CD8
+sao_hr.exe+184C85: 57                       - push rdi
+sao_hr.exe+184C86: 48 83 EC 20              - sub rsp,20
+sao_hr.exe+184C8A: 48 89 5C 24 30           - mov [rsp+30],rbx
+sao_hr.exe+184C8F: 0F B7 59 04              - movzx ebx,word ptr [rcx+04]
+sao_hr.exe+184C93: 0F BF C2                 - movsx eax,dx
+// ---------- INJECTING HERE ----------
+sao_hr.exe+184C96: 03 D8                    - add ebx,eax
+// ---------- DONE INJECTING  ----------
+sao_hr.exe+184C98: B8 9C 63 00 00           - mov eax,0000639C
+sao_hr.exe+184C9D: 48 8B F9                 - mov rdi,rcx
+sao_hr.exe+184CA0: 3B D8                    - cmp ebx,eax
+sao_hr.exe+184CA2: 0F 4F D8                 - cmovg ebx,eax
+sao_hr.exe+184CA5: 66 0F 6E C3              - movd xmm0,ebx
+sao_hr.exe+184CA9: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+sao_hr.exe+184CAC: F3 0F 5E 05 A0 EF 67 00  - divss xmm0,[sao_hr.exe+803C54]
+sao_hr.exe+184CB4: E8 EB 5E 56 00           - call sao_hr.exe+6EABA4
+sao_hr.exe+184CB9: B9 FF 00 00 00           - mov ecx,000000FF
+sao_hr.exe+184CBE: 66 89 5F 04              - mov [rdi+04],bx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>86</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_blacksmith_exp_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>88</ID>
+          <Description>"EXP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_blacksmith_exp_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
