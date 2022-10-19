@@ -1,6 +1,6 @@
-# Stellaris
+# Sword Art Online: Hollow Realization Deluxe Edition
 
-Stellaris (Steam)
+Sword Art Online: Hollow Realization Deluxe Edition (Steam)
 
 ## Release
 
