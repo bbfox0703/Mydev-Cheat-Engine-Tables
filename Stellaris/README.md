@@ -1,6 +1,7 @@
 # Sword Art Online: Hollow Realization Deluxe Edition
-
-Sword Art Online: Hollow Realization Deluxe Edition (Steam)
+Sword Art Online: Hollow Realization Deluxe Edition (Steam)  
+zh-TW: 刀劍神域 虛空幻界  
+ja-JP: ソードアート・オンライン -ホロウ・リアリゼーション-  
 
 ## Release
 
