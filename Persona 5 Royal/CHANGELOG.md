@@ -4,6 +4,7 @@
 1. Revise: Battle: HP/SP
 1. Added inf. bullets
 1. Added Status viewer for Joker and party members
+1. Added Existing confidants (コープ) viewer
 1. misc improvements  
 
 ## 2022/10/23
