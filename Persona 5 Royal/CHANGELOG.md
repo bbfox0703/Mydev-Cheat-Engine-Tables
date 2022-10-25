@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/10/25
+1. Revise: Set existing Confidants (コープ) Rank & Pt / edit all confidants 
+
 ## 2022/10/24
 1. Revise: Battle: HP/SP
 1. Added inf. bullets
