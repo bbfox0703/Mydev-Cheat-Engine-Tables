@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/10/26
+1. Updated for 0.4.7-4a21   
+
 ## 2022/09/16  
 1. Updated for v0.4.4
 
