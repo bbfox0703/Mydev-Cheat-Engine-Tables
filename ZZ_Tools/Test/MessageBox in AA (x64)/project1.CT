@@ -2,13 +2,83 @@
 <CheatTable CheatEngineTableVersion="42">
   <CheatEntries>
     <CheatEntry>
-      <ID>2</ID>
-      <Description>"MessageBox (Auto Assembly)"</Description>
+      <ID>3</ID>
+      <Description>"Code: start_a subroutine (Enable first)"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : project1.exe
   Version: 
   Date   : 2022-10-27
-  Author :
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+alloc(newmem,$1000, project1.exe)
+
+label(code)
+label(start_a)
+
+newmem:
+start_a:
+   push rbp
+   // method 1,
+   mov rbp,rsp
+   lea rsp,[rsp-40]
+
+   // store fastcall registers
+   // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+
+   // method 2: edit rsp
+   sub rsp, #8  //Align the stack to a multiple of 16 bytes
+   sub rsp, #32 //32 bytes of shadow space
+   xor ecx, ecx
+   mov rdx, s_text
+   mov r8, s_caption
+   mov r9d, 0
+   call  MessageBoxA
+   add rsp, #40
+
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+
+code:
+   //use leave as:
+   //lea rsp,[rbp+00]
+   //pop rbp
+
+   leave
+   ret
+align 10 cc
+  s_text:
+  db 'This is message body', 0
+  align 10 0
+  s_caption:
+  db 'This is message title', 0
+
+registersymbol(start_a)
+
+
+[DISABLE]
+unregistersymbol(start_a)
+dealloc(newmem)
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"MessageBox  (direct, AA)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : project1.exe
+  Version: 
+  Date   : 2022-10-27
+  Author :  bbfox@https://opencheattables.com
 }
 
 [ENABLE]
@@ -40,6 +110,81 @@ newmem:
    pop rdx
    pop rcx
    pop rax
+
+code:
+  add dword ptr [rax+000007C8],01
+  jmp return
+align 10 cc
+  s_text:
+  db 'This is message body', 0
+  align 10 0
+  s_caption:
+  db 'This is message title', 0
+
+INJECT_TEST:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_TEST)
+
+[DISABLE]
+
+INJECT_TEST:
+  db 83 80 C8 07 00 00 01
+
+unregistersymbol(INJECT_TEST)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: project1.exe+2C331
+
+project1.exe+2C30C: 00 00                    - add [rax],al
+project1.exe+2C30E: 00 00                    - add [rax],al
+project1.exe+2C310: 55                       - push rbp
+project1.exe+2C311: 48 89 E5                 - mov rbp,rsp
+project1.exe+2C314: 48 8D A4 24 C0 FE FF FF  - lea rsp,[rsp-00000140]
+project1.exe+2C31C: 48 89 4D F0              - mov [rbp-10],rcx
+project1.exe+2C320: 48 89 55 F8              - mov [rbp-08],rdx
+project1.exe+2C324: 48 C7 45 E8 00 00 00 00  - mov qword ptr [rbp-18],00000000
+project1.exe+2C32C: 90                       - nop 
+project1.exe+2C32D: 48 8B 45 F0              - mov rax,[rbp-10]
+// ---------- INJECTING HERE ----------
+project1.exe+2C331: 83 80 C8 07 00 00 01     - add dword ptr [rax+000007C8],01
+// ---------- DONE INJECTING  ----------
+project1.exe+2C338: 48 8B 45 F0              - mov rax,[rbp-10]
+project1.exe+2C33C: 8B 80 C8 07 00 00        - mov eax,[rax+000007C8]
+project1.exe+2C342: 89 45 E4                 - mov [rbp-1C],eax
+project1.exe+2C345: 41 B9 FF 00 00 00        - mov r9d,000000FF
+project1.exe+2C34B: 4C 8D 85 E4 FE FF FF     - lea r8,[rbp-0000011C]
+project1.exe+2C352: 48 C7 C2 FF FF FF FF     - mov rdx,FFFFFFFFFFFFFFFF
+project1.exe+2C359: 48 63 4D E4              - movsxd  rcx,dword ptr [rbp-1C]
+project1.exe+2C35D: E8 5E 9C FD FF           - call project1.exe+5FC0
+project1.exe+2C362: 45 31 C0                 - xor r8d,r8d
+project1.exe+2C365: 48 8D 95 E4 FE FF FF     - lea rdx,[rbp-0000011C]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"MessageBox  (call/ret, AA)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : project1.exe
+  Version: 
+  Date   : 2022-10-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TEST,project1.exe,83 80 C8 07 00 00 01) // should be unique
+alloc(newmem,$1000,INJECT_TEST)
+
+label(code)
+label(return)
+
+newmem:
+
+  call start_a
 
 code:
   add dword ptr [rax+000007C8],01
