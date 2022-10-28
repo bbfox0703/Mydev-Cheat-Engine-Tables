@@ -26,27 +26,26 @@ start_a:
 
    // store fastcall registers
    // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
-   push rax
-   push rcx
-   push rdx
-   push r8
-   push r9
+   //push rax
+   //push rcx
+   //push rdx
+   //push r8
+   //push r9
 
    // method 2: edit rsp
    sub rsp, #8  //Align the stack to a multiple of 16 bytes
    sub rsp, #32 //32 bytes of shadow space
-   xor ecx, ecx
-   mov rdx, s_text
-   mov r8, s_caption
-   mov r9d, 0
-   call  MessageBoxA
+
+   call MessageBoxA
+
+   // return code in rax register
    add rsp, #40
 
-   pop r9
-   pop r8
-   pop rdx
-   pop rcx
-   pop rax
+   //pop r9
+   //pop r8
+   //pop rdx
+   //pop rcx
+   //pop rax
 
 code:
    //use leave as:
@@ -56,11 +55,9 @@ code:
    leave
    ret
 align 10 cc
-  s_text:
-  db 'This is message body', 0
-  align 10 0
-  s_caption:
-  db 'This is message title', 0
+   MB_ICONASTERISK:
+   dd 40
+
 
 registersymbol(start_a)
 
@@ -184,11 +181,33 @@ label(return)
 
 newmem:
 
+  push rax
+  push rcx
+  push rdx
+  push r8
+  push r9
+  xor ecx, ecx
+  mov rdx, s_text
+  mov r8, s_caption
+  //mov r9d, 0
+  mov r9d, 24 //MB_YESNO or MB_ICONQUESTION
   call start_a
+  // return rax: IDYES: 6, IDNO: 7
+  pop r9
+  pop r8
+  pop rdx
+  pop rcx
+  pop rax
 
 code:
   add dword ptr [rax+000007C8],01
   jmp return
+align 10 cc
+  s_text:
+  db 'Click on Yes or No for test', 0
+  align 10 0
+  s_caption:
+  db 'This is message title', 0
 
 INJECT_TEST:
   jmp newmem
