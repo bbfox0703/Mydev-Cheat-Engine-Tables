@@ -1,4 +1,6 @@
 # Changelog
+## 2022/10/29  
+1. Added shortcut to turn scripts on/off
 
 ## 2022/10/25
 1. Revise: Set existing Confidants (コープ) Rank & Pt / edit all confidants 
