@@ -62,6 +62,9 @@ ja-JP: ブリガンダイン ルーナジア戦記
 ## Dorfromantik   
 [Dorfromantik (Steam)](https://store.steampowered.com/app/1455840/Dorfromantik/)  
 
+## DRAGONQUEST QUEST XI S
+[DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (XBox Games)](https://www.xbox.com/en-US/games/dragon-quest-xi-s-echoes-of-an-elusive-age)
+
 ## Distant Worlds 2  
 [Distant Worlds 2 (Steam)](https://store.steampowered.com/app/1531540/Distant_Worlds_2/)  
 
