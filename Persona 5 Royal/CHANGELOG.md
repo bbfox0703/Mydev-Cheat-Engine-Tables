@@ -1,4 +1,11 @@
 # Changelog
+
+## 2022/10/30
+1. Removed XboxGames description. Table only works in Steam platform.
+1. Added Get old clothes pt / 古着屋pt
+1. Added Darts game - one shot
+1. Added Special battle score multiplier
+
 ## 2022/10/29  
 1. Added shortcut to turn scripts on/off
 1. Added Fill items - Skillcards
