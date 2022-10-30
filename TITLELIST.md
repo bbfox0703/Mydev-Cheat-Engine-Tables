@@ -130,11 +130,9 @@ zh-TW: 舊世界 Old World
 
 ## Persona 5 Royal  
 [Persona 5 Royal (Steam)](https://store.steampowered.com/app/1687950/5//)  
-[Persona 5 Royal (XBOX Games)](https://www.xbox.com/en-us/games/store/-/9NZDHXL9SJJ8) [zh-tw](https://www.xbox.com/zh-tw/games/store/-/9NZDHXL9SJJ8)  
 
 zh-TW: 女神異聞錄5皇家版  
 ja-JP: ペルソナ５ ザ・ロイヤル  
-
 
 ## Port Royal 3
 [Port Royal 3 (Steam)](https://store.steampowered.com/app/205610/Port_Royale_3/)
