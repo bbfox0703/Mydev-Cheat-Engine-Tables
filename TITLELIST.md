@@ -3,6 +3,9 @@
 ## 4 Elements II Special Edition
 [4 Elements II Special Edition (Microsoft Windows Store)](https://www.microsoft.com/zh-tw/p/4-elements-ii-special-edition/9wzdncrfhw7h?activetab=pivot:overviewtab)  
 
+## Age of Empires II Definitive Edition
+[Age of Empires II: Definitive Edition (Xbox Games)](https://www.xbox.com/en-US/games/age-of-empires-ii-definitive-edition)
+
 ## Age of Empires IV
 [Age of Empires IV (Steam)](https://store.steampowered.com/app/1466860/Age_of_Empires_IV/)  
 
