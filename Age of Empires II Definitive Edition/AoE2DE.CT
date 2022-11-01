@@ -10,6 +10,7 @@
     <CheatEntry>
       <ID>0</ID>
       <Description>"Lock resources (skirmish map)"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : AoE2DE.exe
   Version: 
@@ -24,10 +25,14 @@ alloc(newmem,$1000,INJECT_PLAYER_RESOURCES)
 
 label(code)
 label(return)
+label(is_res_lock_on)
+label(is_try_to_decrypt_encrypt)
+label(vf_min_resource)
 
 newmem:
   push rbx
   push rax
+  push rdx
 
   mov rbx,[r10+18]
   mov eax, [rbx+10]
@@ -36,18 +41,50 @@ newmem:
 
   mov rbx,[rbx+F0]
 
-  mov eax, 527C159D
+  // encrypt resource
+  cmp dword ptr [is_try_to_decrypt_encrypt], 1
+  jne chk_lock_res
+
+  //mov r11,4EFA2C18CBD3C884
+  //mov rbx,0CDAD4EF0E7FA52E
+  //mov rdi,5F37C54769DFD8B1
+  //mov rsi,74757C9ED9786E07
+
+  xor rax, rax
+  vmovss xmm15, [vf_min_resource]
+  cvtps2dq xmm15, xmm15
+  movd eax, xmm15
+  cvtsi2ss xmm14, eax
+  movd rax, xmm14
+
+  mov rsi,74757C9ED9786E07
+  add rax, rsi
+  mov rsi,5F37C54769DFD8B1
+  add rax, rsi
+  mov rsi,0CDAD4EF0E7FA52E
+  xor rax, rsi
+  mov rsi,4EFA2C18CBD3C884
+  add rax, rsi
+  //mov [rbx+8], rax
+
+
+chk_lock_res:
+  cmp dword ptr [is_res_lock_on], 1
+  jne endp
+  //mov eax, 527C159D /4090
   //mov eax, 53F4AC1A
-  mov [rbx], eax
-  mov [rbx+8], eax
-  mov [rbx+10], eax
-  mov [rbx+18], eax
+  mov [rbx], rax
+  mov [rbx+8], rax
+  mov [rbx+10], rax
+  mov [rbx+18], rax
+
 
 
 endp:
   db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20 68 74 74 70 73 3A 2F
   db 2F 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
 
+  pop rdx
   pop rax
   pop rbx
 
@@ -55,19 +92,33 @@ code:
   mov rax,[r10+18]
   mov r11,4EFA2C18CBD3C884
   jmp return
+align 10 cc
+  is_res_lock_on:
+  dd 1
+  is_try_to_decrypt_encrypt:
+  dd 1
+  vf_5000:
+  dd (float)5000
+  vf_min_resource:
+  dd (float)5678
+  i_tmp1:
+  dq 0
 
 INJECT_PLAYER_RESOURCES+03:
   jmp newmem
   nop 9
 return:
 registersymbol(INJECT_PLAYER_RESOURCES)
+registersymbol(is_res_lock_on)
+registersymbol(is_try_to_decrypt_encrypt)
+registersymbol(vf_min_resource)
 
 [DISABLE]
 
 INJECT_PLAYER_RESOURCES+03:
   db 49 8B 42 18 49 BB 84 C8 D3 CB 18 2C FA 4E
 
-unregistersymbol(INJECT_PLAYER_RESOURCES)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -96,8 +147,48 @@ AoE2DE.exe+1541C9B: 48 8B 04 D1                    - mov rax,[rcx+rdx*8]
 AoE2DE.exe+1541C9F: 33 C9                          - xor ecx,ecx
 AoE2DE.exe+1541CA1: 48 89 44 24 38                 - mov [rsp+38],rax
 AoE2DE.exe+1541CA6: 48 8B 44 24 38                 - mov rax,[rsp+38]
+AoE2DE.exe+1541CAB - 49 2B C3              - sub rax,r11
+AoE2DE.exe+1541CAE - 48 89 44 24 38        - mov [rsp+38],rax
+AoE2DE.exe+1541CB3 - 48 8B 44 24 38        - mov rax,[rsp+38]
+AoE2DE.exe+1541CB8 - 48 33 C3              - xor rax,rbx
+AoE2DE.exe+1541CBB - 48 89 44 24 38        - mov [rsp+38],rax
+AoE2DE.exe+1541CC0 - 48 8B 44 24 38        - mov rax,[rsp+38]
+AoE2DE.exe+1541CC5 - 48 2B C7              - sub rax,rdi
+AoE2DE.exe+1541CC8 - 48 89 44 24 38        - mov [rsp+38],rax
+AoE2DE.exe+1541CCD - 48 8B 44 24 38        - mov rax,[rsp+38]
+AoE2DE.exe+1541CD2 - 48 2B C6              - sub rax,rsi
+AoE2DE.exe+1541CD5 - 48 89 44 24 38        - mov [rsp+38],rax
+AoE2DE.exe+1541CDA - 48 8B 44 24 38        - mov rax,[rsp+38]
+AoE2DE.exe+1541CDF - 45 8B 41 10           - mov r8d,[r9+10]
+AoE2DE.exe+1541CE3 - 48 89 44 24 38        - mov [rsp+38],rax
+AoE2DE.exe+1541CE8 - F3 0F2C 44 24 38      - cvttss2si eax,[rsp+38]
+AoE2DE.exe+1541CEE - 66 0F6E C0            - movd xmm0,eax
+AoE2DE.exe+1541CF2 - 0F5B C0               - cvtdq2ps xmm0,xmm0
+AoE2DE.exe+1541CF5 - F3 41 0F11 41 1C      - movss [r9+1C],xmm0
+AoE2DE.exe+1541CFB - 45 85 C0              - test r8d,r8d
+
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Set resource to:"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF0080</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_resource</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"Set resource?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_res_lock_on</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>1</ID>
