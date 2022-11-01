@@ -1,8 +1,7 @@
 # Repository for self-dev Cheat Engine tables
 Contains some simple self-dev. Cheat Engine tables
 
-# 
-OpenCheatTables site URL: https://opencheattables.com  
+## OpenCheatTables site URL: https://opencheattables.com  
 
 ## Titles list  
 [Title list](https://github.com/bbfox0703/Mydev-Cheat-Engine-Tables/blob/main/TITLELIST.md)
