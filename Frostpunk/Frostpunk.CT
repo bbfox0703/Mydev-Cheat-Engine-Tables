@@ -1,0 +1,942 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Base resources"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_RESOURCES,Frostpunk.exe,41 03 4C 00 08) // should be unique
+alloc(newmem,$1000,INJECT_GET_RESOURCES)
+
+label(code)
+label(return)
+label(i_base_coal_addr)
+label(i_base_wood_addr)
+label(i_base_steel_addr)
+label(i_base_steam_core_addr)
+label(i_base_raw_food_addr)
+label(i_base_food_rations_addr)
+label(vf_resource_multiplier)
+
+
+newmem:
+  push r15
+  push r14
+
+  lea r15, [r8+rax]
+  mov [i_var_temp1], r15
+{$try}
+  mov r15, [r15]
+  test r15, r15
+  jz p_fail
+  mov r15, [r15]
+  test r15, r15
+  jz p_fail
+
+  mov r14d, [r15]
+  cmp r14d, 6C616F43
+  jne chk_wood
+  mov r15, [i_var_temp1]
+  mov [i_base_coal_addr], r15
+  jmp do_res_multi
+
+chk_wood:
+  cmp r14d, 646F6F57
+  jne chk_steel
+  mov r15, [i_var_temp1]
+  mov [i_base_wood_addr], r15
+  jmp do_res_multi
+
+chk_steel:
+  cmp r14d, 65657453
+  jne chk_steam_core
+  mov r15, [i_var_temp1]
+  mov [i_base_steel_addr], r15
+  jmp do_res_multi
+
+chk_steam_core:
+  cmp r14d, 61657453
+  jne chk_raw_food
+  mov r15, [i_var_temp1]
+  mov [i_base_steam_core_addr], r15
+  jmp do_res_multi
+
+chk_raw_food:
+  cmp r14d, 20776152
+  jne chk_food_rations
+  mov r15, [i_var_temp1]
+  mov [i_base_raw_food_addr], r15
+  jmp do_res_multi
+
+chk_food_rations:
+  cmp r14d, 646F6F46
+  jne do_res_multi
+  mov r15, [i_var_temp1]
+  mov [i_base_food_rations_addr], r15
+  jmp do_res_multi
+
+
+{$except}
+p_fail:
+  jmp endp
+
+do_res_multi:
+
+endp:
+  pop r14
+  pop r15
+
+
+code:
+  add ecx,[r8+rax+08]
+  jmp return
+align 10 cc
+  i_base_coal_addr:
+  dq 0
+  i_base_wood_addr:
+  dq 0
+  i_base_steel_addr:
+  dq 0
+  i_base_steam_core_addr:
+  dq 0
+  i_base_raw_food_addr:
+  dq 0
+  i_base_food_rations_addr:
+  dq 0
+  i_var_temp1:
+  dq 0
+  vf_resource_multiplier:
+  dd (float)1.25
+
+
+INJECT_GET_RESOURCES:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_RESOURCES)
+registersymbol(i_base_coal_addr)
+registersymbol(i_base_wood_addr)
+registersymbol(i_base_steel_addr)
+registersymbol(i_base_steam_core_addr)
+registersymbol(i_base_raw_food_addr)
+registersymbol(i_base_food_rations_addr)
+registersymbol(vf_resource_multiplier)
+
+[DISABLE]
+
+INJECT_GET_RESOURCES:
+  db 41 03 4C 00 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+19F00D2
+
+Frostpunk.exe+19F00A0: 48 89 44 24 70        - mov [rsp+70],rax
+Frostpunk.exe+19F00A5: 4C 8B 2D 24 44 5F 02  - mov r13,[Frostpunk.exe+3FE44D0]
+Frostpunk.exe+19F00AC: 48 89 45 80           - mov [rbp-80],rax
+Frostpunk.exe+19F00B0: 48 8D 55 80           - lea rdx,[rbp-80]
+Frostpunk.exe+19F00B4: 49 8D 8D 40 22 00 00  - lea rcx,[r13+00002240]
+Frostpunk.exe+19F00BB: E8 00 84 84 FF        - call Frostpunk.exe+12384C0
+Frostpunk.exe+19F00C0: 48 63 D0              - movsxd  rdx,eax
+Frostpunk.exe+19F00C3: 4C 6B C2 70           - imul r8,rdx,70
+Frostpunk.exe+19F00C7: 49 8B 85 40 22 00 00  - mov rax,[r13+00002240]
+Frostpunk.exe+19F00CE: 8B 4C 24 54           - mov ecx,[rsp+54]
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+19F00D2: 41 03 4C 00 08        - add ecx,[r8+rax+08]
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+19F00D7: 89 4C 24 54           - mov [rsp+54],ecx
+Frostpunk.exe+19F00DB: 45 33 C0              - xor r8d,r8d
+Frostpunk.exe+19F00DE: 48 8B 54 24 70        - mov rdx,[rsp+70]
+Frostpunk.exe+19F00E3: 49 8B CD              - mov rcx,r13
+Frostpunk.exe+19F00E6: E8 D5 B7 BE FF        - call Frostpunk.exe+15DB8C0
+Frostpunk.exe+19F00EB: 66 0F 6E 4C 24 78     - movd xmm1,[rsp+78]
+Frostpunk.exe+19F00F1: 0F 5B C9              - cvtdq2ps xmm1,xmm1
+Frostpunk.exe+19F00F4: F3 0F 58 C1           - addss xmm0,xmm1
+Frostpunk.exe+19F00F8: F3 0F 2C C0           - cvttss2si eax,xmm0
+Frostpunk.exe+19F00FC: 89 44 24 78           - mov [rsp+78],eax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"Coal"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_coal_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Max coal"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_coal_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>6</ID>
+          <Description>"Wood"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_wood_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"Max wood"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_wood_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"Steel"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_steel_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Max steel"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_steel_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"Steam core"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_steam_core_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Max steam core"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_steam_core_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"Raw food"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_raw_food_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"Max raw food"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_raw_food_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"Food rations"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_food_rations_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"Max food rations"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_food_rations_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Base resource multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_RESOURCE_MULTI,Frostpunk.exe,44 01 7C 28 08) // should be unique
+alloc(newmem,$1000,INJECT_RESOURCE_MULTI)
+
+label(code)
+label(return)
+label(vf_resource_multi)
+label(is_keep_min_resource)
+label(i_min_resource)
+label(vf_resource_decrease_ratio)
+
+newmem:
+  cvtsi2ss xmm15, r15d
+  vxorps xmm14,xmm14, xmm14
+  vcomiss xmm15, xmm14
+  jbe calc_resource_dec
+
+  vmovss xmm14, [vf_resource_multi]
+  jmp calc_common_formula
+
+calc_resource_dec:
+  vmovss xmm14, [vf_resource_decrease_ratio]
+
+calc_common_formula:
+  vmulss xmm15, xmm15, xmm14
+  cvtss2si r15d, xmm15
+
+check_min_res:
+  cmp dword ptr [is_keep_min_resource], 1
+  jne code
+
+  push r14
+
+  mov r14d, [rax+rbp+8]
+  cmp r14d, [i_min_resource]
+  jae endp
+  mov r14d, [i_min_resource]
+  mov [rax+rbp+8], r14d
+
+  db EB 3B 54 68 69 73 20 74
+  db 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20
+  db 68 74 74 70 73 3A 2F
+  db 2F 6F 70 65 6E 63 68 65
+  db 61 74
+  db 74 61 62 6C 65 73 2E 63 6F 6D
+  db 20 2F 20 43 45 20 37 2E 34 2B
+endp:
+  pop r14
+
+code:
+  add [rax+rbp+08],r15d
+  jmp return
+align 10 cc
+  vf_resource_multi:
+  dd (float)5.5
+  vf_resource_decrease_ratio:
+  dd (float)0.33334
+  is_keep_min_resource:
+  dd 1
+  i_min_resource:
+  dd #250
+
+
+INJECT_RESOURCE_MULTI:
+  jmp newmem
+return:
+registersymbol(INJECT_RESOURCE_MULTI)
+registersymbol(vf_resource_multi)
+registersymbol(is_keep_min_resource)
+registersymbol(i_min_resource)
+registersymbol(vf_resource_decrease_ratio)
+
+[DISABLE]
+
+INJECT_RESOURCE_MULTI:
+  db 44 01 7C 28 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+15DA128
+
+Frostpunk.exe+15DA104: 8B 44 28 08           - mov eax,[rax+rbp+08]
+Frostpunk.exe+15DA108: 89 44 24 40           - mov [rsp+40],eax
+Frostpunk.exe+15DA10C: 89 44 24 30           - mov [rsp+30],eax
+Frostpunk.exe+15DA110: E8 AB E3 C5 FF        - call Frostpunk.exe+12384C0
+Frostpunk.exe+15DA115: 48 63 C8              - movsxd  rcx,eax
+Frostpunk.exe+15DA118: 45 33 C9              - xor r9d,r9d
+Frostpunk.exe+15DA11B: 48 6B C1 70           - imul rax,rcx,70
+Frostpunk.exe+15DA11F: 45 8B C7              - mov r8d,r15d
+Frostpunk.exe+15DA122: 49 8B D6              - mov rdx,r14
+Frostpunk.exe+15DA125: 48 8B CF              - mov rcx,rdi
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+15DA128: 44 01 7C 28 08        - add [rax+rbp+08],r15d
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+15DA12D: 8B 44 28 08           - mov eax,[rax+rbp+08]
+Frostpunk.exe+15DA131: 89 44 24 38           - mov [rsp+38],eax
+Frostpunk.exe+15DA135: 89 44 24 34           - mov [rsp+34],eax
+Frostpunk.exe+15DA139: 8B 84 24 D0 00 00 00  - mov eax,[rsp+000000D0]
+Frostpunk.exe+15DA140: 89 44 24 28           - mov [rsp+28],eax
+Frostpunk.exe+15DA144: 4C 89 6C 24 20        - mov [rsp+20],r13
+Frostpunk.exe+15DA149: E8 22 39 00 00        - call Frostpunk.exe+15DDA70
+Frostpunk.exe+15DA14E: 83 3D 9B D9 38 01 00  - cmp dword ptr [Frostpunk.exe+2967AF0],00
+Frostpunk.exe+15DA155: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+Frostpunk.exe+15DA15A: 74 44                 - je Frostpunk.exe+15DA1A0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Increase multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_resource_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Decrease ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_resource_decrease_ratio</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Keep min. resource?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF0080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_keep_min_resource</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Set min. resource on change"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_min_resource</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>18</ID>
+      <Description>"Build speed multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BUILD_SPEED_MULTI,Frostpunk.exe,0F 28 DC F3 0F 58 DA) // should be unique
+alloc(newmem,$1000,INJECT_BUILD_SPEED_MULTI)
+
+label(code)
+label(return)
+label(vf_build_speed_multi)
+
+newmem:
+  vmovss xmm14, [vf_build_speed_multi]
+  vmulss xmm2, xmm2, xmm14
+
+code:
+  movaps xmm3,xmm4
+  addss xmm3,xmm2
+  jmp return
+align 10 cc
+  vf_build_speed_multi:
+  dd (float)3.333334
+
+
+INJECT_BUILD_SPEED_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BUILD_SPEED_MULTI)
+registersymbol(vf_build_speed_multi)
+
+[DISABLE]
+
+INJECT_BUILD_SPEED_MULTI:
+  db 0F 28 DC F3 0F 58 DA
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+17EE8DF
+
+Frostpunk.exe+17EE8C9: C3              - ret 
+Frostpunk.exe+17EE8CA: CC              - int 3 
+Frostpunk.exe+17EE8CB: CC              - int 3 
+Frostpunk.exe+17EE8CC: CC              - int 3 
+Frostpunk.exe+17EE8CD: CC              - int 3 
+Frostpunk.exe+17EE8CE: CC              - int 3 
+Frostpunk.exe+17EE8CF: CC              - int 3 
+Frostpunk.exe+17EE8D0: F3 0F 5C 51 0C  - subss xmm2,[rcx+0C]
+Frostpunk.exe+17EE8D5: F3 0F 10 61 08  - movss xmm4,[rcx+08]
+Frostpunk.exe+17EE8DA: F3 0F 10 49 04  - movss xmm1,[rcx+04]
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+17EE8DF: 0F 28 DC        - movaps xmm3,xmm4
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+17EE8E2: F3 0F 58 DA     - addss xmm3,xmm2
+Frostpunk.exe+17EE8E6: 0F 2F D9        - comiss xmm3,xmm1
+Frostpunk.exe+17EE8E9: 0F 28 C3        - movaps xmm0,xmm3
+Frostpunk.exe+17EE8EC: F3 0F 11 59 08  - movss [rcx+08],xmm3
+Frostpunk.exe+17EE8F1: F3 0F 5C C4     - subss xmm0,xmm4
+Frostpunk.exe+17EE8F5: F3 0F 5C C2     - subss xmm0,xmm2
+Frostpunk.exe+17EE8F9: F3 0F 11 41 0C  - movss [rcx+0C],xmm0
+Frostpunk.exe+17EE8FE: 72 19           - jb Frostpunk.exe+17EE919
+Frostpunk.exe+17EE900: F3 0F 11 49 08  - movss [rcx+08],xmm1
+Frostpunk.exe+17EE905: 48 8B C2        - mov rax,rdx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_build_speed_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"Generator stress"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_GENERATOR_STRESS,Frostpunk.exe,F3 FF FF F3 0F 5C 47 04 F3 0F 10 17 0F 28 DA F3 0F 58 D8 F3 0F 11 1F 0F 28 CB) // should be unique
+alloc(newmem,$1000,INJECT_GET_GENERATOR_STRESS)
+
+label(code)
+label(return)
+label(i_base_generator_stress_addr)
+label(vf_max_generator_stress)
+
+newmem:
+  mov [i_base_generator_stress_addr], rdi
+  vmovss xmm14, [vf_max_generator_stress]
+  vucomiss xmm14, xmm3
+  jae code
+  vmovss xmm3, [vf_max_generator_stress]
+
+code:
+  movss [rdi],xmm3
+  movaps xmm1,xmm3
+  jmp return
+align 10 cc
+  i_base_generator_stress_addr:
+  dq 0
+  vf_max_generator_stress:
+  dd (float)0.2
+
+INJECT_GET_GENERATOR_STRESS+13:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_GENERATOR_STRESS)
+registersymbol(i_base_generator_stress_addr)
+registersymbol(vf_max_generator_stress)
+[DISABLE]
+
+INJECT_GET_GENERATOR_STRESS+13:
+  db F3 0F 11 1F 0F 28 CB
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+17EED44
+
+Frostpunk.exe+17EED1A: 0F 86 B6 00 00 00  - jbe Frostpunk.exe+17EEDD6
+Frostpunk.exe+17EED20: 48 8D 57 58        - lea rdx,[rdi+58]
+Frostpunk.exe+17EED24: E8 A7 04 9D FF     - call Frostpunk.exe+11BF1D0
+Frostpunk.exe+17EED29: 48 8B D0           - mov rdx,rax
+Frostpunk.exe+17EED2C: 48 8B CB           - mov rcx,rbx
+Frostpunk.exe+17EED2F: E8 4C F3 FF FF     - call Frostpunk.exe+17EE080
+Frostpunk.exe+17EED34: F3 0F 5C 47 04     - subss xmm0,[rdi+04]
+Frostpunk.exe+17EED39: F3 0F 10 17        - movss xmm2,[rdi]
+Frostpunk.exe+17EED3D: 0F 28 DA           - movaps xmm3,xmm2
+Frostpunk.exe+17EED40: F3 0F 58 D8        - addss xmm3,xmm0
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+17EED44: F3 0F 11 1F        - movss [rdi],xmm3
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+17EED48: 0F 28 CB           - movaps xmm1,xmm3
+Frostpunk.exe+17EED4B: F3 0F 5C CA        - subss xmm1,xmm2
+Frostpunk.exe+17EED4F: F3 0F 5C C8        - subss xmm1,xmm0
+Frostpunk.exe+17EED53: F3 0F 11 4F 04     - movss [rdi+04],xmm1
+Frostpunk.exe+17EED58: F3 0F 10 4F 50     - movss xmm1,[rdi+50]
+Frostpunk.exe+17EED5D: F3 0F 10 47 10     - movss xmm0,[rdi+10]
+Frostpunk.exe+17EED62: F3 0F 58 47 08     - addss xmm0,[rdi+08]
+Frostpunk.exe+17EED67: F3 0F 10 57 54     - movss xmm2,[rdi+54]
+Frostpunk.exe+17EED6C: F3 0F 11 55 1F     - movss [rbp+1F],xmm2
+Frostpunk.exe+17EED71: F3 0F 11 4D 27     - movss [rbp+27],xmm1
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"Active: Generator got stress / overloading"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>37</ID>
+          <Description>"Disable when restart generator / before tream level change"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"Stress"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_generator_stress_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"Set stress limit"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_max_generator_stress</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>28</ID>
+      <Description>"Speedup research"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattbales.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SPEEDUP_RESEARCH_ON_START,Frostpunk.exe,48 8B 85 B8 00 00 00 48 89 44) // should be unique
+alloc(newmem,$1000,INJECT_SPEEDUP_RESEARCH_ON_START)
+
+label(code)
+label(return)
+label(vf_research_speedup_multi)
+
+newmem:
+  vmovss xmm15, [rbp+000000B8]
+  vmovss xmm14, [vf_research_speedup_multi]
+  vmulss xmm15, xmm15, xmm14
+  vmovss [rbp+000000B8], xmm15
+
+code:
+  mov rax,[rbp+000000B8]
+  jmp return
+align 10 cc
+  vf_research_speedup_multi:
+  dd (float)0.125
+
+INJECT_SPEEDUP_RESEARCH_ON_START:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SPEEDUP_RESEARCH_ON_START)
+registersymbol(vf_research_speedup_multi)
+
+[DISABLE]
+
+INJECT_SPEEDUP_RESEARCH_ON_START:
+  db 48 8B 85 B8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+11C32BB
+
+Frostpunk.exe+11C3285: FF 15 8D EB AF 00        - call qword ptr [Frostpunk.exe+1CC1E18]
+Frostpunk.exe+11C328B: CC                       - int 3 
+Frostpunk.exe+11C328C: 48 8D 8F 48 22 00 00     - lea rcx,[rdi+00002248]
+Frostpunk.exe+11C3293: 48 89 74 24 50           - mov [rsp+50],rsi
+Frostpunk.exe+11C3298: 48 8D 54 24 30           - lea rdx,[rsp+30]
+Frostpunk.exe+11C329D: C6 87 41 22 00 00 01     - mov byte ptr [rdi+00002241],01
+Frostpunk.exe+11C32A4: 48 89 6C 24 30           - mov [rsp+30],rbp
+Frostpunk.exe+11C32A9: E8 D2 DB FF FF           - call Frostpunk.exe+11C0E80
+Frostpunk.exe+11C32AE: C7 00 01 00 00 00        - mov [rax],00000001
+Frostpunk.exe+11C32B4: 48 89 AF 60 22 00 00     - mov [rdi+00002260],rbp
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+11C32BB: 48 8B 85 B8 00 00 00     - mov rax,[rbp+000000B8]
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+11C32C2: 48 89 44 24 30           - mov [rsp+30],rax
+Frostpunk.exe+11C32C7: F3 0F 10 44 24 30        - movss xmm0,[rsp+30]
+Frostpunk.exe+11C32CD: 0F 2F C6                 - comiss xmm0,xmm6
+Frostpunk.exe+11C32D0: 76 0A                    - jna Frostpunk.exe+11C32DC
+Frostpunk.exe+11C32D2: 48 8B CF                 - mov rcx,rdi
+Frostpunk.exe+11C32D5: E8 26 02 00 00           - call Frostpunk.exe+11C3500
+Frostpunk.exe+11C32DA: EB 2A                    - jmp Frostpunk.exe+11C3306
+Frostpunk.exe+11C32DC: 48 8D 8F 70 22 00 00     - lea rcx,[rdi+00002270]
+Frostpunk.exe+11C32E3: 48 C7 01 00 00 80 3F     - mov qword ptr [rcx],3F800000
+Frostpunk.exe+11C32EA: F3 0F 10 97 6C 22 00 00  - movss xmm2,[rdi+0000226C]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"Active: Start/restart a research"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>42</ID>
+          <Description>"Reduce research time multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_research_speedup_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>30</ID>
+      <Description>"Set heal rate"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FASTER_HEAL,Frostpunk.exe,48 8B 58 20 48 89 7C 24 30) // should be unique
+alloc(newmem,$1000,INJECT_FASTER_HEAL)
+
+label(code)
+label(return)
+label(vf_heal_rate)
+
+newmem:
+  push r15
+  mov r15, rax
+  vmovss xmm15, [r15+18]
+  vmovss xmm14, [vf_heal_rate]
+  vucomiss xmm15, xmm14
+  jae endp
+  vmovss xmm15, [vf_heal_rate]
+  vmovss [r15+18], xmm15
+
+endp:
+  pop r15
+
+code:
+  mov rbx,[rax+20]
+  mov [rsp+30],rdi
+  jmp return
+align 10 cc
+  vf_heal_rate:
+  dd (float)3.33334
+
+INJECT_FASTER_HEAL:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_FASTER_HEAL)
+registersymbol(vf_heal_rate)
+[DISABLE]
+
+INJECT_FASTER_HEAL:
+  db 48 8B 58 20 48 89 7C 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+16B867D
+
+Frostpunk.exe+16B8657: 0F 84 89 00 00 00     - je Frostpunk.exe+16B86E6
+Frostpunk.exe+16B865D: E8 5E 6C CA FF        - call Frostpunk.exe+135F2C0
+Frostpunk.exe+16B8662: 48 8B D3              - mov rdx,rbx
+Frostpunk.exe+16B8665: 48 8B 08              - mov rcx,[rax]
+Frostpunk.exe+16B8668: 4C 8B 81 88 00 00 00  - mov r8,[rcx+00000088]
+Frostpunk.exe+16B866F: 48 8B C8              - mov rcx,rax
+Frostpunk.exe+16B8672: 41 FF D0              - call r8
+Frostpunk.exe+16B8675: 48 8B E8              - mov rbp,rax
+Frostpunk.exe+16B8678: 48 85 C0              - test rax,rax
+Frostpunk.exe+16B867B: 74 69                 - je Frostpunk.exe+16B86E6
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+16B867D: 48 8B 58 20           - mov rbx,[rax+20]
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+16B8681: 48 89 7C 24 30        - mov [rsp+30],rdi
+Frostpunk.exe+16B8686: 48 63 78 28           - movsxd  rdi,dword ptr [rax+28]
+Frostpunk.exe+16B868A: 48 C1 E7 06           - shl rdi,06
+Frostpunk.exe+16B868E: 48 03 FB              - add rdi,rbx
+Frostpunk.exe+16B8691: 48 3B DF              - cmp rbx,rdi
+Frostpunk.exe+16B8694: 74 2F                 - je Frostpunk.exe+16B86C5
+Frostpunk.exe+16B8696: 48 8B CB              - mov rcx,rbx
+Frostpunk.exe+16B8699: E8 B2 35 20 00        - call Frostpunk.exe+18BBC50
+Frostpunk.exe+16B869E: 3B C6                 - cmp eax,esi
+Frostpunk.exe+16B86A0: 7F 1A                 - jg Frostpunk.exe+16B86BC
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"Min. heal rate"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_heal_rate</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>39</ID>
+      <Description>"Selected coal pie, Steel wreckage, wood ...etc"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SELECTED_COAL_PIE_OR_WOOD,Frostpunk.exe,8B 58 58 81 FB FF FF FF 7F) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_COAL_PIE_OR_WOOD)
+
+label(code)
+label(return)
+label(i_base_coal_pie_res_addr)
+
+newmem:
+  mov [i_base_coal_pie_res_addr], rax
+code:
+  mov ebx,[rax+58]
+  cmp ebx,7FFFFFFF
+  jmp return
+align 10 cc
+  i_base_coal_pie_res_addr:
+  dq 0
+
+INJECT_SELECTED_COAL_PIE_OR_WOOD:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SELECTED_COAL_PIE_OR_WOOD)
+registersymbol(i_base_coal_pie_res_addr)
+[DISABLE]
+
+INJECT_SELECTED_COAL_PIE_OR_WOOD:
+  db 8B 58 58 81 FB FF FF FF 7F
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+13DE0D8
+
+Frostpunk.exe+13DE0AB: 33 D2                 - xor edx,edx
+Frostpunk.exe+13DE0AD: 41 B8 50 08 00 00     - mov r8d,00000850
+Frostpunk.exe+13DE0B3: 48 8D 4C 24 70        - lea rcx,[rsp+70]
+Frostpunk.exe+13DE0B8: E8 D9 F7 6F 00        - call Frostpunk.exe+1ADD896
+Frostpunk.exe+13DE0BD: 48 8D 4C 24 70        - lea rcx,[rsp+70]
+Frostpunk.exe+13DE0C2: E8 C9 D2 84 00        - call Frostpunk.exe+1C2B390
+Frostpunk.exe+13DE0C7: 90                    - nop 
+Frostpunk.exe+13DE0C8: 48 8B 87 28 03 00 00  - mov rax,[rdi+00000328]
+Frostpunk.exe+13DE0CF: 48 85 C0              - test rax,rax
+Frostpunk.exe+13DE0D2: 0F 84 E0 00 00 00     - je Frostpunk.exe+13DE1B8
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+13DE0D8: 8B 58 58              - mov ebx,[rax+58]
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+13DE0DB: 81 FB FF FF FF 7F     - cmp ebx,7FFFFFFF
+Frostpunk.exe+13DE0E1: 7C 3A                 - jl Frostpunk.exe+13DE11D
+Frostpunk.exe+13DE0E3: 48 8D 15 6E 17 B1 00  - lea rdx,[Frostpunk.exe+1EEF858]
+Frostpunk.exe+13DE0EA: 48 8D 4C 24 30        - lea rcx,[rsp+30]
+Frostpunk.exe+13DE0EF: E8 FC 26 A4 FF        - call Frostpunk.exe+E207F0
+Frostpunk.exe+13DE0F4: 90                    - nop 
+Frostpunk.exe+13DE0F5: 48 8D 54 24 30        - lea rdx,[rsp+30]
+Frostpunk.exe+13DE0FA: 48 8D 4C 24 70        - lea rcx,[rsp+70]
+Frostpunk.exe+13DE0FF: E8 4C 26 FE FF        - call Frostpunk.exe+13C0750
+Frostpunk.exe+13DE104: 90                    - nop 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"Amount"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_coal_pie_res_addr</Address>
+          <Offsets>
+            <Offset>58</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>41</ID>
+      <Description>"Frostpunk 1.6.2 plus season pass  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Color>400080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
