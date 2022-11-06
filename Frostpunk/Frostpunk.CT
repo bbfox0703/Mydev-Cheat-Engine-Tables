@@ -315,7 +315,7 @@ Frostpunk.exe+19F00FC: 89 44 24 78           - mov [rsp+78],eax
     </CheatEntry>
     <CheatEntry>
       <ID>14</ID>
-      <Description>"Base resources multiplier"</Description>
+      <Description>"Base resources multiplier &amp; set min. value"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Frostpunk.exe
@@ -560,7 +560,7 @@ Frostpunk.exe+17EE905: 48 8B C2        - mov rax,rdx
     </CheatEntry>
     <CheatEntry>
       <ID>24</ID>
-      <Description>"Generator stress"</Description>
+      <Description>"Generator data reader"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Frostpunk.exe
@@ -578,16 +578,71 @@ label(code)
 label(return)
 label(i_base_generator_stress_addr)
 label(vf_max_generator_stress)
+label(i_base_generator_level_addr)
+label(i_base_generator_range_addr)
+label(vf_streamhub_range)
 
 newmem:
+  push rax
+  mov eax, [rdi-18]
+  test eax, eax
+  jne get_grange
+
+  mov eax, [rdi+58]
+  cmp eax, 0
+  jne get_glevel
+  jmp get_slevel
+
+get_glevel:
+  vmovss xmm14, [vf_2]
+  vmovss xmm15, [rdi+58]
+  vucomiss xmm15, xmm14
+  jae get_grange
+
+  cmp qword ptr [i_base_generator_level_addr], 0
+  jne endp
+  mov [i_base_generator_level_addr], rdi
+  jmp endp
+
+get_grange:
+  cmp qword ptr [i_base_generator_range_addr], 0
+  jne endp
+{$try}
+  mov rax, [rdi-18]
+  test rax, rax
+  je endp
+  mov rax, [rax+48]
+  test rax, rax
+  je endp
+  mov eax, [rax]
+  cmp eax, 656E6547
+  jne get_streamhub_range
+  jmp get_grange1
+
+get_streamhub_range:
+  cmp eax, 61657453
+  jne endp
+
+
+{$except}
+  jmp endp
+
+get_grange1:
+  mov [i_base_generator_range_addr], rdi
+  jmp endp
+
+get_slevel:
+  cmp qword ptr [i_base_generator_stress_addr], 0
+  jne endp
   mov [i_base_generator_stress_addr], rdi
-  jmp code
-
-
+nextp:
   vmovss xmm14, [vf_max_generator_stress]
   vucomiss xmm14, xmm3
-  jae code
+  jae endp
   vmovss xmm3, [vf_max_generator_stress]
+endp:
+  pop rax
+
 
 code:
   movss [rdi],xmm3
@@ -596,8 +651,16 @@ code:
 align 10 cc
   i_base_generator_stress_addr:
   dq 0
+  i_base_generator_level_addr:
+  dq 0
+  i_base_generator_range_addr:
+  dq 0
   vf_max_generator_stress:
-  dd (float)0.2
+  dd (float)0.15
+  vf_2:
+  dd (float)2
+  vf_streamhub_range:
+  dd 0
 
 INJECT_GET_GENERATOR_STRESS+13:
   jmp newmem
@@ -606,6 +669,10 @@ return:
 registersymbol(INJECT_GET_GENERATOR_STRESS)
 registersymbol(i_base_generator_stress_addr)
 registersymbol(vf_max_generator_stress)
+registersymbol(i_base_generator_level_addr)
+registersymbol(i_base_generator_range_addr)
+registersymbol(vf_streamhub_range)
+
 [DISABLE]
 
 INJECT_GET_GENERATOR_STRESS+13:
@@ -651,13 +718,65 @@ Frostpunk.exe+17EED71: F3 0F 11 4D 27     - movss [rbp+27],xmm1
         </CheatEntry>
         <CheatEntry>
           <ID>32</ID>
-          <Description>"Stress"</Description>
+          <Description>"Stress (overdrive)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_base_generator_stress_addr</Address>
           <Offsets>
             <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>51</ID>
+          <Description>"Max stress"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_max_generator_stress</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>52</ID>
+          <Description>"Generator level  (active: change level)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_generator_level_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>53</ID>
+          <Description>"Generator max level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_generator_level_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>54</ID>
+          <Description>"Generator range (active: change range)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_generator_range_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"Generator max range"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_generator_range_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -1111,8 +1230,102 @@ Frostpunk.exe+13DE104: 90                    - nop
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>56</ID>
+      <Description>"Book of Law cooldown multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Frostpunk.exe
+  Version: 
+  Date   : 2022-11-06
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_LAW_COOLDOWN_MULTI,Frostpunk.exe,48 8B 84 24 90 00 00 00 49 89 85) // should be unique
+alloc(newmem,$1000,INJECT_LAW_COOLDOWN_MULTI)
+
+label(code)
+label(return)
+label(vf_law_cooldown_multi)
+
+newmem:
+  push rax
+  mov eax, [rsp+8]
+  test eax, eax
+  je endp
+  vmovss xmm14, [vf_law_cooldown_multi]
+  vmovss xmm15, [rsp+8]
+  vmulss xmm15, xmm15, xmm14
+  vmovss [rsp+8], xmm15
+
+endp:
+  pop rax
+
+code:
+  mov rax,[rsp+00000090]
+  jmp return
+align 10 cc
+  vf_law_cooldown_multi:
+  dd (float)0.2
+
+INJECT_LAW_COOLDOWN_MULTI:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_LAW_COOLDOWN_MULTI)
+registersymbol(vf_law_cooldown_multi)
+
+[DISABLE]
+
+INJECT_LAW_COOLDOWN_MULTI:
+  db 48 8B 84 24 90 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Frostpunk.exe+15977E2
+
+Frostpunk.exe+159779D: 48 8B 05 8C DF 5E 01        - mov rax,[Frostpunk.exe+2B85730]
+Frostpunk.exe+15977A4: 48 8B 88 B0 00 00 00        - mov rcx,[rax+000000B0]
+Frostpunk.exe+15977AB: 4A 89 4C C2 08              - mov [rdx+r8*8+08],rcx
+Frostpunk.exe+15977B0: 42 C7 44 C2 10 02 00 00 00  - mov [rdx+r8*8+10],00000002
+Frostpunk.exe+15977B9: 48 8B 05 70 DF 5E 01        - mov rax,[Frostpunk.exe+2B85730]
+Frostpunk.exe+15977C0: 48 8B 88 B0 00 00 00        - mov rcx,[rax+000000B0]
+Frostpunk.exe+15977C7: 49 89 8D F0 00 00 00        - mov [r13+000000F0],rcx
+Frostpunk.exe+15977CE: 49 8B 97 C8 00 00 00        - mov rdx,[r15+000000C8]
+Frostpunk.exe+15977D5: 48 8D 8C 24 90 00 00 00     - lea rcx,[rsp+00000090]
+Frostpunk.exe+15977DD: E8 9E 06 B6 FF              - call Frostpunk.exe+10F7E80
+// ---------- INJECTING HERE ----------
+Frostpunk.exe+15977E2: 48 8B 84 24 90 00 00 00     - mov rax,[rsp+00000090]
+// ---------- DONE INJECTING  ----------
+Frostpunk.exe+15977EA: 49 89 85 F8 00 00 00        - mov [r13+000000F8],rax
+Frostpunk.exe+15977F1: 49 8B D7                    - mov rdx,r15
+Frostpunk.exe+15977F4: 49 8B CD                    - mov rcx,r13
+Frostpunk.exe+15977F7: E8 B4 05 00 00              - call Frostpunk.exe+1597DB0
+Frostpunk.exe+15977FC: 48 8D 15 25 04 3D 01        - lea rdx,[Frostpunk.exe+2967C28]
+Frostpunk.exe+1597803: 49 8D 8F B4 00 00 00        - lea rcx,[r15+000000B4]
+Frostpunk.exe+159780A: E8 E1 6D 88 FF              - call Frostpunk.exe+E1E5F0
+Frostpunk.exe+159780F: 85 C0                       - test eax,eax
+Frostpunk.exe+1597811: 74 1E                       - je Frostpunk.exe+1597831
+Frostpunk.exe+1597813: E8 58 3B F2 FF              - call Frostpunk.exe+14BB370
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>57</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_law_cooldown_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>49</ID>
-      <Description>"Move speed multiplier"</Description>
+      <Description>"Move speed multiplier (buggy)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Frostpunk.exe
