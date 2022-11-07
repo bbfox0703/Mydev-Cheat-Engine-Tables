@@ -39,6 +39,8 @@ label(i_base_raw_food_addr)
 label(i_base_food_rations_addr)
 label(vf_resource_multiplier)
 label(i_Scaffoldings_addr)
+label(i_SteelPlates_addr)
+label(i_Pipes_addr)
 
 newmem:
   push r15
@@ -55,7 +57,8 @@ newmem:
   test r15, r15
   jz p_fail
 
-  mov r13, [r15]
+  lea r13, [r8+rax]
+  mov r13, [r13]
 
   mov r14d, [r15]
   cmp r14d, 6C616F43
@@ -68,6 +71,7 @@ newmem:
   jmp do_res_multi
 
 chk_wood:
+  mov r14d, [r15]
   cmp r14d, 646F6F57
   jne chk_steel
 
@@ -80,6 +84,7 @@ chk_wood:
   jmp do_res_multi
 
 chk_steel:
+  mov r14d, [r15]
   cmp r14d, 65657453
   jne chk_steam_core
 
@@ -92,11 +97,16 @@ chk_steel:
   jmp do_res_multi
 
 chk_steam_core:
-  cmp r14d, 61657453
+  mov r14d, [r15]
+  cmp r14d, 61657453  //Steam Cores
   jne chk_raw_food
 
   mov r14d, [r15+4]
   cmp r14d, 6F43206D
+  jne chk_raw_food
+
+  mov r14d, [r15+8]
+  cmp r14d, 00736572
   jne chk_raw_food
 
   mov r15, [i_var_temp1]
@@ -104,6 +114,7 @@ chk_steam_core:
   jmp do_res_multi
 
 chk_raw_food:
+  mov r14d, [r15]
   cmp r14d, 20776152
   jne chk_food_rations
 
@@ -116,6 +127,7 @@ chk_raw_food:
   jmp do_res_multi
 
 chk_food_rations:
+  mov r14d, [r15]
   cmp r14d, 646F6F46
   jne chk_scaffoldings
 
@@ -128,12 +140,13 @@ chk_food_rations:
   jmp do_res_multi
 
 chk_scaffoldings:
+  mov r14d, [r15]
   cmp r14d, 646F6F57  // Wooden Materials
-  jne do_res_multi
+  jne chk_steelplates
 
   mov r14d, [r15+4]
   cmp r14d, 4D206E65
-  jne do_res_multi
+  jne chk_steelplates
 
   mov r13, [r13+28]
   test r13, r13
@@ -141,20 +154,81 @@ chk_scaffoldings:
 
   mov r14d, [r13+10] //@Resources/Names/Scaffoldings
   cmp r14d, 6163532F
-  jne do_res_multi
+  jne chk_steelplates
 
   mov r14d, [r13+14]
   cmp r14d, 6C6F6666
-  jne do_res_multi
+  jne chk_steelplates
 
   mov r14d, [r13+18]
   cmp r14d, 676E6964
-  jne do_res_multi
+  jne chk_steelplates
 
   mov r15, [i_var_temp1]
   mov [i_Scaffoldings_addr], r15
   jmp do_res_multi
 
+
+chk_steelplates:
+  mov r14d, [r15]
+  cmp r14d, 65657453  // Steel Plates
+  jne chk_pipes
+
+  mov r14d, [r15+4]
+  cmp r14d, 6C50206C
+  jne chk_pipes
+
+  {
+  mov r13, [r13+28]
+  test r13, r13
+  jz p_fail
+
+  mov r14d, [r13+10] //@Resources/Names/SteelPlates
+  cmp r14d, 6574532F
+  jne chk_pipes
+
+  mov r14d, [r13+14]
+  cmp r14d, 6C506C65
+  jne chk_pipes
+
+  mov r14d, [r13+18]
+  cmp r14d, 73657461
+  jne chk_pipes
+  }
+  mov r15, [i_var_temp1]
+  mov [i_SteelPlates_addr], r15
+  jmp do_res_multi
+
+chk_pipes:
+  mov r14d, [r15]
+  cmp r14d, 61657453  // Steam Tools
+  jne do_res_multi
+
+  mov r14d, [r15+4]
+  cmp r14d, 6F54206D
+  jne do_res_multi
+
+  mov r14d, [r15+8]
+  cmp r14d, 00736C6F
+  jne do_res_multi
+
+  {
+  mov r13, [r13+28]
+  test r13, r13
+  jz p_fail
+
+  mov r14d, [r13+10] //@Resources/Names/Pipes
+  cmp r14d, 7069502F
+  jne do_res_multi
+
+  mov r14d, [r13+14]
+  cmp r14d, 00007365
+  jne do_res_multi
+  }
+
+  mov r15, [i_var_temp1]
+  mov [i_Pipes_addr], r15
+  jmp do_res_multi
 
 {$except}
 p_fail:
@@ -186,7 +260,13 @@ align 10 cc
   dq 0
   i_var_temp1:
   dq 0
+  i_var_temp2:
+  dq 0
   i_Scaffoldings_addr:
+  dq 0
+  i_SteelPlates_addr:
+  dq 0
+  i_Pipes_addr:
   dq 0
   vf_resource_multiplier:
   dd (float)1.25
@@ -204,6 +284,11 @@ registersymbol(i_base_raw_food_addr)
 registersymbol(i_base_food_rations_addr)
 registersymbol(vf_resource_multiplier)
 registersymbol(i_Scaffoldings_addr)
+registersymbol(i_SteelPlates_addr)
+registersymbol(i_Pipes_addr)
+
+
+
 [DISABLE]
 
 INJECT_GET_RESOURCES:
@@ -374,14 +459,78 @@ Frostpunk.exe+19F00FC: 89 44 24 78           - mov [rsp+78],eax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>69</ID>
-          <Description>"Scaffoldings"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_Scaffoldings_addr</Address>
-          <Offsets>
-            <Offset>4</Offset>
-          </Offsets>
+          <ID>75</ID>
+          <Description>"+Some scenarios extra resources"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>69</ID>
+              <Description>"Scaffoldings"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_Scaffoldings_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>70</ID>
+              <Description>"Max scaffoldings"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_Scaffoldings_addr</Address>
+              <Offsets>
+                <Offset>C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>71</ID>
+              <Description>"Steel plates"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_SteelPlates_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>72</ID>
+              <Description>"Max steel plates"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_SteelPlates_addr</Address>
+              <Offsets>
+                <Offset>C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>73</ID>
+              <Description>"Pipes"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_Pipes_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>74</ID>
+              <Description>"Max pipes"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_Pipes_addr</Address>
+              <Offsets>
+                <Offset>C</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -451,13 +600,13 @@ code:
   jmp return
 align 10 cc
   vf_resource_multi:
-  dd (float)5.5
+  dd (float)2.5
   vf_resource_decrease_ratio:
   dd (float)0.33334
   is_keep_min_resource:
   dd 1
   i_min_resource:
-  dd #250
+  dd #150
 
 
 INJECT_RESOURCE_MULTI:
