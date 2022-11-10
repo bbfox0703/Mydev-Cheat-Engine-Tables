@@ -124,6 +124,11 @@ ja-JP:ラングリッサーI&II
 [Mahjong Nagomi (Steam)] (https://store.steampowered.com/app/1356180/Mahjong_Nagomi/)
 ja-JP:麻雀 和 -Nagomi-  
 
+## Meowjiro
+[Meowjiro (Steam)](https://store.steampowered.com/app/2157340/_/)
+zh-TW:貓次郎  
+ja-JP:ニャー次郎  
+
 ## Monster Hunter Rise  
 [MONSTER HUNTER RISE (Steam)](https://store.steampowered.com/app/1446780/MONSTER_HUNTER_RISE/)  
 zh-TW:魔物獵人崛起  
