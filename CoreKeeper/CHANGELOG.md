@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/11/11
+1. Updated for 0.5.0.0-9b96
+
 ## 2022/10/26
 1. Updated for 0.4.7-4a21   
 
