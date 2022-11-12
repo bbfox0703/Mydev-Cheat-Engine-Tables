@@ -1,5 +1,5 @@
-# Atelier Sophie DX  
-Cheat Table for Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)  
+# Atelier Ryza 2 
+Cheat Table for Atelier Ryza 2: Lost Legends & the Secret Fairy (Steam)  
 ja-JP: ライザのアトリエ2 ～失われた伝承と秘密の妖精 (チートエンジン)  
 zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～ (修改器)  
  
