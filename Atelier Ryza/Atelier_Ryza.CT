@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Compact mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Walk/Run speed hack"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_XYZ_COORDS,Atelier_Ryza.exe,F3 0F 10 43 10 48 8D 54) // should be unique
+alloc(newmem,$1000,INJECT_XYZ_COORDS)
+
+label(code)
+label(return)
+label(x_vector)
+label(x_coords)
+label(y_vector)
+label(y_coords)
+label(z_vector)
+label(z_coords)
+label(speed_acc_factor)
+
+{
+Atelier_Ryza.exe+662043: F3 0F 10 4B 14           - movss xmm1,[rbx+14] // z vector
+Atelier_Ryza.exe+662048: F3 0F 10 53 18           - movss xmm2,[rbx+18] // y vector
+Atelier_Ryza.exe+66204D: F3 0F 10 5B 1C           - movss xmm3,[rbx+1C] // always 0?
+Atelier_Ryza.exe+662052: F3 0F 58 4B 2C           - addss xmm1,[rbx+2C] // z coord
+Atelier_Ryza.exe+662057: F3 0F 58 53 30           - addss xmm2,[rbx+30] // y coord
+Atelier_Ryza.exe+66205C: F3 0F 58 5B 34           - addss xmm3,[rbx+34] // always 1?
+  movss xmm15, [rbx+10]  //x vector
+  movss [x_vector], xmm15
+  movss xmm15, [rbx+28]  //x coord
+  movss [x_coords], xmm15
+
+  movss xmm15, [rbx+14] //z vector
+  movss [xm1a], xmm15
+  movss xmm15, [rbx+18] //y vector
+  movss [xm2a], xmm15
+  movss xmm15, [rbx+1C]
+  movss [xm3a], xmm15
+
+  movss xmm15, [rbx+2c] // z coord
+  movss [xm1b], xmm15
+  movss xmm15, [rbx+30] // y coord
+  movss [xm2b], xmm15
+  movss xmm15, [rbx+34]
+  movss [xm3b], xmm15
+}
+
+newmem:
+  //save xmm
+  //vmovdqu [xm14_save1], xmm14
+  //vmovdqu [xm15_save1], xmm15
+
+  // display x
+  vmovss xmm15, [rbx+10]
+  vmovss [x_vector], xmm15
+
+  vmovss xmm15, [rbx+28]
+  vmovss [x_coords], xmm15
+
+  // display y
+  vmovss xmm15, [rbx+18]
+  vmovss [y_vector], xmm15
+
+  vmovss xmm15, [rbx+30]
+  vmovss [y_coords], xmm15
+
+  // display z
+  vmovss xmm15, [rbx+14]
+  vmovss [z_vector], xmm15
+
+  vmovss xmm15, [rbx+2c]
+  vmovss [z_coords], xmm15
+
+  //mulss xmm0 = x
+  //mulss xmm2 = y
+
+  vmovss xmm15, [speed_acc_factor]
+  vmovss xmm14, [rbx+10]
+  vmulss xmm14, xmm14, xmm15
+  vmovss [rbx+10], xmm14
+
+  vmovss xmm14, [rbx+18]
+  vmulss xmm14, xmm14, xmm15
+  vmovss [rbx+18], xmm14
+
+  //load xmm
+  //vmovdqu xmm14, [xm14_save1]
+  //vmovdqu xmm15, [xm15_save1]
+
+
+code:
+  movss xmm0,[rbx+10]
+  jmp return
+align 10 cc
+  x_vector:
+  dd 0
+  x_coords:
+  dd 0
+  y_vector:
+  dd 0
+  y_coords:
+  dd 0
+  z_vector:
+  dd 0
+  z_coords:
+  dd 0
+  speed_acc_factor:
+  dd (float)1.35
+  xm14_save1:
+  dq 0
+  xm14_save2:
+  dq 0
+  xm15_save1:
+  dq 0
+  xm15_save2:
+  dq 0
+
+INJECT_XYZ_COORDS:
+  jmp newmem
+return:
+registersymbol(INJECT_XYZ_COORDS)
+registersymbol(z_vector)
+registersymbol(z_coords)
+registersymbol(y_vector)
+registersymbol(y_coords)
+registersymbol(speed_acc_factor)
+registersymbol(x_vector)
+registersymbol(x_coords)
+
+[DISABLE]
+
+INJECT_XYZ_COORDS:
+  db F3 0F 10 43 10
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+662034
+
+Atelier_Ryza.exe+662008: 48 8B D9                 - mov rbx,rcx
+Atelier_Ryza.exe+66200B: E8 E0 1F 00 00           - call Atelier_Ryza.exe+663FF0
+Atelier_Ryza.exe+662010: 48 83 BB 88 00 00 00 00  - cmp qword ptr [rbx+00000088],00
+Atelier_Ryza.exe+662018: 76 16                    - jna Atelier_Ryza.exe+662030
+Atelier_Ryza.exe+66201A: F3 0F 10 0D 42 A2 3D 00  - movss xmm1,[Atelier_Ryza.exe+A3C264]
+Atelier_Ryza.exe+662022: 44 0F B6 C7              - movzx r8d,dil
+Atelier_Ryza.exe+662026: 48 8B CB                 - mov rcx,rbx
+Atelier_Ryza.exe+662029: E8 62 0C 00 00           - call Atelier_Ryza.exe+662C90
+Atelier_Ryza.exe+66202E: EB 04                    - jmp Atelier_Ryza.exe+662034
+Atelier_Ryza.exe+662030: C6 43 48 00              - mov byte ptr [rbx+48],00
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+662034: F3 0F 10 43 10           - movss xmm0,[rbx+10]
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+662039: 48 8D 54 24 20           - lea rdx,[rsp+20]
+Atelier_Ryza.exe+66203E: F3 0F 58 43 28           - addss xmm0,[rbx+28]
+Atelier_Ryza.exe+662043: F3 0F 10 4B 14           - movss xmm1,[rbx+14]
+Atelier_Ryza.exe+662048: F3 0F 10 53 18           - movss xmm2,[rbx+18]
+Atelier_Ryza.exe+66204D: F3 0F 10 5B 1C           - movss xmm3,[rbx+1C]
+Atelier_Ryza.exe+662052: F3 0F 58 4B 2C           - addss xmm1,[rbx+2C]
+Atelier_Ryza.exe+662057: F3 0F 58 53 30           - addss xmm2,[rbx+30]
+Atelier_Ryza.exe+66205C: F3 0F 58 5B 34           - addss xmm3,[rbx+34]
+Atelier_Ryza.exe+662061: 48 8B 4B 58              - mov rcx,[rbx+58]
+Atelier_Ryza.exe+662065: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Speed multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>speed_acc_factor</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"Vectors"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1</ID>
+              <Description>"X"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>x_vector</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2</ID>
+              <Description>"Y"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>y_vector</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"Z"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>z_vector</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"Coords"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>5</ID>
+              <Description>"X"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>x_coords</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"Y"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>y_coords</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>7</ID>
+              <Description>"Z"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Float</VariableType>
+              <Address>z_coords</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
