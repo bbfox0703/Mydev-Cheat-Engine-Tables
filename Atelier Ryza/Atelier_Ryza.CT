@@ -14,18 +14,402 @@ LuaCall(cycleFullCompact(nil,false))
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>33</ID>
-      <Description>"Cole"</Description>
-      <Color>FF8080</Color>
-      <VariableType>4 Bytes</VariableType>
-      <Address>Atelier_Ryza.exe+147D198</Address>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>0</ID>
-      <Description>"Walk/Run speed hack"</Description>
+      <ID>633</ID>
+      <Description>"Init. (v1.08) &lt;==== Enable after save loaded"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <Color>FF0000</Color>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Atelier_Ryza.exe
+      <AssemblerScript>[ENABLE]
+{$asm}
+define(container_base ,"Atelier_Ryza.exe"+14293E0)
+
+define(basket_base ,"Atelier_Ryza.exe"+1426050)
+
+define(drop_item_box ,"Atelier_Ryza.exe"+13F8A00)
+
+registersymbol(container_base)
+registersymbol(basket_base)
+registersymbol(drop_item_box)
+
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+
+--container address
+g_containerBaseAddress = getAddressSafe("Atelier_Ryza.exe")+0x14293E0 -- 1.08
+
+--basket address
+--*****************************************
+--!!!!Remember to change EDITOR scripts!!!!
+--*****************************************
+g_basketBaseAddress = getAddressSafe("Atelier_Ryza.exe")+0x1426050 -- 1.08
+
+--container size
+--Atelier_Ryza.exe+147D0FC
+g_containerSizeAddress = getAddressSafe("Atelier_Ryza.exe")+0x147D0FC
+MaxContainerCount = readSmallInteger(g_containerSizeAddress)
+
+--basket size
+g_dynBasketAddress = getAddressSafe("Atelier_Ryza.exe")+0x147D0BC
+MaxBasketCount = readSmallInteger(g_dynBasketAddress)
+
+getLuaEngine().MenuItem5.doClick()
+getLuaEngine().Close()
+
+local _dbg = true
+if (_dbg) then
+  AOBs = {
+    {["name"]="puni", ["aob"]="8B 0D ?? ?? ?? ?? 44 03 C1 48 8B AC 24", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="puni_base"},
+    {["name"]="alchemy_lv", ["aob"]="8B 15 ?? ?? ?? ?? 45 33 C0 48 8B C8", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="alchemy_lv_base"},
+    {["name"]="difficult", ["aob"]="89 05 ?? ?? ?? ?? EB 24 85 DB", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="difficult_base"},
+    {["name"]="cole", ["aob"]="01 1D ?? ?? ?? ?? B9 08 00 00 00 45 33 C0", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="cole_base"},
+  }
+
+
+  local a1 = 'n/a'
+  local a2 = 'n/a'
+  local a3 = 0
+  local a4 = 0
+  local a5 = 'n/a'
+
+  for k,v in pairs(AOBs) do
+    -- k = array seq.
+    for k1,v1 in pairs(v) do
+      if (k1 == 'name') then
+        a1 = v1
+      end
+      if (k1 == 'aob') then
+        a2 = v1
+      end
+      if (k1 == 'pos') then
+        a3 = v1
+      end
+      if (k1 == 'aoblen') then
+        a4 = v1
+      end
+      if (k1 == 'symbol') then
+        a5 = v1
+      end
+      --print(k1,v1)
+    end
+    local aob_addr_str = AOBScanModule('Atelier_Ryza.exe', a2, '+X-C-W')
+    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local name_addr_val = readInteger(name_addr_str)
+    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local final_addr_val = name_addr_val + aob_addr_val + a4
+    --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
+    registerSymbol(a5, final_addr_val)
+    --print('-------')
+  end
+end
+
+{$asm}
+
+
+[DISABLE]
+{$asm}
+unregistersymbol(container_base)
+unregistersymbol(basket_base)
+unregistersymbol(drop_item_box)
+{$lua}
+
+if syntaxcheck then return end
+local disable_array = {"puni_base", "alchemy_lv_base", "difficult_base", "cole_base",}
+local a_len = #(disable_array)
+local i = 0
+for i = 1, a_len do
+  --print(disable_array[i])
+  unregisterSymbol(disable_array[i])
+end
+
+getLuaEngine().Close()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>9520</ID>
+          <Description>"Turn some scripts On/Off"</Description>
+          <Color>4080FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Please load Atelier_Ryza.exe first")
+else
+
+  battle_array = {9525, 2217, 39, 637,
+                  609, 34, 0, 14, 573, 17, 22, 31, 43, 37, 2226, 2225, 2223, 9524
+                  }
+  --battle_array_value = {[607] = "0.749"}
+
+  local a_len = #(battle_array)
+
+  local i = 0
+
+  for i = 1, a_len do
+    getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
+  end
+
+
+--[[
+  --local v_len = #(battle_array_value)
+  local m1 = nil
+
+  for m_id, m_value in pairs(battle_array_value) do
+    m1 = getAddressList().getMemoryRecordByID(m_id)
+    if (m1) then
+      m1.Value = m_value
+    end
+  end
+--]]
+
+  print("Most scripts ON; Total " .. a_len .. " items.")
+end
+
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+
+local a_len = #(battle_array)
+
+local i = 0
+
+for i = 1, a_len do
+  getAddressList().getMemoryRecordByID(battle_array[i]).Active = false
+end
+
+print("Most scripts OFF.")
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>9526</ID>
+              <Description>"Notice: wait for seconds"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9521</ID>
+          <Description>"Turn all scripts off"</Description>
+          <Color>0080FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+
+
+local disable_array = {8, 609, 34, 0, 14, 573, 17, 22, 31, 43, 37, 2226, 2225, 2223, 2220, 2234, 11, 2218, 9524,
+                       2233, 2217, 39, 637, 604, 2195, 29, 9520, 10, 9525
+                       }
+
+local a_len = #(disable_array)
+
+local i = 0
+
+for i = 1, a_len do
+  --print(disable_array[i])
+  getAddressList().getMemoryRecordByID(disable_array[i]).Active = false
+end
+
+print("Turn all scripts off. Total: " .. a_len .. " items (and its sub-item(s)) checked.")
+[DISABLE]
+
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2233</ID>
+          <Description>"+Static values"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>33</ID>
+              <Description>"Cole"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>cole_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>610</ID>
+              <Description>"Gold Coins"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>cole_base+8</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9532</ID>
+              <Description>"Gems"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>Atelier_Ryza.exe+1423988</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2231</ID>
+              <Description>"Alchemy Lv"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>alchemy_lv_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2232</ID>
+              <Description>"Alchemy XP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>alchemy_lv_base+4</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9529</ID>
+              <Description>"Difficult"</Description>
+              <DropDownList DisplayValueAsItem="1">0:Easy
+1:Normal
+2:Hard
+3:Very Hard
+4:Charisma
+5:Legend
+6:Very Easy
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>difficult_base</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"Cole multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_COLE_MULTI,Atelier_Ryza.exe,8B D1 8B D9 85 C9) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_COLE_MULTI)
+
+label(code)
+label(return)
+label(vf_cole_income_multi)
+label(vf_battle_cole_discount_multi)
+
+newmem:
+  cmp ecx, 0
+  jl to_purchase
+  cvtsi2ss xmm15, ecx
+  vmovss xmm14, [vf_cole_income_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si ecx, xmm15
+  jmp endp
+
+to_purchase:
+  cvtsi2ss xmm15, ecx
+  vmovss xmm14, [vf_battle_cole_discount_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si ecx, xmm15
+  jmp endp
+
+
+endp:
+
+code:
+  mov edx,ecx
+  mov ebx,ecx
+  test ecx,ecx
+  jmp return
+align 10 cc
+  vf_cole_income_multi:
+  dd (float)1.5
+  vf_battle_cole_discount_multi:
+  dd (float)0.75
+
+INJECT_BATTLE_COLE_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_COLE_MULTI)
+registersymbol(vf_cole_income_multi)
+registersymbol(vf_battle_cole_discount_multi)
+[DISABLE]
+
+INJECT_BATTLE_COLE_MULTI:
+  db 8B D1 8B D9 85 C9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+41BA8D
+
+Atelier_Ryza.exe+41BA7A: CC                    - int 3 
+Atelier_Ryza.exe+41BA7B: CC                    - int 3 
+Atelier_Ryza.exe+41BA7C: CC                    - int 3 
+Atelier_Ryza.exe+41BA7D: CC                    - int 3 
+Atelier_Ryza.exe+41BA7E: CC                    - int 3 
+Atelier_Ryza.exe+41BA7F: CC                    - int 3 
+Atelier_Ryza.exe+41BA80: 48 89 5C 24 08        - mov [rsp+08],rbx
+Atelier_Ryza.exe+41BA85: 57                    - push rdi
+Atelier_Ryza.exe+41BA86: 48 83 EC 20           - sub rsp,20
+Atelier_Ryza.exe+41BA8A: 0F B6 FA              - movzx edi,dl
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+41BA8D: 8B D1                 - mov edx,ecx
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+41BA8F: 8B D9                 - mov ebx,ecx
+Atelier_Ryza.exe+41BA91: 85 C9                 - test ecx,ecx
+Atelier_Ryza.exe+41BA93: 7E 2D                 - jle Atelier_Ryza.exe+41BAC2
+Atelier_Ryza.exe+41BA95: 44 8B 05 FC 16 06 01  - mov r8d,[Atelier_Ryza.exe+147D198]
+Atelier_Ryza.exe+41BA9C: 41 BA 3F 42 0F 00     - mov r10d,000F423F
+Atelier_Ryza.exe+41BAA2: 44 2B D1              - sub r10d,ecx
+Atelier_Ryza.exe+41BAA5: B8 3F 42 0F 00        - mov eax,000F423F
+Atelier_Ryza.exe+41BAAA: 45 3B C2              - cmp r8d,r10d
+Atelier_Ryza.exe+41BAAD: 46 8D 0C 01           - lea r9d,[rcx+r8]
+Atelier_Ryza.exe+41BAB1: B9 09 00 00 00        - mov ecx,00000009
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>35</ID>
+              <Description>"Multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_cole_income_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2194</ID>
+              <Description>"Purchase discount factor"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_battle_cole_discount_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>0</ID>
+          <Description>"Walk/Run speed hack"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -191,54 +575,54 @@ Atelier_Ryza.exe+662061: 48 8B 4B 58              - mov rcx,[rbx+58]
 Atelier_Ryza.exe+662065: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>9</ID>
-          <Description>"Speed multiplier"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>C08000</Color>
-          <VariableType>Float</VariableType>
-          <Address>speed_acc_factor</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>8</ID>
-          <Description>"Coords"</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>5</ID>
-              <Description>"X"</Description>
+              <ID>9</ID>
+              <Description>"Speed multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
+              <Color>C08000</Color>
               <VariableType>Float</VariableType>
-              <Address>x_coords</Address>
+              <Address>speed_acc_factor</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>6</ID>
-              <Description>"Y"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>Float</VariableType>
-              <Address>y_coords</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>7</ID>
-              <Description>"Z"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>Float</VariableType>
-              <Address>z_coords</Address>
+              <ID>8</ID>
+              <Description>"Coords"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>5</ID>
+                  <Description>"X"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>x_coords</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>6</ID>
+                  <Description>"Y"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>y_coords</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>7</ID>
+                  <Description>"Z"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>z_coords</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>14</ID>
-      <Description>"Recover HP after battle"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Atelier_Ryza.exe
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"Recover HP after battle"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -305,19 +689,1231 @@ Atelier_Ryza.exe+3B7DC4: 83 79 10 00           - cmp dword ptr [rcx+10],00
 Atelier_Ryza.exe+3B7DC8: 7D 23                 - jnl Atelier_Ryza.exe+3B7DED
 }
 </AssemblerScript>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>39</ID>
-      <Description>"+Battle scripts"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
+        </CheatEntry>
         <CheatEntry>
-          <ID>17</ID>
-          <Description>"Battle: HP/Stun gauge"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+          <ID>604</ID>
+          <Description>"Item Editor (choose one)"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <Color>FF80FF</Color>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>51</ID>
+              <Description>"アイテムエディター -日本語 -"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-12
+  Author : bbfox@https://opencheattables.com
+}
+// 66 bytes per record
+// Container start = Atelier_Ryza.exe+14293E0
+// max container no = 5000
+[ENABLE]
+
+aobscanmodule(INJECT_ITEM_EDITOR,Atelier_Ryza.exe,0F 10 07 48 8B CF 0F 11 83) // should be unique
+alloc(newmem,$1000,INJECT_ITEM_EDITOR)
+
+label(code)
+label(return)
+label(container_base_addr)
+
+newmem:
+  mov [container_base_addr], rdi
+
+code:
+  movups xmm0,[rdi]
+  mov rcx,rdi
+  jmp return
+align 10 cc
+  container_base_addr:
+  dq 0
+
+INJECT_ITEM_EDITOR:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_ITEM_EDITOR)
+registersymbol(container_base_addr)
+
+[DISABLE]
+
+INJECT_ITEM_EDITOR:
+  db 0F 10 07 48 8B CF
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+396CCF
+
+Atelier_Ryza.exe+396CAA: 48 8B FA              - mov rdi,rdx
+Atelier_Ryza.exe+396CAD: 48 8B D9              - mov rbx,rcx
+Atelier_Ryza.exe+396CB0: 48 85 D2              - test rdx,rdx
+Atelier_Ryza.exe+396CB3: 74 68                 - je Atelier_Ryza.exe+396D1D
+Atelier_Ryza.exe+396CB5: 48 83 C2 02           - add rdx,02
+Atelier_Ryza.exe+396CB9: 48 81 C1 1E 01 00 00  - add rcx,0000011E
+Atelier_Ryza.exe+396CC0: 41 B8 40 00 00 00     - mov r8d,00000040
+Atelier_Ryza.exe+396CC6: E8 B5 58 61 00        - call Atelier_Ryza.exe+9AC580
+Atelier_Ryza.exe+396CCB: 85 C0                 - test eax,eax
+Atelier_Ryza.exe+396CCD: 74 7D                 - je Atelier_Ryza.exe+396D4C
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+396CCF: 0F 10 07              - movups xmm0,[rdi]
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+396CD2: 48 8B CF              - mov rcx,rdi
+Atelier_Ryza.exe+396CD5: 0F 11 83 1C 01 00 00  - movups [rbx+0000011C],xmm0
+Atelier_Ryza.exe+396CDC: 0F 10 4F 10           - movups xmm1,[rdi+10]
+Atelier_Ryza.exe+396CE0: 0F 11 8B 2C 01 00 00  - movups [rbx+0000012C],xmm1
+Atelier_Ryza.exe+396CE7: 0F 10 47 20           - movups xmm0,[rdi+20]
+Atelier_Ryza.exe+396CEB: 0F 11 83 3C 01 00 00  - movups [rbx+0000013C],xmm0
+Atelier_Ryza.exe+396CF2: 0F 10 4F 30           - movups xmm1,[rdi+30]
+Atelier_Ryza.exe+396CF6: 0F 11 8B 4C 01 00 00  - movups [rbx+0000014C],xmm1
+Atelier_Ryza.exe+396CFD: 0F B7 47 40           - movzx eax,word ptr [rdi+40]
+Atelier_Ryza.exe+396D01: 66 89 83 5C 01 00 00  - mov [rbx+0000015C],ax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>635</ID>
+                  <Description>"Duplicate highlighted item (3x) to container (v1.08 only)"</Description>
+                  <Color>FF0080</Color>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+
+if memrec then print(memrec.Description) end
+print("Start")
+
+itemBaseAddr=readPointer("container_base_addr") --higlighted item base addr
+print("Source item addr: " .. string.format("%08X", itemBaseAddr))
+if (itemBaseAddr == 0) then
+  print("Please select item first")
+  return
+end
+
+srcQualityAddress = itemBaseAddr
+
+--getLuaEngine().MenuItem5.doClick()
+
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Atelier_Ryza.exe?")
+else
+  --Author : bbfox@ https://opencheattables.com/
+  --local containerBaseAddress = getAddressSafe("Atelier_Ryza.exe")+0x?????
+  local containerBaseAddress = g_containerBaseAddress
+
+  print("Container addr: " .. string.format("%08X", containerBaseAddress))
+
+  local isFound = false
+  local IsBypass = false
+  local prevID0 = 1
+  local currentID0 = 0
+  local currentQlty = 0
+  local theQuality = 0 -- for duplicate destionation, quality should not the same if not in 999
+  local dupCount = 3
+
+  local currentQualityAddress = containerBaseAddress --base item address
+  local MaxCount = MaxContainerCount
+
+  local prevQualityAddress = currentQualityAddress
+
+  --set Quality address
+  currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+
+  if (IsBypass == false)
+  then
+    for i = 1, MaxCount-5, 1
+    do
+      if (isFound == false)
+      then
+        currentID0 = readSmallInteger(currentQualityAddress)
+
+        if (currentID0 == 65535 and i &gt; 1)
+        then
+          print("Found empty slot in position #", i, ", address: #", string.format("%X", prevQualityAddress) .. ", src quality: " ..  currentQlty)
+          isFound = true
+          for i1 = 1, dupCount, 1
+          do
+            print("#", i1, ", addr: ", string.format("%X", currentQualityAddress), ", New ID: ", prevID0 + 1)
+            for i2 = 0, ItemRecordSize-1, 1
+            do
+              if (i2 == 0)
+              then
+                -- 0~1: item id
+                prevID0 = prevID0 + 1
+                writeSmallInteger(currentQualityAddress, prevID0)
+              end
+              if ((i2 &gt; 1) and (i2 &lt; 4)) -- bypass offset 1 because already written; bytes before quality
+              then
+                --theByte = barray[i2]
+                --print(string.format("%02X", theByte))
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+
+              if (i2 == 4) -- Quality part; read once and write twice; bypass 7,8,9 offset
+              then --Quality different than source to avoid game bug.
+                theQuality = currentQlty
+
+                if (theQuality &lt; (999 - dupCount)) then
+                  theQuality = theQuality + i1
+                  print("new quality ".. theQuality)
+                else
+                  theQuality = theQuality - i1
+                  print("new quality ".. theQuality)
+                end
+                writeSmallInteger(currentQualityAddress + 0x4, theQuality)
+                --writeSmallInteger(currentQualityAddress + 0x6, theQuality)
+              end
+
+
+              if (i2 &gt; 5) -- rest part
+              then
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+            end
+            prevQualityAddress = currentQualityAddress
+            currentQualityAddress = currentQualityAddress + ItemRecordSize
+            currentID0 = prevID0
+          end
+        end
+
+        prevID0 = currentID0
+        currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+        prevQualityAddress = currentQualityAddress
+        currentQualityAddress = currentQualityAddress + ItemRecordSize
+      else
+        break
+      end
+    end
+  end
+
+  print("Done")
+end
+
+{$asm}
+
+[DISABLE]
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>52</ID>
+                  <Description>"Base addr."</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>53</ID>
+                  <Description>"シリアルナンバー"</Description>
+                  <DropDownListLink>-Item ID-Ja</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>54</ID>
+                  <Description>"アイテムID"</Description>
+                  <DropDownListLink>-Item ID-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>56</ID>
+                  <Description>"品質"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>4</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>59</ID>
+                  <Description>"??"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>6</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>57</ID>
+                  <Description>"LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>60</ID>
+                  <Description>"元のLV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>9</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>58</ID>
+                  <Description>"調合可"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>61</ID>
+                  <Description>"??"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Binary</VariableType>
+                  <BitStart>0</BitStart>
+                  <BitLength>8</BitLength>
+                  <ShowAsBinary>0</ShowAsBinary>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>B</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>62</ID>
+                  <Description>"??"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>63</ID>
+                  <Description>"効果1"</Description>
+                  <DropDownListLink>-Effects-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>E</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>64</ID>
+                  <Description>"効果2"</Description>
+                  <DropDownListLink>-Effects-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>65</ID>
+                  <Description>"効果3"</Description>
+                  <DropDownListLink>-Effects-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>12</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"効果4"</Description>
+                  <DropDownListLink>-Effects-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>14</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>67</ID>
+                  <Description>"特性スロット数"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Binary</VariableType>
+                  <BitStart>2</BitStart>
+                  <BitLength>5</BitLength>
+                  <ShowAsBinary>0</ShowAsBinary>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>B</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>68</ID>
+                  <Description>"特性1"</Description>
+                  <DropDownListLink>-Traits-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>16</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>69</ID>
+                  <Description>"特性2"</Description>
+                  <DropDownListLink>-Traits-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>70</ID>
+                  <Description>"特性3"</Description>
+                  <DropDownListLink>-Traits-Ja</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>71</ID>
+                  <Description>"特性1 LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>72</ID>
+                  <Description>"特性2 LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1D</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>73</ID>
+                  <Description>"特性3 LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1E</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>570</ID>
+                  <Description>"+Equip modifier"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>480</ID>
+                      <Description>"HP+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>569</ID>
+                      <Description>"ATK+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>367</ID>
+                      <Description>"Def+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>26</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>368</ID>
+                      <Description>"SPD+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>369</ID>
+                      <Description>"Offense+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2A</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>370</ID>
+                      <Description>"Defense+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>371</ID>
+                      <Description>"Support+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>574</ID>
+              <Description>"Item Editor - English -"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-12
+  Author : bbfox@https://opencheattables.com
+}
+// 66 bytes per record
+// Container start = Atelier_Ryza.exe+14293E0
+// max container no = 5000
+[ENABLE]
+
+aobscanmodule(INJECT_ITEM_EDITOR,Atelier_Ryza.exe,0F 10 07 48 8B CF 0F 11 83) // should be unique
+alloc(newmem,$1000,INJECT_ITEM_EDITOR)
+
+label(code)
+label(return)
+label(container_base_addr)
+
+newmem:
+  mov [container_base_addr], rdi
+
+code:
+  movups xmm0,[rdi]
+  mov rcx,rdi
+  jmp return
+align 10 cc
+  container_base_addr:
+  dq 0
+
+INJECT_ITEM_EDITOR:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_ITEM_EDITOR)
+registersymbol(container_base_addr)
+
+[DISABLE]
+
+INJECT_ITEM_EDITOR:
+  db 0F 10 07 48 8B CF
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+396CCF
+
+Atelier_Ryza.exe+396CAA: 48 8B FA              - mov rdi,rdx
+Atelier_Ryza.exe+396CAD: 48 8B D9              - mov rbx,rcx
+Atelier_Ryza.exe+396CB0: 48 85 D2              - test rdx,rdx
+Atelier_Ryza.exe+396CB3: 74 68                 - je Atelier_Ryza.exe+396D1D
+Atelier_Ryza.exe+396CB5: 48 83 C2 02           - add rdx,02
+Atelier_Ryza.exe+396CB9: 48 81 C1 1E 01 00 00  - add rcx,0000011E
+Atelier_Ryza.exe+396CC0: 41 B8 40 00 00 00     - mov r8d,00000040
+Atelier_Ryza.exe+396CC6: E8 B5 58 61 00        - call Atelier_Ryza.exe+9AC580
+Atelier_Ryza.exe+396CCB: 85 C0                 - test eax,eax
+Atelier_Ryza.exe+396CCD: 74 7D                 - je Atelier_Ryza.exe+396D4C
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+396CCF: 0F 10 07              - movups xmm0,[rdi]
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+396CD2: 48 8B CF              - mov rcx,rdi
+Atelier_Ryza.exe+396CD5: 0F 11 83 1C 01 00 00  - movups [rbx+0000011C],xmm0
+Atelier_Ryza.exe+396CDC: 0F 10 4F 10           - movups xmm1,[rdi+10]
+Atelier_Ryza.exe+396CE0: 0F 11 8B 2C 01 00 00  - movups [rbx+0000012C],xmm1
+Atelier_Ryza.exe+396CE7: 0F 10 47 20           - movups xmm0,[rdi+20]
+Atelier_Ryza.exe+396CEB: 0F 11 83 3C 01 00 00  - movups [rbx+0000013C],xmm0
+Atelier_Ryza.exe+396CF2: 0F 10 4F 30           - movups xmm1,[rdi+30]
+Atelier_Ryza.exe+396CF6: 0F 11 8B 4C 01 00 00  - movups [rbx+0000014C],xmm1
+Atelier_Ryza.exe+396CFD: 0F B7 47 40           - movzx eax,word ptr [rdi+40]
+Atelier_Ryza.exe+396D01: 66 89 83 5C 01 00 00  - mov [rbx+0000015C],ax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>636</ID>
+                  <Description>"Duplicate highlighted item (3x) to container (v1.08 only)"</Description>
+                  <Color>FF0080</Color>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+
+if memrec then print(memrec.Description) end
+print("Start")
+
+itemBaseAddr=readPointer("container_base_addr") --higlighted item base addr
+print("Source item addr: " .. string.format("%08X", itemBaseAddr))
+if (itemBaseAddr == 0) then
+  print("Please select item first")
+  return
+end
+
+srcQualityAddress = itemBaseAddr
+
+--getLuaEngine().MenuItem5.doClick()
+
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Atelier_Ryza.exe?")
+else
+  --Author : bbfox@ https://opencheattables.com/
+  --local containerBaseAddress = getAddressSafe("Atelier_Ryza.exe")+0x?????
+  local containerBaseAddress = g_containerBaseAddress
+
+  print("Container addr: " .. string.format("%08X", containerBaseAddress))
+
+  local isFound = false
+  local IsBypass = false
+  local prevID0 = 1
+  local currentID0 = 0
+  local currentQlty = 0
+  local theQuality = 0 -- for duplicate destionation, quality should not the same if not in 999
+  local dupCount = 3
+
+  local currentQualityAddress = containerBaseAddress --base item address
+  local MaxCount = MaxContainerCount
+
+  local prevQualityAddress = currentQualityAddress
+
+  --set Quality address
+  currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+
+  if (IsBypass == false)
+  then
+    for i = 1, MaxCount-5, 1
+    do
+      if (isFound == false)
+      then
+        currentID0 = readSmallInteger(currentQualityAddress)
+
+        if (currentID0 == 65535 and i &gt; 1)
+        then
+          print("Found empty slot in position #", i, ", address: #", string.format("%X", prevQualityAddress) .. ", src quality: " ..  currentQlty)
+          isFound = true
+          for i1 = 1, dupCount, 1
+          do
+            print("#", i1, ", addr: ", string.format("%X", currentQualityAddress), ", New ID: ", prevID0 + 1)
+            for i2 = 0, ItemRecordSize-1, 1
+            do
+              if (i2 == 0)
+              then
+                -- 0~1: item id
+                prevID0 = prevID0 + 1
+                writeSmallInteger(currentQualityAddress, prevID0)
+              end
+              if ((i2 &gt; 1) and (i2 &lt; 4)) -- bypass offset 1 because already written; bytes before quality
+              then
+                --theByte = barray[i2]
+                --print(string.format("%02X", theByte))
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+
+              if (i2 == 4) -- Quality part; read once and write twice; bypass 7,8,9 offset
+              then --Quality different than source to avoid game bug.
+                theQuality = currentQlty
+
+                if (theQuality &lt; (999 - dupCount)) then
+                  theQuality = theQuality + i1
+                  print("new quality ".. theQuality)
+                else
+                  theQuality = theQuality - i1
+                  print("new quality ".. theQuality)
+                end
+                writeSmallInteger(currentQualityAddress + 0x4, theQuality)
+                --writeSmallInteger(currentQualityAddress + 0x6, theQuality)
+              end
+
+
+              if (i2 &gt; 5) -- rest part
+              then
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+            end
+            prevQualityAddress = currentQualityAddress
+            currentQualityAddress = currentQualityAddress + ItemRecordSize
+            currentID0 = prevID0
+          end
+        end
+
+        prevID0 = currentID0
+        currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+        prevQualityAddress = currentQualityAddress
+        currentQualityAddress = currentQualityAddress + ItemRecordSize
+      else
+        break
+      end
+    end
+  end
+
+  print("Done")
+end
+
+{$asm}
+
+[DISABLE]
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>575</ID>
+                  <Description>"Base addr."</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>576</ID>
+                  <Description>"Sequence"</Description>
+                  <DropDownListLink>-Item ID-Ja</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>577</ID>
+                  <Description>"ID"</Description>
+                  <DropDownListLink>-Item ID-En</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>578</ID>
+                  <Description>"Quality"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>4</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>579</ID>
+                  <Description>"??"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>6</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>580</ID>
+                  <Description>"LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>581</ID>
+                  <Description>"Original LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>9</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>582</ID>
+                  <Description>"Synthesizable?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>583</ID>
+                  <Description>"??"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Binary</VariableType>
+                  <BitStart>0</BitStart>
+                  <BitLength>8</BitLength>
+                  <ShowAsBinary>0</ShowAsBinary>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>B</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>584</ID>
+                  <Description>"??"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>585</ID>
+                  <Description>"Effect 1"</Description>
+                  <DropDownListLink>-Effects-En</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>E</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>586</ID>
+                  <Description>"Effect 2"</Description>
+                  <DropDownListLink>-Effects-En</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>587</ID>
+                  <Description>"Effect 3"</Description>
+                  <DropDownListLink>-Effects-En</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>12</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>588</ID>
+                  <Description>"Effect 4"</Description>
+                  <DropDownListLink>-Effects-En</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>14</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>589</ID>
+                  <Description>"Trait slots"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Binary</VariableType>
+                  <BitStart>2</BitStart>
+                  <BitLength>5</BitLength>
+                  <ShowAsBinary>0</ShowAsBinary>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>B</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>590</ID>
+                  <Description>"Trait 1"</Description>
+                  <DropDownListLink>-Traits-En</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>16</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>591</ID>
+                  <Description>"Trait 2"</Description>
+                  <DropDownListLink>-Traits-En</DropDownListLink>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>592</ID>
+                  <Description>"Trait 3"</Description>
+                  <DropDownListLink>-Traits-En</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>593</ID>
+                  <Description>"Trait 1 LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>594</ID>
+                  <Description>"Trait 2 LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1D</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>595</ID>
+                  <Description>"Trait 3 LV"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>container_base_addr</Address>
+                  <Offsets>
+                    <Offset>1E</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>596</ID>
+                  <Description>"+Equip modifier"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>597</ID>
+                      <Description>"HP+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>20</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>598</ID>
+                      <Description>"ATK+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>599</ID>
+                      <Description>"Def+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>26</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>600</ID>
+                      <Description>"SPD+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>601</ID>
+                      <Description>"Offense+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2A</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>602</ID>
+                      <Description>"Defense+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>603</ID>
+                      <Description>"Support+"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2217</ID>
+          <Description>"+Party quests (choose one)"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>573</ID>
+              <Description>"Faster party quests"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_PARTY_TASKS,Atelier_Ryza.exe,44 89 04 88 C3) // should be unique
+alloc(newmem,$1000,INJECT_PARTY_TASKS)
+
+label(code)
+label(return)
+
+newmem:
+  cmp r8d, #1    //skip count 1 to avoid bug
+  je short endp
+  cmp r8d, #2
+  jne next1
+  mov r8d, #10   // if count = 2 then set count to 10
+  jmp short endp
+next1:
+  cmp r8d, #11
+  jne short next2
+  mov r8d, #15   // if count = 11 then set count to 15
+
+next2:
+  cmp r8d, #16
+  jne short endp
+  mov r8d, #20   // if count = 11 then set count to 15
+
+endp:
+
+
+code:
+  mov [rax+rcx*4],r8d
+  ret 
+  jmp return
+
+INJECT_PARTY_TASKS:
+  jmp newmem
+return:
+registersymbol(INJECT_PARTY_TASKS)
+
+[DISABLE]
+
+INJECT_PARTY_TASKS:
+  db 44 89 04 88 C3
+
+unregistersymbol(INJECT_PARTY_TASKS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+2F50E1
+
+Atelier_Ryza.exe+2F50CA: CC                    - int 3 
+Atelier_Ryza.exe+2F50CB: CC                    - int 3 
+Atelier_Ryza.exe+2F50CC: CC                    - int 3 
+Atelier_Ryza.exe+2F50CD: CC                    - int 3 
+Atelier_Ryza.exe+2F50CE: CC                    - int 3 
+Atelier_Ryza.exe+2F50CF: CC                    - int 3 
+Atelier_Ryza.exe+2F50D0: 48 63 C2              - movsxd  rax,edx
+Atelier_Ryza.exe+2F50D3: 4C 63 C9              - movsxd  r9,ecx
+Atelier_Ryza.exe+2F50D6: 4A 8D 0C 88           - lea rcx,[rax+r9*4]
+Atelier_Ryza.exe+2F50DA: 48 8D 05 4F 77 10 01  - lea rax,[Atelier_Ryza.exe+13FC830]
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+2F50E1: 44 89 04 88           - mov [rax+rcx*4],r8d
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+2F50E5: C3                    - ret 
+Atelier_Ryza.exe+2F50E6: CC                    - int 3 
+Atelier_Ryza.exe+2F50E7: CC                    - int 3 
+Atelier_Ryza.exe+2F50E8: CC                    - int 3 
+Atelier_Ryza.exe+2F50E9: CC                    - int 3 
+Atelier_Ryza.exe+2F50EA: CC                    - int 3 
+Atelier_Ryza.exe+2F50EB: CC                    - int 3 
+Atelier_Ryza.exe+2F50EC: CC                    - int 3 
+Atelier_Ryza.exe+2F50ED: CC                    - int 3 
+Atelier_Ryza.exe+2F50EE: CC                    - int 3 
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2218</ID>
+              <Description>"Fastest party quests (may cause bug)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_PARTY_TASKS,Atelier_Ryza.exe,44 89 04 88 C3) // should be unique
+alloc(newmem,$1000,INJECT_PARTY_TASKS)
+
+label(code)
+label(return)
+
+newmem:
+  mov r8d, 3E7
+
+endp:
+
+
+code:
+  mov [rax+rcx*4],r8d
+  ret 
+  jmp return
+
+INJECT_PARTY_TASKS:
+  jmp newmem
+return:
+registersymbol(INJECT_PARTY_TASKS)
+
+[DISABLE]
+
+INJECT_PARTY_TASKS:
+  db 44 89 04 88 C3
+
+unregistersymbol(INJECT_PARTY_TASKS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+2F50E1
+
+Atelier_Ryza.exe+2F50CA: CC                    - int 3 
+Atelier_Ryza.exe+2F50CB: CC                    - int 3 
+Atelier_Ryza.exe+2F50CC: CC                    - int 3 
+Atelier_Ryza.exe+2F50CD: CC                    - int 3 
+Atelier_Ryza.exe+2F50CE: CC                    - int 3 
+Atelier_Ryza.exe+2F50CF: CC                    - int 3 
+Atelier_Ryza.exe+2F50D0: 48 63 C2              - movsxd  rax,edx
+Atelier_Ryza.exe+2F50D3: 4C 63 C9              - movsxd  r9,ecx
+Atelier_Ryza.exe+2F50D6: 4A 8D 0C 88           - lea rcx,[rax+r9*4]
+Atelier_Ryza.exe+2F50DA: 48 8D 05 4F 77 10 01  - lea rax,[Atelier_Ryza.exe+13FC830]
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+2F50E1: 44 89 04 88           - mov [rax+rcx*4],r8d
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+2F50E5: C3                    - ret 
+Atelier_Ryza.exe+2F50E6: CC                    - int 3 
+Atelier_Ryza.exe+2F50E7: CC                    - int 3 
+Atelier_Ryza.exe+2F50E8: CC                    - int 3 
+Atelier_Ryza.exe+2F50E9: CC                    - int 3 
+Atelier_Ryza.exe+2F50EA: CC                    - int 3 
+Atelier_Ryza.exe+2F50EB: CC                    - int 3 
+Atelier_Ryza.exe+2F50EC: CC                    - int 3 
+Atelier_Ryza.exe+2F50ED: CC                    - int 3 
+Atelier_Ryza.exe+2F50EE: CC                    - int 3 
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"+Battle scripts"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <Color>008000</Color>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>17</ID>
+              <Description>"Battle: HP/Stun gauge"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfopx@https://opencheattables.com
@@ -374,7 +1970,13 @@ check_mp:
 
 
 endp:
-
+  db EB 3B 54
+  db 68 69 73 20 74 61
+  db 62 6C 65 20 63 6F 6D
+  db 65 73 20
+  db 66 72 6F 6D 20 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61 74 74 61 62
+  db 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
 code:
   mov ebp,[rcx+r13*4+00000108]
   jmp return
@@ -386,7 +1988,7 @@ align 10 cc
   vf_06:
   dd (float)0.6
   vf_battle_hp_percent:
-  dd (float)0.6
+  dd (float)0.333334
 
 INJECT_BATTLE_HPMP:
   jmp newmem
@@ -432,46 +2034,46 @@ Atelier_Ryza.exe+21E3CA: 4D 89 73 E0              - mov [r11-20],r14
 Atelier_Ryza.exe+21E3CE: 4D 89 7B D8              - mov [r11-28],r15
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>18</ID>
-              <Description>"Player HP option"</Description>
-              <DropDownList DisplayValueAsItem="1">0:None
-1:Try to keep 60%
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>18</ID>
+                  <Description>"Player HP option"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:None
+1:Try to keep as specified
 2:Try to keep full
 </DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_battle_hp_option</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>40</ID>
-              <Description>"Min. HP % (for HP option 1)"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_battle_hp_percent</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>19</ID>
-              <Description>"Player stun gauge option"</Description>
-              <DropDownList DisplayValueAsItem="1">0:None
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_hp_option</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>40</ID>
+                  <Description>"Min. HP % (for HP option 1)"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_battle_hp_percent</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>19</ID>
+                  <Description>"Player stun gauge option"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:None
 1:Full
 </DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_battle_break_option</Address>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_break_option</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>22</ID>
-          <Description>"Battle: AP increase multiplier"</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+            <CheatEntry>
+              <ID>22</ID>
+              <Description>"Battle: AP increase multiplier"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -555,148 +2157,81 @@ Atelier_Ryza.exe+8A87: 48 8B 4B 28           - mov rcx,[rbx+28]
 Atelier_Ryza.exe+8A8B: 44 8B C6              - mov r8d,esi
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>23</ID>
-              <Description>"Multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_battle_ap_multi</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>28</ID>
-              <Description>"+Info"</Description>
-              <Options moHideChildren="1"/>
-              <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>30</ID>
-                  <Description>"Available during battle"</Description>
-                  <Color>8000FF</Color>
+                  <ID>23</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_battle_ap_multi</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28</ID>
+                  <Description>"+Info"</Description>
+                  <Options moHideChildren="1"/>
                   <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>24</ID>
-                  <Description>"AP"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_battleinfo_addr</Address>
-                  <Offsets>
-                    <Offset>10</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>25</ID>
-                  <Description>"AP Limit"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_battleinfo_addr</Address>
-                  <Offsets>
-                    <Offset>14</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>26</ID>
-                  <Description>"Tactics Lv"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_battleinfo_addr</Address>
-                  <Offsets>
-                    <Offset>6C</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>27</ID>
-                  <Description>"Tactics Lv"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_battleinfo_addr</Address>
-                  <Offsets>
-                    <Offset>74</Offset>
-                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>30</ID>
+                      <Description>"Available during battle"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>24</ID>
+                      <Description>"AP"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_battleinfo_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>25</ID>
+                      <Description>"AP Limit"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_battleinfo_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>26</ID>
+                      <Description>"Tactics Lv"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_battleinfo_addr</Address>
+                      <Offsets>
+                        <Offset>6C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>27</ID>
+                      <Description>"Tactics Lv"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_battleinfo_addr</Address>
+                      <Offsets>
+                        <Offset>74</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>42</ID>
-          <Description>"Battle: MP does not decrease"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
-  Version: 
-  Date   : 2022-11-12
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_BATTLE_MP,Atelier_Ryza.exe,29 91 10 01 00 00) // should be unique
-alloc(newmem,$1000,INJECT_BATTLE_MP)
-
-label(code)
-label(return)
-
-newmem:
-
-code:
-  //sub [rcx+00000110],edx
-  jmp return
-
-INJECT_BATTLE_MP:
-  jmp newmem
-  nop
-return:
-registersymbol(INJECT_BATTLE_MP)
-
-[DISABLE]
-
-INJECT_BATTLE_MP:
-  db 29 91 10 01 00 00
-
-unregistersymbol(INJECT_BATTLE_MP)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+219DCA
-
-Atelier_Ryza.exe+219DB9: 5B                             - pop rbx
-Atelier_Ryza.exe+219DBA: C3                             - ret 
-Atelier_Ryza.exe+219DBB: CC                             - int 3 
-Atelier_Ryza.exe+219DBC: CC                             - int 3 
-Atelier_Ryza.exe+219DBD: CC                             - int 3 
-Atelier_Ryza.exe+219DBE: CC                             - int 3 
-Atelier_Ryza.exe+219DBF: CC                             - int 3 
-Atelier_Ryza.exe+219DC0: 48 89 5C 24 08                 - mov [rsp+08],rbx
-Atelier_Ryza.exe+219DC5: 57                             - push rdi
-Atelier_Ryza.exe+219DC6: 48 83 EC 30                    - sub rsp,30
-// ---------- INJECTING HERE ----------
-Atelier_Ryza.exe+219DCA: 29 91 10 01 00 00              - sub [rcx+00000110],edx
-// ---------- DONE INJECTING  ----------
-Atelier_Ryza.exe+219DD0: 8B FA                          - mov edi,edx
-Atelier_Ryza.exe+219DD2: 83 B9 10 01 00 00 00           - cmp dword ptr [rcx+00000110],00
-Atelier_Ryza.exe+219DD9: 48 8B D9                       - mov rbx,rcx
-Atelier_Ryza.exe+219DDC: 7D 0A                          - jnl Atelier_Ryza.exe+219DE8
-Atelier_Ryza.exe+219DDE: C7 81 10 01 00 00 00 00 00 00  - mov [rcx+00000110],00000000
-Atelier_Ryza.exe+219DE8: 85 FF                          - test edi,edi
-Atelier_Ryza.exe+219DEA: 74 7F                          - je Atelier_Ryza.exe+219E6B
-Atelier_Ryza.exe+219DEC: 48 8B 01                       - mov rax,[rcx]
-Atelier_Ryza.exe+219DEF: BA 9A 00 00 00                 - mov edx,0000009A
-Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+000001D0]
-}
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>31</ID>
-          <Description>"Battle: AP decrease multiplier"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+            <CheatEntry>
+              <ID>31</ID>
+              <Description>"Battle: AP decrease multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -768,113 +2303,23 @@ Atelier_Ryza.exe+8B75: E9 26 A0 45 00        - jmp Atelier_Ryza.exe+462BA0
 Atelier_Ryza.exe+8B7A: C3                    - ret 
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>32</ID>
-              <Description>"Multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_battle_ap_dec_multi</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>32</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_battle_ap_dec_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>34</ID>
-          <Description>"Battle: Cole multiplier"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
-  Version: 
-  Date   : 2022-11-12
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_BATTLE_COLE_MULTI,Atelier_Ryza.exe,8B D1 8B D9 85 C9) // should be unique
-alloc(newmem,$1000,INJECT_BATTLE_COLE_MULTI)
-
-label(code)
-label(return)
-label(vf_battle_cole_multi)
-
-newmem:
-  cvtsi2ss xmm15, ecx
-  vmovss xmm14, [vf_battle_cole_multi]
-  vmulss xmm15, xmm15, xmm14
-  vcvtss2si ecx, xmm15
-
-code:
-  mov edx,ecx
-  mov ebx,ecx
-  test ecx,ecx
-  jmp return
-align 10 cc
-  vf_battle_cole_multi:
-  dd (float)1.5
-
-
-INJECT_BATTLE_COLE_MULTI:
-  jmp newmem
-  nop
-return:
-registersymbol(INJECT_BATTLE_COLE_MULTI)
-registersymbol(vf_battle_cole_multi)
-
-[DISABLE]
-
-INJECT_BATTLE_COLE_MULTI:
-  db 8B D1 8B D9 85 C9
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+41BA8D
-
-Atelier_Ryza.exe+41BA7A: CC                    - int 3 
-Atelier_Ryza.exe+41BA7B: CC                    - int 3 
-Atelier_Ryza.exe+41BA7C: CC                    - int 3 
-Atelier_Ryza.exe+41BA7D: CC                    - int 3 
-Atelier_Ryza.exe+41BA7E: CC                    - int 3 
-Atelier_Ryza.exe+41BA7F: CC                    - int 3 
-Atelier_Ryza.exe+41BA80: 48 89 5C 24 08        - mov [rsp+08],rbx
-Atelier_Ryza.exe+41BA85: 57                    - push rdi
-Atelier_Ryza.exe+41BA86: 48 83 EC 20           - sub rsp,20
-Atelier_Ryza.exe+41BA8A: 0F B6 FA              - movzx edi,dl
-// ---------- INJECTING HERE ----------
-Atelier_Ryza.exe+41BA8D: 8B D1                 - mov edx,ecx
-// ---------- DONE INJECTING  ----------
-Atelier_Ryza.exe+41BA8F: 8B D9                 - mov ebx,ecx
-Atelier_Ryza.exe+41BA91: 85 C9                 - test ecx,ecx
-Atelier_Ryza.exe+41BA93: 7E 2D                 - jle Atelier_Ryza.exe+41BAC2
-Atelier_Ryza.exe+41BA95: 44 8B 05 FC 16 06 01  - mov r8d,[Atelier_Ryza.exe+147D198]
-Atelier_Ryza.exe+41BA9C: 41 BA 3F 42 0F 00     - mov r10d,000F423F
-Atelier_Ryza.exe+41BAA2: 44 2B D1              - sub r10d,ecx
-Atelier_Ryza.exe+41BAA5: B8 3F 42 0F 00        - mov eax,000F423F
-Atelier_Ryza.exe+41BAAA: 45 3B C2              - cmp r8d,r10d
-Atelier_Ryza.exe+41BAAD: 46 8D 0C 01           - lea r9d,[rcx+r8]
-Atelier_Ryza.exe+41BAB1: B9 09 00 00 00        - mov ecx,00000009
-}
-</AssemblerScript>
-          <CheatEntries>
             <CheatEntry>
-              <ID>35</ID>
-              <Description>"Multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_battle_cole_multi</Address>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>43</ID>
-          <Description>"Battle: Damage control"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+              <ID>43</ID>
+              <Description>"Battle: Damage control"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -993,50 +2438,50 @@ Atelier_Ryza.exe+219C18: E8 63 CF FC FF                 - call Atelier_Ryza.exe+
 Atelier_Ryza.exe+219C1D: 44 39 A3 0C 01 00 00           - cmp [rbx+0000010C],r12d
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>44</ID>
-              <Description>"Damage type to player"</Description>
-              <DropDownList DisplayValueAsItem="1">0:Off
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>44</ID>
+                  <Description>"Damage type to player"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:Off
 1:1pt
 2:Normal / 正常
 3:By multiplier
 </DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>hp_damage_type</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>45</ID>
-              <Description>"Multiplier to player"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>hp_fdamage_multi</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>46</ID>
-              <Description>"Damage multiplier to enemy"</Description>
-              <DropDownList DisplayValueAsItem="1">1:Default
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>hp_damage_type</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>45</ID>
+                  <Description>"Multiplier to player"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>hp_fdamage_multi</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>46</ID>
+                  <Description>"Damage multiplier to enemy"</Description>
+                  <DropDownList DisplayValueAsItem="1">1:Default
 2:2x
 4:4x
 10:10x
 0.0001:almost no damage
 </DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>enemy_damage_multi</Address>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>enemy_damage_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>37</ID>
-          <Description>"Battle: EXP multiplier"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"Battle: EXP multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -1107,903 +2552,1799 @@ Atelier_Ryza.exe+3B5102: 7D 03              - jnl Atelier_Ryza.exe+3B5107
 Atelier_Ryza.exe+3B5104: 89 43 08           - mov [rbx+08],eax
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>38</ID>
-              <Description>"Multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_battle_exp_multi</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>38</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_battle_exp_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>573</ID>
-      <Description>"Fast party quests"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Atelier_Ryza.exe
+            <CheatEntry>
+              <ID>2226</ID>
+              <Description>"Battle: core charges does not decrease"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
-  Date   : 2022-11-12
+  Date   : 2022-11-13
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_PARTY_TASKS,Atelier_Ryza.exe,44 89 04 88 C3) // should be unique
-alloc(newmem,$1000,INJECT_PARTY_TASKS)
+aobscanmodule(INJECT_BATTLE_INF_CORE_USAGE,Atelier_Ryza.exe,29 51 1C 83 79 1C 00) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_INF_CORE_USAGE)
 
 label(code)
 label(return)
 
 newmem:
-  cmp r8d, #1    //skip count 1 to avoid bug
-  je short endp
-  cmp r8d, #2
+  mov edx, 0
+
+code:
+  sub [rcx+1C],edx
+  cmp dword ptr [rcx+1C],00
+  jmp return
+
+INJECT_BATTLE_INF_CORE_USAGE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BATTLE_INF_CORE_USAGE)
+
+[DISABLE]
+
+INJECT_BATTLE_INF_CORE_USAGE:
+  db 29 51 1C 83 79 1C 00
+
+unregistersymbol(INJECT_BATTLE_INF_CORE_USAGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+1510A
+
+Atelier_Ryza.exe+150F7: 48 FF 60 18           - jmp qword ptr [rax+18]
+Atelier_Ryza.exe+150FB: CC                    - int 3 
+Atelier_Ryza.exe+150FC: CC                    - int 3 
+Atelier_Ryza.exe+150FD: CC                    - int 3 
+Atelier_Ryza.exe+150FE: CC                    - int 3 
+Atelier_Ryza.exe+150FF: CC                    - int 3 
+Atelier_Ryza.exe+15100: 80 79 18 00           - cmp byte ptr [rcx+18],00
+Atelier_Ryza.exe+15104: 74 1C                 - je Atelier_Ryza.exe+15122
+Atelier_Ryza.exe+15106: 85 D2                 - test edx,edx
+Atelier_Ryza.exe+15108: 78 18                 - js Atelier_Ryza.exe+15122
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+1510A: 29 51 1C              - sub [rcx+1C],edx
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+1510D: 83 79 1C 00           - cmp dword ptr [rcx+1C],00
+Atelier_Ryza.exe+15111: 7D 07                 - jnl Atelier_Ryza.exe+1511A
+Atelier_Ryza.exe+15113: C7 41 1C 00 00 00 00  - mov [rcx+1C],00000000
+Atelier_Ryza.exe+1511A: 48 8B 41 10           - mov rax,[rcx+10]
+Atelier_Ryza.exe+1511E: C6 40 20 01           - mov byte ptr [rax+20],01
+Atelier_Ryza.exe+15122: C3                    - ret 
+Atelier_Ryza.exe+15123: CC                    - int 3 
+Atelier_Ryza.exe+15124: CC                    - int 3 
+Atelier_Ryza.exe+15125: CC                    - int 3 
+Atelier_Ryza.exe+15126: CC                    - int 3 
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2225</ID>
+              <Description>"No CC cost for Consumables"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+//89 0D * * 05 01 BB 0A 00 00 00
+aobscanmodule(INJECT_INF_CC_FOR_EQUIP_ITEM,Atelier_Ryza.exe,89 0D 88 F4 05 01) // should be unique
+alloc(newmem,$1000,INJECT_INF_CC_FOR_EQUIP_ITEM)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  //mov [Atelier_Ryza.exe+147D204],ecx
+  jmp return
+
+INJECT_INF_CC_FOR_EQUIP_ITEM:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_INF_CC_FOR_EQUIP_ITEM)
+
+[DISABLE]
+
+INJECT_INF_CC_FOR_EQUIP_ITEM:
+  db 89 0D 88 F4 05 01
+
+unregistersymbol(INJECT_INF_CC_FOR_EQUIP_ITEM)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+41DD76
+
+Atelier_Ryza.exe+41DD5D: D9 41 00              - fld dword ptr [rcx+00]
+Atelier_Ryza.exe+41DD60: D2 D9                 - rcr cl,cl
+Atelier_Ryza.exe+41DD62: 41 00 83 DA 41 00 37  - add [r11+370041DA],al
+Atelier_Ryza.exe+41DD69: DB 41 00              - fild dword ptr [rcx+00]
+Atelier_Ryza.exe+41DD6C: CC                    - int 3 
+Atelier_Ryza.exe+41DD6D: CC                    - int 3 
+Atelier_Ryza.exe+41DD6E: CC                    - int 3 
+Atelier_Ryza.exe+41DD6F: CC                    - int 3 
+Atelier_Ryza.exe+41DD70: 40 53                 - push rbx
+Atelier_Ryza.exe+41DD72: 48 83 EC 20           - sub rsp,20
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+41DD76: 89 0D 88 F4 05 01     - mov [Atelier_Ryza.exe+147D204],ecx
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+41DD7C: BB 0A 00 00 00        - mov ebx,0000000A
+Atelier_Ryza.exe+41DD81: B9 31 03 00 00        - mov ecx,00000331
+Atelier_Ryza.exe+41DD86: E8 D5 A5 FF FF        - call Atelier_Ryza.exe+418360
+Atelier_Ryza.exe+41DD8B: B9 0C 00 00 00        - mov ecx,0000000C
+Atelier_Ryza.exe+41DD90: 84 C0                 - test al,al
+Atelier_Ryza.exe+41DD92: 0F 45 D9              - cmovne ebx,ecx
+Atelier_Ryza.exe+41DD95: B9 32 03 00 00        - mov ecx,00000332
+Atelier_Ryza.exe+41DD9A: E8 C1 A5 FF FF        - call Atelier_Ryza.exe+418360
+Atelier_Ryza.exe+41DD9F: 84 C0                 - test al,al
+Atelier_Ryza.exe+41DDA1: 74 03                 - je Atelier_Ryza.exe+41DDA6
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>637</ID>
+          <Description>"+Container, Basket &amp; drop item"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <Color>FF0080</Color>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>609</ID>
+              <Description>"Set min. quality when store the item into container"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER,Atelier_Ryza.exe,41 0F 10 4F 10 0F 11 4F) // should be unique
+alloc(newmem,$1000,INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER)
+
+label(code)
+label(return)
+label(i_min_quality_put_in_container)
+label(i_last_store_item_in_container_addr)
+label(is_make_quality_difference)
+
+newmem:
+  mov [i_last_store_item_in_container_addr], rdi
+
+  push rax
+  xor rax, rax
+  mov ax, [rdi+4]
+  cmp ax, [i_min_quality_put_in_container]
+  jae endp
+  mov ax, [i_min_quality_put_in_container]
+  cmp ax, 3E7
+  jae endp
+  // keep quality not the same
+  cmp dword ptr [is_make_quality_difference], 1
   jne next1
-  mov r8d, #10   // if count = 2 then set count to 10
-  jmp short endp
+
+  inc word ptr [i_seq]
+  cmp word ptr [i_seq], 2
+  jbe next0
+  mov word ptr [i_seq], 0
+next0:
+  add ax, word ptr [i_seq]
+
+  cmp ax, 3E7
+  jbe next1
+  mov ax, 3E7
 next1:
-  cmp r8d, #11
-  jne short endp
-  mov r8d, #10   // if count = 11 then set count to 20
+  mov [rdi+4], ax
 
 endp:
+  pop rax
 
 
 code:
-  mov [rax+rcx*4],r8d
-  ret 
-  jmp return
-
-INJECT_PARTY_TASKS:
-  jmp newmem
-return:
-registersymbol(INJECT_PARTY_TASKS)
-
-[DISABLE]
-
-INJECT_PARTY_TASKS:
-  db 44 89 04 88 C3
-
-unregistersymbol(INJECT_PARTY_TASKS)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+2F50E1
-
-Atelier_Ryza.exe+2F50CA: CC                    - int 3 
-Atelier_Ryza.exe+2F50CB: CC                    - int 3 
-Atelier_Ryza.exe+2F50CC: CC                    - int 3 
-Atelier_Ryza.exe+2F50CD: CC                    - int 3 
-Atelier_Ryza.exe+2F50CE: CC                    - int 3 
-Atelier_Ryza.exe+2F50CF: CC                    - int 3 
-Atelier_Ryza.exe+2F50D0: 48 63 C2              - movsxd  rax,edx
-Atelier_Ryza.exe+2F50D3: 4C 63 C9              - movsxd  r9,ecx
-Atelier_Ryza.exe+2F50D6: 4A 8D 0C 88           - lea rcx,[rax+r9*4]
-Atelier_Ryza.exe+2F50DA: 48 8D 05 4F 77 10 01  - lea rax,[Atelier_Ryza.exe+13FC830]
-// ---------- INJECTING HERE ----------
-Atelier_Ryza.exe+2F50E1: 44 89 04 88           - mov [rax+rcx*4],r8d
-// ---------- DONE INJECTING  ----------
-Atelier_Ryza.exe+2F50E5: C3                    - ret 
-Atelier_Ryza.exe+2F50E6: CC                    - int 3 
-Atelier_Ryza.exe+2F50E7: CC                    - int 3 
-Atelier_Ryza.exe+2F50E8: CC                    - int 3 
-Atelier_Ryza.exe+2F50E9: CC                    - int 3 
-Atelier_Ryza.exe+2F50EA: CC                    - int 3 
-Atelier_Ryza.exe+2F50EB: CC                    - int 3 
-Atelier_Ryza.exe+2F50EC: CC                    - int 3 
-Atelier_Ryza.exe+2F50ED: CC                    - int 3 
-Atelier_Ryza.exe+2F50EE: CC                    - int 3 
-}
-</AssemblerScript>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>604</ID>
-      <Description>"Item Editor (choose one)"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>51</ID>
-          <Description>"アイテムエディター -日本語 -"</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
-  Version: 
-  Date   : 2022-11-12
-  Author : bbfox@https://opencheattables.com
-}
-// 66 bytes per record
-// Container start = Atelier_Ryza.exe+14293E0
-// max container no = 5000
-[ENABLE]
-
-aobscanmodule(INJECT_ITEM_EDITOR,Atelier_Ryza.exe,0F 10 07 48 8B CF 0F 11 83) // should be unique
-alloc(newmem,$1000,INJECT_ITEM_EDITOR)
-
-label(code)
-label(return)
-label(container_base_addr)
-
-newmem:
-  mov [container_base_addr], rdi
-
-code:
-  movups xmm0,[rdi]
-  mov rcx,rdi
+  movups xmm1,[r15+10]
   jmp return
 align 10 cc
-  container_base_addr:
+  i_last_store_item_in_container_addr:
   dq 0
+  i_ups_tmp1:
+  dq 0
+  i_ups_tmp2:
+  dq 0
+  is_make_quality_difference:
+  dd 1
+  i_tmp1:
+  dw 0
+  i_min_quality_put_in_container:
+  dw 46
+  i_seq:
+  dw 0
 
-INJECT_ITEM_EDITOR:
+INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER:
   jmp newmem
-  nop
 return:
-registersymbol(INJECT_ITEM_EDITOR)
-registersymbol(container_base_addr)
+registersymbol(INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER)
+registersymbol(i_min_quality_put_in_container)
+registersymbol(i_last_store_item_in_container_addr)
+registersymbol(is_make_quality_difference)
 
 [DISABLE]
 
-INJECT_ITEM_EDITOR:
-  db 0F 10 07 48 8B CF
+INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER:
+  db 41 0F 10 4F 10
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+396CCF
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+1787B5
 
-Atelier_Ryza.exe+396CAA: 48 8B FA              - mov rdi,rdx
-Atelier_Ryza.exe+396CAD: 48 8B D9              - mov rbx,rcx
-Atelier_Ryza.exe+396CB0: 48 85 D2              - test rdx,rdx
-Atelier_Ryza.exe+396CB3: 74 68                 - je Atelier_Ryza.exe+396D1D
-Atelier_Ryza.exe+396CB5: 48 83 C2 02           - add rdx,02
-Atelier_Ryza.exe+396CB9: 48 81 C1 1E 01 00 00  - add rcx,0000011E
-Atelier_Ryza.exe+396CC0: 41 B8 40 00 00 00     - mov r8d,00000040
-Atelier_Ryza.exe+396CC6: E8 B5 58 61 00        - call Atelier_Ryza.exe+9AC580
-Atelier_Ryza.exe+396CCB: 85 C0                 - test eax,eax
-Atelier_Ryza.exe+396CCD: 74 7D                 - je Atelier_Ryza.exe+396D4C
+Atelier_Ryza.exe+178796: 45 8B C6        - mov r8d,r14d
+Atelier_Ryza.exe+178799: 49 8B D7        - mov rdx,r15
+Atelier_Ryza.exe+17879C: 48 8B C8        - mov rcx,rax
+Atelier_Ryza.exe+17879F: 4C 8B 10        - mov r10,[rax]
+Atelier_Ryza.exe+1787A2: 41 FF 52 60     - call qword ptr [r10+60]
+Atelier_Ryza.exe+1787A6: 4C 8B CF        - mov r9,rdi
+Atelier_Ryza.exe+1787A9: 44 8B C6        - mov r8d,esi
+Atelier_Ryza.exe+1787AC: EB 94           - jmp Atelier_Ryza.exe+178742
+Atelier_Ryza.exe+1787AE: 41 0F 10 07     - movups xmm0,[r15]
+Atelier_Ryza.exe+1787B2: 0F 11 07        - movups [rdi],xmm0
 // ---------- INJECTING HERE ----------
-Atelier_Ryza.exe+396CCF: 0F 10 07              - movups xmm0,[rdi]
+Atelier_Ryza.exe+1787B5: 41 0F 10 4F 10  - movups xmm1,[r15+10]
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza.exe+396CD2: 48 8B CF              - mov rcx,rdi
-Atelier_Ryza.exe+396CD5: 0F 11 83 1C 01 00 00  - movups [rbx+0000011C],xmm0
-Atelier_Ryza.exe+396CDC: 0F 10 4F 10           - movups xmm1,[rdi+10]
-Atelier_Ryza.exe+396CE0: 0F 11 8B 2C 01 00 00  - movups [rbx+0000012C],xmm1
-Atelier_Ryza.exe+396CE7: 0F 10 47 20           - movups xmm0,[rdi+20]
-Atelier_Ryza.exe+396CEB: 0F 11 83 3C 01 00 00  - movups [rbx+0000013C],xmm0
-Atelier_Ryza.exe+396CF2: 0F 10 4F 30           - movups xmm1,[rdi+30]
-Atelier_Ryza.exe+396CF6: 0F 11 8B 4C 01 00 00  - movups [rbx+0000014C],xmm1
-Atelier_Ryza.exe+396CFD: 0F B7 47 40           - movzx eax,word ptr [rdi+40]
-Atelier_Ryza.exe+396D01: 66 89 83 5C 01 00 00  - mov [rbx+0000015C],ax
+Atelier_Ryza.exe+1787BA: 0F 11 4F 10     - movups [rdi+10],xmm1
+Atelier_Ryza.exe+1787BE: 41 0F 10 47 20  - movups xmm0,[r15+20]
+Atelier_Ryza.exe+1787C3: 0F 11 47 20     - movups [rdi+20],xmm0
+Atelier_Ryza.exe+1787C7: 41 0F 10 4F 30  - movups xmm1,[r15+30]
+Atelier_Ryza.exe+1787CC: 0F 11 4F 30     - movups [rdi+30],xmm1
+Atelier_Ryza.exe+1787D0: 41 0F B7 47 40  - movzx eax,word ptr [r15+40]
+Atelier_Ryza.exe+1787D5: 66 89 47 40     - mov [rdi+40],ax
+Atelier_Ryza.exe+1787D9: 8B 45 08        - mov eax,[rbp+08]
+Atelier_Ryza.exe+1787DC: 85 C0           - test eax,eax
+Atelier_Ryza.exe+1787DE: 78 12           - js Atelier_Ryza.exe+1787F2
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>52</ID>
-              <Description>"Base addr."</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>53</ID>
-              <Description>"シリアルナンバー"</Description>
-              <DropDownListLink>-Item ID-Ja</DropDownListLink>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>54</ID>
-              <Description>"アイテムID"</Description>
-              <DropDownListLink>-Item ID-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>2</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>56</ID>
-              <Description>"品質"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>4</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>59</ID>
-              <Description>"??"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>6</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>57</ID>
-              <Description>"LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>8</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>60</ID>
-              <Description>"??"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>9</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>58</ID>
-              <Description>"Synthesizable?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>A</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>61</ID>
-              <Description>"??"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Binary</VariableType>
-              <BitStart>0</BitStart>
-              <BitLength>8</BitLength>
-              <ShowAsBinary>0</ShowAsBinary>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>B</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>62</ID>
-              <Description>"??"</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>C</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>63</ID>
-              <Description>"効果1"</Description>
-              <DropDownListLink>-Effects-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>E</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>64</ID>
-              <Description>"効果2"</Description>
-              <DropDownListLink>-Effects-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>10</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>65</ID>
-              <Description>"効果3"</Description>
-              <DropDownListLink>-Effects-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>12</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>66</ID>
-              <Description>"効果4"</Description>
-              <DropDownListLink>-Effects-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>14</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>67</ID>
-              <Description>"特性slots"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Binary</VariableType>
-              <BitStart>2</BitStart>
-              <BitLength>5</BitLength>
-              <ShowAsBinary>0</ShowAsBinary>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>B</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>68</ID>
-              <Description>"特性1"</Description>
-              <DropDownListLink>-Traits-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>16</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>69</ID>
-              <Description>"特性2"</Description>
-              <DropDownListLink>-Traits-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>18</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>70</ID>
-              <Description>"特性3"</Description>
-              <DropDownListLink>-Traits-Ja</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1A</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>71</ID>
-              <Description>"特性1 LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1C</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>72</ID>
-              <Description>"特性2 LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1D</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>73</ID>
-              <Description>"特性3 LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1E</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>570</ID>
-              <Description>"+Equip modifier"</Description>
-              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-              <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>480</ID>
-                  <Description>"HP+"</Description>
+                  <ID>607</ID>
+                  <Description>"Min. quality (max 999)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
                   <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>20</Offset>
-                  </Offsets>
+                  <Address>i_min_quality_put_in_container</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>569</ID>
-                  <Description>"ATK+"</Description>
+                  <ID>608</ID>
+                  <Description>"Make quality jitter? (add 0-2 quality)"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
                   <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>24</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>367</ID>
-                  <Description>"Def+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>26</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>368</ID>
-                  <Description>"SPD+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>28</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>369</ID>
-                  <Description>"Offense+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>Byte</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>2A</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>370</ID>
-                  <Description>"Defense+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>Byte</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>2B</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>371</ID>
-                  <Description>"Support+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>Byte</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>2C</Offset>
-                  </Offsets>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_make_quality_difference</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>574</ID>
-          <Description>"Item Editor - English -"</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
-  Version: 
-  Date   : 2022-11-12
-  Author : bbfox@https://opencheattables.com
-}
-// 66 bytes per record
-// Container start = Atelier_Ryza.exe+14293E0
-// max container no = 5000
-[ENABLE]
-
-aobscanmodule(INJECT_ITEM_EDITOR,Atelier_Ryza.exe,0F 10 07 48 8B CF 0F 11 83) // should be unique
-alloc(newmem,$1000,INJECT_ITEM_EDITOR)
-
-label(code)
-label(return)
-label(container_base_addr)
-
+            <CheatEntry>
+              <ID>2167</ID>
+              <Description>"+Set Container items quality"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <Color>008000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+alloc(newmem, 8)
 newmem:
-  mov [container_base_addr], rdi
+  new_item_quality:
+  dd #100
+  new_item_rnd:
+  dd 0
 
-code:
-  movups xmm0,[rdi]
-  mov rcx,rdi
-  jmp return
-align 10 cc
-  container_base_addr:
-  dq 0
+registersymbol(new_item_quality)
+registersymbol(new_item_rnd)
 
-INJECT_ITEM_EDITOR:
-  jmp newmem
-  nop
-return:
-registersymbol(INJECT_ITEM_EDITOR)
-registersymbol(container_base_addr)
+ 
+ 
+[DISABLE]
+dealloc(newmem)
+unregistersymbol(new_item_quality)
+unregistersymbol(new_item_rnd)
+
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>2168</ID>
+                  <Description>"1. Specify new min. quality"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">100:100
+250:250
+999:999
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>new_item_quality</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>2169</ID>
+                  <Description>"2. Go (v1.08)"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+print("Start")
+
+--getLuaEngine().MenuItem5.doClick()
+
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Please load Atelier_Ryza.exe first")
+else
+  --ItemRecordSize=66
+  --MaxContainerCount=5000
+  --local containerBaseAddress = getAddressSafe("Atelier_Ryza.exe")+0x??????
+  local containerBaseAddress = g_containerBaseAddress
+
+  print("Container addr: " .. string.format("%08X", containerBaseAddress))
+
+  local TargetQuality = readSmallInteger('new_item_quality')
+  print('new quality: '..TargetQuality)
+
+
+  local IsBypass = false
+  local prevID0 = 1
+  local currentID0 = 0
+  local currentQlty = 0
+
+  local currentQualityAddress = containerBaseAddress --base item address
+  local MaxCount = MaxContainerCount
+
+  local prevQualityAddress = currentQualityAddress
+  local i
+  local i1 = 0
+
+  if (IsBypass == false)
+  then
+    for i = 1, MaxCount, 1
+    do
+        currentID0 = readSmallInteger(currentQualityAddress)
+        if (currentID0 ~= 65535 and i &gt;= 1)
+        then
+          currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+          if (currentQlty &lt; TargetQuality) then
+            i1 = i1 + 1
+            writeSmallInteger(currentQualityAddress + 0x04, TargetQuality)
+            --writeSmallInteger(currentQualityAddress + 0x08, TargetQuality)
+          end
+        else
+          print((i-1) .. " item(s) processed, " .. (i1) .. " item(s) changed.")
+          break
+        end
+        prevID0 = currentID0
+        prevQualityAddress = currentQualityAddress
+        currentQualityAddress = currentQualityAddress + ItemRecordSize
+    end
+  end
+
+  print("Done")
+end
+
+{$asm}
 
 [DISABLE]
-
-INJECT_ITEM_EDITOR:
-  db 0F 10 07 48 8B CF
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+396CCF
-
-Atelier_Ryza.exe+396CAA: 48 8B FA              - mov rdi,rdx
-Atelier_Ryza.exe+396CAD: 48 8B D9              - mov rbx,rcx
-Atelier_Ryza.exe+396CB0: 48 85 D2              - test rdx,rdx
-Atelier_Ryza.exe+396CB3: 74 68                 - je Atelier_Ryza.exe+396D1D
-Atelier_Ryza.exe+396CB5: 48 83 C2 02           - add rdx,02
-Atelier_Ryza.exe+396CB9: 48 81 C1 1E 01 00 00  - add rcx,0000011E
-Atelier_Ryza.exe+396CC0: 41 B8 40 00 00 00     - mov r8d,00000040
-Atelier_Ryza.exe+396CC6: E8 B5 58 61 00        - call Atelier_Ryza.exe+9AC580
-Atelier_Ryza.exe+396CCB: 85 C0                 - test eax,eax
-Atelier_Ryza.exe+396CCD: 74 7D                 - je Atelier_Ryza.exe+396D4C
-// ---------- INJECTING HERE ----------
-Atelier_Ryza.exe+396CCF: 0F 10 07              - movups xmm0,[rdi]
-// ---------- DONE INJECTING  ----------
-Atelier_Ryza.exe+396CD2: 48 8B CF              - mov rcx,rdi
-Atelier_Ryza.exe+396CD5: 0F 11 83 1C 01 00 00  - movups [rbx+0000011C],xmm0
-Atelier_Ryza.exe+396CDC: 0F 10 4F 10           - movups xmm1,[rdi+10]
-Atelier_Ryza.exe+396CE0: 0F 11 8B 2C 01 00 00  - movups [rbx+0000012C],xmm1
-Atelier_Ryza.exe+396CE7: 0F 10 47 20           - movups xmm0,[rdi+20]
-Atelier_Ryza.exe+396CEB: 0F 11 83 3C 01 00 00  - movups [rbx+0000013C],xmm0
-Atelier_Ryza.exe+396CF2: 0F 10 4F 30           - movups xmm1,[rdi+30]
-Atelier_Ryza.exe+396CF6: 0F 11 8B 4C 01 00 00  - movups [rbx+0000014C],xmm1
-Atelier_Ryza.exe+396CFD: 0F B7 47 40           - movzx eax,word ptr [rdi+40]
-Atelier_Ryza.exe+396D01: 66 89 83 5C 01 00 00  - mov [rbx+0000015C],ax
-}
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>575</ID>
-              <Description>"Base addr."</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>576</ID>
-              <Description>"Sequence"</Description>
-              <DropDownListLink>-Item ID-Ja</DropDownListLink>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>577</ID>
-              <Description>"ID"</Description>
-              <DropDownListLink>-Item ID-En</DropDownListLink>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>2</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>578</ID>
-              <Description>"Quality"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>4</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>579</ID>
-              <Description>"??"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>6</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>580</ID>
-              <Description>"LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>8</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>581</ID>
-              <Description>"??"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>9</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>582</ID>
-              <Description>"Synthesizable?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>A</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>583</ID>
-              <Description>"??"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Binary</VariableType>
-              <BitStart>0</BitStart>
-              <BitLength>8</BitLength>
-              <ShowAsBinary>0</ShowAsBinary>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>B</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>584</ID>
-              <Description>"??"</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>C</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>585</ID>
-              <Description>"Effect 1"</Description>
-              <DropDownListLink>-Effects-En</DropDownListLink>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>E</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>586</ID>
-              <Description>"Effect 2"</Description>
-              <DropDownListLink>-Effects-En</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>10</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>587</ID>
-              <Description>"Effect 3"</Description>
-              <DropDownListLink>-Effects-En</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>12</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>588</ID>
-              <Description>"Effect 4"</Description>
-              <DropDownListLink>-Effects-En</DropDownListLink>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>14</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>589</ID>
-              <Description>"Trait slots"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Binary</VariableType>
-              <BitStart>2</BitStart>
-              <BitLength>5</BitLength>
-              <ShowAsBinary>0</ShowAsBinary>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>B</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>590</ID>
-              <Description>"Trait 1"</Description>
-              <DropDownListLink>-Traits-En</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>16</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>591</ID>
-              <Description>"Trait 2"</Description>
-              <DropDownListLink>-Traits-En</DropDownListLink>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>18</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>592</ID>
-              <Description>"Trait 3"</Description>
-              <DropDownListLink>-Traits-En</DropDownListLink>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>2 Bytes</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1A</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>593</ID>
-              <Description>"Trait 1 LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1C</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>594</ID>
-              <Description>"Trait 2 LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1D</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>595</ID>
-              <Description>"Trait 3 LV"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>Byte</VariableType>
-              <Address>container_base_addr</Address>
-              <Offsets>
-                <Offset>1E</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>596</ID>
-              <Description>"+Equip modifier"</Description>
-              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-              <GroupHeader>1</GroupHeader>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>597</ID>
-                  <Description>"HP+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>20</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>598</ID>
-                  <Description>"ATK+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>24</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>599</ID>
-                  <Description>"Def+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>26</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>600</ID>
-                  <Description>"SPD+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>28</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>601</ID>
-                  <Description>"Offense+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>Byte</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>2A</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>602</ID>
-                  <Description>"Defense+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>Byte</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>2B</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>603</ID>
-                  <Description>"Support+"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>Byte</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>2C</Offset>
-                  </Offsets>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
+            <CheatEntry>
+              <ID>6664</ID>
+              <Description>"+Set Basket items quality"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <Color>008000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+alloc(newmem, 8)
+newmem:
+  new_basket_item_quality:
+  dd #100
+  basket_space_left:
+  dd 0
+
+
+registersymbol(new_basket_item_quality)
+registersymbol(basket_space_left)
+
+
+[DISABLE]
+dealloc(newmem)
+unregistersymbol(new_basket_item_quality)
+unregistersymbol(basket_space_left)
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>6665</ID>
+                  <Description>"1. Specify new quality (at least &gt;=)"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">100:100
+250:250
+999:999
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>new_basket_item_quality</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>6666</ID>
+                  <Description>"2. Go (v1.08)"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+print("Start")
+
+--getLuaEngine().MenuItem5.doClick()
+
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Where is Atelier_Ryza.exe?")
+else
+  local containerBaseAddress = g_basketBaseAddress
+
+  print("Basket addr: " .. string.format("%08X", containerBaseAddress))
+
+  local TargetQuality = readSmallInteger('new_basket_item_quality')
+  print('New quality: '..TargetQuality)
+
+  local dynBasketAddress = g_dynBasketAddress
+  MaxBasketCount = readSmallInteger(dynBasketAddress)
+
+  local IsBypass = false
+  local prevID0 = 1
+  local currentID0 = 0
+  local currentQlty = 0
+
+  local currentQualityAddress = containerBaseAddress --base item address
+  local MaxCount = MaxBasketCount
+
+  local prevQualityAddress = currentQualityAddress
+
+  local i
+  local i1 = 0
+
+  if (IsBypass == false)
+  then
+    for i = 1, MaxCount, 1
+    do
+        currentID0 = readSmallInteger(currentQualityAddress)
+        if (currentID0 ~= 65535 and i &gt;= 1)
+        then
+          currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+          if (currentQlty &lt; TargetQuality) then
+            i1 = i1 + 1
+            writeSmallInteger(currentQualityAddress + 0x04, TargetQuality)
+            --writeSmallInteger(currentQualityAddress + 0x08, TargetQuality)
+          end
+        else
+          print((i-1) .. " item(s) processed, " .. (i1) .. " item(s) changed.")
+          break
+        end
+        prevID0 = currentID0
+        prevQualityAddress = currentQualityAddress
+        currentQualityAddress = currentQualityAddress + ItemRecordSize
+    end
+
+  end
+
+  print("Done")
+end
+
+{$asm}
+
+[DISABLE]
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>9470</ID>
+                  <Description>"3. ....or: auto set (v1.08; every 10 sec)"</Description>
+                  <Options moHideChildren="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{$lua}
+if syntaxcheck then return end
+[ENABLE]
+--if (Timer1 == nil) then
+  TimerB1 = createTimer()
+  TimerB1.Interval = 10000
+  TimerB1.OnTimer = function(timerb1)
+
+
+    if (getAddressSafe('Atelier_Ryza.exe') == nil)
+    then
+      --print("Atelier_Ryza.exe?")
+    else
+      local containerBaseAddress = g_basketBaseAddress
+
+      --print("Basket addr: " .. string.format("%08X", containerBaseAddress))
+
+      local TargetQuality = readSmallInteger('new_basket_item_quality')
+      --print('New quality: '..TargetQuality)
+
+      --local dynBasketAddress = getAddressSafe("?????.exe")+0x1????  --basket size
+      local dynBasketAddress = g_dynBasketAddress
+      MaxBasketCount = readSmallInteger(dynBasketAddress)
+
+      local IsBypass = false
+      local prevID0 = 1
+      local currentID0 = 0
+      local currentQlty = 0
+
+      local currentQualityAddress = containerBaseAddress --base item address
+      local MaxCount = MaxBasketCount
+
+      local prevQualityAddress = currentQualityAddress
+
+      local i = 1
+      local used_size = 0
+      local i1 = 0
+
+      if ((IsBypass == false) and TargetQuality)
+      then
+        for i = 1, MaxCount, 1
+        do
+            currentID0 = readSmallInteger(currentQualityAddress)
+            if (currentID0 ~= 65535 and i &gt;= 1)
+            then
+              used_size = used_size + 1
+              currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+              if (currentQlty &lt; TargetQuality) then
+                i1 = i1 + 1
+                writeSmallInteger(currentQualityAddress + 0x04, TargetQuality)
+                --writeSmallInteger(currentQualityAddress + 0x08, TargetQuality)
+              end
+            else
+              --print((i-1) .. " item(s) processed, " .. (i1) .. " item(s) changed.")
+              break
+            end
+            prevID0 = currentID0
+            prevQualityAddress = currentQualityAddress
+            currentQualityAddress = currentQualityAddress + ItemRecordSize
+        end
+        local basket_left = MaxBasketCount - used_size
+        local isLeft_exists = readSmallInteger("basket_space_left")
+        if (isLeft_exists) then
+          writeSmallInteger("basket_space_left", basket_left)
+        end
+      end
+
+    end
+
+
+  end
+
+  print('Basket quality auto set: Enabled')
+[DISABLE]
+
+TimerB1.Destroy()
+print('Basket quality auto set: Disabled')
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>9519</ID>
+                      <Description>"Space left"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>basket_space_left</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>158</ID>
+              <Description>"Container 1st item addr"</Description>
+              <Options moHideChildren="1"/>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <GroupHeader>1</GroupHeader>
+              <Address>container_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>208</ID>
+              <Description>"Basket 1st item addr"</Description>
+              <Options moHideChildren="1"/>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <GroupHeader>1</GroupHeader>
+              <Address>basket_base</Address>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>29</ID>
-      <Description>"_Debug"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
         <CheatEntry>
-          <ID>11</ID>
-          <Description>"Get container / basket size &amp; addr (open basket or container)"</Description>
+          <ID>9525</ID>
+          <Description>"+Synthesis / 調合"</Description>
           <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza.exe
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>2220</ID>
+              <Description>"Synthesis: # of material used"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SYNH_MATERIAL_COUNT,Atelier_Ryza.exe,89 81 80 00 00 00 E9) // should be unique
+alloc(newmem,$1000,INJECT_SYNH_MATERIAL_COUNT)
+
+label(code)
+label(return)
+label(i_base_synh_material_cnt_addr)
+
+newmem:
+  mov [i_base_synh_material_cnt_addr], rcx
+code:
+  mov [rcx+00000080],eax
+  jmp return
+align 10 cc
+  i_base_synh_material_cnt_addr:
+  dq 0
+
+INJECT_SYNH_MATERIAL_COUNT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SYNH_MATERIAL_COUNT)
+registersymbol(i_base_synh_material_cnt_addr)
+
+[DISABLE]
+
+INJECT_SYNH_MATERIAL_COUNT:
+  db 89 81 80 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+116702
+
+Atelier_Ryza.exe+1166ED: 48 8D 0D 9C 59 92 00  - lea rcx,[Atelier_Ryza.exe+A3C090]
+Atelier_Ryza.exe+1166F4: E8 63 89 86 00        - call Atelier_Ryza.exe+97F05C
+Atelier_Ryza.exe+1166F9: CC                    - int 3 
+Atelier_Ryza.exe+1166FA: CC                    - int 3 
+Atelier_Ryza.exe+1166FB: CC                    - int 3 
+Atelier_Ryza.exe+1166FC: CC                    - int 3 
+Atelier_Ryza.exe+1166FD: CC                    - int 3 
+Atelier_Ryza.exe+1166FE: CC                    - int 3 
+Atelier_Ryza.exe+1166FF: CC                    - int 3 
+Atelier_Ryza.exe+116700: 8B 02                 - mov eax,[rdx]
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+116702: 89 81 80 00 00 00     - mov [rcx+00000080],eax
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+116708: E9 03 02 00 00        - jmp Atelier_Ryza.exe+116910
+Atelier_Ryza.exe+11670D: CC                    - int 3 
+Atelier_Ryza.exe+11670E: CC                    - int 3 
+Atelier_Ryza.exe+11670F: CC                    - int 3 
+Atelier_Ryza.exe+116710: 48 89 5C 24 08        - mov [rsp+08],rbx
+Atelier_Ryza.exe+116715: 48 89 74 24 10        - mov [rsp+10],rsi
+Atelier_Ryza.exe+11671A: 57                    - push rdi
+Atelier_Ryza.exe+11671B: 48 83 EC 20           - sub rsp,20
+Atelier_Ryza.exe+11671F: 48 8B F2              - mov rsi,rdx
+Atelier_Ryza.exe+116722: 49 8B F8              - mov rdi,r8
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>2221</ID>
+                  <Description>"Use count"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_synh_material_cnt_addr</Address>
+                  <Offsets>
+                    <Offset>80</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9524</ID>
+              <Description>"Synthesis: Fast unlock connected loops ( マテリアル環接続ロックを解除)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_MATERIA_UNLOCK,Atelier_Ryza.exe,01 44 D5 10 0F 88 2D 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_MATERIA_UNLOCK)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, 10
+
+code:
+  add [rbp+rdx*8+10],eax
+  js Atelier_Ryza.exe+D962D
+  jmp return
+
+INJECT_FAST_MATERIA_UNLOCK:
+  jmp newmem
+  nop 5
+return:
+registersymbol(INJECT_FAST_MATERIA_UNLOCK)
+
+[DISABLE]
+
+INJECT_FAST_MATERIA_UNLOCK:
+  db 01 44 D5 10 0F 88 2D 01 00 00
+
+unregistersymbol(INJECT_FAST_MATERIA_UNLOCK)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+D94F6
+
+Atelier_Ryza.exe+D94C8: 0F 84 AF 01 00 00        - je Atelier_Ryza.exe+D967D
+Atelier_Ryza.exe+D94CE: 48 8B 84 24 98 00 00 00  - mov rax,[rsp+00000098]
+Atelier_Ryza.exe+D94D6: 8B 00                    - mov eax,[rax]
+Atelier_Ryza.exe+D94D8: C7 01 03 00 00 00        - mov [rcx],00000003
+Atelier_Ryza.exe+D94DE: 89 51 04                 - mov [rcx+04],edx
+Atelier_Ryza.exe+D94E1: 89 79 08                 - mov [rcx+08],edi
+Atelier_Ryza.exe+D94E4: 89 41 0C                 - mov [rcx+0C],eax
+Atelier_Ryza.exe+D94E7: E9 91 01 00 00           - jmp Atelier_Ryza.exe+D967D
+Atelier_Ryza.exe+D94EC: 48 8B 8C 24 B8 00 00 00  - mov rcx,[rsp+000000B8]
+Atelier_Ryza.exe+D94F4: 8B 01                    - mov eax,[rcx]
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+D94F6: 01 44 D5 10              - add [rbp+rdx*8+10],eax
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+D94FA: 0F 88 2D 01 00 00        - js Atelier_Ryza.exe+D962D
+Atelier_Ryza.exe+D9500: C6 44 D5 14 01           - mov byte ptr [rbp+rdx*8+14],01
+Atelier_Ryza.exe+D9505: 48 8D 9D 58 01 00 00     - lea rbx,[rbp+00000158]
+Atelier_Ryza.exe+D950C: C7 44 D5 10 00 00 00 00  - mov [rbp+rdx*8+10],00000000
+Atelier_Ryza.exe+D9514: 8B 3E                    - mov edi,[rsi]
+Atelier_Ryza.exe+D9516: 48 8B 43 10              - mov rax,[rbx+10]
+Atelier_Ryza.exe+D951A: FF C7                    - inc edi
+Atelier_Ryza.exe+D951C: 48 39 43 08              - cmp [rbx+08],rax
+Atelier_Ryza.exe+D9520: 75 0D                    - jne Atelier_Ryza.exe+D952F
+Atelier_Ryza.exe+D9522: BA 01 00 00 00           - mov edx,00000001
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2223</ID>
+              <Description>"Synthesis: material loop (マテリアル環) multiplier "</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SYTH_TRAIT_MULTI,Atelier_Ryza.exe,01 42 10 48 63 07) // should be unique
+alloc(newmem,$1000,INJECT_SYTH_TRAIT_MULTI)
+
+label(code)
+label(return)
+label(vf_syth_trait_multi)
+label(i_last_material_loop_addr)
+
+newmem:
+  mov [i_last_material_loop_addr], rdx
+  cmp eax, 0
+  jl code
+  cmp eax, 5
+  jg code
+  vmovss xmm14, [vf_syth_trait_multi]
+  cvtsi2ss xmm15, eax
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+code:
+  add [rdx+10],eax
+  movsxd  rax,dword ptr [rdi]
+  jmp return
+align 10 cc
+  i_last_material_loop_addr:
+  dq 0
+  vf_syth_trait_multi:
+  dd (float)2
+
+INJECT_SYTH_TRAIT_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SYTH_TRAIT_MULTI)
+registersymbol(vf_syth_trait_multi)
+registersymbol(i_last_material_loop_addr)
+[DISABLE]
+
+INJECT_SYTH_TRAIT_MULTI:
+  db 01 42 10 48 63 07
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+D928A
+
+Atelier_Ryza.exe+D925F: 83 F8 03                 - cmp eax,03
+Atelier_Ryza.exe+D9262: 77 0E                    - ja Atelier_Ryza.exe+D9272
+Atelier_Ryza.exe+D9264: 48 8B 8C 24 B0 00 00 00  - mov rcx,[rsp+000000B0]
+Atelier_Ryza.exe+D926C: 80 3C 08 00              - cmp byte ptr [rax+rcx],00
+Atelier_Ryza.exe+D9270: 74 30                    - je Atelier_Ryza.exe+D92A2
+Atelier_Ryza.exe+D9272: 48 63 07                 - movsxd  rax,dword ptr [rdi]
+Atelier_Ryza.exe+D9275: 48 8D 14 C5 00 00 00 00  - lea rdx,[rax*8+00000000]
+Atelier_Ryza.exe+D927D: 48 8B 84 24 B8 00 00 00  - mov rax,[rsp+000000B8]
+Atelier_Ryza.exe+D9285: 48 03 D5                 - add rdx,rbp
+Atelier_Ryza.exe+D9288: 8B 00                    - mov eax,[rax]
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+D928A: 01 42 10                 - add [rdx+10],eax
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+D928D: 48 63 07                 - movsxd  rax,dword ptr [rdi]
+Atelier_Ryza.exe+D9290: 8B 8C 85 88 01 00 00     - mov ecx,[rbp+rax*4+00000188]
+Atelier_Ryza.exe+D9297: 8B 42 10                 - mov eax,[rdx+10]
+Atelier_Ryza.exe+D929A: 3B C1                    - cmp eax,ecx
+Atelier_Ryza.exe+D929C: 0F 4F C1                 - cmovg eax,ecx
+Atelier_Ryza.exe+D929F: 89 42 10                 - mov [rdx+10],eax
+Atelier_Ryza.exe+D92A2: 33 FF                    - xor edi,edi
+Atelier_Ryza.exe+D92A4: 48 8D 43 54              - lea rax,[rbx+54]
+Atelier_Ryza.exe+D92A8: 89 BC 24 A0 00 00 00     - mov [rsp+000000A0],edi
+Atelier_Ryza.exe+D92AF: 48 89 44 24 58           - mov [rsp+58],rax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>2224</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_syth_trait_multi</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>9522</ID>
+                  <Description>"Last material loop value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_last_material_loop_addr</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2195</ID>
+              <Description>"Synthesis Item Editor (Choose one)"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <Color>FF80FF</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>611</ID>
+                  <Description>"調合アイテムエディター -日本語 -"</Description>
+                  <Options moHideChildren="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SYNH_ITEM_EDITOR,Atelier_Ryza.exe,0F 10 07 48 8B CB 0F 11 83) // should be unique
+alloc(newmem,$1000,INJECT_SYNH_ITEM_EDITOR)
+
+label(code)
+label(return)
+label(i_synh_container_base_addr)
+newmem:
+  mov [i_synh_container_base_addr], rdi
+
+code:
+  movups xmm0,[rdi]
+  mov rcx,rbx
+  jmp return
+align 10 cc
+  i_synh_container_base_addr:
+  dq 0
+INJECT_SYNH_ITEM_EDITOR:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SYNH_ITEM_EDITOR)
+registersymbol(i_synh_container_base_addr)
+[DISABLE]
+
+INJECT_SYNH_ITEM_EDITOR:
+  db 0F 10 07 48 8B CB
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+11716D
+
+Atelier_Ryza.exe+117143: 75 0E                 - jne Atelier_Ryza.exe+117153
+Atelier_Ryza.exe+117145: 48 81 C1 F8 00 00 00  - add rcx,000000F8
+Atelier_Ryza.exe+11714C: E8 AF A7 06 00        - call Atelier_Ryza.exe+181900
+Atelier_Ryza.exe+117151: EB 1A                 - jmp Atelier_Ryza.exe+11716D
+Atelier_Ryza.exe+117153: 48 8D 91 FA 00 00 00  - lea rdx,[rcx+000000FA]
+Atelier_Ryza.exe+11715A: 41 B8 40 00 00 00     - mov r8d,00000040
+Atelier_Ryza.exe+117160: 48 8D 4F 02           - lea rcx,[rdi+02]
+Atelier_Ryza.exe+117164: E8 17 54 89 00        - call Atelier_Ryza.exe+9AC580
+Atelier_Ryza.exe+117169: 85 C0                 - test eax,eax
+Atelier_Ryza.exe+11716B: 74 3E                 - je Atelier_Ryza.exe+1171AB
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+11716D: 0F 10 07              - movups xmm0,[rdi]
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+117170: 48 8B CB              - mov rcx,rbx
+Atelier_Ryza.exe+117173: 0F 11 83 F8 00 00 00  - movups [rbx+000000F8],xmm0
+Atelier_Ryza.exe+11717A: 0F 10 4F 10           - movups xmm1,[rdi+10]
+Atelier_Ryza.exe+11717E: 0F 11 8B 08 01 00 00  - movups [rbx+00000108],xmm1
+Atelier_Ryza.exe+117185: 0F 10 47 20           - movups xmm0,[rdi+20]
+Atelier_Ryza.exe+117189: 0F 11 83 18 01 00 00  - movups [rbx+00000118],xmm0
+Atelier_Ryza.exe+117190: 0F 10 4F 30           - movups xmm1,[rdi+30]
+Atelier_Ryza.exe+117194: 0F 11 8B 28 01 00 00  - movups [rbx+00000128],xmm1
+Atelier_Ryza.exe+11719B: 0F B7 47 40           - movzx eax,word ptr [rdi+40]
+Atelier_Ryza.exe+11719F: 66 89 83 38 01 00 00  - mov [rbx+00000138],ax
+}
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>9527</ID>
+                      <Description>"Duplicate highlighted item (3x) to container (v1.08 only)"</Description>
+                      <Color>FF0080</Color>
+                      <VariableType>Auto Assembler Script</VariableType>
+                      <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+
+if memrec then print(memrec.Description) end
+print("Start")
+
+itemBaseAddr=readPointer("i_synh_container_base_addr") --higlighted item base addr
+print("Source item addr: " .. string.format("%08X", itemBaseAddr))
+if (itemBaseAddr == 0) then
+  print("Please select item first")
+  return
+end
+
+srcQualityAddress = itemBaseAddr
+
+--getLuaEngine().MenuItem5.doClick()
+
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Atelier_Ryza.exe?")
+else
+  local containerBaseAddress = g_containerBaseAddress
+
+  print("Container addr: " .. string.format("%08X", containerBaseAddress))
+
+  local isFound = false
+  local IsBypass = false
+  local prevID0 = 1
+  local currentID0 = 0
+  local currentQlty = 0
+  local theQuality = 0 -- for duplicate destionation, quality should not the same if not in 999
+  local dupCount = 3
+
+  local currentQualityAddress = containerBaseAddress --base item address
+  local MaxCount = MaxContainerCount
+
+  local prevQualityAddress = currentQualityAddress
+
+  --set Quality address
+  currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+
+  if (IsBypass == false)
+  then
+    for i = 1, MaxCount-5, 1
+    do
+      if (isFound == false)
+      then
+        currentID0 = readSmallInteger(currentQualityAddress)
+
+        if (currentID0 == 65535 and i &gt; 1)
+        then
+          print("Found empty slot in position #", i, ", address: #", string.format("%X", prevQualityAddress) .. ", src quality: " ..  currentQlty)
+          isFound = true
+          for i1 = 1, dupCount, 1
+          do
+            print("#", i1, ", addr: ", string.format("%X", currentQualityAddress), ", New ID: ", prevID0 + 1)
+            for i2 = 0, ItemRecordSize-1, 1
+            do
+              if (i2 == 0)
+              then
+                -- 0~1: item id
+                prevID0 = prevID0 + 1
+                writeSmallInteger(currentQualityAddress, prevID0)
+              end
+              if ((i2 &gt; 1) and (i2 &lt; 4)) -- bypass offset 1 because already written; bytes before quality
+              then
+                --theByte = barray[i2]
+                --print(string.format("%02X", theByte))
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+
+              if (i2 == 4) -- Quality part; read once and write twice; bypass 7,8,9 offset
+              then --Quality different than source to avoid game bug.
+                theQuality = currentQlty
+
+                if (theQuality &lt; (999 - dupCount)) then
+                  theQuality = theQuality + i1
+                  print("new quality ".. theQuality)
+                else
+                  theQuality = theQuality - i1
+                  print("new quality ".. theQuality)
+                end
+                writeSmallInteger(currentQualityAddress + 0x4, theQuality)
+                --writeSmallInteger(currentQualityAddress + 0x6, theQuality)
+              end
+
+
+              if (i2 &gt; 5) -- rest part
+              then
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+            end
+            prevQualityAddress = currentQualityAddress
+            currentQualityAddress = currentQualityAddress + ItemRecordSize
+            currentID0 = prevID0
+          end
+        end
+
+        prevID0 = currentID0
+        currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+        prevQualityAddress = currentQualityAddress
+        currentQualityAddress = currentQualityAddress + ItemRecordSize
+      else
+        break
+      end
+    end
+  end
+
+  print("Done")
+end
+
+{$asm}
+
+[DISABLE]
+</AssemblerScript>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>612</ID>
+                      <Description>"Base addr."</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>613</ID>
+                      <Description>"シリアルナンバー"</Description>
+                      <DropDownListLink>-Item ID-Ja</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>614</ID>
+                      <Description>"アイテムID"</Description>
+                      <DropDownListLink>-Item ID-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>615</ID>
+                      <Description>"品質"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>616</ID>
+                      <Description>"??"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>6</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>617</ID>
+                      <Description>"LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>618</ID>
+                      <Description>"元のLV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>9</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>620</ID>
+                      <Description>"??"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Binary</VariableType>
+                      <BitStart>0</BitStart>
+                      <BitLength>8</BitLength>
+                      <ShowAsBinary>0</ShowAsBinary>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>621</ID>
+                      <Description>"??"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>622</ID>
+                      <Description>"効果1"</Description>
+                      <DropDownListLink>-Effects-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>E</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>623</ID>
+                      <Description>"効果2"</Description>
+                      <DropDownListLink>-Effects-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>624</ID>
+                      <Description>"効果3"</Description>
+                      <DropDownListLink>-Effects-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>12</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>625</ID>
+                      <Description>"効果4"</Description>
+                      <DropDownListLink>-Effects-Ja</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>626</ID>
+                      <Description>"特性スロット数"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Binary</VariableType>
+                      <BitStart>2</BitStart>
+                      <BitLength>5</BitLength>
+                      <ShowAsBinary>0</ShowAsBinary>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>627</ID>
+                      <Description>"特性1"</Description>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>16</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>628</ID>
+                      <Description>"特性2"</Description>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>629</ID>
+                      <Description>"特性3"</Description>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1A</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>630</ID>
+                      <Description>"特性1 LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>631</ID>
+                      <Description>"特性2 LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1D</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>632</ID>
+                      <Description>"特性3 LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1E</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>2196</ID>
+                  <Description>"Synthesis Item Editor -English-"</Description>
+                  <Options moHideChildren="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SYNH_ITEM_EDITOR,Atelier_Ryza.exe,0F 10 07 48 8B CB 0F 11 83) // should be unique
+alloc(newmem,$1000,INJECT_SYNH_ITEM_EDITOR)
+
+label(code)
+label(return)
+label(i_synh_container_base_addr)
+newmem:
+  mov [i_synh_container_base_addr], rdi
+
+code:
+  movups xmm0,[rdi]
+  mov rcx,rbx
+  jmp return
+align 10 cc
+  i_synh_container_base_addr:
+  dq 0
+INJECT_SYNH_ITEM_EDITOR:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SYNH_ITEM_EDITOR)
+registersymbol(i_synh_container_base_addr)
+[DISABLE]
+
+INJECT_SYNH_ITEM_EDITOR:
+  db 0F 10 07 48 8B CB
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+11716D
+
+Atelier_Ryza.exe+117143: 75 0E                 - jne Atelier_Ryza.exe+117153
+Atelier_Ryza.exe+117145: 48 81 C1 F8 00 00 00  - add rcx,000000F8
+Atelier_Ryza.exe+11714C: E8 AF A7 06 00        - call Atelier_Ryza.exe+181900
+Atelier_Ryza.exe+117151: EB 1A                 - jmp Atelier_Ryza.exe+11716D
+Atelier_Ryza.exe+117153: 48 8D 91 FA 00 00 00  - lea rdx,[rcx+000000FA]
+Atelier_Ryza.exe+11715A: 41 B8 40 00 00 00     - mov r8d,00000040
+Atelier_Ryza.exe+117160: 48 8D 4F 02           - lea rcx,[rdi+02]
+Atelier_Ryza.exe+117164: E8 17 54 89 00        - call Atelier_Ryza.exe+9AC580
+Atelier_Ryza.exe+117169: 85 C0                 - test eax,eax
+Atelier_Ryza.exe+11716B: 74 3E                 - je Atelier_Ryza.exe+1171AB
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+11716D: 0F 10 07              - movups xmm0,[rdi]
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+117170: 48 8B CB              - mov rcx,rbx
+Atelier_Ryza.exe+117173: 0F 11 83 F8 00 00 00  - movups [rbx+000000F8],xmm0
+Atelier_Ryza.exe+11717A: 0F 10 4F 10           - movups xmm1,[rdi+10]
+Atelier_Ryza.exe+11717E: 0F 11 8B 08 01 00 00  - movups [rbx+00000108],xmm1
+Atelier_Ryza.exe+117185: 0F 10 47 20           - movups xmm0,[rdi+20]
+Atelier_Ryza.exe+117189: 0F 11 83 18 01 00 00  - movups [rbx+00000118],xmm0
+Atelier_Ryza.exe+117190: 0F 10 4F 30           - movups xmm1,[rdi+30]
+Atelier_Ryza.exe+117194: 0F 11 8B 28 01 00 00  - movups [rbx+00000128],xmm1
+Atelier_Ryza.exe+11719B: 0F B7 47 40           - movzx eax,word ptr [rdi+40]
+Atelier_Ryza.exe+11719F: 66 89 83 38 01 00 00  - mov [rbx+00000138],ax
+}
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>9531</ID>
+                      <Description>"Duplicate highlighted item (3x) to container (v1.08 only)"</Description>
+                      <Color>FF0080</Color>
+                      <VariableType>Auto Assembler Script</VariableType>
+                      <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+
+if memrec then print(memrec.Description) end
+print("Start")
+
+itemBaseAddr=readPointer("i_synh_container_base_addr") --higlighted item base addr
+print("Source item addr: " .. string.format("%08X", itemBaseAddr))
+if (itemBaseAddr == 0) then
+  print("Please select item first")
+  return
+end
+
+srcQualityAddress = itemBaseAddr
+
+--getLuaEngine().MenuItem5.doClick()
+
+if (getAddressSafe('Atelier_Ryza.exe') == nil)
+then
+  print("Atelier_Ryza.exe?")
+else
+  local containerBaseAddress = g_containerBaseAddress
+
+  print("Container addr: " .. string.format("%08X", containerBaseAddress))
+
+  local isFound = false
+  local IsBypass = false
+  local prevID0 = 1
+  local currentID0 = 0
+  local currentQlty = 0
+  local theQuality = 0 -- for duplicate destionation, quality should not the same if not in 999
+  local dupCount = 3
+
+  local currentQualityAddress = containerBaseAddress --base item address
+  local MaxCount = MaxContainerCount
+
+  local prevQualityAddress = currentQualityAddress
+
+  --set Quality address
+  currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+
+  if (IsBypass == false)
+  then
+    for i = 1, MaxCount-5, 1
+    do
+      if (isFound == false)
+      then
+        currentID0 = readSmallInteger(currentQualityAddress)
+
+        if (currentID0 == 65535 and i &gt; 1)
+        then
+          print("Found empty slot in position #", i, ", address: #", string.format("%X", prevQualityAddress) .. ", src quality: " ..  currentQlty)
+          isFound = true
+          for i1 = 1, dupCount, 1
+          do
+            print("#", i1, ", addr: ", string.format("%X", currentQualityAddress), ", New ID: ", prevID0 + 1)
+            for i2 = 0, ItemRecordSize-1, 1
+            do
+              if (i2 == 0)
+              then
+                -- 0~1: item id
+                prevID0 = prevID0 + 1
+                writeSmallInteger(currentQualityAddress, prevID0)
+              end
+              if ((i2 &gt; 1) and (i2 &lt; 4)) -- bypass offset 1 because already written; bytes before quality
+              then
+                --theByte = barray[i2]
+                --print(string.format("%02X", theByte))
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+
+              if (i2 == 4) -- Quality part; read once and write twice; bypass 7,8,9 offset
+              then --Quality different than source to avoid game bug.
+                theQuality = currentQlty
+
+                if (theQuality &lt; (999 - dupCount)) then
+                  theQuality = theQuality + i1
+                  print("new quality ".. theQuality)
+                else
+                  theQuality = theQuality - i1
+                  print("new quality ".. theQuality)
+                end
+                writeSmallInteger(currentQualityAddress + 0x4, theQuality)
+                --writeSmallInteger(currentQualityAddress + 0x6, theQuality)
+              end
+
+
+              if (i2 &gt; 5) -- rest part
+              then
+                thebyte = readBytes(srcQualityAddress + i2, 1, false)
+                writeBytes(currentQualityAddress + i2, thebyte)
+              end
+            end
+            prevQualityAddress = currentQualityAddress
+            currentQualityAddress = currentQualityAddress + ItemRecordSize
+            currentID0 = prevID0
+          end
+        end
+
+        prevID0 = currentID0
+        currentQlty = readSmallInteger(currentQualityAddress + 0x04)
+        prevQualityAddress = currentQualityAddress
+        currentQualityAddress = currentQualityAddress + ItemRecordSize
+      else
+        break
+      end
+    end
+  end
+
+  print("Done")
+end
+
+{$asm}
+
+[DISABLE]
+</AssemblerScript>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2197</ID>
+                      <Description>"Base addr."</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2198</ID>
+                      <Description>"Sequence"</Description>
+                      <DropDownListLink>-Item ID-Ja</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2199</ID>
+                      <Description>"ID"</Description>
+                      <DropDownListLink>-Item ID-En</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2200</ID>
+                      <Description>"Quality"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2201</ID>
+                      <Description>"??"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>6</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2202</ID>
+                      <Description>"LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2203</ID>
+                      <Description>"Original LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>9</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2204</ID>
+                      <Description>"??"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Binary</VariableType>
+                      <BitStart>0</BitStart>
+                      <BitLength>8</BitLength>
+                      <ShowAsBinary>0</ShowAsBinary>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2205</ID>
+                      <Description>"??"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2206</ID>
+                      <Description>"Effect 1"</Description>
+                      <DropDownListLink>-Effects-En</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>E</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2207</ID>
+                      <Description>"Effect 2"</Description>
+                      <DropDownListLink>-Effects-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2208</ID>
+                      <Description>"Effect 3"</Description>
+                      <DropDownListLink>-Effects-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>12</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2209</ID>
+                      <Description>"Effect 4"</Description>
+                      <DropDownListLink>-Effects-En</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2210</ID>
+                      <Description>"Trait slots"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Binary</VariableType>
+                      <BitStart>2</BitStart>
+                      <BitLength>5</BitLength>
+                      <ShowAsBinary>0</ShowAsBinary>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2211</ID>
+                      <Description>"Trait 1"</Description>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>16</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2212</ID>
+                      <Description>"Trait 2"</Description>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2213</ID>
+                      <Description>"Trait 3"</Description>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1A</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2214</ID>
+                      <Description>"Trait 1 LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2215</ID>
+                      <Description>"Trait 2 LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1D</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>2216</ID>
+                      <Description>"Trait 3 LV"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_synh_container_base_addr</Address>
+                      <Offsets>
+                        <Offset>1E</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2234</ID>
+          <Description>"+Puni stats / ぷに"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>2235</ID>
+              <Description>"Constitution / 体力"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>puni_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2236</ID>
+              <Description>"Luster / 色つや"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>puni_base+4</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2237</ID>
+              <Description>"Mood / 機嫌"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>puni_base+8</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"_Debug"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"Get container / basket size &amp; addr (open basket or container)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza.exe
   Version: 
   Date   : 2022-11-12
   Author : bbfox@https://opencheattables.com
@@ -2072,42 +4413,119 @@ Atelier_Ryza.exe+17990F: CC              - int 3
 Atelier_Ryza.exe+179910: 48 89 5C 24 08  - mov [rsp+08],rbx
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>12</ID>
-              <Description>"Addr."</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>i_basket_addr</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"Addr."</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_basket_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>13</ID>
+                  <Description>"Size"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_basket_addr</Address>
+                  <Offsets>
+                    <Offset>C</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>13</ID>
-              <Description>"Size"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
+              <ID>20</ID>
+              <Description>"Ryza HP"</Description>
+              <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_basket_addr</Address>
-              <Offsets>
-                <Offset>C</Offset>
-              </Offsets>
+              <Address>Atelier_Ryza.exe+147D22C</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>36</ID>
+              <Description>"Ryza EXP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>Atelier_Ryza.exe+147D228 </Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9530</ID>
+              <Description>"_WIP"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>42</ID>
+                  <Description>"Battle: MP does not decrease"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : Atelier_Ryza.exe
+  Version: 
+  Date   : 2022-11-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_MP,Atelier_Ryza.exe,29 91 10 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_MP)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  //sub [rcx+00000110],edx
+  jmp return
+
+INJECT_BATTLE_MP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_MP)
+
+[DISABLE]
+
+INJECT_BATTLE_MP:
+  db 29 91 10 01 00 00
+
+unregistersymbol(INJECT_BATTLE_MP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza.exe+219DCA
+
+Atelier_Ryza.exe+219DB9: 5B                             - pop rbx
+Atelier_Ryza.exe+219DBA: C3                             - ret 
+Atelier_Ryza.exe+219DBB: CC                             - int 3 
+Atelier_Ryza.exe+219DBC: CC                             - int 3 
+Atelier_Ryza.exe+219DBD: CC                             - int 3 
+Atelier_Ryza.exe+219DBE: CC                             - int 3 
+Atelier_Ryza.exe+219DBF: CC                             - int 3 
+Atelier_Ryza.exe+219DC0: 48 89 5C 24 08                 - mov [rsp+08],rbx
+Atelier_Ryza.exe+219DC5: 57                             - push rdi
+Atelier_Ryza.exe+219DC6: 48 83 EC 30                    - sub rsp,30
+// ---------- INJECTING HERE ----------
+Atelier_Ryza.exe+219DCA: 29 91 10 01 00 00              - sub [rcx+00000110],edx
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza.exe+219DD0: 8B FA                          - mov edi,edx
+Atelier_Ryza.exe+219DD2: 83 B9 10 01 00 00 00           - cmp dword ptr [rcx+00000110],00
+Atelier_Ryza.exe+219DD9: 48 8B D9                       - mov rbx,rcx
+Atelier_Ryza.exe+219DDC: 7D 0A                          - jnl Atelier_Ryza.exe+219DE8
+Atelier_Ryza.exe+219DDE: C7 81 10 01 00 00 00 00 00 00  - mov [rcx+00000110],00000000
+Atelier_Ryza.exe+219DE8: 85 FF                          - test edi,edi
+Atelier_Ryza.exe+219DEA: 74 7F                          - je Atelier_Ryza.exe+219E6B
+Atelier_Ryza.exe+219DEC: 48 8B 01                       - mov rax,[rcx]
+Atelier_Ryza.exe+219DEF: BA 9A 00 00 00                 - mov edx,0000009A
+Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+000001D0]
+}
+</AssemblerScript>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>20</ID>
-          <Description>"Ryza HP"</Description>
-          <Color>FF8080</Color>
-          <VariableType>4 Bytes</VariableType>
-          <Address>Atelier_Ryza.exe+147D22C</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>36</ID>
-          <Description>"Ryza EXP"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>Atelier_Ryza.exe+147D228 </Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -2121,6 +4539,7 @@ Atelier_Ryza.exe+179910: 48 89 5C 24 08  - mov [rsp+08],rbx
         <CheatEntry>
           <ID>47</ID>
           <Description>"Group 7"</Description>
+          <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
@@ -5336,7 +7755,7 @@ g_containerBaseAddress = nil
 
 --print(MaxBasketCount)
 
---local dynBasketAddress = getAddressSafe("Atelier_Sophie_2.exe")+0x188574C
+--local dynBasketAddress = getAddressSafe("???.exe")+0x?????
 --MaxBasketCount = readSmallInteger(dynBasketAddress)
 --print(MaxBasketCount)
 
@@ -5350,7 +7769,7 @@ function onMemRecPostExecute(memoryrecord, newState, succeeded )
 end
 
 --memory record IDs now allowed to be 'locked'
-IDs = {999999999,999999,
+IDs = {41, 158, 208,
        }
 
 --determine event trigger sequence
