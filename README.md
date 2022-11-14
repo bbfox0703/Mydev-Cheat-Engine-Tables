@@ -1,7 +1,12 @@
 # Repository for self-dev Cheat Engine tables
-Contains some simple self-dev. Cheat Engine tables
+Contains some simple self-dev. Cheat Engine tables.
+Also post all tables in Open Cheat Tables (OCT) site:
 
 ## OpenCheatTables site URL: https://opencheattables.com  
+To search with keywords, please go to https://opencheattables.com  
+キーワードで検索するには、https://opencheattables.com にアクセスしてください。  
+如果要進行全文檢索，請至 https://opencheattables.com 中進行搜尋。  
+
 
 ## Titles list  
 To know how many cheat tables, please refer title list. 
