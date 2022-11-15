@@ -992,7 +992,7 @@ newmem:
 _test1:
   test rbx, rbx
   jz endp
-  mov cl, [rbx+235] //mePlayer
+  mov cl, [rbx+239] //mePlayer
   test cl, cl
   jnz endp
   mov rbx, [rbx+40] //maiYieldProgress
@@ -1017,7 +1017,7 @@ check4:
   mov rbx, [r15+10] //mpCurrentData
   test rbx, rbx
   jz endp
-  mov cl, [rbx+235] //mePlayer
+  mov cl, [rbx+239] //mePlayer
   test cl, cl
   jnz endp
   mov rbx, [rbx+40]
@@ -1136,72 +1136,93 @@ TenCrowns.GameCore.City:setYieldProgress+4c: 33 C0                 - xor eax,eax
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>67</ID>
-              <Description>"Auto Assemble script"</Description>
+              <ID>85</ID>
+              <Description>"City production speed multiplier"</Description>
+              <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : OldWorld.exe
   Version: 
-  Date   : 2022-05-20
-  Author : bbfox @ https://opencheattables.org
+  Date   : 2022-11-15
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-//aobscan(INJECT_CITY_CONSTRUCTION,89 77 24 48 8B 75 E8) // should be unique
-aobscanregion(INJECT_CITY_CONSTRUCTION,TenCrownsGameCoreCitysetBuildProgressProc+93,TenCrownsGameCoreCitysetBuildProgressProc+b3,89 77 24 48 8B 75 E8) // should be unique
-alloc(newmem,$1000,INJECT_CITY_CONSTRUCTION)
+//aobscan(INJECT_FAST_CITY_BUILD,89 77 24 48 8B 75 E8 48 8B 7D F0 4C 8B 7D F8) // should be unique
+aobscanregion(INJECT_FAST_CITY_BUILD,TenCrownsGameCoreCitysetBuildProgressProc+81,TenCrownsGameCoreCitysetBuildProgressProc+b6,89 77 24 48 8B 75 E8 48 8B 7D F0 4C 8B 7D F8) // should be unique
+
+alloc(newmem,$1000)
 
 label(code)
 label(return)
+label(vf_production_speed_multi)
 
 newmem:
   push rbx
-  mov rbx, [r15+10]
+  push rcx
+{$try}
+  mov rbx, [r15+18] //mpLastUpdateData
+  jmp short _test1
+{$except}
+  xor rbx, rbx
+_test1:
   test rbx, rbx
   jz endp
-  mov bl, [rbx+239]
-  test bl, bl
+  mov cl, [rbx+239] //mePlayer
+  test cl, cl
   jnz endp
 
-  cmp esi, #1000
-  jge endp
-  mov esi, #1000
-  mov [rdi+24], esi
+  cvtsi2ss xmm15, [rdi+24]
+  cvtsi2ss xmm13, esi
+  vmovss xmm14, [vf_production_speed_multi]
+  vucomiss xmm15, xmm13
+  jae endp
+  vsubss xmm13, xmm13, xmm15
+  vmulss xmm13, xmm13, xmm14
+  vaddss xmm13, xmm15, xmm13
+  vcvtss2si esi, xmm13
 
 endp:
+  pop rcx
   pop rbx
 
 code:
   mov [rdi+24],esi
   mov rsi,[rbp-18]
-  jmp return
+  mov rdi,[rbp-10]
+  mov r15,[rbp-08]
+  jmp far return
+align 10 cc
+  vf_production_speed_multi:
+  dd (float)2
 
-INJECT_CITY_CONSTRUCTION:
-  jmp newmem
-  nop 2
+INJECT_FAST_CITY_BUILD:
+  jmp far newmem
+  nop
 return:
-registersymbol(INJECT_CITY_CONSTRUCTION)
+registersymbol(INJECT_FAST_CITY_BUILD)
+registersymbol(vf_production_speed_multi)
 
 [DISABLE]
 
-INJECT_CITY_CONSTRUCTION:
-  db 89 77 24 48 8B 75 E8
+INJECT_FAST_CITY_BUILD:
+  db 89 77 24 48 8B 75 E8 48 8B 7D F0 4C 8B 7D F8
 
-unregistersymbol(INJECT_CITY_CONSTRUCTION)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
 // ORIGINAL CODE - INJECTION POINT: TenCrowns.GameCore.City:setBuildProgress+93
 
-TenCrowns.GameCore.City:setBuildProgress+59: 4C 8B 80 60 01 00 00           - mov r8,[rax+00000160]
+TenCrowns.GameCore.City:setBuildProgress+59: 4C 8B 80 68 01 00 00           - mov r8,[rax+00000168]
 TenCrowns.GameCore.City:setBuildProgress+60: 4D 8B 4F 18                    - mov r9,[r15+18]
 TenCrowns.GameCore.City:setBuildProgress+64: 4D 85 C9                       - test r9,r9
 TenCrowns.GameCore.City:setBuildProgress+67: 0F 84 3B 00 00 00              - je TenCrowns.GameCore.City:setBuildProgress+a8
-TenCrowns.GameCore.City:setBuildProgress+6d: 49 81 C1 60 01 00 00           - add r9,00000160
-TenCrowns.GameCore.City:setBuildProgress+74: 49 BA C8 A9 00 7B FB 01 00 00  - mov r10,000001FB7B00A9C8
+TenCrowns.GameCore.City:setBuildProgress+6d: 49 81 C1 68 01 00 00           - add r9,00000168
+TenCrowns.GameCore.City:setBuildProgress+74: 49 BA 30 63 42 1D B6 01 00 00  - mov r10,000001B61D426330
 TenCrowns.GameCore.City:setBuildProgress+7e: 49 8B CF                       - mov rcx,r15
 TenCrowns.GameCore.City:setBuildProgress+81: 48 8D 64 24 00                 - lea rsp,[rsp+00]
-TenCrowns.GameCore.City:setBuildProgress+86: 49 BB 10 90 FD 74 FB 01 00 00  - mov r11,TenCrowns.GameCore.GameCoreObject:updateLastData
+TenCrowns.GameCore.City:setBuildProgress+86: 49 BB 90 9E 28 EB B4 01 00 00  - mov r11,TenCrowns.GameCore.GameCoreObject:updateLastData
 TenCrowns.GameCore.City:setBuildProgress+90: 41 FF D3                       - call r11
 // ---------- INJECTING HERE ----------
 TenCrowns.GameCore.City:setBuildProgress+93: 89 77 24                       - mov [rdi+24],esi
@@ -1211,13 +1232,22 @@ TenCrowns.GameCore.City:setBuildProgress+9a: 48 8B 7D F0                    - mo
 TenCrowns.GameCore.City:setBuildProgress+9e: 4C 8B 7D F8                    - mov r15,[rbp-08]
 TenCrowns.GameCore.City:setBuildProgress+a2: 48 8D 65 00                    - lea rsp,[rbp+00]
 TenCrowns.GameCore.City:setBuildProgress+a6: 5D                             - pop rbp
-TenCrowns.GameCore.City:setBuildProgress+a7: C3                             - ret
+TenCrowns.GameCore.City:setBuildProgress+a7: C3                             - ret 
 TenCrowns.GameCore.City:setBuildProgress+a8: BA 5C 00 00 00                 - mov edx,0000005C
 TenCrowns.GameCore.City:setBuildProgress+ad: B9 A6 01 00 00                 - mov ecx,000001A6
 TenCrowns.GameCore.City:setBuildProgress+b2: 48 8D 6D 00                    - lea rbp,[rbp+00]
-TenCrowns.GameCore.City:setBuildProgress+b6: 49 BB D0 20 6F FA F9 01 00 00  - mov r11,000001F9FA6F20D0
+TenCrowns.GameCore.City:setBuildProgress+b6: 49 BB D0 20 8B 71 B3 01 00 00  - mov r11,000001B3718B20D0
 }
 </AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>86</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_production_speed_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -1228,12 +1258,6 @@ TenCrowns.GameCore.City:setBuildProgress+b6: 49 BB D0 20 6F FA F9 01 00 00  - mo
       <Description>"Old World v1.0.63890 (2022/11/10)  /  https://opencheattables.org  /  CE 7.4+"</Description>
       <Color>400080</Color>
       <GroupHeader>1</GroupHeader>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>87</ID>
-      <Description>"No Description"</Description>
-      <VariableType>4 Bytes</VariableType>
-      <Address>1B0C3E96D64</Address>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
