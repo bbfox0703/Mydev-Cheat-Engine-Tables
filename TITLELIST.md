@@ -135,6 +135,11 @@ ja-JP:麻雀 和 -Nagomi-
 zh-TW:貓次郎  
 ja-JP:ニャー次郎  
 
+## Monochrome Mobius Rights and Wrongs Forgotten
+[Monochrome Mobius: Rights and Wrongs Forgotten (Steam)](https://store.steampowered.com/app/1962430/_/)  
+ja-JP: モノクロームメビウス 刻ノ代贖  
+zh-TW: 黑白莫比烏斯 歲月的代價  
+
 ## Monster Hunter Rise  
 [MONSTER HUNTER RISE (Steam)](https://store.steampowered.com/app/1446780/MONSTER_HUNTER_RISE/)  
 zh-TW:魔物獵人崛起  
