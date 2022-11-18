@@ -49,7 +49,6 @@ zh-TW: 萊莎的鍊金工房 ～常闇女王與秘密藏身處～
 ja-JP: ライザのアトリエ2 ～失われた伝承と秘密の妖精  
 zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～  
 
-
 ## Atelier Sophie DX  
 [Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)](https://store.steampowered.com/app/1502970/__DX/)  
 zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX  
@@ -120,7 +119,6 @@ ja-JP: けものフレンズ Cellien May Cry
 ## Kingdom Two Crowns  
 [Kingdom Two Crowns (Steam)](https://store.steampowered.com/app/701160/Kingdom_Two_Crowns/)  
 
-
 ## Langrisser I & II  
 [Langrisser I & II (Steam)](https://store.steampowered.com/app/1060220/Langrisser_I__II/)  
 zh-TW:夢幻模擬戰 I & II  
@@ -158,7 +156,6 @@ zh-TW: 舊世界 Old World
 
 ## Persona 5 Royal  
 [Persona 5 Royal (Steam)](https://store.steampowered.com/app/1687950/5//)  
-
 zh-TW: 女神異聞錄5皇家版  
 ja-JP: ペルソナ５ ザ・ロイヤル  
 
@@ -182,6 +179,10 @@ ja-JP: SDガンダム バトルアライアンス
 
 ## Seraph's Last Stand  
 [Seraph's Last Stand (Steam)](https://store.steampowered.com/app/1919460/Seraphs_Last_Stand/)  
+
+## Sid Meier’s Civilization® VI
+[Sid Meier's Civilization® VI (Steam)](https://store.steampowered.com/app/289070/Sid_Meiers_Civilization_VI/)  
+zh-TW: 文明帝國VI  
 
 ## Sid Meier's Civilization® V  
 [Sid Meier's Civilization® V (Steam)](https://store.steampowered.com/app/8930/Sid_Meiers_Civilization_V/)  
