@@ -23,10 +23,12 @@ registersymbol(game_exp0)
 [DISABLE]
 {$asm}
 unregistersymbol(maindll)
+unregistersymbol(maindll_b1)
+unregistersymbol(maindll_xp2)
 unregistersymbol(game_exp2)
 unregistersymbol(game_exp1)
 unregistersymbol(game_exp0)
-
+unregistersymbol(maindll_base)
 
 </AssemblerScript>
       <CheatEntries>
@@ -42,20 +44,27 @@ if syntaxcheck then return end
 
 if ( getAddressSafe("game_exp2") ~= nil ) then
   registerSymbol("maindll", "GameCore_XP2_FinalRelease.dll")
+  registerSymbol("maindll_xp2", "GameCore_XP2_FinalRelease.dll")
 end
 
 if getAddressSafe("game_exp0") ~= nil then
   registerSymbol("maindll", "GameCore_Base_FinalRelease.dll")
+  registerSymbol("maindll_b1", "GameCore_Base_FinalRelease.dll")
+  registerSymbol("maindll_base", "GameCore_Base_FinalRelease.dll")
 end
 
 if getAddressSafe("game_exp1") ~= nil then
   registerSymbol("maindll", "GameCore_XP1_FinalRelease.dll")
+  registerSymbol("maindll_b1", "GameCore_XP1_FinalRelease.dll")
 end
 
  
 [DISABLE]
 {$asm}
 unregistersymbol(maindll)
+unregistersymbol(maindll_b1)
+unregistersymbol(maindll_xp2)
+unregistersymbol(maindll_base)
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
@@ -581,9 +590,218 @@ GameCore_XP2_FinalRelease.HksCompilerSettings::_isHksGlobalMemoTestingMode+A1C6:
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
+              <ID>43</ID>
+              <Description>"Unit: XP multiplier"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_UNIT_EXP_MULTI,maindll,45 01 7E 0C 4C 89 A4 24 B0 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_UNIT_EXP_MULTI)
+
+label(code)
+label(return)
+label(vf_xp_multi)
+label(is_keep_lv1)
+
+newmem:
+  push r14
+  mov r14, [r14]
+  mov r14w, [r14+60]
+  cmp r14w, 0
+  pop r14
+  jne code
+  vmovss xmm14, [vf_xp_multi]
+  cvtsi2ss xmm15, r15d
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r15d, xmm15
+
+  cmp dword ptr [is_keep_lv1], 1
+  jne code
+  cmp dword ptr [r14+10], 1
+  je code
+  mov dword ptr [r14+10], 1
+
+code:
+  add [r14+0C],r15d
+  mov [rsp+000000B0],r12
+  jmp return
+align 10 cc
+  vf_xp_multi:
+  dd (float)1.5
+  is_keep_lv1:
+  dd 1
+
+INJECT_UNIT_EXP_MULTI:
+  jmp newmem
+  nop 7
+return:
+registersymbol(INJECT_UNIT_EXP_MULTI)
+registersymbol(vf_xp_multi)
+registersymbol(is_keep_lv1)
+
+[DISABLE]
+
+INJECT_UNIT_EXP_MULTI:
+  db 45 01 7E 0C 4C 89 A4 24 B0 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP2_FinalRelease.dll+394604
+
+GameCore_XP2_FinalRelease.dll+3945D5: 8B 99 C0 04 00 00        - mov ebx,[rcx+000004C0]
+GameCore_XP2_FinalRelease.dll+3945DB: E8 60 CD 00 00           - call GameCore_XP2_FinalRelease.dll+3A1340
+GameCore_XP2_FinalRelease.dll+3945E0: 3B D8                    - cmp ebx,eax
+GameCore_XP2_FinalRelease.dll+3945E2: 0F 8D FC 01 00 00        - jnl GameCore_XP2_FinalRelease.dll+3947E4
+GameCore_XP2_FinalRelease.dll+3945E8: 49 8B 0E                 - mov rcx,[r14]
+GameCore_XP2_FinalRelease.dll+3945EB: E8 E0 DA 00 00           - call GameCore_XP2_FinalRelease.dll+3A20D0
+GameCore_XP2_FinalRelease.dll+3945F0: 84 C0                    - test al,al
+GameCore_XP2_FinalRelease.dll+3945F2: 0F 85 EC 01 00 00        - jne GameCore_XP2_FinalRelease.dll+3947E4
+GameCore_XP2_FinalRelease.dll+3945F8: 41 8B 5E 10              - mov ebx,[r14+10]
+GameCore_XP2_FinalRelease.dll+3945FC: F2 0F 10 0D 24 D2 65 00  - movsd xmm1,[GameCore_XP2_FinalRelease.dll+9F1828]
+// ---------- INJECTING HERE ----------
+GameCore_XP2_FinalRelease.dll+394604: 45 01 7E 0C              - add [r14+0C],r15d
+// ---------- DONE INJECTING  ----------
+GameCore_XP2_FinalRelease.dll+394608: 4C 89 A4 24 B0 00 00 00  - mov [rsp+000000B0],r12
+GameCore_XP2_FinalRelease.dll+394610: 66 0F 6E C3              - movd xmm0,ebx
+GameCore_XP2_FinalRelease.dll+394614: F3 0F E6 C0              - cvtdq2pd xmm0,xmm0,xmm0
+GameCore_XP2_FinalRelease.dll+394618: E8 43 97 61 00           - call GameCore_XP2_FinalRelease.dll+9ADD60
+GameCore_XP2_FinalRelease.dll+39461D: 48 8B 0D 7C 23 7F 00     - mov rcx,[GameCore_XP2_FinalRelease.dll+B869A0]
+GameCore_XP2_FinalRelease.dll+394624: 41 BC 01 00 00 00        - mov r12d,00000001
+GameCore_XP2_FinalRelease.dll+39462A: F2 0F 2C C0              - cvttsd2si eax,xmm0
+GameCore_XP2_FinalRelease.dll+39462E: 03 C3                    - add eax,ebx
+GameCore_XP2_FinalRelease.dll+394630: 99                       - cdq 
+GameCore_XP2_FinalRelease.dll+394631: 2B C2                    - sub eax,edx
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>44</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_xp_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>68</ID>
+              <Description>"City border growth multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CITY_BORDER_GROW_MULTI,maindll,01 57 08 48 8B CF) // should be unique
+alloc(newmem,$1000,INJECT_CITY_BORDER_GROW_MULTI)
+
+label(code)
+label(return)
+label(vf_city_border_multi)
+
+newmem:
+  push r15
+{$try}
+  mov r15, [rcx]
+  test r15, r15
+  je endp
+  mov r15w, [r15+60]
+  jmp short do_normal
+{$except}
+  jmp endp
+do_normal:
+  cmp r15w, 0
+  jne endp
+
+  cvtsi2ss xmm15, edx
+  vmovss xmm14, [vf_city_border_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si edx, xmm15
+
+endp:
+  pop r15
+
+code:
+  add [rdi+08],edx
+  mov rcx,rdi
+  jmp return
+align 10 cc
+  vf_city_border_multi:
+  dd (float)1.5
+
+INJECT_CITY_BORDER_GROW_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CITY_BORDER_GROW_MULTI)
+registersymbol(vf_city_border_multi)
+
+[DISABLE]
+
+INJECT_CITY_BORDER_GROW_MULTI:
+  db 01 57 08 48 8B CF
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP2_FinalRelease.dll+11B8B2
+
+GameCore_XP2_FinalRelease.dll+11B890: 49 C1 E0 08     - shl r8,08
+GameCore_XP2_FinalRelease.dll+11B894: 49 F7 E8        - imul r8
+GameCore_XP2_FinalRelease.dll+11B897: 49 03 D0        - add rdx,r8
+GameCore_XP2_FinalRelease.dll+11B89A: 48 C1 FA 0E     - sar rdx,0E
+GameCore_XP2_FinalRelease.dll+11B89E: 48 8B C2        - mov rax,rdx
+GameCore_XP2_FinalRelease.dll+11B8A1: 48 C1 E8 3F     - shr rax,3F
+GameCore_XP2_FinalRelease.dll+11B8A5: 48 03 D0        - add rdx,rax
+GameCore_XP2_FinalRelease.dll+11B8A8: 89 54 24 48     - mov [rsp+48],edx
+GameCore_XP2_FinalRelease.dll+11B8AC: EB 04           - jmp GameCore_XP2_FinalRelease.dll+11B8B2
+GameCore_XP2_FinalRelease.dll+11B8AE: 8B 54 24 48     - mov edx,[rsp+48]
+// ---------- INJECTING HERE ----------
+GameCore_XP2_FinalRelease.dll+11B8B2: 01 57 08        - add [rdi+08],edx
+// ---------- DONE INJECTING  ----------
+GameCore_XP2_FinalRelease.dll+11B8B5: 48 8B CF        - mov rcx,rdi
+GameCore_XP2_FinalRelease.dll+11B8B8: E8 B3 09 00 00  - call GameCore_XP2_FinalRelease.dll+11C270
+GameCore_XP2_FinalRelease.dll+11B8BD: C1 E0 08        - shl eax,08
+GameCore_XP2_FinalRelease.dll+11B8C0: 39 47 08        - cmp [rdi+08],eax
+GameCore_XP2_FinalRelease.dll+11B8C3: 7C 6D           - jl GameCore_XP2_FinalRelease.dll+11B932
+GameCore_XP2_FinalRelease.dll+11B8C5: 48 8B CF        - mov rcx,rdi
+GameCore_XP2_FinalRelease.dll+11B8C8: E8 A3 09 00 00  - call GameCore_XP2_FinalRelease.dll+11C270
+GameCore_XP2_FinalRelease.dll+11B8CD: C1 E0 08        - shl eax,08
+GameCore_XP2_FinalRelease.dll+11B8D0: 29 47 08        - sub [rdi+08],eax
+GameCore_XP2_FinalRelease.dll+11B8D3: 83 7F 1C FF     - cmp dword ptr [rdi+1C],-01
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>69</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_city_border_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
               <ID>38</ID>
               <Description>"(Expansion 2) Unit: when move:"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <Color>808000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
   Version: 
@@ -592,7 +810,7 @@ GameCore_XP2_FinalRelease.HksCompilerSettings::_isHksGlobalMemoTestingMode+A1C6:
 }
 
 [ENABLE]
-aobscanmodule(INJECT_INF_UNIT_MOVE,maindll,48 8B 82 B8 0B 00 00 48) // should be unique
+aobscanmodule(INJECT_INF_UNIT_MOVE,maindll_xp2,48 8B 82 B8 0B 00 00 48) // should be unique
 alloc(newmem,$1000,INJECT_INF_UNIT_MOVE)
 
 label(code)
@@ -720,9 +938,10 @@ GameCore_XP2_FinalRelease.dll+6576AC: CC                    - int 3
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>55</ID>
-              <Description>"(Base &amp; Expansion 1) Unit: when move:"</Description>
-              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <ID>59</ID>
+              <Description>"(Expansion 2) Selected City"</Description>
+              <Options moHideChildren="1"/>
+              <Color>808000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
   Version: 
@@ -731,7 +950,233 @@ GameCore_XP2_FinalRelease.dll+6576AC: CC                    - int 3
 }
 
 [ENABLE]
-aobscanmodule(INJECT_INF_UNIT_MOVE_BASE,maindll,48 8B 82 ?? ?? 00 00 48 85 C0 74 0C 83 B8 68 02 00 00 01) // should be unique
+
+aobscanmodule(INJECT_SELECTED_CITY_XP2,maindll,48 8B F9 8B 98 68 02 00 00 E8 05) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_CITY_XP2)
+
+label(code)
+label(return)
+label(i_selected_base_city_addr)
+
+newmem:
+  mov [i_selected_base_city_addr], rax
+code:
+  mov rdi,rcx
+  mov ebx,[rax+00000268]
+  jmp return
+align 10 cc
+  i_selected_base_city_addr:
+  dq 0
+
+
+INJECT_SELECTED_CITY_XP2:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SELECTED_CITY_XP2)
+registersymbol(i_selected_base_city_addr)
+
+[DISABLE]
+
+INJECT_SELECTED_CITY_XP2:
+  db 48 8B F9 8B 98 68 02 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP2_FinalRelease.dll+123D3D
+
+GameCore_XP2_FinalRelease.dll+123D22: 89 0E              - mov [rsi],ecx
+GameCore_XP2_FinalRelease.dll+123D24: 48 8B 74 24 40     - mov rsi,[rsp+40]
+GameCore_XP2_FinalRelease.dll+123D29: 48 83 C4 20        - add rsp,20
+GameCore_XP2_FinalRelease.dll+123D2D: 5F                 - pop rdi
+GameCore_XP2_FinalRelease.dll+123D2E: C3                 - ret 
+GameCore_XP2_FinalRelease.dll+123D2F: CC                 - int 3 
+GameCore_XP2_FinalRelease.dll+123D30: 48 89 5C 24 08     - mov [rsp+08],rbx
+GameCore_XP2_FinalRelease.dll+123D35: 57                 - push rdi
+GameCore_XP2_FinalRelease.dll+123D36: 48 83 EC 20        - sub rsp,20
+GameCore_XP2_FinalRelease.dll+123D3A: 48 8B 01           - mov rax,[rcx]
+// ---------- INJECTING HERE ----------
+GameCore_XP2_FinalRelease.dll+123D3D: 48 8B F9           - mov rdi,rcx
+// ---------- DONE INJECTING  ----------
+GameCore_XP2_FinalRelease.dll+123D40: 8B 98 68 02 00 00  - mov ebx,[rax+00000268]
+GameCore_XP2_FinalRelease.dll+123D46: E8 05 AE 24 00     - call GameCore_XP2_FinalRelease.dll+36EB50
+GameCore_XP2_FinalRelease.dll+123D4B: 48 8B C8           - mov rcx,rax
+GameCore_XP2_FinalRelease.dll+123D4E: 8B D3              - mov edx,ebx
+GameCore_XP2_FinalRelease.dll+123D50: E8 0B AE 24 00     - call GameCore_XP2_FinalRelease.dll+36EB60
+GameCore_XP2_FinalRelease.dll+123D55: 48 8B CF           - mov rcx,rdi
+GameCore_XP2_FinalRelease.dll+123D58: 8B D8              - mov ebx,eax
+GameCore_XP2_FinalRelease.dll+123D5A: E8 71 F7 FF FF     - call GameCore_XP2_FinalRelease.dll+1234D0
+GameCore_XP2_FinalRelease.dll+123D5F: 8B F8              - mov edi,eax
+GameCore_XP2_FinalRelease.dll+123D61: 2B FB              - sub edi,ebx
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>60</ID>
+                  <Description>"Player ID"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:Player
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>60</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>61</ID>
+                  <Description>"Population"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>268</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>62</ID>
+                  <Description>"Population growth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>9F0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>63</ID>
+                  <Description>"City border growth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>B98</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>65</ID>
+              <Description>"(Expansion 2) Population growth multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <Color>808000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CITY_POP_MULTI,maindll_xp2,01 81 80 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_CITY_POP_MULTI)
+
+label(code)
+label(return)
+label(vf_city_pop_multi)
+
+newmem:
+  push r15
+{$try}
+  mov r15, [rcx]
+  test r15, r15
+  je endp
+  mov r15w, [r15+60]
+  jmp short do_normal
+{$except}
+  jmp endp
+do_normal:
+  cmp r15w, 0
+  jne endp
+  vxorps xmm14, xmm14, xmm14
+  cvtsi2ss xmm15, eax
+  vcomiss xmm15, xmm14
+  jle endp
+  vmovss xmm14, [vf_city_pop_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+endp:
+  pop r15
+
+code:
+  add [rcx+00000080],eax
+  jmp return
+align 10 cc
+  vf_city_pop_multi:
+  dd (float)1.25
+
+INJECT_CITY_POP_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CITY_POP_MULTI)
+registersymbol(vf_city_pop_multi)
+
+[DISABLE]
+
+INJECT_CITY_POP_MULTI:
+  db 01 81 80 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP2_FinalRelease.dll+122DE4
+
+GameCore_XP2_FinalRelease.dll+122DCC: 5D                 - pop rbp
+GameCore_XP2_FinalRelease.dll+122DCD: C3                 - ret 
+GameCore_XP2_FinalRelease.dll+122DCE: CC                 - int 3 
+GameCore_XP2_FinalRelease.dll+122DCF: CC                 - int 3 
+GameCore_XP2_FinalRelease.dll+122DD0: 48 89 5C 24 18     - mov [rsp+18],rbx
+GameCore_XP2_FinalRelease.dll+122DD5: 48 89 74 24 20     - mov [rsp+20],rsi
+GameCore_XP2_FinalRelease.dll+122DDA: 57                 - push rdi
+GameCore_XP2_FinalRelease.dll+122DDB: 48 83 EC 20        - sub rsp,20
+GameCore_XP2_FinalRelease.dll+122DDF: 8B 02              - mov eax,[rdx]
+GameCore_XP2_FinalRelease.dll+122DE1: 48 8B F2           - mov rsi,rdx
+// ---------- INJECTING HERE ----------
+GameCore_XP2_FinalRelease.dll+122DE4: 01 81 80 00 00 00  - add [rcx+00000080],eax
+// ---------- DONE INJECTING  ----------
+GameCore_XP2_FinalRelease.dll+122DEA: 48 8B F9           - mov rdi,rcx
+GameCore_XP2_FinalRelease.dll+122DED: 48 8B 01           - mov rax,[rcx]
+GameCore_XP2_FinalRelease.dll+122DF0: 8B 98 68 02 00 00  - mov ebx,[rax+00000268]
+GameCore_XP2_FinalRelease.dll+122DF6: E8 55 BD 24 00     - call GameCore_XP2_FinalRelease.dll+36EB50
+GameCore_XP2_FinalRelease.dll+122DFB: 48 8B C8           - mov rcx,rax
+GameCore_XP2_FinalRelease.dll+122DFE: 8B D3              - mov edx,ebx
+GameCore_XP2_FinalRelease.dll+122E00: E8 9B BE 24 00     - call GameCore_XP2_FinalRelease.dll+36ECA0
+GameCore_XP2_FinalRelease.dll+122E05: 8B 8F 80 00 00 00  - mov ecx,[rdi+00000080]
+GameCore_XP2_FinalRelease.dll+122E0B: C1 E0 08           - shl eax,08
+GameCore_XP2_FinalRelease.dll+122E0E: 3B C8              - cmp ecx,eax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_city_pop_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>55</ID>
+              <Description>"(Base &amp; Expansion 1) Unit: when move:"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <Color>804000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+aobscanmodule(INJECT_INF_UNIT_MOVE_BASE,maindll_b1,48 8B 82 ?? ?? 00 00 48 85 C0 74 0C 83 B8 68 02 00 00 01) // should be unique
 alloc(newmem,$1000,INJECT_INF_UNIT_MOVE_BASE)
 alloc(INJECT_INF_UNIT_MOVE_BASEo,7)
 
@@ -883,9 +1328,10 @@ GameCore_XP1_FinalRelease.dll+571BDC: CC                    - int 3
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>43</ID>
-              <Description>"Unit: XP multiplier"</Description>
-              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <ID>78</ID>
+              <Description>"(Expansion 1) Selected City"</Description>
+              <Options moHideChildren="1"/>
+              <Color>804000</Color>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
   Version: 
@@ -895,94 +1341,438 @@ GameCore_XP1_FinalRelease.dll+571BDC: CC                    - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_UNIT_EXP_MULTI,maindll,45 01 7E 0C 4C 89 A4 24 B0 00 00 00) // should be unique
-alloc(newmem,$1000,INJECT_UNIT_EXP_MULTI)
+aobscanmodule(INJECT_SELECTED_CITY_XP1,GameCore_XP1_FinalRelease.dll,48 8B F9 8B 98 68 02 00 00 E8 95) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_CITY_XP1)
 
 label(code)
 label(return)
-label(vf_xp_multi)
-label(is_keep_lv1)
-
+label(i_selected_base_city_addr)
 newmem:
-  push r14
-  mov r14, [r14]
-  mov r14w, [r14+60]
-  cmp r14w, 0
-  pop r14
-  jne code
-  vmovss xmm14, [vf_xp_multi]
-  cvtsi2ss xmm15, r15d
-  vmulss xmm15, xmm15, xmm14
-  vcvtss2si r15d, xmm15
-
-  cmp dword ptr [is_keep_lv1], 1
-  jne code
-  cmp dword ptr [r14+10], 1
-  je code
-  mov dword ptr [r14+10], 1
+  mov [i_selected_base_city_addr], rax
 
 code:
-  add [r14+0C],r15d
-  mov [rsp+000000B0],r12
+  mov rdi,rcx
+  mov ebx,[rax+00000268]
   jmp return
 align 10 cc
-  vf_xp_multi:
-  dd (float)1.5
-  is_keep_lv1:
-  dd 1
+  i_selected_base_city_addr:
+  dq 0
 
-INJECT_UNIT_EXP_MULTI:
+INJECT_SELECTED_CITY_XP1:
   jmp newmem
-  nop 7
+  nop 4
 return:
-registersymbol(INJECT_UNIT_EXP_MULTI)
-registersymbol(vf_xp_multi)
-registersymbol(is_keep_lv1)
+registersymbol(INJECT_SELECTED_CITY_XP1)
+registersymbol(i_selected_base_city_addr)
 
 [DISABLE]
 
-INJECT_UNIT_EXP_MULTI:
-  db 45 01 7E 0C 4C 89 A4 24 B0 00 00 00
+INJECT_SELECTED_CITY_XP1:
+  db 48 8B F9 8B 98 68 02 00 00
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameCore_XP2_FinalRelease.dll+394604
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP1_FinalRelease.dll+F77FD
 
-GameCore_XP2_FinalRelease.dll+3945D5: 8B 99 C0 04 00 00        - mov ebx,[rcx+000004C0]
-GameCore_XP2_FinalRelease.dll+3945DB: E8 60 CD 00 00           - call GameCore_XP2_FinalRelease.dll+3A1340
-GameCore_XP2_FinalRelease.dll+3945E0: 3B D8                    - cmp ebx,eax
-GameCore_XP2_FinalRelease.dll+3945E2: 0F 8D FC 01 00 00        - jnl GameCore_XP2_FinalRelease.dll+3947E4
-GameCore_XP2_FinalRelease.dll+3945E8: 49 8B 0E                 - mov rcx,[r14]
-GameCore_XP2_FinalRelease.dll+3945EB: E8 E0 DA 00 00           - call GameCore_XP2_FinalRelease.dll+3A20D0
-GameCore_XP2_FinalRelease.dll+3945F0: 84 C0                    - test al,al
-GameCore_XP2_FinalRelease.dll+3945F2: 0F 85 EC 01 00 00        - jne GameCore_XP2_FinalRelease.dll+3947E4
-GameCore_XP2_FinalRelease.dll+3945F8: 41 8B 5E 10              - mov ebx,[r14+10]
-GameCore_XP2_FinalRelease.dll+3945FC: F2 0F 10 0D 24 D2 65 00  - movsd xmm1,[GameCore_XP2_FinalRelease.dll+9F1828]
+GameCore_XP1_FinalRelease.dll+F77E2: 89 0E              - mov [rsi],ecx
+GameCore_XP1_FinalRelease.dll+F77E4: 48 8B 74 24 40     - mov rsi,[rsp+40]
+GameCore_XP1_FinalRelease.dll+F77E9: 48 83 C4 20        - add rsp,20
+GameCore_XP1_FinalRelease.dll+F77ED: 5F                 - pop rdi
+GameCore_XP1_FinalRelease.dll+F77EE: C3                 - ret 
+GameCore_XP1_FinalRelease.dll+F77EF: CC                 - int 3 
+GameCore_XP1_FinalRelease.dll+F77F0: 48 89 5C 24 08     - mov [rsp+08],rbx
+GameCore_XP1_FinalRelease.dll+F77F5: 57                 - push rdi
+GameCore_XP1_FinalRelease.dll+F77F6: 48 83 EC 20        - sub rsp,20
+GameCore_XP1_FinalRelease.dll+F77FA: 48 8B 01           - mov rax,[rcx]
 // ---------- INJECTING HERE ----------
-GameCore_XP2_FinalRelease.dll+394604: 45 01 7E 0C              - add [r14+0C],r15d
+GameCore_XP1_FinalRelease.dll+F77FD: 48 8B F9           - mov rdi,rcx
 // ---------- DONE INJECTING  ----------
-GameCore_XP2_FinalRelease.dll+394608: 4C 89 A4 24 B0 00 00 00  - mov [rsp+000000B0],r12
-GameCore_XP2_FinalRelease.dll+394610: 66 0F 6E C3              - movd xmm0,ebx
-GameCore_XP2_FinalRelease.dll+394614: F3 0F E6 C0              - cvtdq2pd xmm0,xmm0,xmm0
-GameCore_XP2_FinalRelease.dll+394618: E8 43 97 61 00           - call GameCore_XP2_FinalRelease.dll+9ADD60
-GameCore_XP2_FinalRelease.dll+39461D: 48 8B 0D 7C 23 7F 00     - mov rcx,[GameCore_XP2_FinalRelease.dll+B869A0]
-GameCore_XP2_FinalRelease.dll+394624: 41 BC 01 00 00 00        - mov r12d,00000001
-GameCore_XP2_FinalRelease.dll+39462A: F2 0F 2C C0              - cvttsd2si eax,xmm0
-GameCore_XP2_FinalRelease.dll+39462E: 03 C3                    - add eax,ebx
-GameCore_XP2_FinalRelease.dll+394630: 99                       - cdq 
-GameCore_XP2_FinalRelease.dll+394631: 2B C2                    - sub eax,edx
+GameCore_XP1_FinalRelease.dll+F7800: 8B 98 68 02 00 00  - mov ebx,[rax+00000268]
+GameCore_XP1_FinalRelease.dll+F7806: E8 95 A5 1E 00     - call GameCore_XP1_FinalRelease.dll+2E1DA0
+GameCore_XP1_FinalRelease.dll+F780B: 48 8B C8           - mov rcx,rax
+GameCore_XP1_FinalRelease.dll+F780E: 8B D3              - mov edx,ebx
+GameCore_XP1_FinalRelease.dll+F7810: E8 9B A5 1E 00     - call GameCore_XP1_FinalRelease.dll+2E1DB0
+GameCore_XP1_FinalRelease.dll+F7815: 48 8B CF           - mov rcx,rdi
+GameCore_XP1_FinalRelease.dll+F7818: 8B D8              - mov ebx,eax
+GameCore_XP1_FinalRelease.dll+F781A: E8 11 F9 FF FF     - call GameCore_XP1_FinalRelease.dll+F7130
+GameCore_XP1_FinalRelease.dll+F781F: 8B F8              - mov edi,eax
+GameCore_XP1_FinalRelease.dll+F7821: 2B FB              - sub edi,ebx
 }
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>44</ID>
+                  <ID>74</ID>
+                  <Description>"Player ID"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:Player
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>60</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>75</ID>
+                  <Description>"Population"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>268</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>76</ID>
+                  <Description>"Population growth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>800</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>77</ID>
+                  <Description>"City border growth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>9A0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>86</ID>
+              <Description>"(Base) Selected City"</Description>
+              <Options moHideChildren="1"/>
+              <Color>A00000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SELECTED_CITY_BASE,maindll_base,48 8B F9 8B 98 50 02 00 00 E8 45 79) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_CITY_BASE)
+
+label(code)
+label(return)
+label(i_selected_base_city_addr)
+
+newmem:
+  mov [i_selected_base_city_addr], rax
+
+code:
+  mov rdi,rcx
+  mov ebx,[rax+00000250]
+  jmp return
+align 10 cc
+  i_selected_base_city_addr:
+  dq 0
+INJECT_SELECTED_CITY_BASE:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SELECTED_CITY_BASE)
+registersymbol(i_selected_base_city_addr)
+
+[DISABLE]
+
+INJECT_SELECTED_CITY_BASE:
+  db 48 8B F9 8B 98 50 02 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_Base_FinalRelease.dll+DA2CD
+
+GameCore_Base_FinalRelease.dll+DA2B2: 89 0E              - mov [rsi],ecx
+GameCore_Base_FinalRelease.dll+DA2B4: 48 8B 74 24 40     - mov rsi,[rsp+40]
+GameCore_Base_FinalRelease.dll+DA2B9: 48 83 C4 20        - add rsp,20
+GameCore_Base_FinalRelease.dll+DA2BD: 5F                 - pop rdi
+GameCore_Base_FinalRelease.dll+DA2BE: C3                 - ret 
+GameCore_Base_FinalRelease.dll+DA2BF: CC                 - int 3 
+GameCore_Base_FinalRelease.dll+DA2C0: 48 89 5C 24 08     - mov [rsp+08],rbx
+GameCore_Base_FinalRelease.dll+DA2C5: 57                 - push rdi
+GameCore_Base_FinalRelease.dll+DA2C6: 48 83 EC 20        - sub rsp,20
+GameCore_Base_FinalRelease.dll+DA2CA: 48 8B 01           - mov rax,[rcx]
+// ---------- INJECTING HERE ----------
+GameCore_Base_FinalRelease.dll+DA2CD: 48 8B F9           - mov rdi,rcx
+// ---------- DONE INJECTING  ----------
+GameCore_Base_FinalRelease.dll+DA2D0: 8B 98 50 02 00 00  - mov ebx,[rax+00000250]
+GameCore_Base_FinalRelease.dll+DA2D6: E8 45 79 19 00     - call GameCore_Base_FinalRelease.dll+271C20
+GameCore_Base_FinalRelease.dll+DA2DB: 48 8B C8           - mov rcx,rax
+GameCore_Base_FinalRelease.dll+DA2DE: 8B D3              - mov edx,ebx
+GameCore_Base_FinalRelease.dll+DA2E0: E8 4B 79 19 00     - call GameCore_Base_FinalRelease.dll+271C30
+GameCore_Base_FinalRelease.dll+DA2E5: 48 8B CF           - mov rcx,rdi
+GameCore_Base_FinalRelease.dll+DA2E8: 8B D8              - mov ebx,eax
+GameCore_Base_FinalRelease.dll+DA2EA: E8 11 F9 FF FF     - call GameCore_Base_FinalRelease.dll+D9C00
+GameCore_Base_FinalRelease.dll+DA2EF: 8B F8              - mov edi,eax
+GameCore_Base_FinalRelease.dll+DA2F1: 2B FB              - sub edi,ebx
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>87</ID>
+                  <Description>"Player ID"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:Player
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>60</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>88</ID>
+                  <Description>"Population"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>250</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>89</ID>
+                  <Description>"Population growth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>71C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>90</ID>
+                  <Description>"City border growth"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_selected_base_city_addr</Address>
+                  <Offsets>
+                    <Offset>8A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>70</ID>
+              <Description>"(Expansion 1) Population growth multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <Color>804000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CITY_POP_MULTI_XP1,GameCore_XP1_FinalRelease.dll,01 41 78 48 8B F9) // should be unique
+alloc(newmem,$1000,INJECT_CITY_POP_MULTI_XP1)
+
+label(code)
+label(return)
+label(vf_city_pop_multi)
+
+
+newmem:
+  push r15
+{$try}
+  mov r15, [rcx]
+  test r15, r15
+  je endp
+  mov r15w, [r15+60]
+  jmp short do_normal
+{$except}
+  jmp endp
+do_normal:
+  cmp r15w, 0
+  jne endp
+  vxorps xmm14, xmm14, xmm14
+  cvtsi2ss xmm15, eax
+  vcomiss xmm15, xmm14
+  jle endp
+  vmovss xmm14, [vf_city_pop_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+endp:
+  pop r15
+
+code:
+  add [rcx+78],eax
+  mov rdi,rcx
+  jmp return
+align 10 cc
+  vf_city_pop_multi:
+  dd (float)1.25
+
+INJECT_CITY_POP_MULTI_XP1:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CITY_POP_MULTI_XP1)
+registersymbol(vf_city_pop_multi)
+[DISABLE]
+
+INJECT_CITY_POP_MULTI_XP1:
+  db 01 41 78 48 8B F9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP1_FinalRelease.dll+F6A64
+
+GameCore_XP1_FinalRelease.dll+F6A4C: 5D                 - pop rbp
+GameCore_XP1_FinalRelease.dll+F6A4D: C3                 - ret 
+GameCore_XP1_FinalRelease.dll+F6A4E: CC                 - int 3 
+GameCore_XP1_FinalRelease.dll+F6A4F: CC                 - int 3 
+GameCore_XP1_FinalRelease.dll+F6A50: 48 89 5C 24 18     - mov [rsp+18],rbx
+GameCore_XP1_FinalRelease.dll+F6A55: 48 89 74 24 20     - mov [rsp+20],rsi
+GameCore_XP1_FinalRelease.dll+F6A5A: 57                 - push rdi
+GameCore_XP1_FinalRelease.dll+F6A5B: 48 83 EC 20        - sub rsp,20
+GameCore_XP1_FinalRelease.dll+F6A5F: 8B 02              - mov eax,[rdx]
+GameCore_XP1_FinalRelease.dll+F6A61: 48 8B F2           - mov rsi,rdx
+// ---------- INJECTING HERE ----------
+GameCore_XP1_FinalRelease.dll+F6A64: 01 41 78           - add [rcx+78],eax
+// ---------- DONE INJECTING  ----------
+GameCore_XP1_FinalRelease.dll+F6A67: 48 8B F9           - mov rdi,rcx
+GameCore_XP1_FinalRelease.dll+F6A6A: 48 8B 01           - mov rax,[rcx]
+GameCore_XP1_FinalRelease.dll+F6A6D: 8B 98 68 02 00 00  - mov ebx,[rax+00000268]
+GameCore_XP1_FinalRelease.dll+F6A73: E8 28 B3 1E 00     - call GameCore_XP1_FinalRelease.dll+2E1DA0
+GameCore_XP1_FinalRelease.dll+F6A78: 48 8B C8           - mov rcx,rax
+GameCore_XP1_FinalRelease.dll+F6A7B: 8B D3              - mov edx,ebx
+GameCore_XP1_FinalRelease.dll+F6A7D: E8 AE B4 1E 00     - call GameCore_XP1_FinalRelease.dll+2E1F30
+GameCore_XP1_FinalRelease.dll+F6A82: 8B 4F 78           - mov ecx,[rdi+78]
+GameCore_XP1_FinalRelease.dll+F6A85: C1 E0 08           - shl eax,08
+GameCore_XP1_FinalRelease.dll+F6A88: 3B C8              - cmp ecx,eax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>71</ID>
                   <Description>"Multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
                   <VariableType>Float</VariableType>
-                  <Address>vf_xp_multi</Address>
+                  <Address>vf_city_pop_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>79</ID>
+              <Description>"(Base) Population growth multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <Color>A00000</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CITY_POP_MULTI_BASE,maindll_base,01 41 74 48 8B F9) // should be unique
+alloc(newmem,$1000,INJECT_CITY_POP_MULTI_BASE)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+{$try}
+  mov r15, [rcx]
+  test r15, r15
+  je endp
+  mov r15w, [r15+60]
+  jmp short do_normal
+{$except}
+  jmp endp
+do_normal:
+  cmp r15w, 0
+  jne endp
+  vxorps xmm14, xmm14, xmm14
+  cvtsi2ss xmm15, eax
+  vcomiss xmm15, xmm14
+  jle endp
+  vmovss xmm14, [vf_city_pop_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+endp:
+  pop r15
+
+code:
+  add [rcx+74],eax
+  mov rdi,rcx
+  jmp return
+align 10 cc
+  vf_city_pop_multi:
+  dd (float)1.25
+
+INJECT_CITY_POP_MULTI_BASE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CITY_POP_MULTI_BASE)
+
+[DISABLE]
+
+INJECT_CITY_POP_MULTI_BASE:
+  db 01 41 74 48 8B F9
+
+unregistersymbol(INJECT_CITY_POP_MULTI_BASE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_Base_FinalRelease.dll+D92D4
+
+GameCore_Base_FinalRelease.dll+D92BC: 5D                 - pop rbp
+GameCore_Base_FinalRelease.dll+D92BD: C3                 - ret 
+GameCore_Base_FinalRelease.dll+D92BE: CC                 - int 3 
+GameCore_Base_FinalRelease.dll+D92BF: CC                 - int 3 
+GameCore_Base_FinalRelease.dll+D92C0: 48 89 5C 24 18     - mov [rsp+18],rbx
+GameCore_Base_FinalRelease.dll+D92C5: 48 89 74 24 20     - mov [rsp+20],rsi
+GameCore_Base_FinalRelease.dll+D92CA: 57                 - push rdi
+GameCore_Base_FinalRelease.dll+D92CB: 48 83 EC 20        - sub rsp,20
+GameCore_Base_FinalRelease.dll+D92CF: 8B 02              - mov eax,[rdx]
+GameCore_Base_FinalRelease.dll+D92D1: 48 8B F2           - mov rsi,rdx
+// ---------- INJECTING HERE ----------
+GameCore_Base_FinalRelease.dll+D92D4: 01 41 74           - add [rcx+74],eax
+// ---------- DONE INJECTING  ----------
+GameCore_Base_FinalRelease.dll+D92D7: 48 8B F9           - mov rdi,rcx
+GameCore_Base_FinalRelease.dll+D92DA: 48 8B 01           - mov rax,[rcx]
+GameCore_Base_FinalRelease.dll+D92DD: 8B 98 50 02 00 00  - mov ebx,[rax+00000250]
+GameCore_Base_FinalRelease.dll+D92E3: E8 38 89 19 00     - call GameCore_Base_FinalRelease.dll+271C20
+GameCore_Base_FinalRelease.dll+D92E8: 48 8B C8           - mov rcx,rax
+GameCore_Base_FinalRelease.dll+D92EB: 8B D3              - mov edx,ebx
+GameCore_Base_FinalRelease.dll+D92ED: E8 5E 8A 19 00     - call GameCore_Base_FinalRelease.dll+271D50
+GameCore_Base_FinalRelease.dll+D92F2: 8B 4F 74           - mov ecx,[rdi+74]
+GameCore_Base_FinalRelease.dll+D92F5: C1 E0 08           - shl eax,08
+GameCore_Base_FinalRelease.dll+D92F8: 3B C8              - cmp ecx,eax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>80</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_city_pop_multi</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -1327,13 +2117,14 @@ GameCore_XP1_FinalRelease.dll+571BDC: CC                    - int 3
       <Color>400080</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
+    <CheatEntry>
+      <ID>72</ID>
+      <Description>"Gathering Storm = Expansion 2; Rise and Fall = Expansion 1"</Description>
+      <Color>808080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>maindll</Name>
-      <Address>GameCore_XP1_FinalRelease.dll</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <Comments>aobscanmodule(INJECT,GameCore_XP2_FinalRelease.dll,41 8B 86 A8 00 00 00 49) // should be unique
 </Comments>
 </CheatTable>
