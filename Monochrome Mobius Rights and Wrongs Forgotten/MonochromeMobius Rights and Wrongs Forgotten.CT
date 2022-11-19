@@ -49,6 +49,7 @@ define(CAMPCampStatusMenuManagerUpdateCharaStatusDataProc, "CAMP.CampStatusMenuM
 define(utrpg_guiBattleResultCharaTabProcAdditiveExpProc, "utrpg_gui.BattleResultCharaTab.ProcAdditiveExp")
 define(BattleSequenceControlCharaStatusControlForwardTimeProc, "BattleSequenceControl.CharaStatusControl.ForwardTime")
 define(BattleSequenceControlbattleCharaControlSubLifeProc, "BattleSequenceControl.battleCharaControl.SubLife")
+define(CurrentMoveExecPlayerMoveInputProc, "CurrentMove.ExecPlayerMoveInput")
 
 
 registersymbol(BattleSequenceControlbattleConditionIsAnnihilateProc)
@@ -60,6 +61,7 @@ registersymbol(CAMPCampStatusMenuManagerUpdateCharaStatusDataProc)
 registersymbol(utrpg_guiBattleResultCharaTabProcAdditiveExpProc)
 registersymbol(BattleSequenceControlCharaStatusControlForwardTimeProc)
 registersymbol(BattleSequenceControlbattleCharaControlSubLifeProc)
+registersymbol(CurrentMoveExecPlayerMoveInputProc)
 
 [DISABLE]
 {$lua}
@@ -504,6 +506,81 @@ GameAssembly.dll+1390323: 85 C0              - test eax,eax
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>86</ID>
+          <Description>"inf. running"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
+  Version: 
+  Date   : 2022-11-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_INF_STAMINA,GameAssembly.dll,0F 57 C0 F3 0F 11 08) // should be unique
+aobscanregion(INJECT_INF_STAMINA,CurrentMoveExecPlayerMoveInputProc+30e,CurrentMoveExecPlayerMoveInputProc+3ae,0F 57 C0 F3 0F 11 08) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+
+newmem:
+  movss xmm7, [vf_06]
+  comiss xmm1, xmm7
+  jae code
+  movss xmm1, [vf_06]
+code:
+  xorps xmm0,xmm0
+  movss [eax],xmm1
+  jmp return
+align 10 cc
+  vf_06:
+  dd (float)0.6
+
+INJECT_INF_STAMINA:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INF_STAMINA)
+
+[DISABLE]
+
+INJECT_INF_STAMINA:
+  db 0F 57 C0 F3 0F 11 08
+
+unregistersymbol(INJECT_INF_STAMINA)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+9AB51E
+
+GameAssembly.dll+9AB4ED: F3 0F 10 44 24 2C     - movss xmm0,[esp+2C]
+GameAssembly.dll+9AB4F3: 83 C4 04              - add esp,04
+GameAssembly.dll+9AB4F6: F3 0F 59 44 24 20     - mulss xmm0,[esp+20]
+GameAssembly.dll+9AB4FC: A1 0C A2 7D 0C        - mov eax,[GameAssembly.dll+31DA20C]
+GameAssembly.dll+9AB501: F3 0F 10 4C 24 10     - movss xmm1,[esp+10]
+GameAssembly.dll+9AB507: D9 5C 24 24           - fstp dword ptr [esp+24]
+GameAssembly.dll+9AB50B: F3 0F 5E 44 24 2C     - divss xmm0,[esp+2C]
+GameAssembly.dll+9AB511: 8B 40 5C              - mov eax,[eax+5C]
+GameAssembly.dll+9AB514: F3 0F 59 44 24 24     - mulss xmm0,[esp+24]
+GameAssembly.dll+9AB51A: F3 0F 5C C8           - subss xmm1,xmm0
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+9AB51E: 0F 57 C0              - xorps xmm0,xmm0
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+9AB521: F3 0F 11 08           - movss [eax],xmm1
+GameAssembly.dll+9AB525: 8B 0D 0C A2 7D 0C     - mov ecx,[GameAssembly.dll+31DA20C]
+GameAssembly.dll+9AB52B: 8B 41 5C              - mov eax,[ecx+5C]
+GameAssembly.dll+9AB52E: 0F 2F 00              - comiss xmm0,[eax]
+GameAssembly.dll+9AB531: 0F 82 98 01 00 00     - jb GameAssembly.dll+9AB6CF
+GameAssembly.dll+9AB537: F6 81 BB 00 00 00 04  - test byte ptr [ecx+000000BB],04
+GameAssembly.dll+9AB53E: 74 11                 - je GameAssembly.dll+9AB551
+GameAssembly.dll+9AB540: 83 79 74 00           - cmp dword ptr [ecx+74],00
+GameAssembly.dll+9AB544: 75 0B                 - jne GameAssembly.dll+9AB551
+GameAssembly.dll+9AB546: E8 35 A3 A3 FF        - call GameAssembly.dll+3E5880
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>13</ID>
           <Description>"Get money"</Description>
           <Options moHideChildren="1"/>
@@ -515,8 +592,8 @@ GameAssembly.dll+1390323: 85 C0              - test eax,eax
 }
 
 [ENABLE]
-aobscanmodule(INJECT_GET_MONEY,GameAssembly.dll,6A 00 FF 70 34 E8) // should be unique
-//aobscanregion(INJECT_GET_MONEY,GameAssembly.dll,CAMPCampMoneyManagerSetMoneyProc+21,CAMPCampMoneyManagerSetMoneyProc+91,6A 00 FF 70 34 E8) // should be unique
+//aobscanmodule(INJECT_GET_MONEY,GameAssembly.dll,6A 00 FF 70 34 E8) // should be unique
+aobscanregion(INJECT_GET_MONEY,CAMPCampMoneyManagerSetMoneyProc+21,CAMPCampMoneyManagerSetMoneyProc+91,6A 00 FF 70 34 E8) // should be unique
 alloc(newmem,$1000)
 
 label(code)
@@ -614,7 +691,7 @@ GameAssembly.dll+89DAB2: 51                 - push ecx
               <VariableType>4 Bytes</VariableType>
               <Address>i_base_money_addr</Address>
               <Offsets>
-                <Offset>70</Offset>
+                <Offset>74</Offset>
               </Offsets>
             </CheatEntry>
             <CheatEntry>
