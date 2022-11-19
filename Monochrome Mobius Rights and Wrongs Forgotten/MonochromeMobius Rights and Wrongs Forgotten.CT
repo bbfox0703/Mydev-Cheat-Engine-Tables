@@ -48,6 +48,8 @@ define(BattleSequenceControlEnergyControlAddEnergyProc, "BattleSequenceControl.E
 define(CAMPCampStatusMenuManagerUpdateCharaStatusDataProc, "CAMP.CampStatusMenuManager.UpdateCharaStatusData")
 define(utrpg_guiBattleResultCharaTabProcAdditiveExpProc, "utrpg_gui.BattleResultCharaTab.ProcAdditiveExp")
 define(BattleSequenceControlCharaStatusControlForwardTimeProc, "BattleSequenceControl.CharaStatusControl.ForwardTime")
+define(BattleSequenceControlbattleCharaControlSubLifeProc, "BattleSequenceControl.battleCharaControl.SubLife")
+
 
 registersymbol(BattleSequenceControlbattleConditionIsAnnihilateProc)
 registersymbol(CAMPCampMoneyManagerSetMoneyProc)
@@ -57,6 +59,7 @@ registersymbol(BattleSequenceControlEnergyControlAddEnergyProc)
 registersymbol(CAMPCampStatusMenuManagerUpdateCharaStatusDataProc)
 registersymbol(utrpg_guiBattleResultCharaTabProcAdditiveExpProc)
 registersymbol(BattleSequenceControlCharaStatusControlForwardTimeProc)
+registersymbol(BattleSequenceControlbattleCharaControlSubLifeProc)
 
 [DISABLE]
 {$lua}
@@ -301,6 +304,113 @@ GameAssembly.dll+A484BD: 0F 57 C0                 - xorps xmm0,xmm0
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_battle_energy_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>80</ID>
+          <Description>"Battle: Damage control"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
+  Version: 
+  Date   : 2022-11-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_BATTLE_DAMAGE_CONTROL,GameAssembly.dll,F3 0F 58 46 1C E8 14) // should be unique
+aobscanregion(INJECT_BATTLE_DAMAGE_CONTROL,BattleSequenceControlbattleCharaControlSubLifeProc+12,BattleSequenceControlbattleCharaControlSubLifeProc+92,F3 0F 58 46 1C) // should be unique
+
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(vf_damage_to_player_multi)
+label(vf_damage_to_enemy_multi)
+
+newmem:
+  cmp dword ptr [esi+70], 0
+  jne to_enemy
+to_player:
+  movss xmm6, [vf_damage_to_player_multi]
+  mulss xmm0, xmm6
+  jmp code
+
+to_enemy:
+  movss xmm6, [vf_damage_to_enemy_multi]
+  mulss xmm0, xmm6
+  jmp code
+
+code:
+  addss xmm0,[esi+1C]
+  jmp return
+align 10 cc
+  vf_damage_to_player_multi:
+  dd (float)0.85
+  vf_damage_to_enemy_multi:
+  dd (float)1.15
+
+INJECT_BATTLE_DAMAGE_CONTROL:
+  jmp newmem
+return:
+registersymbol(INJECT_BATTLE_DAMAGE_CONTROL)
+registersymbol(vf_damage_to_player_multi)
+registersymbol(vf_damage_to_enemy_multi)
+
+[DISABLE]
+
+INJECT_BATTLE_DAMAGE_CONTROL:
+  db F3 0F 58 46 1C
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+9BF652
+
+GameAssembly.dll+9BF636: 56                    - push esi
+GameAssembly.dll+9BF637: 57                    - push edi
+GameAssembly.dll+9BF638: 8B 7D 08              - mov edi,[ebp+08]
+GameAssembly.dll+9BF63B: 8B 77 0C              - mov esi,[edi+0C]
+GameAssembly.dll+9BF63E: 85 F6                 - test esi,esi
+GameAssembly.dll+9BF640: 0F 84 F4 01 00 00     - je GameAssembly.dll+9BF83A
+GameAssembly.dll+9BF646: 8B 45 0C              - mov eax,[ebp+0C]
+GameAssembly.dll+9BF649: F7 D8                 - neg eax
+GameAssembly.dll+9BF64B: 66 0F 6E C0           - movd xmm0,eax
+GameAssembly.dll+9BF64F: 0F 5B C0              - cvtdq2ps xmm0,xmm0
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+9BF652: F3 0F 58 46 1C        - addss xmm0,[esi+1C]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+9BF657: E8 14 84 7D FF        - call GameAssembly.dll+197A70
+GameAssembly.dll+9BF65C: 0F 28 C8              - movaps xmm1,xmm0
+GameAssembly.dll+9BF65F: F3 0F 10 46 20        - movss xmm0,[esi+20]
+GameAssembly.dll+9BF664: 0F 2F C8              - comiss xmm1,xmm0
+GameAssembly.dll+9BF667: F3 0F 11 4E 1C        - movss [esi+1C],xmm1
+GameAssembly.dll+9BF66C: 77 11                 - ja GameAssembly.dll+9BF67F
+GameAssembly.dll+9BF66E: 0F 57 C0              - xorps xmm0,xmm0
+GameAssembly.dll+9BF671: 0F 2F C1              - comiss xmm0,xmm1
+GameAssembly.dll+9BF674: 76 0E                 - jna GameAssembly.dll+9BF684
+GameAssembly.dll+9BF676: C7 46 1C 00 00 00 00  - mov [esi+1C],00000000
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>81</ID>
+              <Description>"Damage to player multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_to_player_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>82</ID>
+              <Description>"Damage to enemy multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_to_enemy_multi</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
