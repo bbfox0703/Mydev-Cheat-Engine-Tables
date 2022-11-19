@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="44">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"4 Bytes"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>284A6E90+18</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Init"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_CHAR_CALL_BASE,$process,40 57 48 83 EC 30 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 40 48 89 6C 24 48 8B DA 48 8B F9 48 8D 05 ?? ?? ?? ?? 48 89 01) // should be unique
+alloc(newmem,$1000,INJECT_GET_CHAR_CALL_BASE)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  push rdi
+  sub rsp,30
+  jmp return
+
+INJECT_GET_CHAR_CALL_BASE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_CHAR_CALL_BASE)
+
+[DISABLE]
+
+INJECT_GET_CHAR_CALL_BASE:
+  db 40 57 48 83 EC 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1664B0
+
+sao_al.exe+16649E: CC                          - int 3 
+sao_al.exe+16649F: CC                          - int 3 
+sao_al.exe+1664A0: 48 8D 05 C1 43 7F 01        - lea rax,[sao_al.exe+195A868]
+sao_al.exe+1664A7: 48 89 01                    - mov [rcx],rax
+sao_al.exe+1664AA: C3                          - ret 
+sao_al.exe+1664AB: CC                          - int 3 
+sao_al.exe+1664AC: CC                          - int 3 
+sao_al.exe+1664AD: CC                          - int 3 
+sao_al.exe+1664AE: CC                          - int 3 
+sao_al.exe+1664AF: CC                          - int 3 
+// ---------- INJECTING HERE ----------
+sao_al.exe+1664B0: 40 57                       - push rdi
+// ---------- DONE INJECTING  ----------
+sao_al.exe+1664B2: 48 83 EC 30                 - sub rsp,30
+sao_al.exe+1664B6: 48 C7 44 24 20 FE FF FF FF  - mov qword ptr [rsp+20],FFFFFFFFFFFFFFFE
+sao_al.exe+1664BF: 48 89 5C 24 40              - mov [rsp+40],rbx
+sao_al.exe+1664C4: 48 89 6C 24 48              - mov [rsp+48],rbp
+sao_al.exe+1664C9: 8B DA                       - mov ebx,edx
+sao_al.exe+1664CB: 48 8B F9                    - mov rdi,rcx
+sao_al.exe+1664CE: 48 8D 05 83 45 7F 01        - lea rax,[sao_al.exe+195AA58]
+sao_al.exe+1664D5: 48 89 01                    - mov [rcx],rax
+sao_al.exe+1664D8: 48 81 C1 60 1B 02 00        - add rcx,00021B60
+sao_al.exe+1664DF: E8 BC 5B 1D 00              - call sao_al.exe+33C0A0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"Base addr"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>INJECT_GET_CHAR_CALL_BASE</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>7</ID>
+      <Description>"Current ctrl char"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_CTRL_CHAR_DATA,sao_al.exe,41 8B 87 E8 02 01 00 89) // should be unique
+alloc(newmem,$1000,INJECT_GET_CTRL_CHAR_DATA)
+
+label(code)
+label(return)
+label(i_cur_char_base_addr)
+label(is_cur_char_inf_sp)
+label(is_cur_char_min_hp)
+label(vf_cur_char_min_hp_mul)
+
+newmem:
+  push r13
+  push r12
+
+  lea r13, [r15+000102D0]
+  mov [i_cur_char_base_addr], r13
+  cmp dword ptr [is_cur_char_inf_sp], 1
+  jne check_next1
+  mov r12d, [r13+1C]
+  mov [r13+18], r12d
+
+check_next1:
+  cmp dword ptr [is_cur_char_min_hp], 1
+  jne endp
+  vmovss xmm14, [vf_cur_char_min_hp_mul]
+  cvtsi2ss xmm15, [r13+10]
+  vmulss xmm13, xmm15, xmm14
+  cvtsi2ss xmm15, [r13+08]
+  vucomiss xmm15, xmm13
+  jae endp
+  cvtss2si r12d, xmm13
+  mov [r13+08], r12d
+
+endp:
+  pop r12
+  pop r13
+
+
+
+code:
+  mov eax,[r15+000102E8]
+  jmp return
+align 10 cc
+  i_cur_char_base_addr:
+  dq 0
+  is_cur_char_inf_sp:
+  dd 1
+  is_cur_char_min_hp:
+  dd 1
+  vf_cur_char_min_hp_mul:
+  dd (float)0.5
+
+INJECT_GET_CTRL_CHAR_DATA:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_CTRL_CHAR_DATA)
+registersymbol(i_cur_char_base_addr)
+registersymbol(is_cur_char_inf_sp)
+registersymbol(is_cur_char_min_hp)
+registersymbol(vf_cur_char_min_hp_mul)
+
+[DISABLE]
+
+INJECT_GET_CTRL_CHAR_DATA:
+  db 41 8B 87 E8 02 01 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+5CD00D
+
+sao_al.exe+5CCFD2: 45 0F B6 E1           - movzx r12d,r9l
+sao_al.exe+5CCFD6: 89 5C 24 60           - mov [rsp+60],ebx
+sao_al.exe+5CCFDA: FF 90 F0 05 00 00     - call qword ptr [rax+000005F0]
+sao_al.exe+5CCFE0: 48 89 87 70 04 00 00  - mov [rdi+00000470],rax
+sao_al.exe+5CCFE7: 4D 8D B7 D0 02 01 00  - lea r14,[r15+000102D0]
+sao_al.exe+5CCFEE: 49 8B 87 D8 02 01 00  - mov rax,[r15+000102D8]
+sao_al.exe+5CCFF5: 49 8B CE              - mov rcx,r14
+sao_al.exe+5CCFF8: 48 89 87 78 04 00 00  - mov [rdi+00000478],rax
+sao_al.exe+5CCFFF: 49 8B 87 E0 02 01 00  - mov rax,[r15+000102E0]
+sao_al.exe+5CD006: 48 89 87 80 04 00 00  - mov [rdi+00000480],rax
+// ---------- INJECTING HERE ----------
+sao_al.exe+5CD00D: 41 8B 87 E8 02 01 00  - mov eax,[r15+000102E8]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+5CD014: 89 87 88 04 00 00     - mov [rdi+00000488],eax
+sao_al.exe+5CD01A: 41 8B 87 EC 02 01 00  - mov eax,[r15+000102EC]
+sao_al.exe+5CD021: 89 87 8C 04 00 00     - mov [rdi+0000048C],eax
+sao_al.exe+5CD027: 49 8B 06              - mov rax,[r14]
+sao_al.exe+5CD02A: FF 50 10              - call qword ptr [rax+10]
+sao_al.exe+5CD02D: 0F B7 C0              - movzx eax,ax
+sao_al.exe+5CD030: 49 8B CF              - mov rcx,r15
+sao_al.exe+5CD033: 89 87 C4 04 00 00     - mov [rdi+000004C4],eax
+sao_al.exe+5CD039: 41 8B 87 E0 11 00 00  - mov eax,[r15+000011E0]
+sao_al.exe+5CD040: 89 87 CC 04 00 00     - mov [rdi+000004CC],eax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"base addr"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_cur_char_base_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"inf. SP?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_cur_char_inf_sp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Keep min. HP?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_cur_char_min_hp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"Min. HP ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_cur_char_min_hp_mul</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Stats"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>9</ID>
+              <Description>"HP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"Max HP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"SP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"Ma SP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>1C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>14</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>24</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>16</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>2C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"Level"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>30</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"EXP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>34</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>20</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_char_base_addr</Address>
+              <Offsets>
+                <Offset>38</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"R14"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <ShowAsSigned>0</ShowAsSigned>
+      <VariableType>8 Bytes</VariableType>
+      <Address>284A6E90</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"R15"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <ShowAsSigned>0</ShowAsSigned>
+      <VariableType>8 Bytes</VariableType>
+      <Address>28496BC0</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"R14A"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <ShowAsSigned>0</ShowAsSigned>
+      <VariableType>8 Bytes</VariableType>
+      <Address>28519120</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"No description"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <ShowAsSigned>0</ShowAsSigned>
+      <VariableType>8 Bytes</VariableType>
+      <Address>284a6e90</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"Coin"</Description>
+      <ShowAsSigned>0</ShowAsSigned>
+      <VariableType>4 Bytes</VariableType>
+      <Address>sao_al.exe+2142CAC</Address>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
