@@ -197,6 +197,11 @@ zh-TW: 文明帝國V
 ## Stellaris  
 [Stellaris (Steam)](https://store.steampowered.com/app/281990/Stellaris/)  
 
+## Sword Art Online Alicization Lycoris  
+[Cheat Table for Sword Art Online: Alicization Lycoris (Steam)](https://store.steampowered.com/app/1009290/_/)  
+ja-JP: ソードアート・オンライン アリシゼーション リコリス  
+zh-TW: 刀劍神域 彼岸遊境  
+
 ## Sword Art Online Hollow Realization Deluxe Edition
 [Sword Art Online: Hollow Realization Deluxe Edition (Steam)](https://store.steampowered.com/app/607890/Sword_Art_Online_Hollow_Realization_Deluxe_Edition/)
 zh-TW: 刀劍神域 虛空幻界  
