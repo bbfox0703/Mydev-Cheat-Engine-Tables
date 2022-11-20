@@ -15,7 +15,7 @@ LuaCall(cycleFullCompact(nil,false))
     </CheatEntry>
     <CheatEntry>
       <ID>25</ID>
-      <Description>"init"</Description>
+      <Description>"init - get money - must be sao_al.exe"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -118,20 +118,36 @@ newmem:
   push r13
   push r12
 
+{$try}
   lea r13, [r15+000102D0] // from SP: 000102E8-18
   mov [i_cur_char_base_addr], r13
+  jmp short do_ex_next1
+{$except}
+  jmp endp
+
+do_ex_next1:
   cmp dword ptr [is_cur_char_inf_sp], 1
   jne check_next1
+{$try}
   mov r12d, [r13+1C]
   mov [r13+18], r12d
+  jmp short check_next1
+{$except}
+  jmp endp
 
 check_next1:
   cmp dword ptr [is_cur_char_min_hp], 1
   jne endp
+{$try}
   vmovss xmm14, [vf_cur_char_min_hp_mul]
   cvtsi2ss xmm15, [r13+10]
   vmulss xmm13, xmm15, xmm14
   cvtsi2ss xmm15, [r13+08]
+  jmp short do_ex_next2
+{$except}
+  jmp endp
+
+do_ex_next2:
   vucomiss xmm15, xmm13
   jae endp
   cvtss2si r12d, xmm13
@@ -219,7 +235,7 @@ sao_al.exe+5CD040: 89 87 CC 04 00 00     - mov [rdi+000004CC],eax
           <Description>"Battle: Damage control"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : sao_al.exe
+          <AssemblerScript Async="1">{ Game   : sao_al.exe
   Version: 
   Date   : 2022-11-20
   Author : bbfox@https://opencheattables.com
@@ -237,8 +253,15 @@ label(vf_damage_to_enemy)
 label(vf_damage_to_npc)
 
 newmem:
+{$try}
   cmp word ptr [rbx+34], 1 // skip level 1
+  jmp short do_ex_next1
+{$except}
+  jmp code
+
+do_ex_next1:
   je code
+
   cmp word ptr [rbx+36], 1 // System control authority
   je to_enemy_check
 to_npc_check:
@@ -492,7 +515,7 @@ sao_al.exe+23F46F: 48 83 C4 28                    - add rsp,28
             </CheatEntry>
             <CheatEntry>
               <ID>16</ID>
-              <Description>"??"</Description>
+              <Description>"Stamina"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -503,7 +526,7 @@ sao_al.exe+23F46F: 48 83 C4 28                    - add rsp,28
             </CheatEntry>
             <CheatEntry>
               <ID>17</ID>
-              <Description>"??"</Description>
+              <Description>"Max stamina "</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -573,20 +596,18 @@ sao_al.exe+23F46F: 48 83 C4 28                    - add rsp,28
     </CheatEntry>
     <CheatEntry>
       <ID>28</ID>
-      <Description>"Selected item"</Description>
+      <Description>"Selected item in Item menu"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : sao_al.exe
   Version: 
   Date   : 2022-11-19
-  Author : Andyc
-
-  This script does blah blah blah
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 //0F BF 19 0F B6 49 02 E8 ?? ?? ?? ?? 85 C0
-aobscanmodule(INJECT_SELED_ITEM,sao_al.exe,0F BF 19 0F B6 49 02 E8 B3) // should be unique
+aobscanmodule(INJECT_SELED_ITEM,$process,0F BF 19 0F B6 49 02 E8 B3) // should be unique
 alloc(newmem,$1000,INJECT_SELED_ITEM)
 
 label(code)
@@ -648,6 +669,12 @@ sao_al.exe+3BD4BF: 3D E7 03 00 00     - cmp eax,000003E7
 }
 </AssemblerScript>
       <CheatEntries>
+        <CheatEntry>
+          <ID>148</ID>
+          <Description>"Only enable when needed"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
         <CheatEntry>
           <ID>29</ID>
           <Description>"Base addr."</Description>
@@ -1307,7 +1334,7 @@ sao_al.exe+3BD4BF: 3D E7 03 00 00     - cmp eax,000003E7
 
 [ENABLE]
 
-aobscanmodule(INJECT_BROWSE_ITEMS,sao_al.exe,41 89 46 08 0F 94 C0) // should be unique
+aobscanmodule(INJECT_BROWSE_ITEMS,$process,41 89 46 08 0F 94 C0) // should be unique
 alloc(newmem,$1000,INJECT_BROWSE_ITEMS)
 
 label(code)
@@ -1317,7 +1344,13 @@ newmem:
   push r15
   xor r15, r15
 
+{$try}
   mov r15b, [rsi+02]
+  jmp do_ex_next1
+{$except}
+  jmp endp
+
+do_ex_next1:
   cmp r15b, #100
   je set_potion
   cmp r15b, #115
@@ -1402,19 +1435,25 @@ sao_al.exe+75BE0B: 40 84 FF        - test dil,dil
       <CheatEntries>
         <CheatEntry>
           <ID>97</ID>
-          <Description>"Usage: Menu -&gt; Item -&gt; switch item category -&gt; close menu -&gt; open again"</Description>
+          <Description>"Usage: Menu -&gt; Item -&gt; switch item category -&gt; close menu"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
           <ID>99</ID>
-          <Description>"            -&gt; close menu -&gt; open again"</Description>
+          <Description>"            -&gt; DISABLE script -&gt;"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>98</ID>
-          <Description>"Disable when not in use"</Description>
+          <ID>152</ID>
+          <Description>"            -&gt; open menu again"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>151</ID>
+          <Description>"Only enable when needed"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
@@ -1502,9 +1541,8 @@ sao_al.exe+1A520F: 66 C7 44 24 60 00 00     - mov word ptr [rsp+60],0000
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>111</ID>
-      <Description>"EXP multiplier"</Description>
-      <Options moHideChildren="1"/>
+      <ID>134</ID>
+      <Description>"inf. stamina"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : sao_al.exe
   Version: 
@@ -1514,7 +1552,82 @@ sao_al.exe+1A520F: 66 C7 44 24 60 00 00     - mov word ptr [rsp+60],0000
 
 [ENABLE]
 
-aobscanmodule(INJECT_EXP_MULTI,sao_al.exe,48 8B F1 48 85 FF 74 32) // should be unique
+aobscanmodule(INJECT_INF_STAMINA,$process,8B C2 48 8B D9 8B 51 2C) // should be unique
+alloc(newmem,$1000,INJECT_INF_STAMINA)
+
+label(code)
+label(return)
+
+newmem:
+  mov edx, [rcx+2C]
+  sub edx, 64
+  mov eax, [rcx+28]
+  cmp edx, eax
+  cmovb edx, eax
+  //jae code
+  //mov edx, eax
+
+code:
+  mov eax,edx
+  mov rbx,rcx
+  jmp return
+
+INJECT_INF_STAMINA:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_STAMINA)
+
+[DISABLE]
+
+INJECT_INF_STAMINA:
+  db 8B C2 48 8B D9
+
+unregistersymbol(INJECT_INF_STAMINA)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+240256
+
+sao_al.exe+240248: CC              - int 3 
+sao_al.exe+240249: CC              - int 3 
+sao_al.exe+24024A: CC              - int 3 
+sao_al.exe+24024B: CC              - int 3 
+sao_al.exe+24024C: CC              - int 3 
+sao_al.exe+24024D: CC              - int 3 
+sao_al.exe+24024E: CC              - int 3 
+sao_al.exe+24024F: CC              - int 3 
+sao_al.exe+240250: 40 53           - push rbx
+sao_al.exe+240252: 48 83 EC 40     - sub rsp,40
+// ---------- INJECTING HERE ----------
+sao_al.exe+240256: 8B C2           - mov eax,edx
+// ---------- DONE INJECTING  ----------
+sao_al.exe+240258: 48 8B D9        - mov rbx,rcx
+sao_al.exe+24025B: 8B 51 2C        - mov edx,[rcx+2C]
+sao_al.exe+24025E: 3B C2           - cmp eax,edx
+sao_al.exe+240260: 0F 4C D0        - cmovl edx,eax
+sao_al.exe+240263: 85 D2           - test edx,edx
+sao_al.exe+240265: 79 31           - jns sao_al.exe+240298
+sao_al.exe+240267: 4C 8B 44 24 48  - mov r8,[rsp+48]
+sao_al.exe+24026C: 45 33 C9        - xor r9d,r9d
+sao_al.exe+24026F: C6 44 24 30 3C  - mov byte ptr [rsp+30],3C
+sao_al.exe+240274: 8B C8           - mov ecx,eax
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>111</ID>
+      <Description>"Level EXP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_EXP_MULTI,$process,48 8B F1 48 85 FF 74 32) // should be unique
 alloc(newmem,$1000,INJECT_EXP_MULTI)
 
 label(code)
@@ -1524,7 +1637,13 @@ label(vf_exp_multi)
 newmem:
   test rdi,rdi
   je code
+{$try}
   cmp ebx, [rdi]
+  jmp short do_ex_next1
+{$except}
+  jmp code
+
+do_ex_next1:
   jbe code
   vmovss xmm14, [vf_exp_multi]
   cvtsi2ss xmm15, ebx
@@ -1614,7 +1733,7 @@ sao_al.exe+24225B- 45 33 C9              - xor r9d,r9d
       <Description>"System control authority EXP multiplier"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : sao_al.exe
+      <AssemblerScript Async="1">{ Game   : sao_al.exe
   Version: 
   Date   : 2022-11-20
   Author : bbfox@https://opencheattables.com
@@ -1622,7 +1741,7 @@ sao_al.exe+24225B- 45 33 C9              - xor r9d,r9d
 
 [ENABLE]
 
-aobscanmodule(INJECT_SYSCTRL_EXP_MULTI,sao_al.exe,89 5F 10 85 DB) // should be unique
+aobscanmodule(INJECT_SYSCTRL_EXP_MULTI,$process,89 5F 10 85 DB) // should be unique
 alloc(newmem,$1000,INJECT_SYSCTRL_EXP_MULTI)
 
 label(code)
@@ -1630,7 +1749,13 @@ label(return)
 label(vf_sysctrl_exp_multi)
 
 newmem:
+{$try}
   cmp ebx, [rdi+10]
+  jmp short do_ex_next1
+{$except}
+  jmp code
+
+do_ex_next1:
   jbe code
 
   cvtsi2ss xmm15, ebx
@@ -1650,7 +1775,7 @@ code:
   jmp return
 align 10 cc
   vf_sysctrl_exp_multi:
-  dd (float)1.5
+  dd (float)1.25
 
 INJECT_SYSCTRL_EXP_MULTI:
   jmp newmem
@@ -1706,94 +1831,580 @@ sao_al.exe+2423D6: 48 89 44 24 20        - mov [rsp+20],rax
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>104</ID>
-      <Description>"_WIP"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1</ID>
-          <Description>"Init"</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : sao_al.exe
+      <ID>162</ID>
+      <Description>"Crafting EXP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">{ Game   : sao_al.exe
   Version: 
-  Date   : 2022-11-19
+  Date   : 2022-11-20
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_CHAR_CALL_BASE,$process,40 57 48 83 EC 30 48 C7 44 24 20 FE FF FF FF 48 89 5C 24 40 48 89 6C 24 48 8B DA 48 8B F9 48 8D 05 ?? ?? ?? ?? 48 89 01) // should be unique
-alloc(newmem,$1000,INJECT_GET_CHAR_CALL_BASE)
+aobscanmodule(INJECT_CRAFT_XP_MULTI,$process,03 D6 41 8B CF) // should be unique
+alloc(newmem,$1000,INJECT_CRAFT_XP_MULTI)
 
 label(code)
 label(return)
+label(vf_craft_exp_multi)
 
 newmem:
+  cvtsi2ss xmm15, edx
+  vmovss xmm14, [vf_craft_exp_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si edx, xmm15
 
 code:
-  push rdi
-  sub rsp,30
+  add edx,esi
+  mov ecx,r15d
   jmp return
+align 10 cc
+  vf_craft_exp_multi:
+  dd (float)3.3333333
 
-INJECT_GET_CHAR_CALL_BASE:
+
+INJECT_CRAFT_XP_MULTI:
   jmp newmem
-  nop
 return:
-registersymbol(INJECT_GET_CHAR_CALL_BASE)
+registersymbol(INJECT_CRAFT_XP_MULTI)
+registersymbol(vf_craft_exp_multi)
 
 [DISABLE]
 
-INJECT_GET_CHAR_CALL_BASE:
-  db 40 57 48 83 EC 30
+INJECT_CRAFT_XP_MULTI:
+  db 03 D6 41 8B CF
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1664B0
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+7C9484
 
-sao_al.exe+16649E: CC                          - int 3 
-sao_al.exe+16649F: CC                          - int 3 
-sao_al.exe+1664A0: 48 8D 05 C1 43 7F 01        - lea rax,[sao_al.exe+195A868]
-sao_al.exe+1664A7: 48 89 01                    - mov [rcx],rax
-sao_al.exe+1664AA: C3                          - ret 
-sao_al.exe+1664AB: CC                          - int 3 
-sao_al.exe+1664AC: CC                          - int 3 
-sao_al.exe+1664AD: CC                          - int 3 
-sao_al.exe+1664AE: CC                          - int 3 
-sao_al.exe+1664AF: CC                          - int 3 
+sao_al.exe+7C945C: 77 26                    - ja sao_al.exe+7C9484
+sao_al.exe+7C945E: 41 83 FF 06              - cmp r15d,06
+sao_al.exe+7C9462: 72 09                    - jb sao_al.exe+7C946D
+sao_al.exe+7C9464: 48 8D 05 E9 10 DF 01     - lea rax,[sao_al.exe+25BA554]
+sao_al.exe+7C946B: EB 15                    - jmp sao_al.exe+7C9482
+sao_al.exe+7C946D: 4B 8D 0C 7F              - lea rcx,[r15+r15*2]
+sao_al.exe+7C9471: 48 8D 05 78 C4 8F 01     - lea rax,[sao_al.exe+20C58F0]
+sao_al.exe+7C9478: 48 8D 04 C8              - lea rax,[rax+rcx*8]
+sao_al.exe+7C947C: 48 05 64 4C 4F 00        - add rax,004F4C64
+sao_al.exe+7C9482: 8B 30                    - mov esi,[rax]
 // ---------- INJECTING HERE ----------
-sao_al.exe+1664B0: 40 57                       - push rdi
+sao_al.exe+7C9484: 03 D6                    - add edx,esi
 // ---------- DONE INJECTING  ----------
-sao_al.exe+1664B2: 48 83 EC 30                 - sub rsp,30
-sao_al.exe+1664B6: 48 C7 44 24 20 FE FF FF FF  - mov qword ptr [rsp+20],FFFFFFFFFFFFFFFE
-sao_al.exe+1664BF: 48 89 5C 24 40              - mov [rsp+40],rbx
-sao_al.exe+1664C4: 48 89 6C 24 48              - mov [rsp+48],rbp
-sao_al.exe+1664C9: 8B DA                       - mov ebx,edx
-sao_al.exe+1664CB: 48 8B F9                    - mov rdi,rcx
-sao_al.exe+1664CE: 48 8D 05 83 45 7F 01        - lea rax,[sao_al.exe+195AA58]
-sao_al.exe+1664D5: 48 89 01                    - mov [rcx],rax
-sao_al.exe+1664D8: 48 81 C1 60 1B 02 00        - add rcx,00021B60
-sao_al.exe+1664DF: E8 BC 5B 1D 00              - call sao_al.exe+33C0A0
+sao_al.exe+7C9486: 41 8B CF                 - mov ecx,r15d
+sao_al.exe+7C9489: E8 D2 E0 BF FF           - call sao_al.exe+3C7560
+sao_al.exe+7C948E: 32 C0                    - xor al,al
+sao_al.exe+7C9490: 48 8B 4D D0              - mov rcx,[rbp-30]
+sao_al.exe+7C9494: 48 33 CC                 - xor rcx,rsp
+sao_al.exe+7C9497: E8 24 7F 48 00           - call sao_al.exe+C513C0
+sao_al.exe+7C949C: 4C 8D 9C 24 40 01 00 00  - lea r11,[rsp+00000140]
+sao_al.exe+7C94A4: 49 8B 5B 48              - mov rbx,[r11+48]
+sao_al.exe+7C94A8: 41 0F 28 73 F0           - movaps xmm6,[r11-10]
+sao_al.exe+7C94AD: 45 0F 28 53 B0           - movaps xmm10,[r11-50]
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>2</ID>
-              <Description>"Base addr"</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>Byte</VariableType>
-              <Address>INJECT_GET_CHAR_CALL_BASE</Address>
-            </CheatEntry>
-          </CheatEntries>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>163</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_craft_exp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>130</ID>
+      <Description>"Weapon proficiency multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_WEAPON_PROF_MULTI,$process,41 8B F0 8B DA 0F) // should be unique
+alloc(newmem,$1000,INJECT_WEAPON_PROF_MULTI)
+
+label(code)
+label(return)
+label(vf_weapon_prof_multi)
+
+newmem:
+  cvtsi2ss xmm15, r8d
+  vmovss xmm14, [vf_weapon_prof_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r8d, xmm15
+
+code:
+  mov esi,r8d
+  mov ebx,edx
+  jmp return
+align 10 cc
+  vf_weapon_prof_multi:
+  dd (float)2.1
+
+INJECT_WEAPON_PROF_MULTI:
+  jmp newmem
+return:
+registersymbol(INJECT_WEAPON_PROF_MULTI)
+registersymbol(vf_weapon_prof_multi)
+
+[DISABLE]
+
+INJECT_WEAPON_PROF_MULTI:
+  db 41 8B F0 8B DA
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+54F368
+
+sao_al.exe+54F355: B0 01              - mov al,01
+sao_al.exe+54F357: E9 30 FD FF FF     - jmp sao_al.exe+54F08C
+sao_al.exe+54F35C: CC                 - int 3 
+sao_al.exe+54F35D: CC                 - int 3 
+sao_al.exe+54F35E: CC                 - int 3 
+sao_al.exe+54F35F: CC                 - int 3 
+sao_al.exe+54F360: 40 53              - push rbx
+sao_al.exe+54F362: 56                 - push rsi
+sao_al.exe+54F363: 57                 - push rdi
+sao_al.exe+54F364: 48 83 EC 20        - sub rsp,20
+// ---------- INJECTING HERE ----------
+sao_al.exe+54F368: 41 8B F0           - mov esi,r8d
+// ---------- DONE INJECTING  ----------
+sao_al.exe+54F36B: 8B DA              - mov ebx,edx
+sao_al.exe+54F36D: 0F B7 F9           - movzx edi,cx
+sao_al.exe+54F370: E8 3B F7 FF FF     - call sao_al.exe+54EAB0
+sao_al.exe+54F375: 48 85 C0           - test rax,rax
+sao_al.exe+54F378: 0F 84 59 01 00 00  - je sao_al.exe+54F4D7
+sao_al.exe+54F37E: 48 8D 48 04        - lea rcx,[rax+04]
+sao_al.exe+54F382: BA 10 27 00 00     - mov edx,00002710
+sao_al.exe+54F387: 0F B7 01           - movzx eax,word ptr [rcx]
+sao_al.exe+54F38A: 66 3B D0           - cmp dx,ax
+sao_al.exe+54F38D: 0F 8E 44 01 00 00  - jng sao_al.exe+54F4D7
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>131</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_weapon_prof_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>132</ID>
+      <Description>"NPC trust multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_NPC_TRUST_MULTI,$process,F2 44 0F 2C C9) // should be unique
+alloc(newmem,$1000,INJECT_NPC_TRUST_MULTI)
+
+label(code)
+label(return)
+label(vd_npc_trust_multi)
+
+newmem:
+  vmovsd xmm14, [vd_npc_trust_multi]
+  vmulsd xmm1, xmm1, xmm14
+
+code:
+  cvttsd2si r9d,xmm1
+  jmp return
+align 10 cc
+  vd_npc_trust_multi:
+  dq (double)2
+
+INJECT_NPC_TRUST_MULTI:
+  jmp newmem
+return:
+registersymbol(INJECT_NPC_TRUST_MULTI)
+registersymbol(vd_npc_trust_multi)
+
+[DISABLE]
+
+INJECT_NPC_TRUST_MULTI:
+  db F2 44 0F 2C C9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+3C6460
+
+sao_al.exe+3C6437: 48 6B C8 38              - imul rcx,rax,38
+sao_al.exe+3C643B: 42 0F B7 44 39 0A        - movzx eax,word ptr [rcx+r15+0A]
+sao_al.exe+3C6441: 66 0F 6E C8              - movd xmm1,eax
+sao_al.exe+3C6445: F3 0F E6 C9              - cvtdq2pd xmm1,xmm1,xmm1
+sao_al.exe+3C6449: 45 84 F6                 - test r14l,r14b
+sao_al.exe+3C644C: 74 12                    - je sao_al.exe+3C6460
+sao_al.exe+3C644E: 0F 28 C1                 - movaps xmm0,xmm1
+sao_al.exe+3C6451: F2 0F 59 05 27 74 63 01  - mulsd xmm0,[sao_al.exe+19FD880]
+sao_al.exe+3C6459: F2 0F 58 C1              - addsd xmm0,xmm1
+sao_al.exe+3C645D: 0F 28 C8                 - movaps xmm1,xmm0
+// ---------- INJECTING HERE ----------
+sao_al.exe+3C6460: F2 44 0F 2C C9           - cvttsd2si r9d,xmm1
+// ---------- DONE INJECTING  ----------
+sao_al.exe+3C6465: 43 8D 04 08              - lea eax,[r8+r9]
+sao_al.exe+3C6469: 41 BE E8 03 00 00        - mov r14d,000003E8
+sao_al.exe+3C646F: 41 3B C6                 - cmp eax,r14d
+sao_al.exe+3C6472: 44 0F 4C F0              - cmovl r14d,eax
+sao_al.exe+3C6476: 48 83 3D CA 4A CE 01 00  - cmp qword ptr [sao_al.exe+20AAF48],00
+sao_al.exe+3C647E: 41 0F BF 47 0C           - movsx eax,word ptr [r15+0C]
+sao_al.exe+3C6483: 8D 70 64                 - lea esi,[rax+64]
+sao_al.exe+3C6486: 8B FE                    - mov edi,esi
+sao_al.exe+3C6488: 0F 84 E7 00 00 00        - je sao_al.exe+3C6575
+sao_al.exe+3C648E: 48 8B 0D B3 97 CE 01     - mov rcx,[sao_al.exe+20AFC48]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>133</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Double</VariableType>
+          <Address>vd_npc_trust_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>145</ID>
+      <Description>"Art guage grow option"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ART_GUAGE_GROW_OPTION,$process,D3 F3 0F 11 51 38 C3 CC) // should be unique
+alloc(newmem,$1000,INJECT_ART_GUAGE_GROW_OPTION)
+
+label(code)
+label(return)
+label(i_art_gauge_option)
+label(vf_art_gauge_multi)
+
+newmem:
+  cmp dword ptr [i_art_gauge_option], 2
+  je fill_max
+  cmp dword ptr [i_art_gauge_option], 1
+  je fill_multi
+  jmp code
+
+fill_max:
+  push r15
+  mov r15d, [rcx+34]
+  mov [rcx+38], r15d
+  pop r15
+  jmp code
+
+fill_multi:
+  vmovss xmm15, [rcx+38]
+  vmovss xmm14, [vf_art_gauge_multi]
+  vcomiss xmm15, xmm2
+  jae code
+
+  vsubss xmm13, xmm2, xmm15
+  vmulss xmm13, xmm13, xmm14
+  vaddss xmm2, xmm15, xmm13
+
+  vmovss xmm13, [rcx+34]
+  vcomiss xmm2, xmm13
+  jbe code
+  vmovss xmm2, [rcx+34]
+
+code:
+  movss [rcx+38],xmm2
+  jmp return
+align 10 cc
+  i_art_gauge_option: // 0: none, 1:multiplier, 2:immediate
+  dd 1
+  vf_art_gauge_multi:
+  dd (float)3.33333333
+
+INJECT_ART_GUAGE_GROW_OPTION+01:
+  jmp newmem
+return:
+registersymbol(INJECT_ART_GUAGE_GROW_OPTION)
+registersymbol(i_art_gauge_option)
+registersymbol(vf_art_gauge_multi)
+[DISABLE]
+
+INJECT_ART_GUAGE_GROW_OPTION+01:
+  db F3 0F 11 51 38
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1CAB82
+
+sao_al.exe+1CAB67: 77 19           - ja sao_al.exe+1CAB82
+sao_al.exe+1CAB69: 0F 28 D4        - movaps xmm2,xmm4
+sao_al.exe+1CAB6C: F3 0F 11 51 38  - movss [rcx+38],xmm2
+sao_al.exe+1CAB71: C3              - ret 
+sao_al.exe+1CAB72: 0F 2F D4        - comiss xmm2,xmm4
+sao_al.exe+1CAB75: 77 03           - ja sao_al.exe+1CAB7A
+sao_al.exe+1CAB77: 0F 28 D4        - movaps xmm2,xmm4
+sao_al.exe+1CAB7A: 0F 2F DA        - comiss xmm3,xmm2
+sao_al.exe+1CAB7D: 77 03           - ja sao_al.exe+1CAB82
+sao_al.exe+1CAB7F: 0F 28 D3        - movaps xmm2,xmm3
+// ---------- INJECTING HERE ----------
+sao_al.exe+1CAB82: F3 0F 11 51 38  - movss [rcx+38],xmm2
+// ---------- DONE INJECTING  ----------
+sao_al.exe+1CAB87: C3              - ret 
+sao_al.exe+1CAB88: CC              - int 3 
+sao_al.exe+1CAB89: CC              - int 3 
+sao_al.exe+1CAB8A: CC              - int 3 
+sao_al.exe+1CAB8B: CC              - int 3 
+sao_al.exe+1CAB8C: CC              - int 3 
+sao_al.exe+1CAB8D: CC              - int 3 
+sao_al.exe+1CAB8E: CC              - int 3 
+sao_al.exe+1CAB8F: CC              - int 3 
+sao_al.exe+1CAB90: 40 53           - push rbx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>146</ID>
+          <Description>"Option"</Description>
+          <DropDownList DisplayValueAsItem="1">0:None
+1:by multiplier below
+2:Max immediately
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_art_gauge_option</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>114</ID>
-          <Description>"inf. Skill pt?"</Description>
+          <ID>147</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_art_gauge_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>137</ID>
+      <Description>"Min. skill points"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MIN_SKILL_PT,$process,66 89 B8 D8 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_MIN_SKILL_PT)
+
+label(code)
+label(return)
+label(i_min_skill_pt)
+
+newmem:
+  cmp di, [i_min_skill_pt]
+  jae code
+  mov di, [i_min_skill_pt]
+
+code:
+  mov [rax+000000D8],di
+  jmp return
+align 10 cc
+  i_min_skill_pt:
+  dw 32
+
+INJECT_MIN_SKILL_PT:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MIN_SKILL_PT)
+registersymbol(i_min_skill_pt)
+
+[DISABLE]
+
+INJECT_MIN_SKILL_PT:
+  db 66 89 B8 D8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1D7924
+
+sao_al.exe+1D78F5: 48 8B 44 24 48        - mov rax,[rsp+48]
+sao_al.exe+1D78FA: 45 33 C9              - xor r9d,r9d
+sao_al.exe+1D78FD: 0F B7 8B D8 00 00 00  - movzx ecx,word ptr [rbx+000000D8]
+sao_al.exe+1D7904: 44 8B C5              - mov r8d,ebp
+sao_al.exe+1D7907: C6 44 24 30 3E        - mov byte ptr [rsp+30],3E
+sao_al.exe+1D790C: C6 44 24 28 3D        - mov byte ptr [rsp+28],3D
+sao_al.exe+1D7911: 48 89 44 24 20        - mov [rsp+20],rax
+sao_al.exe+1D7916: E8 45 5F EB FF        - call sao_al.exe+8D860
+sao_al.exe+1D791B: 66 89 AB D8 00 00 00  - mov [rbx+000000D8],bp
+sao_al.exe+1D7922: EB 07                 - jmp sao_al.exe+1D792B
+// ---------- INJECTING HERE ----------
+sao_al.exe+1D7924: 66 89 B8 D8 00 00 00  - mov [rax+000000D8],di
+// ---------- DONE INJECTING  ----------
+sao_al.exe+1D792B: 48 8B 6C 24 50        - mov rbp,[rsp+50]
+sao_al.exe+1D7930: 48 8B 5C 24 58        - mov rbx,[rsp+58]
+sao_al.exe+1D7935: 48 8B 74 24 60        - mov rsi,[rsp+60]
+sao_al.exe+1D793A: 48 83 C4 40           - add rsp,40
+sao_al.exe+1D793E: 5F                    - pop rdi
+sao_al.exe+1D793F: C3                    - ret 
+sao_al.exe+1D7940: 48 89 5C 24 08        - mov [rsp+08],rbx
+sao_al.exe+1D7945: 48 89 74 24 10        - mov [rsp+10],rsi
+sao_al.exe+1D794A: 57                    - push rdi
+sao_al.exe+1D794B: 48 83 EC 20           - sub rsp,20
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>139</ID>
+          <Description>"Usage: when skill point changed"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>149</ID>
+          <Description>"Only enable when needed"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>138</ID>
+          <Description>"Min. value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_min_skill_pt</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>122</ID>
+      <Description>"Sacred Art cast multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SACRED_ART_MULTI,$process,F3 0F 58 8E 80 0B 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SACRED_ART_MULTI)
+
+label(code)
+label(return)
+label(vf_sacred_art_multi)
+
+newmem:
+  vmovss xmm14, [vf_sacred_art_multi]
+  vmulss xmm1, xmm1, xmm14
+
+code:
+  addss xmm1,[rsi+00000B80]
+  jmp return
+align 10 cc
+  vf_sacred_art_multi:
+  dd (float)3.3333334
+
+INJECT_SACRED_ART_MULTI:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SACRED_ART_MULTI)
+registersymbol(vf_sacred_art_multi)
+
+[DISABLE]
+
+INJECT_SACRED_ART_MULTI:
+  db F3 0F 58 8E 80 0B 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+2A0CE8
+
+sao_al.exe+2A0CBD: 49 8B CE                 - mov rcx,r14
+sao_al.exe+2A0CC0: FF 90 28 02 00 00        - call qword ptr [rax+00000228]
+sao_al.exe+2A0CC6: 0F 28 C8                 - movaps xmm1,xmm0
+sao_al.exe+2A0CC9: E8 92 AA F6 00           - call sao_al.exe+120B760
+sao_al.exe+2A0CCE: F3 0F 59 C8              - mulss xmm1,xmm0
+sao_al.exe+2A0CD2: 49 8B CE                 - mov rcx,r14
+sao_al.exe+2A0CD5: E8 56 46 E5 FF           - call sao_al.exe+F5330
+sao_al.exe+2A0CDA: 0F 28 C8                 - movaps xmm1,xmm0
+sao_al.exe+2A0CDD: 0F 57 F6                 - xorps xmm6,xmm6
+sao_al.exe+2A0CE0: F3 0F 58 86 8C 0B 00 00  - addss xmm0,[rsi+00000B8C]
+// ---------- INJECTING HERE ----------
+sao_al.exe+2A0CE8: F3 0F 58 8E 80 0B 00 00  - addss xmm1,[rsi+00000B80]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+2A0CF0: F3 0F 11 86 8C 0B 00 00  - movss [rsi+00000B8C],xmm0
+sao_al.exe+2A0CF8: F3 0F 10 86 84 0B 00 00  - movss xmm0,[rsi+00000B84]
+sao_al.exe+2A0D00: 0F 2F C6                 - comiss xmm0,xmm6
+sao_al.exe+2A0D03: F3 0F 11 8E 80 0B 00 00  - movss [rsi+00000B80],xmm1
+sao_al.exe+2A0D0B: 76 43                    - jna sao_al.exe+2A0D50
+sao_al.exe+2A0D0D: 49 8B 06                 - mov rax,[r14]
+sao_al.exe+2A0D10: 45 33 C0                 - xor r8d,r8d
+sao_al.exe+2A0D13: 33 D2                    - xor edx,edx
+sao_al.exe+2A0D15: 49 8B CE                 - mov rcx,r14
+sao_al.exe+2A0D18: FF 90 28 02 00 00        - call qword ptr [rax+00000228]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>123</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_sacred_art_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>126</ID>
+      <Description>"Longer buff duration"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>125</ID>
+          <Description>"Step 1 - init."</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : sao_al.exe
   Version: 
@@ -1803,8 +2414,210 @@ sao_al.exe+1664DF: E8 BC 5B 1D 00              - call sao_al.exe+33C0A0
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_KILL_PT,sao_al.exe,2B 95 88 00 00 00) // should be unique
-alloc(newmem,$1000,INJECT_INF_KILL_PT)
+aobscanmodule(INJECT_LONGER_BUFF_TIME_S1,$process,F3 0F 10 07 0F 2F 03) // should be unique
+alloc(newmem,$1000,INJECT_LONGER_BUFF_TIME_S1)
+
+label(code)
+label(return)
+label(i_buff_base_addr_1)
+
+newmem:
+  cmp r13, 1
+  jne code
+  mov [i_buff_base_addr_1], rdi
+
+code:
+  movss xmm0,[rdi]
+  comiss xmm0,[rbx]
+  jmp return
+align 10 cc
+  i_buff_base_addr_1:
+  dq 0
+
+INJECT_LONGER_BUFF_TIME_S1:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_LONGER_BUFF_TIME_S1)
+registersymbol(i_buff_base_addr_1)
+[DISABLE]
+
+INJECT_LONGER_BUFF_TIME_S1:
+  db F3 0F 10 07 0F 2F 03
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+53FED3
+
+sao_al.exe+53FEAC: 4D 8D 7D F8              - lea r15,[r13-08]
+sao_al.exe+53FEB0: 49 8B DD                 - mov rbx,r13
+sao_al.exe+53FEB3: 49 8D 75 0D              - lea rsi,[r13+0D]
+sao_al.exe+53FEB7: 49 8D 7D FC              - lea rdi,[r13-04]
+sao_al.exe+53FEBB: 4D 8D 75 08              - lea r14,[r13+08]
+sao_al.exe+53FEBF: 44 8B 6C 24 30           - mov r13d,[rsp+30]
+sao_al.exe+53FEC4: 41 83 3E 00              - cmp dword ptr [r14],00
+sao_al.exe+53FEC8: 0F 8E A6 00 00 00        - jng sao_al.exe+53FF74
+sao_al.exe+53FECE: 80 3E 00                 - cmp byte ptr [rsi],00
+sao_al.exe+53FED1: 74 0D                    - je sao_al.exe+53FEE0
+// ---------- INJECTING HERE ----------
+sao_al.exe+53FED3: F3 0F 10 07              - movss xmm0,[rdi]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+53FED7: 0F 2F 03                 - comiss xmm0,[rbx]
+sao_al.exe+53FEDA: 0F 83 94 00 00 00        - jae sao_al.exe+53FF74
+sao_al.exe+53FEE0: 80 3D C3 44 B7 01 01     - cmp byte ptr [sao_al.exe+20B43AA],01
+sao_al.exe+53FEE7: 75 0A                    - jne sao_al.exe+53FEF3
+sao_al.exe+53FEE9: F3 0F 10 35 9B DD 77 01  - movss xmm6,[sao_al.exe+1CBDC8C]
+sao_al.exe+53FEF1: EB 0C                    - jmp sao_al.exe+53FEFF
+sao_al.exe+53FEF3: F3 0F 10 35 9D D6 77 01  - movss xmm6,[sao_al.exe+1CBD598]
+sao_al.exe+53FEFB: F3 0F 59 F7              - mulss xmm6,xmm7
+sao_al.exe+53FEFF: 48 8B 02                 - mov rax,[rdx]
+sao_al.exe+53FF02: 48 8B CA                 - mov rcx,rdx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>128</ID>
+              <Description>"Step 2 - set multiplier"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_LONGER_BUFF_TIME_S2,$process,F3 0F 58 07 F3 0F 11 07 74) // should be unique
+alloc(newmem,$1000,INJECT_LONGER_BUFF_TIME_S2)
+
+label(code)
+label(return)
+label(vf_buff_dur_multi)
+
+newmem:
+
+code:
+
+  addss xmm0,[rdi]
+  // inject code start
+  cmp r13, 1
+  jne endp
+
+  cmp [i_buff_base_addr_1], rdi
+  jne endp
+
+  vmovss xmm15, [rdi+4]
+  vmovss xmm14, [vf_1]
+  vcomiss xmm15, xmm14
+  je endp
+
+  vmovss xmm14, [vf_12]
+  vmovss xmm13, [rdi+4]
+  vsubss xmm13, xmm13, xmm0
+  vcomiss xmm14, xmm13
+  jae endp
+
+  vmovss xmm15, [rdi]
+  vsubss xmm13, xmm0, xmm15
+  vmovss xmm14, [vf_buff_dur_multi]
+  vdivss xmm13, xmm13, xmm14
+  vaddss xmm0, xmm15, xmm13
+
+
+
+endp:
+  // inject code end
+  movss [rdi],xmm0
+  jmp return
+align 10 cc
+  vf_buff_dur_multi:
+  dd (float)2.5
+  vf_1:
+  dd (float)1
+  vf_12:
+  dd (float)12
+{
+  stored = 90
+  new = 92
+  delta = 2
+  div w/ multi = 1
+}
+
+
+INJECT_LONGER_BUFF_TIME_S2:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_LONGER_BUFF_TIME_S2)
+registersymbol(vf_buff_dur_multi)
+[DISABLE]
+
+INJECT_LONGER_BUFF_TIME_S2:
+  db F3 0F 58 07 F3 0F 11 07
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+53FF12
+
+sao_al.exe+53FEE7: 75 0A                    - jne sao_al.exe+53FEF3
+sao_al.exe+53FEE9: F3 0F 10 35 9B DD 77 01  - movss xmm6,[sao_al.exe+1CBDC8C]
+sao_al.exe+53FEF1: EB 0C                    - jmp sao_al.exe+53FEFF
+sao_al.exe+53FEF3: F3 0F 10 35 9D D6 77 01  - movss xmm6,[sao_al.exe+1CBD598]
+sao_al.exe+53FEFB: F3 0F 59 F7              - mulss xmm6,xmm7
+sao_al.exe+53FEFF: 48 8B 02                 - mov rax,[rdx]
+sao_al.exe+53FF02: 48 8B CA                 - mov rcx,rdx
+sao_al.exe+53FF05: FF 90 30 02 00 00        - call qword ptr [rax+00000230]
+sao_al.exe+53FF0B: 80 3E 00                 - cmp byte ptr [rsi],00
+sao_al.exe+53FF0E: F3 0F 59 C6              - mulss xmm0,xmm6
+// ---------- INJECTING HERE ----------
+sao_al.exe+53FF12: F3 0F 58 07              - addss xmm0,[rdi]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+53FF16: F3 0F 11 07              - movss [rdi],xmm0
+sao_al.exe+53FF1A: 74 50                    - je sao_al.exe+53FF6C
+sao_al.exe+53FF1C: 0F 2F 03                 - comiss xmm0,[rbx]
+sao_al.exe+53FF1F: 72 4B                    - jb sao_al.exe+53FF6C
+sao_al.exe+53FF21: 41 0F B7 07              - movzx eax,word ptr [r15]
+sao_al.exe+53FF25: 48 8D 94 24 08 01 00 00  - lea rdx,[rsp+00000108]
+sao_al.exe+53FF2D: 4C 8B 84 24 F8 00 00 00  - mov r8,[rsp+000000F8]
+sao_al.exe+53FF35: 45 33 C9                 - xor r9d,r9d
+sao_al.exe+53FF38: 48 8B 8C 24 F0 00 00 00  - mov rcx,[rsp+000000F0]
+sao_al.exe+53FF40: 89 6C 24 28              - mov [rsp+28],ebp
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>129</ID>
+                  <Description>"Multiplier (don't set too high)"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_buff_dur_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>166</ID>
+      <Description>"Fast daily quest - at least for criteria 1"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_DAILY_QUEST,$process,8D 04 29 89 43 08) // should be unique
+alloc(newmem,$1000,INJECT_FAST_DAILY_QUEST)
 
 label(code)
 label(return)
@@ -1812,53 +2625,232 @@ label(return)
 newmem:
 
 code:
-  //sub edx,[rbp+00000088]
+  lea eax,[rcx+rbp]
+  // inject start
+  cmp eax, 2710
+  jae endp
+  mov eax, 2710
+  // end
+endp:
+  mov [rbx+08],eax
   jmp return
 
-INJECT_INF_KILL_PT:
+INJECT_FAST_DAILY_QUEST:
   jmp newmem
   nop
 return:
-registersymbol(INJECT_INF_KILL_PT)
+registersymbol(INJECT_FAST_DAILY_QUEST)
 
 [DISABLE]
 
-INJECT_INF_KILL_PT:
-  db 2B 95 88 00 00 00
+INJECT_FAST_DAILY_QUEST:
+  db 8D 04 29 89 43 08
 
-unregistersymbol(INJECT_INF_KILL_PT)
+unregistersymbol(INJECT_FAST_DAILY_QUEST)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: sao_al.exe+685422
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+8FFE3F
 
-sao_al.exe+685402: 48 85 C0              - test rax,rax
-sao_al.exe+685405: 74 04                 - je sao_al.exe+68540B
-sao_al.exe+685407: 0F B7 48 0E           - movzx ecx,word ptr [rax+0E]
-sao_al.exe+68540B: 33 D2                 - xor edx,edx
-sao_al.exe+68540D: E8 5E 08 B5 FF        - call sao_al.exe+1D5C70
-sao_al.exe+685412: 48 85 C0              - test rax,rax
-sao_al.exe+685415: 74 09                 - je sao_al.exe+685420
-sao_al.exe+685417: 0F BF 90 D8 00 00 00  - movsx edx,word ptr [rax+000000D8]
-sao_al.exe+68541E: EB 02                 - jmp sao_al.exe+685422
-sao_al.exe+685420: 8B D3                 - mov edx,ebx
+sao_al.exe+8FFE19: 48 8B 44 24 48  - mov rax,[rsp+48]
+sao_al.exe+8FFE1E: 45 33 C9        - xor r9d,r9d
+sao_al.exe+8FFE21: C6 44 24 30 3E  - mov byte ptr [rsp+30],3E
+sao_al.exe+8FFE26: 44 8B C7        - mov r8d,edi
+sao_al.exe+8FFE29: C6 44 24 28 2B  - mov byte ptr [rsp+28],2B
+sao_al.exe+8FFE2E: 8B D5           - mov edx,ebp
+sao_al.exe+8FFE30: 48 89 44 24 20  - mov [rsp+20],rax
+sao_al.exe+8FFE35: E8 96 E3 8D FF  - call sao_al.exe+1DE1D0
+sao_al.exe+8FFE3A: 89 7B 08        - mov [rbx+08],edi
+sao_al.exe+8FFE3D: EB 06           - jmp sao_al.exe+8FFE45
 // ---------- INJECTING HERE ----------
-sao_al.exe+685422: 2B 95 88 00 00 00     - sub edx,[rbp+00000088]
+sao_al.exe+8FFE3F: 8D 04 29        - lea eax,[rcx+rbp]
 // ---------- DONE INJECTING  ----------
-sao_al.exe+685428: 0F 88 11 03 00 00     - js sao_al.exe+68573F
-sao_al.exe+68542E: B9 01 00 00 00        - mov ecx,00000001
-sao_al.exe+685433: 48 89 74 24 78        - mov [rsp+78],rsi
-sao_al.exe+685438: E8 33 24 B5 FF        - call sao_al.exe+1D7870
-sao_al.exe+68543D: 83 BD DC 00 00 00 02  - cmp dword ptr [rbp+000000DC],02
-sao_al.exe+685444: B9 01 00 00 00        - mov ecx,00000001
-sao_al.exe+685449: 75 16                 - jne sao_al.exe+685461
-sao_al.exe+68544B: 8B 95 84 00 00 00     - mov edx,[rbp+00000084]
-sao_al.exe+685451: E8 5A 96 EC FF        - call sao_al.exe+54EAB0
-sao_al.exe+685456: 48 85 C0              - test rax,rax
+sao_al.exe+8FFE42: 89 43 08        - mov [rbx+08],eax
+sao_al.exe+8FFE45: 48 8B 5C 24 50  - mov rbx,[rsp+50]
+sao_al.exe+8FFE4A: 48 8B 6C 24 58  - mov rbp,[rsp+58]
+sao_al.exe+8FFE4F: 48 8B 74 24 60  - mov rsi,[rsp+60]
+sao_al.exe+8FFE54: 48 83 C4 40     - add rsp,40
+sao_al.exe+8FFE58: 5F              - pop rdi
+sao_al.exe+8FFE59: C3              - ret 
+sao_al.exe+8FFE5A: CC              - int 3 
+sao_al.exe+8FFE5B: CC              - int 3 
+sao_al.exe+8FFE5C: CC              - int 3 
 }
 </AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>158</ID>
+      <Description>"Affinity: Fast NPC traits/friendship grow"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_NPC_TRAITS,$process,BF 10 27 00 00 3B D7 7E 2E) // should be unique
+alloc(newmem,$1000,INJECT_FAST_NPC_TRAITS)
+
+label(code)
+label(return)
+label(i_last_trait_addr)
+
+newmem:
+  mov [i_last_trait_addr], rcx
+  cmp edx, #9990
+  jae code
+  mov edx, #9990
+code:
+  mov edi,00002710
+  jmp return
+align 10 cc
+  i_last_trait_addr:
+  dq 0
+
+INJECT_FAST_NPC_TRAITS:
+  jmp newmem
+return:
+registersymbol(INJECT_FAST_NPC_TRAITS)
+registersymbol(i_last_trait_addr)
+
+[DISABLE]
+
+INJECT_FAST_NPC_TRAITS:
+  db BF 10 27 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1DA254
+
+sao_al.exe+1DA232: C6 44 24 30 3C  - mov byte ptr [rsp+30],3C
+sao_al.exe+1DA237: 48 89 44 24 20  - mov [rsp+20],rax
+sao_al.exe+1DA23C: E8 EF 01 00 00  - call sao_al.exe+1DA430
+sao_al.exe+1DA241: 33 C0           - xor eax,eax
+sao_al.exe+1DA243: 66 89 03        - mov [rbx],ax
+sao_al.exe+1DA246: 48 8B C3        - mov rax,rbx
+sao_al.exe+1DA249: 48 8B 5C 24 50  - mov rbx,[rsp+50]
+sao_al.exe+1DA24E: 48 83 C4 40     - add rsp,40
+sao_al.exe+1DA252: 5F              - pop rdi
+sao_al.exe+1DA253: C3              - ret 
+// ---------- INJECTING HERE ----------
+sao_al.exe+1DA254: BF 10 27 00 00  - mov edi,00002710
+// ---------- DONE INJECTING  ----------
+sao_al.exe+1DA259: 3B D7           - cmp edx,edi
+sao_al.exe+1DA25B: 7E 2E           - jle sao_al.exe+1DA28B
+sao_al.exe+1DA25D: 48 8B 44 24 48  - mov rax,[rsp+48]
+sao_al.exe+1DA262: 45 33 C9        - xor r9d,r9d
+sao_al.exe+1DA265: 0F B7 09        - movzx ecx,word ptr [rcx]
+sao_al.exe+1DA268: 44 8B C7        - mov r8d,edi
+sao_al.exe+1DA26B: C6 44 24 30 3E  - mov byte ptr [rsp+30],3E
+sao_al.exe+1DA270: 48 89 44 24 20  - mov [rsp+20],rax
+sao_al.exe+1DA275: E8 B6 01 00 00  - call sao_al.exe+1DA430
+sao_al.exe+1DA27A: 48 8B C3        - mov rax,rbx
+sao_al.exe+1DA27D - 66 89 3B              - mov [rbx],di
+sao_al.exe+1DA280 - 48 8B 5C 24 50        - mov rbx,[rsp+50]
+sao_al.exe+1DA285 - 48 83 C4 40           - add rsp,40
+sao_al.exe+1DA289 - 5F                    - pop rdi
+sao_al.exe+1DA28A - C3                    - ret
+sao_al.exe+1DA28B - 66 89 11              - mov [rcx],dx
+sao_al.exe+1DA28E - 48 8B C3              - mov rax,rbx
+sao_al.exe+1DA291 - 48 8B 5C 24 50        - mov rbx,[rsp+50]
+sao_al.exe+1DA296 - 48 83 C4 40           - add rsp,40
+sao_al.exe+1DA29A - 5F                    - pop rdi
+sao_al.exe+1DA29B - C3                    - ret
+
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>159</ID>
+          <Description>"Last trait"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_last_trait_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>161</ID>
+      <Description>"Affinity: Fast NPC traits limit set"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_TRAIT_LIMIT,$process,BF 0F 27 00 00 3B D7 7E 33) // should be unique
+alloc(newmem,$1000,INJECT_SET_TRAIT_LIMIT)
+
+label(code)
+label(return)
+
+newmem:
+  cmp edx, 270F
+  jae code
+  mov edx, 270F
+
+code:
+  mov edi,0000270F
+  jmp return
+
+INJECT_SET_TRAIT_LIMIT:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_TRAIT_LIMIT)
+
+[DISABLE]
+
+INJECT_SET_TRAIT_LIMIT:
+  db BF 0F 27 00 00
+
+unregistersymbol(INJECT_SET_TRAIT_LIMIT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1D9C39
+
+sao_al.exe+1D9C17: C6 44 24 28 3D  - mov byte ptr [rsp+28],3D
+sao_al.exe+1D9C1C: 48 89 44 24 20  - mov [rsp+20],rax
+sao_al.exe+1D9C21: E8 3A 3C EB FF  - call sao_al.exe+8D860
+sao_al.exe+1D9C26: 33 C0           - xor eax,eax
+sao_al.exe+1D9C28: 66 89 03        - mov [rbx],ax
+sao_al.exe+1D9C2B: 48 8B C3        - mov rax,rbx
+sao_al.exe+1D9C2E: 48 8B 5C 24 50  - mov rbx,[rsp+50]
+sao_al.exe+1D9C33: 48 83 C4 40     - add rsp,40
+sao_al.exe+1D9C37: 5F              - pop rdi
+sao_al.exe+1D9C38: C3              - ret 
+// ---------- INJECTING HERE ----------
+sao_al.exe+1D9C39: BF 0F 27 00 00  - mov edi,0000270F
+// ---------- DONE INJECTING  ----------
+sao_al.exe+1D9C3E: 3B D7           - cmp edx,edi
+sao_al.exe+1D9C40: 7E 33           - jle sao_al.exe+1D9C75
+sao_al.exe+1D9C42: 48 8B 44 24 48  - mov rax,[rsp+48]
+sao_al.exe+1D9C47: 45 33 C9        - xor r9d,r9d
+sao_al.exe+1D9C4A: 0F B7 09        - movzx ecx,word ptr [rcx]
+sao_al.exe+1D9C4D: 44 8B C7        - mov r8d,edi
+sao_al.exe+1D9C50: C6 44 24 30 3E  - mov byte ptr [rsp+30],3E
+sao_al.exe+1D9C55: C6 44 24 28 3D  - mov byte ptr [rsp+28],3D
+sao_al.exe+1D9C5A: 48 89 44 24 20  - mov [rsp+20],rax
+sao_al.exe+1D9C5F: E8 FC 3B EB FF  - call sao_al.exe+8D860
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>104</ID>
+      <Description>"_WIP"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
     </CheatEntry>
     <CheatEntry>
       <ID>31</ID>
@@ -6620,15 +7612,52 @@ sao_al.exe+685456: 48 85 C0              - test rax,rax
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
+    <CheatEntry>
+      <ID>140</ID>
+      <Description>"IDs info / others"</Description>
+      <Options moHideChildren="1"/>
+      <Color>808080</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>141</ID>
+          <Description>"Google Sheet"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>142</ID>
+              <Description>"https://docs.google.com/spreadsheets/d/1jvAWKeo_ufCFZr1eCvLJXsQvTQkhnAhAUxNZTnF1pMg/"</Description>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>143</ID>
+              <Description>"https://docs.google.com/spreadsheets/d/1N8ju5JkBihP7Ilhad8NFN4CTMIMknt0rafDgYFLIo0s/edit#gid=1755745010"</Description>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>144</ID>
+          <Description>"Some AOBs referenced from: https://fearlessrevolution.com/viewtopic.php?f=4&amp;t=13144"</Description>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols/>
+  <UserdefinedSymbols>
+    <SymbolEntry>
+      <Name>money_base</Name>
+      <Address>142142CAC</Address>
+    </SymbolEntry>
+  </UserdefinedSymbols>
   <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
         memoryrecord.disableWithoutExecute()
     end
 end
 
-IDs = {31,
+IDs = {118, 119, 120, 31, 32, 112, 163, 131, 133, 146, 147, 123, 129, 21, 22, 23, 8, 29,
        }
 
 function contains(table, val)
