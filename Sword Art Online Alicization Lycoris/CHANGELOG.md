@@ -1,6 +1,7 @@
 # Change log
 ## 2022/11/22
 1. fix daily quest scripts
+1. Added Set weapon/armor # of upgrades
 
 ## 2022/11/21
 1. Revise scripts
