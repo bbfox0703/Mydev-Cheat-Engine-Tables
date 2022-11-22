@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="42">
+<CheatTable CheatEngineTableVersion="44">
   <CheatEntries>
     <CheatEntry>
       <ID>18</ID>
@@ -40,24 +40,29 @@ unregistersymbol(maindll_base)
           <AssemblerScript>[ENABLE]
 {$lua}
 if syntaxcheck then return end
---if memrec then print(memrec.Description) end
+if memrec then print(memrec.Description) end
+getAddressList().getMemoryRecordByID(91).Description = 'Loaded module: N/A'
 
 if ( getAddressSafe("game_exp2") ~= nil ) then
   registerSymbol("maindll", "GameCore_XP2_FinalRelease.dll")
   registerSymbol("maindll_xp2", "GameCore_XP2_FinalRelease.dll")
+  getAddressList().getMemoryRecordByID(91).Description = 'Loaded module: Gathering Storm (XP2)'
 end
 
 if getAddressSafe("game_exp0") ~= nil then
   registerSymbol("maindll", "GameCore_Base_FinalRelease.dll")
   registerSymbol("maindll_b1", "GameCore_Base_FinalRelease.dll")
   registerSymbol("maindll_base", "GameCore_Base_FinalRelease.dll")
+  getAddressList().getMemoryRecordByID(91).Description = 'Loaded module: No expansion (Base)'
 end
 
 if getAddressSafe("game_exp1") ~= nil then
   registerSymbol("maindll", "GameCore_XP1_FinalRelease.dll")
   registerSymbol("maindll_b1", "GameCore_XP1_FinalRelease.dll")
+  getAddressList().getMemoryRecordByID(91).Description = 'Loaded module: Rise and Fall (XP1)'
 end
-
+getLuaEngine().MenuItem5.doClick()
+getLuaEngine().Close()
  
 [DISABLE]
 {$asm}
@@ -69,7 +74,8 @@ unregistersymbol(maindll_base)
           <CheatEntries>
             <CheatEntry>
               <ID>91</ID>
-              <Description>"Group 7"</Description>
+              <Description>"Loaded module: Gathering Storm (XP2)"</Description>
+              <Color>808080</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
@@ -822,6 +828,7 @@ label(code)
 label(return)
 label(is_inf_action)
 label(is_min_hp)
+label(is_inf_worker_action)
 
 newmem:
   cmp word ptr [rdx+60], 0
@@ -842,10 +849,19 @@ check_inf_action:
 
 check_unit_hp:
   cmp dword ptr [is_min_hp], 1
-  jne code
+  jne check_inf_worker_act
   cmp dword ptr [rdx+4C0], 10
-  jbe code
+  jbe check_inf_worker_act
   mov dword ptr [rdx+4C0], 10
+
+check_inf_worker_act:
+  cmp dword ptr [is_inf_worker_action], 1
+  jne endp
+  cmp dword ptr [rdx+538], 2
+  jae endp
+  mov dword ptr [rdx+538], 2
+
+endp:
 
 code:
   mov rax,[rdx+00000BB8]
@@ -855,6 +871,8 @@ align 10 cc
   dd 0
   is_min_hp:
   dd 1
+  is_inf_worker_action:
+  dd 1
 
 INJECT_INF_UNIT_MOVE:
   jmp newmem
@@ -863,6 +881,7 @@ return:
 registersymbol(INJECT_INF_UNIT_MOVE)
 registersymbol(is_inf_action)
 registersymbol(is_min_hp)
+registersymbol(is_inf_worker_action)
 
 [DISABLE]
 
@@ -919,6 +938,104 @@ GameCore_XP2_FinalRelease.dll+6576AC: CC                    - int 3
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
+                  <ID>93</ID>
+                  <Description>"Also affect linked unit (i.e. settler)"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_LINKED_UNIT_MOVE,maindll,49 8B 8D B8 0B 00 00 33) // should be unique
+alloc(newmem,$1000,INJECT_INF_LINKED_UNIT_MOVE)
+
+label(code)
+label(return)
+
+newmem:
+  cmp word ptr [r13+60], 0
+  jne code
+  cmp dword ptr [r13+4F0], 700
+  ja check_inf_action2
+  push r15
+  mov rcx,[r13+00000BB8]
+  mov r15d, 700
+  mov [rcx+F0], r15d
+  mov [rdx+4F0], r15d
+  pop r15
+
+check_inf_action2:
+  cmp dword ptr [is_inf_action], 1
+  jne check_unit_hp2
+  mov dword ptr [r13+508], 1
+
+check_unit_hp2:
+  cmp dword ptr [is_min_hp], 1
+  jne check_inf_worker_act2
+  cmp dword ptr [r13+4C0], 10
+  jbe check_inf_worker_act2
+  mov dword ptr [r13+4C0], 10
+
+check_inf_worker_act2:
+  cmp dword ptr [is_inf_worker_action], 1
+  jne endp
+  cmp dword ptr [rdx+538], 2
+  jae endp
+  mov dword ptr [rdx+538], 2
+
+endp:
+
+code:
+  mov rcx,[r13+00000BB8]
+  jmp return
+
+INJECT_INF_LINKED_UNIT_MOVE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INF_LINKED_UNIT_MOVE)
+
+[DISABLE]
+
+INJECT_INF_LINKED_UNIT_MOVE:
+  db 49 8B 8D B8 0B 00 00
+
+unregistersymbol(INJECT_INF_LINKED_UNIT_MOVE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP2_FinalRelease.dll+1A33EA
+
+GameCore_XP2_FinalRelease.dll+1A33C5: 41 83 BF 68 02 00 00 01  - cmp dword ptr [r15+00000268],01
+GameCore_XP2_FinalRelease.dll+1A33CD: 75 1B                    - jne GameCore_XP2_FinalRelease.dll+1A33EA
+GameCore_XP2_FinalRelease.dll+1A33CF: 83 F8 02                 - cmp eax,02
+GameCore_XP2_FinalRelease.dll+1A33D2: 75 09                    - jne GameCore_XP2_FinalRelease.dll+1A33DD
+GameCore_XP2_FinalRelease.dll+1A33D4: 83 FB 01                 - cmp ebx,01
+GameCore_XP2_FinalRelease.dll+1A33D7: 0F 84 37 01 00 00        - je GameCore_XP2_FinalRelease.dll+1A3514
+GameCore_XP2_FinalRelease.dll+1A33DD: 84 C9                    - test cl,cl
+GameCore_XP2_FinalRelease.dll+1A33DF: 74 09                    - je GameCore_XP2_FinalRelease.dll+1A33EA
+GameCore_XP2_FinalRelease.dll+1A33E1: 83 FB 02                 - cmp ebx,02
+GameCore_XP2_FinalRelease.dll+1A33E4: 0F 84 2A 01 00 00        - je GameCore_XP2_FinalRelease.dll+1A3514
+// ---------- INJECTING HERE ----------
+GameCore_XP2_FinalRelease.dll+1A33EA: 49 8B 8D B8 0B 00 00     - mov rcx,[r13+00000BB8]
+// ---------- DONE INJECTING  ----------
+GameCore_XP2_FinalRelease.dll+1A33F1: 33 DB                    - xor ebx,ebx
+GameCore_XP2_FinalRelease.dll+1A33F3: 48 89 AC 24 B8 00 00 00  - mov [rsp+000000B8],rbp
+GameCore_XP2_FinalRelease.dll+1A33FB: 48 89 B4 24 C0 00 00 00  - mov [rsp+000000C0],rsi
+GameCore_XP2_FinalRelease.dll+1A3403: 48 89 5C 24 7C           - mov [rsp+7C],rbx
+GameCore_XP2_FinalRelease.dll+1A3408: 89 9C 24 84 00 00 00     - mov [rsp+00000084],ebx
+GameCore_XP2_FinalRelease.dll+1A340F: 48 89 5C 24 70           - mov [rsp+70],rbx
+GameCore_XP2_FinalRelease.dll+1A3414: 89 5C 24 78              - mov [rsp+78],ebx
+GameCore_XP2_FinalRelease.dll+1A3418: 48 85 C9                 - test rcx,rcx
+GameCore_XP2_FinalRelease.dll+1A341B: 0F 84 BA 00 00 00        - je GameCore_XP2_FinalRelease.dll+1A34DB
+GameCore_XP2_FinalRelease.dll+1A3421: 48 8D 54 24 20           - lea rdx,[rsp+20]
+}
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
                   <ID>40</ID>
                   <Description>"inf. actions?"</Description>
                   <DropDownList DisplayValueAsItem="1">0:No
@@ -928,6 +1045,17 @@ GameCore_XP2_FinalRelease.dll+6576AC: CC                    - int 3
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_inf_action</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>94</ID>
+                  <Description>"inf. builder works actions?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_inf_worker_action</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>41</ID>
@@ -1185,19 +1313,18 @@ aobscanmodule(INJECT_INF_UNIT_MOVE_BASE,maindll_b1,48 8B 82 ?? ?? 00 00 48 85 C0
 alloc(newmem,$1000,INJECT_INF_UNIT_MOVE_BASE)
 alloc(INJECT_INF_UNIT_MOVE_BASEo,7)
 
-
-
 label(code)
 label(return)
 label(is_inf_action)
 label(is_min_hp)
+label(is_inf_worker_action)
 
 INJECT_INF_UNIT_MOVE_BASEo:
   readmem(INJECT_INF_UNIT_MOVE_BASE, 7)
 
 newmem:
   cmp word ptr [rdx+60], 0
-  jne code
+  jne endp
   cmp dword ptr [rdx+480], 700
   ja check_inf_action
   push r15
@@ -1216,10 +1343,19 @@ check_inf_action:
 
 check_unit_hp:
   cmp dword ptr [is_min_hp], 1
-  jne code
+  jne check_work_action
   cmp dword ptr [rdx+450], 10
-  jbe code
+  jbe check_work_action
   mov dword ptr [rdx+450], 10
+
+check_work_action:
+  cmp dword ptr [is_inf_worker_action], 1
+  jne endp
+  cmp dword ptr [rdx+4C8], 2
+  jae endp
+  mov dword ptr [rdx+4C8], 2
+
+endp:
 
 code:
   //mov rax,[rdx+000009F0] XP1
@@ -1231,6 +1367,8 @@ align 10 cc
   dd 0
   is_min_hp:
   dd 1
+  is_inf_worker_action:
+  dd 1
 
 INJECT_INF_UNIT_MOVE_BASE:
   jmp newmem
@@ -1239,6 +1377,7 @@ return:
 registersymbol(INJECT_INF_UNIT_MOVE_BASE)
 registersymbol(is_inf_action)
 registersymbol(is_min_hp)
+registersymbol(is_inf_worker_action)
 registersymbol(INJECT_INF_UNIT_MOVE_BASEo)
 [DISABLE]
 
@@ -1309,6 +1448,116 @@ GameCore_XP1_FinalRelease.dll+571BDC: CC                    - int 3
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
+                  <ID>96</ID>
+                  <Description>"Also affect linked unit (i.e. settler)"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>    { Game   : CivilizationVI_DX12.exe
+  Version: 
+  Date   : 2022-11-22
+  Author : bbfox@http://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_INF_LINKED_UNIT_MOVE_BASE,maindll_b1,4D 8B A7 08 0A 00 00 48) // should be unique
+aobscanmodule(INJECT_INF_LINKED_UNIT_MOVE_BASE,maindll_b1,4D 8B A7 ?? ?? ?? ?? 48 8B F8 41 8B B7 ?? ?? ?? ?? 4D 85 E4 75) // should be unique
+alloc(newmem,$1000,INJECT_INF_LINKED_UNIT_MOVE_BASE)
+alloc(INJECT_INF_LINKED_UNIT_MOVE_BASEo,7)
+
+
+label(code)
+label(return)
+
+INJECT_INF_LINKED_UNIT_MOVE_BASEo:
+  readmem(INJECT_INF_LINKED_UNIT_MOVE_BASE, 7)
+
+newmem:
+  cmp word ptr [r15+60], 0
+  jne endp
+  cmp dword ptr [r15+480], 700
+  ja check_inf_action2
+  push r14
+  //mov r12,[r15+00000A08]  XP1
+  reassemble(INJECT_INF_LINKED_UNIT_MOVE_BASE)
+  mov r14d, 700
+  mov [r12+F0], r14d
+  mov [r15+480], r14d
+  pop r14
+
+check_inf_action2:
+  cmp dword ptr [is_inf_action], 1
+  jne check_unit_hp2
+  mov dword ptr [r15+498], 1
+
+check_unit_hp2:
+  cmp dword ptr [is_min_hp], 1
+  jne check_work_action2
+  cmp dword ptr [r15+450], 10
+  jbe check_work_action2
+  mov dword ptr [r15+450], 10
+
+check_work_action2:
+  cmp dword ptr [is_inf_worker_action], 1
+  jne endp
+  cmp dword ptr [r15+4C8], 2
+  jae endp
+  mov dword ptr [r15+4C8], 2
+
+
+endp:
+
+code:
+  //mov r12,[r15+00000A08]   XP1
+  reassemble(INJECT_INF_LINKED_UNIT_MOVE_BASE)
+  jmp return
+
+INJECT_INF_LINKED_UNIT_MOVE_BASE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INF_LINKED_UNIT_MOVE_BASE)
+registersymbol(INJECT_INF_LINKED_UNIT_MOVE_BASEo)
+[DISABLE]
+
+INJECT_INF_LINKED_UNIT_MOVE_BASE:
+  //db 4D 8B A7 08 0A 00 00
+  readmem(INJECT_INF_LINKED_UNIT_MOVE_BASEo,7)
+
+unregistersymbol(*)
+unregistersymbol(INJECT_INF_LINKED_UNIT_MOVE_BASEo)
+dealloc(newmem)
+dealloc(INJECT_INF_LINKED_UNIT_MOVE_BASEo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameCore_XP1_FinalRelease.dll+5718E2
+
+GameCore_XP1_FinalRelease.dll+5718B6: E8 E5 D6 AE FF        - call GameCore_XP1_FinalRelease.dll+5EFA0
+GameCore_XP1_FinalRelease.dll+5718BB: 48 8B 13              - mov rdx,[rbx]
+GameCore_XP1_FinalRelease.dll+5718BE: 48 8B CB              - mov rcx,rbx
+GameCore_XP1_FinalRelease.dll+5718C1: 8B F8                 - mov edi,eax
+GameCore_XP1_FinalRelease.dll+5718C3: FF 92 B8 00 00 00     - call qword ptr [rdx+000000B8]
+GameCore_XP1_FinalRelease.dll+5718C9: 45 8B 87 FC 00 00 00  - mov r8d,[r15+000000FC]
+GameCore_XP1_FinalRelease.dll+5718D0: 44 8B CF              - mov r9d,edi
+GameCore_XP1_FinalRelease.dll+5718D3: 41 8B 97 F8 00 00 00  - mov edx,[r15+000000F8]
+GameCore_XP1_FinalRelease.dll+5718DA: 48 8B C8              - mov rcx,rax
+GameCore_XP1_FinalRelease.dll+5718DD: E8 7E D1 AD FF        - call GameCore_XP1_FinalRelease.dll+4EA60
+// ---------- INJECTING HERE ----------
+GameCore_XP1_FinalRelease.dll+5718E2: 4D 8B A7 08 0A 00 00  - mov r12,[r15+00000A08]
+// ---------- DONE INJECTING  ----------
+GameCore_XP1_FinalRelease.dll+5718E9: 48 8B F8              - mov rdi,rax
+GameCore_XP1_FinalRelease.dll+5718EC: 41 8B B7 28 01 00 00  - mov esi,[r15+00000128]
+GameCore_XP1_FinalRelease.dll+5718F3: 4D 85 E4              - test r12,r12
+GameCore_XP1_FinalRelease.dll+5718F6: 75 0C                 - jne GameCore_XP1_FinalRelease.dll+571904
+GameCore_XP1_FinalRelease.dll+5718F8: 48 8B 54 24 50        - mov rdx,[rsp+50]
+GameCore_XP1_FinalRelease.dll+5718FD: 32 DB                 - xor bl,bl
+GameCore_XP1_FinalRelease.dll+5718FF: E9 08 01 00 00        - jmp GameCore_XP1_FinalRelease.dll+571A0C
+GameCore_XP1_FinalRelease.dll+571904: 48 8B 58 50           - mov rbx,[rax+50]
+GameCore_XP1_FinalRelease.dll+571908: 8B 40 60              - mov eax,[rax+60]
+GameCore_XP1_FinalRelease.dll+57190B: 48 8D 0C C3           - lea rcx,[rbx+rax*8]
+}
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
                   <ID>56</ID>
                   <Description>"inf. actions?"</Description>
                   <DropDownList DisplayValueAsItem="1">0:No
@@ -1318,6 +1567,17 @@ GameCore_XP1_FinalRelease.dll+571BDC: CC                    - int 3
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_inf_action</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>97</ID>
+                  <Description>"inf. builder works actions?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_inf_worker_action</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>57</ID>
@@ -2129,16 +2389,7 @@ GameCore_XP1_FinalRelease.dll+571BDC: CC                    - int 3
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>maindll</Name>
-      <Address>GameCore_XP2_FinalRelease.dll</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>maindll_xp2</Name>
-      <Address>GameCore_XP2_FinalRelease.dll</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <Comments>aobscanmodule(INJECT,GameCore_XP2_FinalRelease.dll,41 8B 86 A8 00 00 00 49) // should be unique
 </Comments>
 </CheatTable>
