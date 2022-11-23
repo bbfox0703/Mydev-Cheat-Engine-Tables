@@ -15,7 +15,7 @@ LuaCall(cycleFullCompact(nil,false))
     </CheatEntry>
     <CheatEntry>
       <ID>25</ID>
-      <Description>"init - get static values"</Description>
+      <Description>"init - get static values - must be sao_al.exe"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -30,6 +30,7 @@ if (_dbg) then
   AOBs = {
     {["name"]="money", ["aob"]="8B 05 ?? ?? ?? ?? 89 87 ?? ?? ?? ?? EB", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="money_base"},
     {["name"]="jump_high", ["aob"]="F3 0F 10 35 ?? ?? ?? ?? F3 0F 59 F0 0F 57 C0 48 85 DB", ["pos"]= 4,  ["aoblen"]= 8 , ["symbol"]="jump_high_base"},
+    {["name"]="fishing_mastery", ["aob"]="44 8B 0D ?? ?? ?? ?? 48 8B 07 48 8B CB 8B 10 48 8B 5C 24 30 48 83 C4 20 5F", ["pos"]= 3,  ["aoblen"]= 7 , ["symbol"]="fishing_mastery_base"},
   }
 
   local a1 = 'n/a'
@@ -72,7 +73,7 @@ getLuaEngine().close()
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-local disable_array = {"money_base", "jump_high_base"}
+local disable_array = {"money_base", "jump_high_base", "fishing_mastery_base"}
 local a_len = #(disable_array)
 local i = 0
 for i = 1, a_len do
@@ -111,6 +112,38 @@ sao_al.exe+1A9835 - 74 20                 - je sao_al.exe+1A9857
 sao_al.exe+1A9837 - 48 8B 01              - mov rax,[rcx]
 
 --]]
+
+--[[
+{
+Fishing pt:
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+5167B5
+
+sao_al.exe+51678B: 84 C0                 - test al,al
+sao_al.exe+51678D: 74 10                 - je sao_al.exe+51679F
+sao_al.exe+51678F: 48 8D 05 B6 F1 BA 01  - lea rax,[sao_al.exe+20C594C]
+sao_al.exe+516796: 44 8B 88 5C 06 00 00  - mov r9d,[rax+0000065C]
+sao_al.exe+51679D: EB 1D                 - jmp sao_al.exe+5167BC
+sao_al.exe+51679F: E8 3C B8 E2 FF        - call sao_al.exe+341FE0
+sao_al.exe+5167A4: 48 05 80 03 00 00     - add rax,00000380
+sao_al.exe+5167AA: 74 09                 - je sao_al.exe+5167B5
+sao_al.exe+5167AC: 44 8B 88 5C 06 00 00  - mov r9d,[rax+0000065C]
+sao_al.exe+5167B3: EB 07                 - jmp sao_al.exe+5167BC
+// ---------- INJECTING HERE ----------
+sao_al.exe+5167B5: 44 8B 0D EC F7 BA 01  - mov r9d,[sao_al.exe+20C5FA8]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+5167BC: 48 8B 07              - mov rax,[rdi]
+sao_al.exe+5167BF: 48 8B CB              - mov rcx,rbx
+sao_al.exe+5167C2: 8B 10                 - mov edx,[rax]
+sao_al.exe+5167C4: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+sao_al.exe+5167C9: 48 83 C4 20           - add rsp,20
+sao_al.exe+5167CD: 5F                    - pop rdi
+sao_al.exe+5167CE: E9 8D 60 FC FF        - jmp sao_al.exe+4DC860
+sao_al.exe+5167D3: CC                    - int 3
+sao_al.exe+5167D4: CC                    - int 3
+sao_al.exe+5167D5: CC                    - int 3
+}
+
+--]]
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
@@ -120,6 +153,14 @@ sao_al.exe+1A9837 - 48 8B 01              - mov rax,[rcx]
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>money_base</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>197</ID>
+          <Description>"Fishing mastery"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>fishing_mastery_base</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>175</ID>
@@ -682,6 +723,240 @@ sao_al.exe+23F46F: 48 83 C4 28                    - add rsp,28
               </Offsets>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>199</ID>
+      <Description>"Get char. record data"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_PERSONA,sao_al.exe,0F B7 84 7B 08 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_PERSONA)
+
+label(code)
+label(return)
+label(i_base_rec_char_addr)
+
+newmem:
+  push rax
+  lea rax, [rbx+rdi*2-2]
+  mov [i_base_rec_char_addr], rax
+  pop rax
+
+code:
+  movzx eax,word ptr [rbx+rdi*2+00000108]
+  jmp return
+align 10 cc
+  i_base_rec_char_addr:
+  dq 0
+
+INJECT_GET_PERSONA:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_PERSONA)
+registersymbol(i_base_rec_char_addr)
+[DISABLE]
+
+INJECT_GET_PERSONA:
+  db 0F B7 84 7B 08 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+1D8E9E
+
+sao_al.exe+1D8E87: 75 04                    - jne sao_al.exe+1D8E8D
+sao_al.exe+1D8E89: B0 FF                    - mov al,-01
+sao_al.exe+1D8E8B: EB 04                    - jmp sao_al.exe+1D8E91
+sao_al.exe+1D8E8D: 0F B6 40 31              - movzx eax,byte ptr [rax+31]
+sao_al.exe+1D8E91: 3C FF                    - cmp al,-01
+sao_al.exe+1D8E93: 74 1C                    - je sao_al.exe+1D8EB1
+sao_al.exe+1D8E95: 85 FF                    - test edi,edi
+sao_al.exe+1D8E97: 78 18                    - js sao_al.exe+1D8EB1
+sao_al.exe+1D8E99: 83 FF 02                 - cmp edi,02
+sao_al.exe+1D8E9C: 73 13                    - jae sao_al.exe+1D8EB1
+// ---------- INJECTING HERE ----------
+sao_al.exe+1D8E9E: 0F B7 84 7B 08 01 00 00  - movzx eax,word ptr [rbx+rdi*2+00000108]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+1D8EA6: 48 8B 5C 24 30           - mov rbx,[rsp+30]
+sao_al.exe+1D8EAB: 48 83 C4 20              - add rsp,20
+sao_al.exe+1D8EAF: 5F                       - pop rdi
+sao_al.exe+1D8EB0: C3                       - ret 
+sao_al.exe+1D8EB1: 48 8B 5C 24 30           - mov rbx,[rsp+30]
+sao_al.exe+1D8EB6: 33 C0                    - xor eax,eax
+sao_al.exe+1D8EB8: 48 83 C4 20              - add rsp,20
+sao_al.exe+1D8EBC: 5F                       - pop rdi
+sao_al.exe+1D8EBD: C3                       - ret 
+sao_al.exe+1D8EBE: CC                       - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>214</ID>
+          <Description>"Usage: Menu -&gt; Record -&gt; cursor over char."</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>207</ID>
+          <Description>"Level RIVAL"</Description>
+          <DropDownList DisplayValueAsItem="1">2700:100%
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>EC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>213</ID>
+          <Description>"Custom points"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>F6</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>210</ID>
+          <Description>"Mood"</Description>
+          <Options moDeactivateChildrenAsWell="1"/>
+          <DropDownList DisplayValueAsItem="1">0:Lvl.1
+8:Lvl.5
+264:Lvl.5 (after 1st bedscene)
+14464:Max (after most bedscene?)
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>100</Offset>
+          </Offsets>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>211</ID>
+              <Description>"Mood - byte 1"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_rec_char_addr</Address>
+              <Offsets>
+                <Offset>100</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>212</ID>
+              <Description>"Mood - byte 2"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_rec_char_addr</Address>
+              <Offsets>
+                <Offset>101</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>206</ID>
+          <Description>"???"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>102</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>205</ID>
+          <Description>"???"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>103</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>204</ID>
+          <Description>"EX Skill"</Description>
+          <DropDownList DisplayValueAsItem="1">46:Attacker
+47:Defender
+48:Buffer
+49:Berseker
+4A:Scout
+4B:SP Buffer
+4C:Debuffer
+4D:Tank
+4E:Healer
+FF:None
+</DropDownList>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>106</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>200</ID>
+          <Description>"Persona (original)"</Description>
+          <DropDownList DisplayValueAsItem="1">10000:Max
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>108</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>201</ID>
+          <Description>"Persona"</Description>
+          <DropDownList DisplayValueAsItem="1">10000:Max
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>10A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>202</ID>
+          <Description>"Anima (original)"</Description>
+          <DropDownList DisplayValueAsItem="1">10000:Max
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>10C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>203</ID>
+          <Description>"Anima"</Description>
+          <DropDownList DisplayValueAsItem="1">10000:Max
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_rec_char_addr</Address>
+          <Offsets>
+            <Offset>10E</Offset>
+          </Offsets>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -3078,22 +3353,148 @@ sao_al.exe+900ABC: C3                 - ret
 sao_al.exe+900ABD: CC                 - int 3 
 }
 </AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>173</ID>
-                  <Description>"Usage: move-over daily quest item from menu"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>174</ID>
-                  <Description>"Save &amp; load to get reward"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>193</ID>
+      <Description>"Get ascension points"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_ASCENSION_PT,sao_al.exe,8B 84 82 DC 05 00 00 48 83 C4 20 5F) // should be unique
+alloc(newmem,$1000,INJECT_GET_ASCENSION_PT)
+
+label(code)
+label(return)
+label(i_base_asc_pt_addr1)
+label(i_base_asc_pt_addr2)
+
+newmem:
+  push r15
+  lea r15,[rdx+rax*4+000005DC]
+  cmp [i_base_asc_pt_addr1], 0
+  jne set_2
+  mov [i_base_asc_pt_addr1], r15
+  jmp endp
+
+set_2:
+  cmp [i_base_asc_pt_addr2], 0
+  jne swap_addr
+  mov [i_base_temp1], r15
+  cmp qword ptr [i_base_asc_pt_addr1], r15
+  je endp
+  mov r15, [i_base_temp1]
+  mov [i_base_asc_pt_addr2], r15
+  jmp swap_addr
+
+
+swap_addr:
+  mov r15, [i_base_asc_pt_addr2]
+  cmp r15, [i_base_asc_pt_addr1]
+  jb do_swap
+
+do_swap:
+  mov r15, [i_base_asc_pt_addr2]
+  mov [i_base_temp1], r15
+  mov r15, [i_base_asc_pt_addr1]
+  mov [i_base_asc_pt_addr2], r15
+  mov r15, [i_base_temp1]
+  mov [i_base_asc_pt_addr1], r15
+
+endp:
+  pop r15
+
+
+code:
+  mov eax,[rdx+rax*4+000005DC]
+  jmp return
+align 10 cc
+  i_base_asc_pt_addr1:
+  dq 0
+  i_base_asc_pt_addr2:
+  dq 0
+  i_base_temp1:
+  dq 0
+
+INJECT_GET_ASCENSION_PT:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_ASCENSION_PT)
+registersymbol(i_base_asc_pt_addr1)
+registersymbol(i_base_asc_pt_addr2)
+[DISABLE]
+
+INJECT_GET_ASCENSION_PT:
+  db 8B 84 82 DC 05 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+4CBE63
+
+sao_al.exe+4CBE3C: 81 FB 00 01 00 00        - cmp ebx,00000100
+sao_al.exe+4CBE42: 72 18                    - jb sao_al.exe+4CBE5C
+sao_al.exe+4CBE44: 8D 83 00 FF FF FF        - lea eax,[rbx-00000100]
+sao_al.exe+4CBE4A: 8B 84 82 08 65 51 00     - mov eax,[rdx+rax*4+00516508]
+sao_al.exe+4CBE51: 48 8B 5C 24 30           - mov rbx,[rsp+30]
+sao_al.exe+4CBE56: 48 83 C4 20              - add rsp,20
+sao_al.exe+4CBE5A: 5F                       - pop rdi
+sao_al.exe+4CBE5B: C3                       - ret 
+sao_al.exe+4CBE5C: 8B C3                    - mov eax,ebx
+sao_al.exe+4CBE5E: 48 8B 5C 24 30           - mov rbx,[rsp+30]
+// ---------- INJECTING HERE ----------
+sao_al.exe+4CBE63: 8B 84 82 DC 05 00 00     - mov eax,[rdx+rax*4+000005DC]
+// ---------- DONE INJECTING  ----------
+sao_al.exe+4CBE6A: 48 83 C4 20              - add rsp,20
+sao_al.exe+4CBE6E: 5F                       - pop rdi
+sao_al.exe+4CBE6F: C3                       - ret 
+sao_al.exe+4CBE70: 48 89 5C 24 08           - mov [rsp+08],rbx
+sao_al.exe+4CBE75: 48 89 74 24 10           - mov [rsp+10],rsi
+sao_al.exe+4CBE7A: 57                       - push rdi
+sao_al.exe+4CBE7B: 48 83 EC 20              - sub rsp,20
+sao_al.exe+4CBE7F: 48 83 3D C1 F0 BD 01 00  - cmp qword ptr [sao_al.exe+20AAF48],00
+sao_al.exe+4CBE87: 8B DA                    - mov ebx,edx
+sao_al.exe+4CBE89: 8B F9                    - mov edi,ecx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>196</ID>
+          <Description>"Usage: talk to ascension pt NPC, select exchange ascenson pt"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>194</ID>
+          <Description>"Ascension points"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_asc_pt_addr1</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>195</ID>
+          <Description>"???"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_asc_pt_addr2</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -8066,16 +8467,7 @@ sao_al.exe+8FFE5C: CC              - int 3
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>money_base</Name>
-      <Address>142142CAC</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>jump_high_base</Name>
-      <Address>1420A9EF0</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
         memoryrecord.disableWithoutExecute()
