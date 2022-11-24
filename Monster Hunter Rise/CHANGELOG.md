@@ -1,5 +1,10 @@
 # Changelog
 
+## 2022/11/24
+1. update for v13.0.0.0
+1. Removed some scripts not working in v13
+
+
 ## 2022/10/09
 1. Revised Anomaly Investigations list viewer 
 
