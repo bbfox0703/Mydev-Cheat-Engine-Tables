@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/11/26
+1. Added Use Skill once ==> max proficiency
+
 ## 2022/11/23
 1. Added Get char. record data
 1. Added Get ascension points

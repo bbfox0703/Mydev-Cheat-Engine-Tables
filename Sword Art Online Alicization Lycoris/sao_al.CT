@@ -1812,23 +1812,23 @@ newmem:
   xor r15, r15
 
 {$try}
-  mov r15b, [rsi+02]
+  mov r15l, [rsi+02]
   jmp do_ex_next1
 {$except}
   jmp endp
 
 do_ex_next1:
-  cmp r15b, #100
+  cmp r15l, #100
   je set_potion
-  cmp r15b, #115
+  cmp r15l, #115
   je set_item
-  cmp r15b, #102
+  cmp r15l, #102
   je set_item2
-  cmp r15b, #104
+  cmp r15l, #104
   je set_item
-  cmp r15b, #105
+  cmp r15l, #105
   je set_item2
-  cmp r15b, #110
+  cmp r15l, #110
   je set_item
 
   jmp endp
@@ -2139,10 +2139,10 @@ label(vf_exp_multi)
 newmem:
   test rdi,rdi
   je code
- {$try}
+{$try}
   cmp ebx, [rdi]
   jmp short do_ex_next1
- {$except}
+{$except}
   jmp code
 
 do_ex_next1:
@@ -2816,6 +2816,75 @@ sao_al.exe+1D794B: 48 83 EC 20           - sub rsp,20
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>217</ID>
+      <Description>"Use Skill once ==&gt; max proficiency "</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : sao_al.exe
+  Version: 
+  Date   : 2022-11-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MAX_SKILL_PROF,sao_al.exe,66 89 7B 04 0F B7 C7) // should be unique
+alloc(newmem,$1000,INJECT_MAX_SKILL_PROF)
+
+label(code)
+label(return)
+
+newmem:
+  // skill proficiency
+  mov di, 2710
+code:
+  mov [rbx+04],di
+  movzx eax,di
+  jmp return
+
+INJECT_MAX_SKILL_PROF:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MAX_SKILL_PROF)
+
+[DISABLE]
+
+INJECT_MAX_SKILL_PROF:
+  db 66 89 7B 04 0F B7 C7
+
+unregistersymbol(INJECT_MAX_SKILL_PROF)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sao_al.exe+5503AE
+
+sao_al.exe+55038A: 7E 1F           - jle sao_al.exe+5503AB
+sao_al.exe+55038C: 48 8B 44 24 58  - mov rax,[rsp+58]
+sao_al.exe+550391: 45 33 C9        - xor r9d,r9d
+sao_al.exe+550394: 44 8B C6        - mov r8d,esi
+sao_al.exe+550397: C6 44 24 30 3E  - mov byte ptr [rsp+30],3E
+sao_al.exe+55039C: 48 89 44 24 20  - mov [rsp+20],rax
+sao_al.exe+5503A1: E8 8A A0 C8 FF  - call sao_al.exe+1DA430
+sao_al.exe+5503A6: 0F B7 FE        - movzx edi,si
+sao_al.exe+5503A9: EB 03           - jmp sao_al.exe+5503AE
+sao_al.exe+5503AB: 0F B7 FA        - movzx edi,dx
+// ---------- INJECTING HERE ----------
+sao_al.exe+5503AE: 66 89 7B 04     - mov [rbx+04],di
+// ---------- DONE INJECTING  ----------
+sao_al.exe+5503B2: 0F B7 C7        - movzx eax,di
+sao_al.exe+5503B5: 48 8B 5C 24 60  - mov rbx,[rsp+60]
+sao_al.exe+5503BA: 48 8B 6C 24 68  - mov rbp,[rsp+68]
+sao_al.exe+5503BF: 48 8B 74 24 70  - mov rsi,[rsp+70]
+sao_al.exe+5503C4: 48 8B 7C 24 78  - mov rdi,[rsp+78]
+sao_al.exe+5503C9: 48 83 C4 50     - add rsp,50
+sao_al.exe+5503CD: 41 5E           - pop r14
+sao_al.exe+5503CF: C3              - ret 
+sao_al.exe+5503D0: 48 83 EC 28     - sub rsp,28
+sao_al.exe+5503D4: 48 89 6C 24 38  - mov [rsp+38],rbp
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
       <ID>122</ID>
       <Description>"Sacred Art cast multiplier"</Description>
       <Options moHideChildren="1"/>
@@ -2927,7 +2996,7 @@ label(return)
 label(i_buff_base_addr_1)
 
 newmem:
-  mov [i_buff_base_addr_1], 0
+  mov qword ptr [i_buff_base_addr_1], 0
   cmp r13, 1
   jne code
   mov [i_buff_base_addr_1], rdi
@@ -2984,6 +3053,15 @@ sao_al.exe+53FF02: 48 8B CA                 - mov rcx,rdx
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
+              <ID>215</ID>
+              <Description>"Addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_buff_base_addr_1</Address>
+            </CheatEntry>
+            <CheatEntry>
               <ID>128</ID>
               <Description>"Step 2 - set multiplier"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -3009,12 +3087,13 @@ code:
   // original code
   addss xmm0,[rdi]
   // inject code start
-  cmp [i_buff_base_addr_1], 0
+  cmp qword ptr [i_buff_base_addr_1], 0
   je endp
 
   cmp r13, 1
   jne endp
 
+{$try}
   cmp [i_buff_base_addr_1], rdi
   jne endp
 
@@ -3034,7 +3113,7 @@ code:
   vmovss xmm14, [vf_buff_dur_multi]
   vdivss xmm13, xmm13, xmm14
   vaddss xmm0, xmm15, xmm13
-
+{$except}
 
 
 endp:
@@ -8498,6 +8577,12 @@ sao_al.exe+8FFE5C: CC              - int 3
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>216</ID>
+      <Description>"No description"</Description>
+      <VariableType>2 Bytes</VariableType>
+      <Address>sao_al.exe+21AEBA8</Address>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols>
