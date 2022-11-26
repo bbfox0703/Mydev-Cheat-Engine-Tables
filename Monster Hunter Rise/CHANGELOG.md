@@ -2,6 +2,7 @@
 
 ## 2022/11/26
 1. Fixed script "Get weapon usage / May not fully working / 取得武器使用次數資料" 
+1. Added monster size record
 
 ## 2022/11/24
 1. update for v13.0.0.0
