@@ -1,0 +1,2575 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>17</ID>
+      <Description>"Compact mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Get resources"</Description>
+      <Options moHideChildren="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Active: ***Pause game*** =&gt; Enable script (1. Get resources)"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1</ID>
+          <Description>"1. Get resources*100,000"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-11-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+//aobscanregion(INJECT_GET_RESOURCES,stellaris.exe+2F0616,stellaris.exe+330616,48 8B 52 08 48 8B 41 08) // should be unique
+aobscanmodule(INJECT_GET_RESOURCES,stellaris.exe,48 8B 52 08 48 8B 41 08 45 3B CA 7F ?? 4E 8D 04 CA 49 3B D0 74 ?? 0F 1F 40 00 48 8B 0A 48 83 C2 08 48 89 08 48 8D 40 08 49 3B D0 75 ?? 44 89 4B 14 48 8B C3 48 83 C4 20 5B C3 4E 8D 1C D2 4C 8B C2 49 3B D3 74 ?? 0F 1F 40 00 49 8B 08 49 83 C0 08 48 89 08 48 8D 40 08 4D 3B C3 75 ?? 44 8B 53 14 49 63 C2 45 2B CA 48 8B CB 4C 8D 04 C2 41 8B D2 E8 ?? ?? ?? ?? 48 8B C3 48 83 C4 20 5B C3 CC CC CC CC CC CC CC CC CC CC CC 40 53) // should be unique
+alloc(newmem,$1000,INJECT_GET_RESOURCES)
+
+label(code)
+label(return)
+label(i_base_res_addr)
+label(is_min_resources)
+label(min_resources)
+label(min_strategic_resources)
+
+newmem:
+  cmp qword ptr [i_base_res_addr], 0
+  je code
+
+  push rdx
+  mov rdx,[rdx+08]
+  cmp qword ptr [i_base_res_addr], rdx
+  pop rdx
+  jne code
+
+  cmp dword ptr [is_min_resources], 1
+  jne code
+
+  push rbx
+  push rdx
+  push rcx
+
+  mov rdx,[rdx+08]
+  xor rcx, rcx
+loop1:
+  add ecx, 8
+  cmp ecx, 20
+  jae loop2_pre
+  mov rbx, [rdx+ecx]
+  cmp rbx, [min_resources]
+  jae @F
+  mov rbx, [min_resources]
+  mov [rdx+ecx], rbx
+@@:
+  jmp loop1
+
+loop2_pre:
+  mov ecx, 30
+
+loop2:
+  add ecx, 8
+  cmp ecx, 58
+  jae loop3_pre
+  mov rbx, [rdx+ecx]
+  cmp rbx, [min_resources]
+  jae @F
+  mov rbx, [min_resources]
+  mov [rdx+ecx], rbx
+@@:
+  jmp loop2
+
+//Strategic resources
+loop3_pre:
+  mov ecx, 50
+
+loop3:
+  add ecx, 8
+  cmp ecx, 90
+  jae endp
+  mov rbx, [rdx+ecx]
+  cmp rbx, [min_strategic_resources]
+  jae @F
+  mov rbx, [min_strategic_resources]
+  mov [rdx+ecx], rbx
+@@:
+  jmp loop3
+
+
+endp:
+  pop rcx
+  pop rdx
+  pop rbx
+
+code:
+  mov rdx,[rdx+08]
+  //**************
+  cmp qword ptr [i_base_res_addr], 0
+  jne @F
+  mov [i_base_res_addr], rdx
+@@:
+  //**************
+  mov rax,[rcx+08]
+  jmp return
+
+align 10 cc
+  i_base_res_addr:
+  dq 0
+  is_min_resources:
+  dd 1
+  min_resources:
+  dq #8000000
+  min_strategic_resources:
+  dq #100000
+
+INJECT_GET_RESOURCES:
+  jmp newmem
+  nop 3
+return:
+registersymbol(i_base_res_addr)
+registersymbol(INJECT_GET_RESOURCES)
+registersymbol(is_min_resources)
+registersymbol(min_resources)
+registersymbol(min_strategic_resources)
+
+[DISABLE]
+
+INJECT_GET_RESOURCES:
+  db 48 8B 52 08 48 8B 41 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: INJECT_GET_RESOURCES
+
+stellaris.exe+31C88D: CC              - int 3
+stellaris.exe+31C88E: CC              - int 3
+stellaris.exe+31C88F: CC              - int 3
+stellaris.exe+31C890: 40 53           - push rbx
+stellaris.exe+31C892: 48 83 EC 20     - sub rsp,20
+stellaris.exe+31C896: 48 8B D9        - mov rbx,rcx
+stellaris.exe+31C899: 48 3B CA        - cmp rcx,rdx
+stellaris.exe+31C89C: 74 7E           - je stellaris.exe+31C91C
+stellaris.exe+31C89E: 4C 63 4A 14     - movsxd  r9,dword ptr [rdx+14]
+stellaris.exe+31C8A2: 4C 63 51 14     - movsxd  r10,dword ptr [rcx+14]
+// ---------- INJECTING HERE ----------
+INJECT_GET_RESOURCES: E9 55 37 CD FF  - jmp 7FF7C97D0000
+// ---------- DONE INJECTING  ----------
+stellaris.exe+31C8AB: 0F 1F 00        - nop dword ptr [rax]
+stellaris.exe+31C8AE: 45 3B CA        - cmp r9d,r10d
+stellaris.exe+31C8B1: 7F 2D           - jg stellaris.exe+31C8E0
+stellaris.exe+31C8B3: 4E 8D 04 CA     - lea r8,[rdx+r9*8]
+stellaris.exe+31C8B7: 49 3B D0        - cmp rdx,r8
+stellaris.exe+31C8BA: 74 17           - je stellaris.exe+31C8D3
+stellaris.exe+31C8BC: 0F 1F 40 00     - nop dword ptr [rax+00]
+stellaris.exe+31C8C0: 48 8B 0A        - mov rcx,[rdx]
+stellaris.exe+31C8C3: 48 83 C2 08     - add rdx,08
+stellaris.exe+31C8C7: 48 89 08        - mov [rax],rcx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"Base addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>36</ID>
+              <Description>"Set min. resources?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_min_resources</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"Min. resources*100,000"</Description>
+              <DropDownList DisplayValueAsItem="1">8000000:80 (to check if correct)
+800000000:8K
+8000000000:80K
+80000000000:800K
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>min_resources</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>89</ID>
+              <Description>"Min. strategic resources*100,000"</Description>
+              <DropDownList DisplayValueAsItem="1">100000:1 (to check if correct)
+800000000:8K
+8000000000:80K
+80000000000:800K
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF0080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>min_strategic_resources</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5</ID>
+              <Description>"Energy credits / 能量幣"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"Minerals / 礦物"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>7</ID>
+              <Description>"Foods / 食物"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>8</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>30</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"Influence / 影響力"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>38</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"Unity / 凝聚力"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>40</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"Consumer goods / 消費品"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>48</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>14</ID>
+              <Description>"Alloys / 合金"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>50</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>15</ID>
+              <Description>"Volatile Motes / 易爆微粒"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>58</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>80</ID>
+              <Description>"Exotic Gases / 異星天然氣"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>60</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>81</ID>
+              <Description>"Rare Crystals / 稀有水晶"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>68</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>82</ID>
+              <Description>"Living Metal / 活體金屬"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>70</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>83</ID>
+              <Description>"Zro / 澤珞"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>78</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>84</ID>
+              <Description>"Dark Matter / 暗物質"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>80</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>85</ID>
+              <Description>"Nanites / 奈米機器人"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000040</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>88</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>86</ID>
+              <Description>"Minor Artifacts"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>000080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>90</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>87</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>98</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>88</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>A0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>110</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>A8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>111</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_res_addr</Address>
+              <Offsets>
+                <Offset>B0</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>39</ID>
+      <Description>"Fast build in selected Starport/Planet"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_STARPORT_BUILD_WHEN_CLICK,stellaris.exe,28 48 8B 53 30 48 B8 FE FF FF FF FF FF FF 7F) // should be unique
+alloc(newmem,$1000,INJECT_FAST_STARPORT_BUILD_WHEN_CLICK)
+
+label(code)
+label(return)
+label(i_build_sub_threshold)
+newmem:
+  push r15
+
+  mov r15, [rbx+38]
+  mov rdx,[rbx+30]
+  sub r15, [i_build_sub_threshold]
+  cmp rdx, r15
+  jge endp
+  mov [rbx+30], r15
+  db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D
+  db 65 73 20 66 72 6F 6D 20 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61 74 74 61 62
+  db 6C 65 73 2E 63 6F 6D 20
+  db 2F 20 43 45 20 37 2E 34 2B
+
+endp:
+  pop r15
+code:
+  mov rdx,[rbx+30]
+  mov rax,7FFFFFFFFFFFFFFE
+  jmp return
+align 10 cc
+  i_build_sub_threshold:
+  dq #100000
+
+
+INJECT_FAST_STARPORT_BUILD_WHEN_CLICK+01:
+  jmp newmem
+  nop 9
+return:
+registersymbol(INJECT_FAST_STARPORT_BUILD_WHEN_CLICK)
+registersymbol(i_build_sub_threshold)
+[DISABLE]
+
+INJECT_FAST_STARPORT_BUILD_WHEN_CLICK+01:
+  db 48 8B 53 30 48 B8 FE FF FF FF FF FF FF 7F
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+EF10E3
+
+stellaris.exe+EF10BF: 74 06                          - je stellaris.exe+EF10C7
+stellaris.exe+EF10C1: 44 39 43 08                    - cmp [rbx+08],r8d
+stellaris.exe+EF10C5: 74 07                          - je stellaris.exe+EF10CE
+stellaris.exe+EF10C7: 48 8B 1D 8A 97 7D 01           - mov rbx,[stellaris.exe+26CA858]
+stellaris.exe+EF10CE: 48 8B 4B 38                    - mov rcx,[rbx+38]
+stellaris.exe+EF10D2: BE FF FF FF FF                 - mov esi,FFFFFFFF
+stellaris.exe+EF10D7: 48 85 C9                       - test rcx,rcx
+stellaris.exe+EF10DA: 7F 07                          - jg stellaris.exe+EF10E3
+stellaris.exe+EF10DC: B8 A0 86 01 00                 - mov eax,000186A0
+stellaris.exe+EF10E1: EB 28                          - jmp stellaris.exe+EF110B
+// ---------- INJECTING HERE ----------
+stellaris.exe+EF10E3: 48 8B 53 30                    - mov rdx,[rbx+30]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+EF10E7: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+EF10F1: 48 03 C2                       - add rax,rdx
+stellaris.exe+EF10F4: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+EF10F8: 77 0E                          - ja stellaris.exe+EF1108
+stellaris.exe+EF10FA: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
+stellaris.exe+EF1101: 48 99                          - cqo
+stellaris.exe+EF1103: 48 F7 F9                       - idiv rcx
+stellaris.exe+EF1106: EB 03                          - jmp stellaris.exe+EF110B
+stellaris.exe+EF1108: 48 8B C6                       - mov rax,rsi
+stellaris.exe+EF110B: 48 8B 8F 10 03 00 00           - mov rcx,[rdi+00000310]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"Set progress value to 100% completed *100,000"</Description>
+          <DropDownList DisplayValueAsItem="1">100000:1 counts
+500000:5 counts
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF0080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_build_sub_threshold</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>19</ID>
+      <Description>"Current player research (Active: click research in left panel)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-05-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_PLAYER_RESEARCH,stellaris.exe,48 8B 41 08 48 8B F9 48 89) // should be unique
+alloc(newmem,$1000,INJECT_PLAYER_RESEARCH)
+aobscanmodule(INJECT_RESEARCH_MULTI,stellaris.exe,49 01 5E 08 48 8B FB) // should be unique
+alloc(newmem2,$1000,INJECT_RESEARCH_MULTI)
+
+label(code2)
+label(return2)
+label(vf_player_research_mul)
+
+label(code)
+label(return)
+label(i_player_research_1)
+label(i_player_research_2)
+label(i_player_research_3)
+label(i_player_research_uid)
+
+
+newmem:
+  cmp qword ptr [i_player_research_1], 0
+  jne @F
+
+  db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D
+  db 65 73 20 66 72 6F 6D 20 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61 74 74 61 62
+  db 6C 65 73 2E 63 6F 6D 20
+  db 2F 20 43 45 20 37 2E 34 2B
+
+  mov [i_player_research_1], rcx
+  push rbx
+  mov ebx, [rcx+1C]
+  mov [i_player_research_uid], ebx
+  pop rbx
+  jmp next1
+@@:
+  cmp qword ptr [i_player_research_2], 0
+  jne @F
+  mov [i_player_research_2], rcx
+  jmp next1
+@@:
+  cmp qword ptr [i_player_research_3], 0
+  jne @F
+  mov [i_player_research_3], rcx
+  jmp next1
+
+next1:
+
+code:
+  mov rax,[rcx+08]
+  mov rdi,rcx
+  jmp return
+
+align 10 cc
+  i_player_research_1:
+  dq 0
+  i_player_research_2:
+  dq 0
+  i_player_research_3:
+  dq 0
+  i_player_research_uid:
+  dd 0
+
+
+INJECT_PLAYER_RESEARCH:
+  jmp newmem
+  nop 2
+return:
+
+registersymbol(i_player_research_uid)
+registersymbol(i_player_research_1)
+registersymbol(i_player_research_2)
+registersymbol(i_player_research_3)
+registersymbol(INJECT_PLAYER_RESEARCH)
+
+newmem2:
+  mov dword ptr [i_is_res123_check_ok], 0
+  cmp r14, [i_player_research_1]
+  jne res_check2
+  mov dword ptr [i_is_res123_check_ok], 1
+res_check2:
+  cmp r14, [i_player_research_2]
+  jne res_check3
+  mov dword ptr [i_is_res123_check_ok], 1
+res_check3:
+  cmp r14, [i_player_research_3]
+  jne res_check_done
+  mov dword ptr [i_is_res123_check_ok], 1
+
+res_check_done:
+  cmp dword ptr [i_is_res123_check_ok], 1
+  jne code2
+
+  //push rax
+  cvtsi2ss xmm15, rbx
+  vmovss xmm14, [vf_player_research_mul]
+  vmulss xmm15, xmm15, xmm14
+  cvtss2si rbx, xmm15
+
+endp:
+  //pop rax
+
+code2:
+  add [r14+08],rbx
+  mov rdi,rbx
+  jmp return2
+
+align 10 cc
+  vf_player_research_mul:
+  dd (float)4.8
+  i_is_res123_check_ok:
+  dd 0
+
+INJECT_RESEARCH_MULTI:
+  jmp newmem2
+  nop 2
+return2:
+registersymbol(vf_player_research_mul)
+registersymbol(INJECT_RESEARCH_MULTI)
+
+
+
+[DISABLE]
+
+INJECT_PLAYER_RESEARCH:
+  db 48 8B 41 08 48 8B F9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+
+INJECT_RESEARCH_MULTI:
+  db 49 01 5E 08 48 8B FB
+
+unregistersymbol(INJECT_RESEARCH_MULTI)
+dealloc(newmem2)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+43CEDF
+
+stellaris.exe+43CEC7: 48 83 C4 20           - add rsp,20
+stellaris.exe+43CECB: 5F                    - pop rdi
+stellaris.exe+43CECC: C3                    - ret
+stellaris.exe+43CECD: CC                    - int 3
+stellaris.exe+43CECE: CC                    - int 3
+stellaris.exe+43CECF: CC                    - int 3
+stellaris.exe+43CED0: 48 89 5C 24 08        - mov [rsp+08],rbx
+stellaris.exe+43CED5: 48 89 74 24 10        - mov [rsp+10],rsi
+stellaris.exe+43CEDA: 57                    - push rdi
+stellaris.exe+43CEDB: 48 83 EC 20           - sub rsp,20
+// ---------- INJECTING HERE ----------
+stellaris.exe+43CEDF: 48 8B 41 08           - mov rax,[rcx+08]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+43CEE3: 48 8B F9              - mov rdi,rcx
+stellaris.exe+43CEE6: 48 89 02              - mov [rdx],rax
+stellaris.exe+43CEE9: 49 8B F0              - mov rsi,r8
+stellaris.exe+43CEEC: 48 8B 49 10           - mov rcx,[rcx+10]
+stellaris.exe+43CEF0: 48 8B DA              - mov rbx,rdx
+stellaris.exe+43CEF3: 48 8B 01              - mov rax,[rcx]
+stellaris.exe+43CEF6: FF 50 38              - call qword ptr [rax+38]
+stellaris.exe+43CEF9: 84 C0                 - test al,al
+stellaris.exe+43CEFB: 74 47                 - je stellaris.exe+43CF44
+stellaris.exe+43CEFD: 48 63 8E 9C 0B 00 00  - movsxd  rcx,dword ptr [rsi+00000B9C]
+}
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+44115D
+
+stellaris.exe+44113F: E8 2C 7A 00 00           - call stellaris.exe+448B70
+stellaris.exe+441144: 84 C0                    - test al,al
+stellaris.exe+441146: 75 15                    - jne stellaris.exe+44115D
+stellaris.exe+441148: 49 8B DC                 - mov rbx,r12
+stellaris.exe+44114B: EB 14                    - jmp stellaris.exe+441161
+stellaris.exe+44114D: 48 8B 3C CF              - mov rdi,[rdi+rcx*8]
+stellaris.exe+441151: EB D9                    - jmp stellaris.exe+44112C
+stellaris.exe+441153: 49 8B 4E 10              - mov rcx,[r14+10]
+stellaris.exe+441157: 48 8B 01                 - mov rax,[rcx]
+stellaris.exe+44115A: FF 50 38                 - call qword ptr [rax+38]
+// ---------- INJECTING HERE ----------
+stellaris.exe+44115D: 49 01 5E 08              - add [r14+08],rbx
+// ---------- DONE INJECTING  ----------
+stellaris.exe+441161: 48 8B FB                 - mov rdi,rbx
+stellaris.exe+441164: 48 89 5D 48              - mov [rbp+48],rbx
+stellaris.exe+441168: 48 8B 0E                 - mov rcx,[rsi]
+stellaris.exe+44116B: 48 3B D9                 - cmp rbx,rcx
+stellaris.exe+44116E: 7E 12                    - jle stellaris.exe+441182
+stellaris.exe+441170: 48 8B C3                 - mov rax,rbx
+stellaris.exe+441173: 48 2B C1                 - sub rax,rcx
+stellaris.exe+441176: 48 8B 55 18              - mov rdx,[rbp+18]
+stellaris.exe+44117A: 49 29 84 D7 90 00 00 00  - sub [r15+rdx*8+00000090],rax
+stellaris.exe+441182: 48 8D 45 48              - lea rax,[rbp+48]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"Research multiplier (#1/#2/#3 data must be correct)"</Description>
+          <DropDownList DisplayValueAsItem="1">1:Default
+4.800000191:4.8x
+9.6:9.6x
+100:100x
+480:480x
+1000:1000x
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Float</VariableType>
+          <Address>vf_player_research_mul</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"Refresh research items (in case researcher changed / or #1/#2/#3 incorrect)"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+local i = 0
+--i = readInteger('i_cur_player_country_id')
+writeDouble('i_player_research_1', i)
+writeDouble('i_player_research_2', i)
+writeDouble('i_player_research_3', i)
+
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"#1+"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>20</ID>
+              <Description>"Research #1 progress*100,000"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_research_1</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>21</ID>
+              <Description>"Research #1 target*100,000"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_research_1</Address>
+              <Offsets>
+                <Offset>38</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>30</ID>
+              <Description>"Research #1 name"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>String</VariableType>
+              <Length>64</Length>
+              <Unicode>0</Unicode>
+              <CodePage>0</CodePage>
+              <ZeroTerminate>1</ZeroTerminate>
+              <Address>i_player_research_1</Address>
+              <Offsets>
+                <Offset>0</Offset>
+                <Offset>10</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"#2+"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>22</ID>
+              <Description>"Research #2 progress*100,000"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_research_2</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>23</ID>
+              <Description>"Research #2 target*100,000"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_research_2</Address>
+              <Offsets>
+                <Offset>38</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>31</ID>
+              <Description>"Research #2 name"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>String</VariableType>
+              <Length>64</Length>
+              <Unicode>0</Unicode>
+              <CodePage>0</CodePage>
+              <ZeroTerminate>1</ZeroTerminate>
+              <Address>i_player_research_2</Address>
+              <Offsets>
+                <Offset>0</Offset>
+                <Offset>10</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"#3+"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>24</ID>
+              <Description>"Research #3 progress*100,000"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_research_3</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"Research #3 target*100,000"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_research_3</Address>
+              <Offsets>
+                <Offset>38</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>32</ID>
+              <Description>"Research #3 name"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>String</VariableType>
+              <Length>64</Length>
+              <Unicode>0</Unicode>
+              <CodePage>0</CodePage>
+              <ZeroTerminate>1</ZeroTerminate>
+              <Address>i_player_research_3</Address>
+              <Offsets>
+                <Offset>0</Offset>
+                <Offset>10</Offset>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>42</ID>
+      <Description>"Selected leader in Science ship (Player and enemy)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-11-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_SELECTED_LEADER,stellaris.exe,48 8B 99 48 01 00 00 48 8B F2) // should be unique
+aobscanmodule(INJECT_SELECTED_LEADER,stellaris.exe,48 8B 99 ?? ?? ?? ?? 48 8B F2 48 8B F9) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_LEADER)
+
+alloc(INJECT_SELECTED_LEADERo, 7)
+
+label(code)
+label(return)
+label(i_base_leader_addr)
+label(i_base_leader_offset)
+
+INJECT_SELECTED_LEADERo:
+  readmem(INJECT_SELECTED_LEADER, 7)
+
+newmem:
+  push rax
+  push rbx
+
+  lea rax, [INJECT_SELECTED_LEADERo+3]
+  mov eax, [rax]
+  mov [i_base_leader_offset], eax
+  lea rbx, [rcx+eax]
+  mov [i_base_leader_addr], rbx
+  pop rbx
+  pop rax
+
+
+code:
+  //mov rbx,[rcx+0000????]
+  reassemble(INJECT_SELECTED_LEADER)
+  jmp return
+align 10 cc
+  i_base_leader_addr:
+  dq 0
+  i_base_leader_offset:
+  dd 0
+
+INJECT_SELECTED_LEADER:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SELECTED_LEADER)
+registersymbol(i_base_leader_addr)
+registersymbol(i_base_leader_offset)
+registersymbol(INJECT_SELECTED_LEADERo)
+
+[DISABLE]
+
+INJECT_SELECTED_LEADER:
+  //db 48 8B 99 48 01 00 00
+  readmem(INJECT_SELECTED_LEADERo, 7)
+
+unregistersymbol(*)
+unregistersymbol(INJECT_SELECTED_LEADERo)
+dealloc(newmem)
+dealloc(INJECT_SELECTED_LEADERo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+496BBF
+
+stellaris.exe+496BAA: CC                    - int 3
+stellaris.exe+496BAB: CC                    - int 3
+stellaris.exe+496BAC: CC                    - int 3
+stellaris.exe+496BAD: CC                    - int 3
+stellaris.exe+496BAE: CC                    - int 3
+stellaris.exe+496BAF: CC                    - int 3
+stellaris.exe+496BB0: 48 89 5C 24 08        - mov [rsp+08],rbx
+stellaris.exe+496BB5: 48 89 74 24 10        - mov [rsp+10],rsi
+stellaris.exe+496BBA: 57                    - push rdi
+stellaris.exe+496BBB: 48 83 EC 20           - sub rsp,20
+// ---------- INJECTING HERE ----------
+stellaris.exe+496BBF: 48 8B 99 B8 00 00 00  - mov rbx,[rcx+000000B8]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+496BC6: 48 8B F2              - mov rsi,rdx
+stellaris.exe+496BC9: 48 8B F9              - mov rdi,rcx
+stellaris.exe+496BCC: E8 3F 67 00 00        - call stellaris.exe+49D310
+stellaris.exe+496BD1: 8B 97 C0 00 00 00     - mov edx,[rdi+000000C0]
+stellaris.exe+496BD7: 4C 8B CB              - mov r9,rbx
+stellaris.exe+496BDA: 44 8B C0              - mov r8d,eax
+stellaris.exe+496BDD: 48 8B CE              - mov rcx,rsi
+stellaris.exe+496BE0: E8 1B FF FF FF        - call stellaris.exe+496B00
+stellaris.exe+496BE5: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+stellaris.exe+496BEA: 48 8B C6              - mov rax,rsi
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>43</ID>
+          <Description>"Base addr."</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>44</ID>
+          <Description>"Race code"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>String</VariableType>
+          <Length>10</Length>
+          <Unicode>0</Unicode>
+          <CodePage>0</CodePage>
+          <ZeroTerminate>1</ZeroTerminate>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>-40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>136</ID>
+          <Description>"Offset"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_leader_offset</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>51</ID>
+          <Description>"Char pic. &amp; name code"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>String</VariableType>
+          <Length>32</Length>
+          <Unicode>0</Unicode>
+          <CodePage>0</CodePage>
+          <ZeroTerminate>1</ZeroTerminate>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+            <Offset>-88</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>50</ID>
+          <Description>"~Age"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>62</ID>
+          <Description>"Level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>45</ID>
+          <Description>"EXP * 100,000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>46</ID>
+          <Description>"Skill level effect #1 (relay on level)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>A0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>47</ID>
+          <Description>"Skill level effect #2 (relay on level)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>B0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>48</ID>
+          <Description>"Skill level effect #3 (relay on level)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>C0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>49</ID>
+          <Description>"Trait #  (if available)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_leader_addr</Address>
+          <Offsets>
+            <Offset>D0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>52</ID>
+      <Description>"Mouse-over on leader XP bar in Leaders window"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//3.5.3aobscanmodule(INJECT_MOUSE_OVER_LEADER,stellaris.exe,48 8B 9E 48 01 00 00 48 8B CE E8 35) // should be unique
+//3.6 ob aobscanmodule(INJECT_MOUSE_OVER_LEADER,stellaris.exe,48 8B BE B0 00 00 00 48 8B 9E) // should be unique
+aobscanmodule(INJECT_MOUSE_OVER_LEADER,stellaris.exe,48 8B BE ?? ?? 00 00 48 8B 9E ?? ?? 00 00 48 8B CE) // should be unique
+alloc(newmem,$1000,INJECT_MOUSE_OVER_LEADER)
+
+alloc(INJECT_MOUSE_OVER_LEADERo, 7)
+
+label(code)
+label(return)
+label(i_base_mouseover_leader_addr)
+label(i_base_mouseover_leader_offset)
+
+INJECT_MOUSE_OVER_LEADERo:
+  readmem(INJECT_MOUSE_OVER_LEADER, 7)
+
+
+newmem:
+  //mov [i_base_mouseover_leader_addr], rsi
+  //jmp code
+
+  push rax
+  push rbx
+
+  lea rax, [INJECT_MOUSE_OVER_LEADERo+3]
+  mov eax, [rax]
+  mov [i_base_mouseover_leader_offset], eax
+  lea rbx, [rsi+eax+8]
+  mov [i_base_mouseover_leader_addr], rbx
+
+  pop rbx
+  pop rax
+
+code:
+  //mov rbx,[rsi+00000148]
+  reassemble(INJECT_MOUSE_OVER_LEADER)
+  jmp return
+align 10 cc
+  i_base_mouseover_leader_addr:
+  dq 0
+  i_base_mouseover_leader_offset:
+  dd 0
+
+
+
+INJECT_MOUSE_OVER_LEADER:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MOUSE_OVER_LEADER)
+registersymbol(i_base_mouseover_leader_addr)
+registersymbol(i_base_mouseover_leader_offset)
+registersymbol(INJECT_MOUSE_OVER_LEADERo)
+
+[DISABLE]
+
+INJECT_MOUSE_OVER_LEADER:
+  // 3.5.3 db 48 8B 9E 48 01 00 00
+  //       db 48 8B BE B0 00 00 00
+  readmem(INJECT_MOUSE_OVER_LEADERo, 7)
+
+unregistersymbol(*)
+dealloc(newmem)
+unregistersymbol(INJECT_MOUSE_OVER_LEADERo)
+dealloc(INJECT_MOUSE_OVER_LEADERo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+496925
+
+stellaris.exe+4968F0: 48 81 C1 58 02 00 00     - add rcx,00000258
+stellaris.exe+4968F7: 48 8B 01                 - mov rax,[rcx]
+stellaris.exe+4968FA: C6 44 24 30 00           - mov byte ptr [rsp+30],00
+stellaris.exe+4968FF: C7 44 24 28 FF FF FF FF  - mov [rsp+28],FFFFFFFF
+stellaris.exe+496907: C7 44 24 20 02 00 00 00  - mov [rsp+20],00000002
+stellaris.exe+49690F: 4C 8B 0D AA F7 55 01     - mov r9,[stellaris.exe+19F60C0]
+stellaris.exe+496916: 41 B8 B5 00 00 00        - mov r8d,000000B5
+stellaris.exe+49691C: 48 8D 54 24 40           - lea rdx,[rsp+40]
+stellaris.exe+496921: FF 50 68                 - call qword ptr [rax+68]
+stellaris.exe+496924: 90                       - nop
+// ---------- INJECTING HERE ----------
+stellaris.exe+496925: 48 8B BE B0 00 00 00     - mov rdi,[rsi+000000B0]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+49692C: 48 8B 9E B8 00 00 00     - mov rbx,[rsi+000000B8]
+stellaris.exe+496933: 48 8B CE                 - mov rcx,rsi
+stellaris.exe+496936: E8 D5 69 00 00           - call stellaris.exe+49D310
+stellaris.exe+49693B: 44 88 74 24 30           - mov [rsp+30],r14l
+stellaris.exe+496940: 48 8D 4C 24 40           - lea rcx,[rsp+40]
+stellaris.exe+496945: 48 89 4C 24 28           - mov [rsp+28],rcx
+stellaris.exe+49694A: 48 89 7C 24 20           - mov [rsp+20],rdi
+stellaris.exe+49694F: 4C 8B CB                 - mov r9,rbx
+stellaris.exe+496952: 44 8B C0                 - mov r8d,eax
+stellaris.exe+496955: 8B 96 C0 00 00 00        - mov edx,[rsi+000000C0]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>53</ID>
+          <Description>"Base addr."</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>137</ID>
+          <Description>"Offset"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_offset</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>54</ID>
+          <Description>"Race code"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>String</VariableType>
+          <Length>10</Length>
+          <Unicode>0</Unicode>
+          <CodePage>0</CodePage>
+          <ZeroTerminate>1</ZeroTerminate>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>-40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"Char pic. &amp; name code"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>String</VariableType>
+          <Length>32</Length>
+          <Unicode>0</Unicode>
+          <CodePage>0</CodePage>
+          <ZeroTerminate>1</ZeroTerminate>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+            <Offset>-88</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>64</ID>
+          <Description>"Category"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>String</VariableType>
+          <Length>12</Length>
+          <Unicode>0</Unicode>
+          <CodePage>0</CodePage>
+          <ZeroTerminate>1</ZeroTerminate>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>10</Offset>
+            <Offset>-8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>106</ID>
+          <Description>"Set base age = 1, level = 90"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+getAddressList().getMemoryRecordByID(63).Value = '1'
+getAddressList().getMemoryRecordByID(56).Value = '90'
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>63</ID>
+          <Description>"Base Age"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>56</ID>
+          <Description>"Level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>57</ID>
+          <Description>"EXP * 100,000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>58</ID>
+          <Description>"Skill level effect #1 (relay on level)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>A0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>59</ID>
+          <Description>"Skill level effect #2 (relay on level)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>B0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"Skill level effect #3 (relay on level)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>C0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>61</ID>
+          <Description>"Trait # (if available)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_mouseover_leader_addr</Address>
+          <Offsets>
+            <Offset>D0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>67</ID>
+      <Description>"Get Spy Network data"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SPY_PROGRESS,stellaris.exe,0F 11 41 30 41 0F 10 48 10 0F 11 49 40 49 8B) // should be unique
+alloc(newmem,$1000,INJECT_SPY_PROGRESS)
+
+label(code)
+label(return)
+label(i_base_spy_network_addr)
+
+newmem:
+  mov [i_base_spy_network_addr], rcx
+
+code:
+  movups [rcx+30],xmm0
+  movups xmm1,[r8+10]
+  jmp return
+align 10 cc
+  i_base_spy_network_addr:
+  dq 0
+
+INJECT_SPY_PROGRESS:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SPY_PROGRESS)
+registersymbol(i_base_spy_network_addr)
+[DISABLE]
+
+INJECT_SPY_PROGRESS:
+  db 0F 11 41 30 41 0F 10 48 10
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+D8BEA6
+
+stellaris.exe+D8BE75: 48 89 74 24 18                 - mov [rsp+18],rsi
+stellaris.exe+D8BE7A: 57                             - push rdi
+stellaris.exe+D8BE7B: 48 83 EC 20                    - sub rsp,20
+stellaris.exe+D8BE7F: 48 89 51 28                    - mov [rcx+28],rdx
+stellaris.exe+D8BE83: 4D 8B D0                       - mov r10,r8
+stellaris.exe+D8BE86: 41 0F 10 00                    - movups xmm0,[r8]
+stellaris.exe+D8BE8A: 48 89 6C 24 30                 - mov [rsp+30],rbp
+stellaris.exe+D8BE8F: 48 8B D9                       - mov rbx,rcx
+stellaris.exe+D8BE92: 48 BD FE FF FF FF FF FF FF 7F  - mov rbp,7FFFFFFFFFFFFFFE
+stellaris.exe+D8BE9C: 49 B9 9C FF FF FF 63 00 00 00  - mov r9,00000063FFFFFF9C
+// ---------- INJECTING HERE ----------
+stellaris.exe+D8BEA6: 0F 11 41 30                    - movups [rcx+30],xmm0
+// ---------- DONE INJECTING  ----------
+stellaris.exe+D8BEAA: 41 0F 10 48 10                 - movups xmm1,[r8+10]
+stellaris.exe+D8BEAF: 0F 11 49 40                    - movups [rcx+40],xmm1
+stellaris.exe+D8BEB3: 49 8B 78 18                    - mov rdi,[r8+18]
+stellaris.exe+D8BEB7: 4D 8B 40 08                    - mov r8,[r8+08]
+stellaris.exe+D8BEBB: 48 85 FF                       - test rdi,rdi
+stellaris.exe+D8BEBE: 74 49                          - je stellaris.exe+D8BF09
+stellaris.exe+D8BEC0: 49 8D 04 28                    - lea rax,[r8+rbp]
+stellaris.exe+D8BEC4: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+D8BEC8: 77 3F                          - ja stellaris.exe+D8BF09
+stellaris.exe+D8BECA: 49 69 C0 A0 86 01 00           - imul rax,r8,000186A0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>68</ID>
+          <Description>"Base addr."</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_network_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>72</ID>
+          <Description>"Usage: Pause game --&gt; Contacts (F1) --&gt; click on empire --&gt; Espionage tab"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>109</ID>
+          <Description>"Set Real Infiltration Level to a high value"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+getAddressList().getMemoryRecordByID(73).Value = '3000000000'
+
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>73</ID>
+          <Description>"Real Infiltration Level *100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF0080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_network_addr</Address>
+          <Offsets>
+            <Offset>28</Offset>
+            <Offset>28</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>69</ID>
+          <Description>"Display value: current *100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_network_addr</Address>
+          <Offsets>
+            <Offset>30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>70</ID>
+          <Description>"Display value: Max *100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_network_addr</Address>
+          <Offsets>
+            <Offset>40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
+          <Description>"??? *100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_network_addr</Address>
+          <Offsets>
+            <Offset>48</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>75</ID>
+      <Description>"Spy action roll info. "</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-09
+  Author : bbbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_SPY_ACTION_ROLL,stellaris.exe,48 2B 97 B0 02 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_SPY_ACTION_ROLL)
+
+label(code)
+label(return)
+label(i_base_spy_action_addr)
+
+newmem:
+  mov [i_base_spy_action_addr], rdi
+  jmp code
+
+
+  push rax
+  mov rax, [rdi+000002B0]
+  cmp rax, #100000
+  jae chk_possibility
+  mov rax, #100000
+  mov [rdi+000002B0], rax
+
+chk_possibility:
+  mov rax, [rdi+000002C0]
+  cmp rax, #2000000
+  jae endp
+  mov rax, #2000000
+  mov [rdi+000002C0], rax
+
+
+endp:
+  pop rax
+
+code:
+  sub rdx,[rdi+000002B0]
+  jmp return
+align 10 cc
+  i_base_spy_action_addr:
+  dq 0
+
+INJECT_FAST_SPY_ACTION_ROLL:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_SPY_ACTION_ROLL)
+registersymbol(i_base_spy_action_addr)
+
+[DISABLE]
+
+INJECT_FAST_SPY_ACTION_ROLL:
+  db 48 2B 97 B0 02 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+F044EF
+
+stellaris.exe+F044C6: EB 0C                          - jmp stellaris.exe+F044D4
+stellaris.exe+F044C8: 80 79 09 00                    - cmp byte ptr [rcx+09],00
+stellaris.exe+F044CC: 74 06                          - je stellaris.exe+F044D4
+stellaris.exe+F044CE: 48 8B 01                       - mov rax,[rcx]
+stellaris.exe+F044D1: FF 50 78                       - call qword ptr [rax+78]
+stellaris.exe+F044D4: 4C 8B 83 70 01 00 00           - mov r8,[rbx+00000170]
+stellaris.exe+F044DB: 49 8B 00                       - mov rax,[r8]
+stellaris.exe+F044DE: 4C 8B 88 A8 00 00 00           - mov r9,[rax+000000A8]
+stellaris.exe+F044E5: 48 8B 0D 8C 76 6A 01           - mov rcx,[stellaris.exe+25ABB78]
+stellaris.exe+F044EC: 48 8B D1                       - mov rdx,rcx
+// ---------- INJECTING HERE ----------
+stellaris.exe+F044EF: 48 2B 97 B0 02 00 00           - sub rdx,[rdi+000002B0]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+F044F6: 48 85 C9                       - test rcx,rcx
+stellaris.exe+F044F9: 74 21                          - je stellaris.exe+F0451C
+stellaris.exe+F044FB: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+F04505: 48 03 C2                       - add rax,rdx
+stellaris.exe+F04508: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+F0450C: 77 0E                          - ja stellaris.exe+F0451C
+stellaris.exe+F0450E: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
+stellaris.exe+F04515: 48 99                          - cqo
+stellaris.exe+F04517: 48 F7 F9                       - idiv rcx
+stellaris.exe+F0451A: EB 05                          - jmp stellaris.exe+F04521
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>133</ID>
+          <Description>"Usage: Espionage window -&gt; Operations -&gt; running operation"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>107</ID>
+          <Description>"Set Operation Phase left to near 0 / Breakthrough Chance to high value"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+getAddressList().getMemoryRecordByID(77).Value = '100000'
+getAddressList().getMemoryRecordByID(79).Value = '3600000'
+
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>77</ID>
+          <Description>"Operation Phase left"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_action_addr</Address>
+          <Offsets>
+            <Offset>2B0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>78</ID>
+          <Description>"(read only) Upkeep"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_action_addr</Address>
+          <Offsets>
+            <Offset>2B8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>79</ID>
+          <Description>"Breakthrough Chance * 100000"</Description>
+          <DropDownList DisplayValueAsItem="1">1800000:High chance
+3600000:Very high chance
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF0080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_spy_action_addr</Address>
+          <Offsets>
+            <Offset>2C0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>91</ID>
+      <Description>"Fast Bogeys breakthrough (Usage: move-over progress bar) / 快速妖靈突破"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TALK_TO_ALENS,stellaris.exe,48 8B 49 48 48 B8 09 E1 D1 C6 11 6B F1 29) // should be unique
+alloc(newmem,$1000,INJECT_TALK_TO_ALENS)
+
+label(code)
+label(return)
+
+newmem:
+  push rbx
+  mov rbx,[rcx+48]
+  cmp rbx, #100000
+  jbe endp
+  mov rbx, #100000
+  mov [rcx+48], rbx
+
+endp:
+  pop rbx
+
+code:
+  mov rcx,[rcx+48]
+  mov rax,29F16B11C6D1E109
+  jmp return
+
+INJECT_TALK_TO_ALENS:
+  jmp newmem
+  nop 9
+return:
+registersymbol(INJECT_TALK_TO_ALENS)
+
+[DISABLE]
+
+INJECT_TALK_TO_ALENS:
+  db 48 8B 49 48 48 B8 09 E1 D1 C6 11 6B F1 29
+
+unregistersymbol(INJECT_TALK_TO_ALENS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+BEAF12
+
+stellaris.exe+BEAEF0: 73 19                          - jae stellaris.exe+BEAF0B
+stellaris.exe+BEAEF2: 8B C8                          - mov ecx,eax
+stellaris.exe+BEAEF4: 48 03 C9                       - add rcx,rcx
+stellaris.exe+BEAEF7: 48 8B 42 18                    - mov rax,[rdx+18]
+stellaris.exe+BEAEFB: 48 8B 4C C8 08                 - mov rcx,[rax+rcx*8+08]
+stellaris.exe+BEAF00: 48 85 C9                       - test rcx,rcx
+stellaris.exe+BEAF03: 74 06                          - je stellaris.exe+BEAF0B
+stellaris.exe+BEAF05: 44 39 41 08                    - cmp [rcx+08],r8d
+stellaris.exe+BEAF09: 74 07                          - je stellaris.exe+BEAF12
+stellaris.exe+BEAF0B: 48 8B 0D 26 FA AD 01           - mov rcx,[stellaris.exe+26CA938]
+// ---------- INJECTING HERE ----------
+stellaris.exe+BEAF12: 48 8B 49 48                    - mov rcx,[rcx+48]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+BEAF16: 48 B8 09 E1 D1 C6 11 6B F1 29  - mov rax,29F16B11C6D1E109
+stellaris.exe+BEAF20: 48 85 C9                       - test rcx,rcx
+stellaris.exe+BEAF23: 79 09                          - jns stellaris.exe+BEAF2E
+stellaris.exe+BEAF25: 48 81 C1 B0 3C FF FF           - add rcx,FFFFFFFFFFFF3CB0
+stellaris.exe+BEAF2C: EB 07                          - jmp stellaris.exe+BEAF35
+stellaris.exe+BEAF2E: 48 81 C1 50 C3 00 00           - add rcx,0000C350
+stellaris.exe+BEAF35: 48 F7 E9                       - imul rcx
+stellaris.exe+BEAF38: 48 8B FA                       - mov rdi,rdx
+stellaris.exe+BEAF3B: 48 C1 FF 0E                    - sar rdi,0E
+stellaris.exe+BEAF3F: 48 8B C7                       - mov rax,rdi
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>119</ID>
+      <Description>"Get terraforming info"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TERRAFORMING_INFO,stellaris.exe,FF 4D 85 C0 ?? ?? 48 8B 4E 10) // should be unique
+// FF 4D 85 C0 74 25 48 8B 4E 10
+alloc(newmem,$1000,INJECT_TERRAFORMING_INFO)
+alloc(INJECT_TERRAFORMING_INFOo,$10)
+
+
+
+label(code)
+label(return)
+label(i_base_terraforming_info_addr)
+
+INJECT_TERRAFORMING_INFOo:
+  readmem(INJECT_TERRAFORMING_INFO, 10)
+
+newmem:
+  mov [i_base_terraforming_info_addr], rsi
+
+code:
+  //je stellaris.exe+BA235F
+  reassemble(INJECT_TERRAFORMING_INFO+4)
+  mov rcx,[rsi+10]
+  jmp return
+
+
+
+align 10 cc
+  i_base_terraforming_info_addr:
+  dq 0
+
+INJECT_TERRAFORMING_INFO+04:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_TERRAFORMING_INFO)
+registersymbol(i_base_terraforming_info_addr)
+registersymbol(INJECT_TERRAFORMING_INFOo)
+
+[DISABLE]
+
+//INJECT_TERRAFORMING_INFO+04:
+//  db 74 25 48 8B 4E 10
+INJECT_TERRAFORMING_INFO:
+  readmem(INJECT_TERRAFORMING_INFOo, 10)
+
+unregistersymbol(*)
+dealloc(newmem)
+dealloc(INJECT_TERRAFORMING_INFOo)
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+BA2338
+
+stellaris.exe+BA22FF: FF 90 D0 00 00 00                 - call qword ptr [rax+000000D0]
+stellaris.exe+BA2305: 41 C7 85 28 2B 00 00 FF FF FF FF  - mov [r13+00002B28],FFFFFFFF
+stellaris.exe+BA2310: 48 8B B7 20 0F 00 00              - mov rsi,[rdi+00000F20]
+stellaris.exe+BA2317: 4C 8B 76 20                       - mov r14,[rsi+20]
+stellaris.exe+BA231B: 4D 8B 8D F0 2A 00 00              - mov r9,[r13+00002AF0]
+stellaris.exe+BA2322: 49 8B 01                          - mov rax,[r9]
+stellaris.exe+BA2325: 4C 8B 90 A8 00 00 00              - mov r10,[rax+000000A8]
+stellaris.exe+BA232C: 4C 8B 46 18                       - mov r8,[rsi+18]
+stellaris.exe+BA2330: BB FF FF FF FF                    - mov ebx,FFFFFFFF
+stellaris.exe+BA2335: 4D 85 C0                          - test r8,r8
+// ---------- INJECTING HERE ----------
+stellaris.exe+BA2338: 74 25                             - je stellaris.exe+BA235F
+// ---------- DONE INJECTING  ----------
+stellaris.exe+BA233A: 48 8B 4E 10                       - mov rcx,[rsi+10]
+stellaris.exe+BA233E: 48 B8 FE FF FF FF FF FF FF 7F     - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+BA2348: 48 03 C1                          - add rax,rcx
+stellaris.exe+BA234B: 48 83 F8 FC                       - cmp rax,-04
+stellaris.exe+BA234F: 77 0E                             - ja stellaris.exe+BA235F
+stellaris.exe+BA2351: 48 69 C1 A0 86 01 00              - imul rax,rcx,000186A0
+stellaris.exe+BA2358: 48 99                             - cqo
+stellaris.exe+BA235A: 49 F7 F8                          - idiv r8
+stellaris.exe+BA235D: EB 03                             - jmp stellaris.exe+BA2362
+stellaris.exe+BA235F: 48 8B C3                          - mov rax,rbx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>134</ID>
+          <Description>"Usage: move-over terraforming progress bar"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>120</ID>
+          <Description>"Set Current = target"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+getAddressList().getMemoryRecordByID(121).Value = getAddressList().getMemoryRecordByID(122).Value
+
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>121</ID>
+          <Description>"Terraforming: Current * 100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_terraforming_info_addr</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>122</ID>
+          <Description>"Terraforming: Target * 100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_terraforming_info_addr</Address>
+          <Offsets>
+            <Offset>18</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>97</ID>
+      <Description>"Selected Megastructure"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SELECTED_MEGASTRUCTURES,stellaris.exe,49 8B 55 48 48 B8 FE FF FF FF FF FF FF 7F) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_MEGASTRUCTURES)
+
+label(code)
+label(return)
+label(i_base_megas_addr)
+
+newmem:
+  mov [i_base_megas_addr], r13
+
+code:
+  mov rdx,[r13+48]
+  mov rax,7FFFFFFFFFFFFFFE
+  jmp return
+align 10 cc
+  i_base_megas_addr:
+  dq 0
+
+INJECT_SELECTED_MEGASTRUCTURES:
+  jmp newmem
+  nop 9
+return:
+registersymbol(INJECT_SELECTED_MEGASTRUCTURES)
+registersymbol(i_base_megas_addr)
+
+[DISABLE]
+
+INJECT_SELECTED_MEGASTRUCTURES:
+  db 49 8B 55 48 48 B8 FE FF FF FF FF FF FF 7F
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+CC0D2E
+
+stellaris.exe+CC0CFF: E8 44 A7 B0 00                 - call stellaris.exe+17CB448
+stellaris.exe+CC0D04: 66 0F 6F 05 04 D4 EB 00        - movdqa xmm0,[stellaris.exe+1B7E110]
+stellaris.exe+CC0D0C: F3 0F 7F 45 30                 - movdqu [rbp+30],xmm0
+stellaris.exe+CC0D11: C6 45 20 00                    - mov byte ptr [rbp+20],00
+stellaris.exe+CC0D15: 40 84 F6                       - test sil,sil
+stellaris.exe+CC0D18: 0F 84 F3 01 00 00              - je stellaris.exe+CC0F11
+stellaris.exe+CC0D1E: 49 8B 45 40                    - mov rax,[r13+40]
+stellaris.exe+CC0D22: 48 8B 88 28 02 00 00           - mov rcx,[rax+00000228]
+stellaris.exe+CC0D29: 48 85 C9                       - test rcx,rcx
+stellaris.exe+CC0D2C: 74 25                          - je stellaris.exe+CC0D53
+// ---------- INJECTING HERE ----------
+stellaris.exe+CC0D2E: 49 8B 55 48                    - mov rdx,[r13+48]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+CC0D32: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+CC0D3C: 48 03 C2                       - add rax,rdx
+stellaris.exe+CC0D3F: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+CC0D43: 77 0E                          - ja stellaris.exe+CC0D53
+stellaris.exe+CC0D45: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
+stellaris.exe+CC0D4C: 48 99                          - cqo
+stellaris.exe+CC0D4E: 48 F7 F9                       - idiv rcx
+stellaris.exe+CC0D51: EB 05                          - jmp stellaris.exe+CC0D58
+stellaris.exe+CC0D53: B8 FF FF FF FF                 - mov eax,FFFFFFFF
+stellaris.exe+CC0D58: 48 6B C8 64                    - imul rcx,rax,64
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>135</ID>
+          <Description>"Usage: move-over progress bar"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>105</ID>
+          <Description>"Set progress to 4800"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+getAddressList().getMemoryRecordByID(98).Value = '480000000'
+
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>98</ID>
+          <Description>"Upgrade progress * 100000"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_megas_addr</Address>
+          <Offsets>
+            <Offset>48</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>102</ID>
+      <Description>"Selected Science Ship research"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_SCI_SHIP_RESEARCH,stellaris.exe,4C 2B 82 B0 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_SCI_SHIP_RESEARCH)
+
+label(code)
+label(return)
+label(i_base_sci_ship_reaearch_addr)
+
+newmem:
+  //mov r8, #100000
+  //mov [rdx+000000B0], r8
+  mov [i_base_sci_ship_reaearch_addr], rdx
+
+code:
+  sub r8,[rdx+000000B0]
+  jmp return
+align 10 cc
+  i_base_sci_ship_reaearch_addr:
+  dq 0
+
+INJECT_FAST_SCI_SHIP_RESEARCH:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_SCI_SHIP_RESEARCH)
+registersymbol(i_base_sci_ship_reaearch_addr)
+
+[DISABLE]
+
+INJECT_FAST_SCI_SHIP_RESEARCH:
+  db 4C 2B 82 B0 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+BE3A35
+
+stellaris.exe+BE3A09: 48 8B 42 18                    - mov rax,[rdx+18]
+stellaris.exe+BE3A0D: 48 8B 54 C8 08                 - mov rdx,[rax+rcx*8+08]
+stellaris.exe+BE3A12: 48 85 D2                       - test rdx,rdx
+stellaris.exe+BE3A15: 74 06                          - je stellaris.exe+BE3A1D
+stellaris.exe+BE3A17: 44 39 42 08                    - cmp [rdx+08],r8d
+stellaris.exe+BE3A1B: 74 07                          - je stellaris.exe+BE3A24
+stellaris.exe+BE3A1D: 48 8B 15 64 6D AE 01           - mov rdx,[stellaris.exe+26CA788]
+stellaris.exe+BE3A24: 48 63 05 CD 83 9C 01           - movsxd  rax,dword ptr [stellaris.exe+25ABDF8]
+stellaris.exe+BE3A2B: 48 69 C8 A0 86 01 00           - imul rcx,rax,000186A0
+stellaris.exe+BE3A32: 4C 8B C1                       - mov r8,rcx
+// ---------- INJECTING HERE ----------
+stellaris.exe+BE3A35: 4C 2B 82 B0 00 00 00           - sub r8,[rdx+000000B0]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+BE3A3C: 48 85 C9                       - test rcx,rcx
+stellaris.exe+BE3A3F: 74 21                          - je stellaris.exe+BE3A62
+stellaris.exe+BE3A41: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+BE3A4B: 49 03 C0                       - add rax,r8
+stellaris.exe+BE3A4E: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+BE3A52: 77 0E                          - ja stellaris.exe+BE3A62
+stellaris.exe+BE3A54: 49 69 C0 A0 86 01 00           - imul rax,r8,000186A0
+stellaris.exe+BE3A5B: 48 99                          - cqo
+stellaris.exe+BE3A5D: 48 F7 F9                       - idiv rcx
+stellaris.exe+BE3A60: EB 05                          - jmp stellaris.exe+BE3A67
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>108</ID>
+          <Description>"Set progress to 0"</Description>
+          <Color>408000</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+getAddressList().getMemoryRecordByID(103).Value = '0'
+
+[DISABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>103</ID>
+          <Description>"Progress"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_sci_ship_reaearch_addr</Address>
+          <Offsets>
+            <Offset>B0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>114</ID>
+      <Description>"High HP for selected fleet"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>113</ID>
+          <Description>"1. Enable this script first"</Description>
+          <Options moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-11
+  Author : bbfox@http://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SELECTED_FLEET_HP,stellaris.exe,49 8B 90 58 01 00 00 48) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_FLEET_HP)
+
+label(code)
+label(return)
+label(i_base_player_pointer)
+
+newmem:
+  cmp qword ptr [i_base_player_pointer], 0
+  jne compare_data
+  mov rdx, [r8+00000058] // player data pointer
+  mov [i_base_player_pointer], rdx
+
+compare_data:
+  push rax
+
+  mov rax, [i_base_player_pointer]
+  mov rdx, [r8+00000058]
+  cmp rax, rdx
+  jne endp
+
+  mov rdx, [r8+000007D8]
+  mov [r8+00000150], rdx
+
+  mov rdx, [r8+000007E0]
+  mov [r8+00000158], rdx
+
+  mov rdx, [r8+000007E8]
+  mov [r8+00000160], rdx
+
+endp:
+  pop rax
+
+code:
+  mov rdx,[r8+00000158]
+  jmp return
+align 10 cc
+  i_max_ship_hp:
+  dq #10000000000
+  i_base_player_pointer:
+  dq 0
+
+INJECT_SELECTED_FLEET_HP:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SELECTED_FLEET_HP)
+registersymbol(i_base_player_pointer)
+
+[DISABLE]
+
+INJECT_SELECTED_FLEET_HP:
+  db 49 8B 90 58 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+C670D8
+
+stellaris.exe+C670B8: 48 99                          - cqo 
+stellaris.exe+C670BA: 48 F7 F9                       - idiv rcx
+stellaris.exe+C670BD: EB 0A                          - jmp stellaris.exe+C670C9
+stellaris.exe+C670BF: B8 FF FF FF FF                 - mov eax,FFFFFFFF
+stellaris.exe+C670C4: EB 03                          - jmp stellaris.exe+C670C9
+stellaris.exe+C670C6: 49 8B C7                       - mov rax,r15
+stellaris.exe+C670C9: 48 03 F0                       - add rsi,rax
+stellaris.exe+C670CC: 49 8B 88 E0 07 00 00           - mov rcx,[r8+000007E0]
+stellaris.exe+C670D3: 48 85 C9                       - test rcx,rcx
+stellaris.exe+C670D6: 7E 2F                          - jle stellaris.exe+C67107
+// ---------- INJECTING HERE ----------
+stellaris.exe+C670D8: 49 8B 90 58 01 00 00           - mov rdx,[r8+00000158]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+C670DF: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+C670E9: 48 03 C2                       - add rax,rdx
+stellaris.exe+C670EC: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+C670F0: 77 0E                          - ja stellaris.exe+C67100
+stellaris.exe+C670F2: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
+stellaris.exe+C670F9: 48 99                          - cqo 
+stellaris.exe+C670FB: 48 F7 F9                       - idiv rcx
+stellaris.exe+C670FE: EB 0A                          - jmp stellaris.exe+C6710A
+stellaris.exe+C67100: B8 FF FF FF FF                 - mov eax,FFFFFFFF
+stellaris.exe+C67105: EB 03                          - jmp stellaris.exe+C6710A
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>118</ID>
+              <Description>"Re-enable (1) if load from saves / new game"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>131</ID>
+              <Description>"2. Click on player fleet (not god mode; must be fleet, not single ship)"</Description>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>117</ID>
+              <Description>"Check Player Race ==&gt;"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>String</VariableType>
+              <Length>20</Length>
+              <Unicode>0</Unicode>
+              <CodePage>0</CodePage>
+              <ZeroTerminate>1</ZeroTerminate>
+              <Address>i_base_player_pointer</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>116</ID>
+              <Description>"3. Monitor all player fleets (1. must be on, or script will error)"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-10-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MONITOR_ALL_FLEETS,stellaris.exe,49 8B 86 58 01 00 00 49) // should be unique
+alloc(newmem,$1000,INJECT_MONITOR_ALL_FLEETS)
+
+label(code)
+label(return)
+
+newmem:
+  cmp qword ptr [i_base_player_pointer], 0
+  jne compare_data
+  jmp code
+
+
+compare_data:
+  push rbx
+
+  mov rax, [i_base_player_pointer]
+  mov rbx, [r14+00000058]
+  cmp rax, rbx
+  jne endp
+
+  mov rbx, [r14+000007D8]
+  mov [r14+00000150], rbx
+
+  mov rbx, [r14+000007E0]
+  mov [r14+00000158], rbx
+
+  mov rbx, [r14+000007E8]
+  mov [r14+00000160], rbx
+
+endp:
+  pop rbx
+
+code:
+  mov rax,[r14+00000158]
+  jmp return
+
+INJECT_MONITOR_ALL_FLEETS:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MONITOR_ALL_FLEETS)
+
+[DISABLE]
+
+INJECT_MONITOR_ALL_FLEETS:
+  db 49 8B 86 58 01 00 00
+
+unregistersymbol(INJECT_MONITOR_ALL_FLEETS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+817988
+
+stellaris.exe+81795D: 4C 8B 05 A4 33 EB 01     - mov r8,[stellaris.exe+26CAD08]
+stellaris.exe+817964: 48 8B 15 35 23 EB 01     - mov rdx,[stellaris.exe+26C9CA0]
+stellaris.exe+81796B: 41 8B 4E 48              - mov ecx,[r14+48]
+stellaris.exe+81796F: 8B C1                    - mov eax,ecx
+stellaris.exe+817971: C1 E8 05                 - shr eax,05
+stellaris.exe+817974: A8 01                    - test al,01
+stellaris.exe+817976: 0F 85 A9 00 00 00        - jne stellaris.exe+817A25
+stellaris.exe+81797C: C1 E9 08                 - shr ecx,08
+stellaris.exe+81797F: F6 C1 01                 - test cl,01
+stellaris.exe+817982: 0F 85 9D 00 00 00        - jne stellaris.exe+817A25
+// ---------- INJECTING HERE ----------
+stellaris.exe+817988: 49 8B 86 58 01 00 00     - mov rax,[r14+00000158]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+81798F: 49 3B 86 E0 07 00 00     - cmp rax,[r14+000007E0]
+stellaris.exe+817996: 0F 8D 89 00 00 00        - jnl stellaris.exe+817A25
+stellaris.exe+81799C: 41 83 BE 6C 01 00 00 00  - cmp dword ptr [r14+0000016C],00
+stellaris.exe+8179A4: 7F 7F                    - jg stellaris.exe+817A25
+stellaris.exe+8179A6: 49 8B 9E 20 08 00 00     - mov rbx,[r14+00000820]
+stellaris.exe+8179AD: 48 85 DB                 - test rbx,rbx
+stellaris.exe+8179B0: 74 73                    - je stellaris.exe+817A25
+stellaris.exe+8179B2: 7F 07                    - jg stellaris.exe+8179BB
+stellaris.exe+8179B4: 79 6F                    - jns stellaris.exe+817A25
+stellaris.exe+8179B6: 48 3B C7                 - cmp rax,rdi
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>132</ID>
+                  <Description>"Disable if affected enemy ship"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>125</ID>
+      <Description>"Get Federation data"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-11-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//3.5.3 aobscanmodule(INJECT_FEDERATION_INFO,stellaris.exe,49 8B 56 28 48 89 55 6F) // should be unique
+aobscanmodule(INJECT_FEDERATION_INFO,stellaris.exe,49 8B 57 28 48 89 55 6F) // should be unique
+
+alloc(newmem,$1000,INJECT_FEDERATION_INFO)
+
+label(code)
+label(return)
+label(i_base_federation_addr)
+
+newmem:
+  mov [i_base_federation_addr], r15
+
+code:
+  mov rdx,[r15+28]
+  mov [rbp+6F],rdx
+  jmp return
+align 10 cc
+  i_base_federation_addr:
+  dq 0
+
+INJECT_FEDERATION_INFO:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FEDERATION_INFO)
+registersymbol(i_base_federation_addr)
+
+[DISABLE]
+
+INJECT_FEDERATION_INFO:
+  // db 49 8B 56 28 48 89 55 6F
+  db 49 8B 57 28 48 89 55 6F
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+3.5.3
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+C4F794
+
+stellaris.exe+C4F767: 41 8B 46 08           - mov eax,[r14+08]
+stellaris.exe+C4F76B: 89 45 67              - mov [rbp+67],eax
+stellaris.exe+C4F76E: 4C 8D 4D 67           - lea r9,[rbp+67]
+stellaris.exe+C4F772: 4C 8D 05 4B D9 DA 00  - lea r8,[stellaris.exe+19FD0C4]
+stellaris.exe+C4F779: 48 8D 15 50 B3 E2 00  - lea rdx,[stellaris.exe+1A7AAD0]
+stellaris.exe+C4F780: 48 8D 4D C7           - lea rcx,[rbp-39]
+stellaris.exe+C4F784: E8 C7 24 5F FF        - call stellaris.exe+241C50
+stellaris.exe+C4F789: 48 8B D0              - mov rdx,rax
+stellaris.exe+C4F78C: 48 8B CB              - mov rcx,rbx
+stellaris.exe+C4F78F: E8 AC 2F 77 00        - call stellaris.exe+13C2740
+// ---------- INJECTING HERE ----------
+stellaris.exe+C4F794: 49 8B 56 28           - mov rdx,[r14+28]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+C4F798: 48 89 55 6F           - mov [rbp+6F],rdx
+stellaris.exe+C4F79C: 49 63 46 08           - movsxd  rax,dword ptr [r14+08]
+stellaris.exe+C4F7A0: 83 F8 01              - cmp eax,01
+stellaris.exe+C4F7A3: 7C 1A                 - jl stellaris.exe+C4F7BF
+stellaris.exe+C4F7A5: 41 3B 86 04 01 00 00  - cmp eax,[r14+00000104]
+stellaris.exe+C4F7AC: 7F 11                 - jg stellaris.exe+C4F7BF
+stellaris.exe+C4F7AE: 48 8B C8              - mov rcx,rax
+stellaris.exe+C4F7B1: 49 8B 86 F8 00 00 00  - mov rax,[r14+000000F8]
+stellaris.exe+C4F7B8: 48 8B 44 C8 F8        - mov rax,[rax+rcx*8-08]
+stellaris.exe+C4F7BD: EB 07                 - jmp stellaris.exe+C4F7C6
+}
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+C87CC6
+
+stellaris.exe+C87C99: 41 8B 47 08           - mov eax,[r15+08]
+stellaris.exe+C87C9D: 89 45 67              - mov [rbp+67],eax
+stellaris.exe+C87CA0: 4C 8D 4D 67           - lea r9,[rbp+67]
+stellaris.exe+C87CA4: 4C 8D 05 2D 05 DC 00  - lea r8,[stellaris.exe+1A481D8]
+stellaris.exe+C87CAB: 48 8D 15 A6 EA E3 00  - lea rdx,[stellaris.exe+1AC6758]
+stellaris.exe+C87CB2: 48 8D 4D C7           - lea rcx,[rbp-39]
+stellaris.exe+C87CB6: E8 45 29 5E FF        - call stellaris.exe+26A600
+stellaris.exe+C87CBB: 48 8B D0              - mov rdx,rax
+stellaris.exe+C87CBE: 48 8B CB              - mov rcx,rbx
+stellaris.exe+C87CC1: E8 7A FA 77 00        - call stellaris.exe+1407740
+// ---------- INJECTING HERE ----------
+stellaris.exe+C87CC6: 49 8B 57 28           - mov rdx,[r15+28]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+C87CCA: 48 89 55 6F           - mov [rbp+6F],rdx
+stellaris.exe+C87CCE: 49 63 47 08           - movsxd  rax,dword ptr [r15+08]
+stellaris.exe+C87CD2: 83 F8 01              - cmp eax,01
+stellaris.exe+C87CD5: 7C 1A                 - jl stellaris.exe+C87CF1
+stellaris.exe+C87CD7: 41 3B 87 04 01 00 00  - cmp eax,[r15+00000104]
+stellaris.exe+C87CDE: 7F 11                 - jg stellaris.exe+C87CF1
+stellaris.exe+C87CE0: 48 8B C8              - mov rcx,rax
+stellaris.exe+C87CE3: 49 8B 87 F8 00 00 00  - mov rax,[r15+000000F8]
+stellaris.exe+C87CEA: 48 8B 44 C8 F8        - mov rax,[rax+rcx*8-08]
+stellaris.exe+C87CEF: EB 07                 - jmp stellaris.exe+C87CF8
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>130</ID>
+          <Description>"Usage: open federation window, mouse over on EXP bar in "Levels" tab"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>126</ID>
+          <Description>"Level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_federation_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>129</ID>
+          <Description>"Total XP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_federation_addr</Address>
+          <Offsets>
+            <Offset>20</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>127</ID>
+          <Description>"Display XP bar (read only)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_federation_addr</Address>
+          <Offsets>
+            <Offset>28</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>128</ID>
+          <Description>"Cohesion / 團結度 (-10000000 ~ 10000000)"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_federation_addr</Address>
+          <Offsets>
+            <Offset>38</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>35</ID>
+      <Description>"Stellaris 3.6.0 (0028) OB  /  http://opencheattables.com  /  CE 7.4+"</Description>
+      <Color>400080</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+</LuaScript>
+</CheatTable>
