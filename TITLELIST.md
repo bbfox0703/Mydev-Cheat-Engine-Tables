@@ -217,6 +217,10 @@ ja-JP: 神領編年史 The DioField Chronicle (チートエンジン)
 zh-TW: 偶像大師 星耀季節  
 ja-JP: アイドルマスター スターリットシーズン  
 
+## The Legend of Heroes Ao no Kiseki KAI
+[The Legend of Heroes: Ao no Kiseki KAI (Steam)](https://store.steampowered.com/app/1461920/_/)  
+zh-TW: 英雄傳說 零之軌跡：改  
+
 ## The Legend of Heroes Kuro no Kiseki
 [The Legend of Heroes: Kuro no Kiseki (Steam)](https://store.steampowered.com/app/1811950/_/)
 zh-TW: 英雄傳說 黎之軌跡  
