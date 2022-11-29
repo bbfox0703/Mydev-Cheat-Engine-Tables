@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/11/29
+1. Update for v3.6
+
 ## 2022/10/14
 1. Added get Federation Data
 
