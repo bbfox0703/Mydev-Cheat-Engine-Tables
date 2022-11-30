@@ -2245,6 +2245,9 @@ label(i_base_player_pointer)
 newmem:
   cmp qword ptr [i_base_player_pointer], 0
   jne compare_data
+  cmp dword ptr [r8+000000324], 0
+  jne code
+
   mov rdx, [r8+00000058] // player data pointer
   mov [i_base_player_pointer], rdx
 
@@ -2359,7 +2362,7 @@ stellaris.exe+C67105: EB 03                          - jmp stellaris.exe+C6710A
             </CheatEntry>
             <CheatEntry>
               <ID>116</ID>
-              <Description>"3. Monitor all player fleets (1. must be on, or script will error)"</Description>
+              <Description>"Option 1: Monitor all player fleets (1. must be on, or script will error)"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : stellaris.exe
@@ -2384,6 +2387,9 @@ newmem:
 
 compare_data:
   push rbx
+
+  cmp dword ptr [r14+000000324], 0
+  jne endp
 
   mov rax, [i_base_player_pointer]
   mov rbx, [r14+00000058]
@@ -2454,6 +2460,119 @@ stellaris.exe+8179B6: 48 3B C7                 - cmp rax,rdi
                   <Description>"Disable if affected enemy ship"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>150</ID>
+                  <Description>"*** not fully tested, may not apply to all ships / starports"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>152</ID>
+              <Description>"Option 2: Sci-Ship survey multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-11-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SCI_SHIP_SURVEY_MULTI,$process,48 01 56 28 48 8B 5C 24 30) // should be unique
+alloc(newmem,$1000,INJECT_SCI_SHIP_SURVEY_MULTI)
+
+label(code)
+label(return)
+label(vf_sci_ship_survey_multi)
+
+newmem:
+
+  cmp dword ptr [r14+000000324], 0
+  jne code
+
+  cmp qword ptr [i_base_player_pointer], 0
+  jne compare_data
+  jmp code
+
+  vmovss xmm14, [vf_sci_ship_survey_multi]
+  cvtsi2ss xmm15, rdx
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si rdx, xmm15
+
+
+compare_data:
+
+code:
+  add [rsi+28],rdx
+  mov rbx,[rsp+30]
+  jmp return
+align 10 cc
+  vf_sci_ship_survey_multi:
+  dd (float)3.33333333
+
+INJECT_SCI_SHIP_SURVEY_MULTI:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SCI_SHIP_SURVEY_MULTI)
+registersymbol(vf_sci_ship_survey_multi)
+
+[DISABLE]
+
+INJECT_SCI_SHIP_SURVEY_MULTI:
+  db 48 01 56 28 48 8B 5C 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+8FC8AF
+
+stellaris.exe+8FC857 - 83 BB 8C030000 02     - cmp dword ptr [rbx+0000038C],02
+stellaris.exe+8FC85E - 75 63                 - jne stellaris.exe+8FC8C3
+stellaris.exe+8FC860 - 48 8B CE              - mov rcx,rsi
+stellaris.exe+8FC863 - E8 387EFFFF           - call stellaris.exe+8F46A0
+stellaris.exe+8FC868 - 48 8B 1D E91AD001     - mov rbx,[stellaris.exe+25FE358]
+stellaris.exe+8FC86F - 48 8D 8F 88010000     - lea rcx,[rdi+00000188]
+stellaris.exe+8FC876 - 41 B8 4F000000        - mov r8d,0000004F
+stellaris.exe+8FC87C - 48 8D 54 24 38        - lea rdx,[rsp+38]
+stellaris.exe+8FC881: E8 3A E5 8A FF                 - call stellaris.exe+1AADC0
+stellaris.exe+8FC886: 48 8B 08                       - mov rcx,[rax]
+stellaris.exe+8FC889: 48 81 C1 A0 86 01 00           - add rcx,000186A0
+stellaris.exe+8FC890: 48 0F AF CB                    - imul rcx,rbx
+stellaris.exe+8FC894: 48 B8 09 E1 D1 C6 11 6B F1 29  - mov rax,29F16B11C6D1E109
+stellaris.exe+8FC89E: 48 F7 E9                       - imul rcx
+stellaris.exe+8FC8A1: 48 C1 FA 0E                    - sar rdx,0E
+stellaris.exe+8FC8A5: 48 8B C2                       - mov rax,rdx
+stellaris.exe+8FC8A8: 48 C1 E8 3F                    - shr rax,3F
+stellaris.exe+8FC8AC: 48 03 D0                       - add rdx,rax
+// ---------- INJECTING HERE ----------
+stellaris.exe+8FC8AF: 48 01 56 28                    - add [rsi+28],rdx
+// ---------- DONE INJECTING  ----------
+stellaris.exe+8FC8B3: 48 8B 5C 24 30                 - mov rbx,[rsp+30]
+stellaris.exe+8FC8B8: 48 8B 74 24 40                 - mov rsi,[rsp+40]
+stellaris.exe+8FC8BD: 48 83 C4 20                    - add rsp,20
+stellaris.exe+8FC8C1: 5F                             - pop rdi
+stellaris.exe+8FC8C2: C3                             - ret 
+stellaris.exe+8FC8C3: 48 8B 4E 08                    - mov rcx,[rsi+08]
+stellaris.exe+8FC8C7: 48 8B 01                       - mov rax,[rcx]
+stellaris.exe+8FC8CA: FF 50 38                       - call qword ptr [rax+38]
+stellaris.exe+8FC8CD: 84 C0                          - test al,al
+stellaris.exe+8FC8CF: 74 1D                          - je stellaris.exe+8FC8EE
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>153</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_sci_ship_survey_multi</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -2624,8 +2743,16 @@ stellaris.exe+C87CEF: EB 07                 - jmp stellaris.exe+C87CF8
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <Comments>Single ship
+  <Comments>Single ship / 48 39 87 50 01 00 00
 stellaris.exe+84DCBB - 48 39 87 50010000     - cmp [rdi+00000150],rax
+
+
+48 8b 08 48 39 4e 28
+stellaris.exe+8FDD96 - 48 8B 08              - mov rcx,[rax]
+
+
+
+stellaris.exe+8FC8AF - 48 01 56 28           - add [rsi+28],rdx
 </Comments>
   <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
