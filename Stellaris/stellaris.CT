@@ -2218,7 +2218,7 @@ if syntaxcheck then return end
     </CheatEntry>
     <CheatEntry>
       <ID>114</ID>
-      <Description>"High HP for selected fleet"</Description>
+      <Description>"High HP for selected fleet / sci-ship survey"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
@@ -2241,15 +2241,18 @@ alloc(newmem,$1000,INJECT_SELECTED_FLEET_HP)
 label(code)
 label(return)
 label(i_base_player_pointer)
+label(i_base_player_iid)
 
 newmem:
   cmp qword ptr [i_base_player_pointer], 0
   jne compare_data
-  cmp dword ptr [r8+000000324], 0
-  jne code
+  //cmp dword ptr [r8+000000324], 0
+  //jne code
 
   mov rdx, [r8+00000058] // player data pointer
   mov [i_base_player_pointer], rdx
+  mov eax, [r8+000000324]
+  mov [i_base_player_iid], eax
 
 compare_data:
   push rax
@@ -2279,6 +2282,8 @@ align 10 cc
   dq #10000000000
   i_base_player_pointer:
   dq 0
+  i_base_player_iid:
+  dd 0
 
 INJECT_SELECTED_FLEET_HP:
   jmp newmem
@@ -2286,6 +2291,7 @@ INJECT_SELECTED_FLEET_HP:
 return:
 registersymbol(INJECT_SELECTED_FLEET_HP)
 registersymbol(i_base_player_pointer)
+registersymbol(i_base_player_iid)
 
 [DISABLE]
 
@@ -2352,6 +2358,14 @@ stellaris.exe+C67105: EB 03                          - jmp stellaris.exe+C6710A
               </Offsets>
             </CheatEntry>
             <CheatEntry>
+              <ID>155</ID>
+              <Description>"chk id."</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_player_iid</Address>
+            </CheatEntry>
+            <CheatEntry>
               <ID>147</ID>
               <Description>"Base addr"</Description>
               <ShowAsHex>1</ShowAsHex>
@@ -2387,8 +2401,8 @@ newmem:
 
 compare_data:
   push rbx
-
-  cmp dword ptr [r14+000000324], 0
+  mov ebx, dword ptr [i_base_player_iid]
+  cmp dword ptr [r14+000000324], ebx
   jne endp
 
   mov rax, [i_base_player_pointer]
@@ -2457,7 +2471,7 @@ stellaris.exe+8179B6: 48 3B C7                 - cmp rax,rdi
               <CheatEntries>
                 <CheatEntry>
                   <ID>132</ID>
-                  <Description>"Disable if affected enemy ship"</Description>
+                  <Description>"Disable if affected enemy ship (i.e. hijacked)"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
@@ -2491,20 +2505,32 @@ label(vf_sci_ship_survey_multi)
 
 newmem:
 
-  cmp dword ptr [r14+000000324], 0
+  mov ebx, dword ptr [i_base_player_iid]
+  cmp dword ptr [rdi+00000324], ebx
   jne code
 
   cmp qword ptr [i_base_player_pointer], 0
   jne compare_data
   jmp code
 
+compare_data:
+  push rax
+  // rbx = safe to use
+  //push rbx
+
+  mov rax, [i_base_player_pointer]
+  mov rbx, [rdi+00000058]
+  cmp rax, rbx
+  jne endp
+
   vmovss xmm14, [vf_sci_ship_survey_multi]
   cvtsi2ss xmm15, rdx
   vmulss xmm15, xmm15, xmm14
   vcvtss2si rdx, xmm15
 
-
-compare_data:
+endp:
+  //pop rbx
+  pop rax
 
 code:
   add [rsi+28],rdx
@@ -2743,16 +2769,10 @@ stellaris.exe+C87CEF: EB 07                 - jmp stellaris.exe+C87CF8
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <Comments>Single ship / 48 39 87 50 01 00 00
-stellaris.exe+84DCBB - 48 39 87 50010000     - cmp [rdi+00000150],rax
-
-
-48 8b 08 48 39 4e 28
-stellaris.exe+8FDD96 - 48 8B 08              - mov rcx,[rax]
-
-
-
-stellaris.exe+8FC8AF - 48 01 56 28           - add [rsi+28],rdx
+  <Comments>stellaris.exe+8FA175: FF 90 C8 00 00 00  - call qword ptr [rax+000000C8]
+---&gt;&gt; stellaris.exe+8FA17B: 48 8B 08           - mov rcx,[rax]
+stellaris.exe+8FA17E: 48 39 4B 38        - cmp [rbx+38],rcx
+stellaris.exe+8FA182: 0F 9D C0           - setge al
 </Comments>
   <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then

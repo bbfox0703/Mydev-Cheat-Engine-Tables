@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/11/30
+1. Added sci-ship survey multiplier
+
 ## 2022/11/29
 1. Update for v3.6
 
