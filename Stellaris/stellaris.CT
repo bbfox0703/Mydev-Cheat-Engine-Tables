@@ -2242,6 +2242,8 @@ label(code)
 label(return)
 label(i_base_player_pointer)
 label(i_base_player_iid)
+label(i_base_player_iid2)
+label(i_base_player_iid3)
 
 newmem:
   cmp qword ptr [i_base_player_pointer], 0
@@ -2251,8 +2253,15 @@ newmem:
 
   mov rdx, [r8+00000058] // player data pointer
   mov [i_base_player_pointer], rdx
+  mov edx, [rdx+18]
+  mov [i_base_player_iid2], edx
+
   mov eax, [r8+000000324]
   mov [i_base_player_iid], eax
+
+  mov eax, [r8+000000E8]
+  mov [i_base_player_iid3], eax
+
 
 compare_data:
   push rax
@@ -2284,6 +2293,10 @@ align 10 cc
   dq 0
   i_base_player_iid:
   dd 0
+  i_base_player_iid2:
+  dd 0
+  i_base_player_iid3:
+  dd 0
 
 INJECT_SELECTED_FLEET_HP:
   jmp newmem
@@ -2292,6 +2305,8 @@ return:
 registersymbol(INJECT_SELECTED_FLEET_HP)
 registersymbol(i_base_player_pointer)
 registersymbol(i_base_player_iid)
+registersymbol(i_base_player_iid2)
+registersymbol(i_base_player_iid3)
 
 [DISABLE]
 
@@ -2358,21 +2373,340 @@ stellaris.exe+C67105: EB 03                          - jmp stellaris.exe+C6710A
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>155</ID>
-              <Description>"chk id."</Description>
-              <ShowAsSigned>0</ShowAsSigned>
+              <ID>158</ID>
+              <Description>"_debug"</Description>
+              <Options moHideChildren="1"/>
               <Color>808080</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_base_player_iid</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>147</ID>
-              <Description>"Base addr"</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>i_base_player_pointer</Address>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>163</ID>
+                  <Description>"Ship info (cursor over single object, not fleet)"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-12-01
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SHIP_INFO,stellaris.exe,4D 8B E1 49 8B F0 4C 8B EA 45) // should be unique
+alloc(newmem,$1000,INJECT_GET_SHIP_INFO)
+
+label(code)
+label(return)
+label(i_ship_info_base)
+label(i_ship_base_player_pointer)
+label(i_ship_r11)
+label(i_ship_r15)
+label(i_ship_base_player_iid)
+label(i_ship_base_player_iid2)
+label(i_ship_base_player_iid3)
+
+newmem:
+  mov [i_ship_info_base], rdi
+  mov [i_ship_r11], r11
+  mov [i_ship_r15], r15
+
+  mov r12d, [rdi+324]
+  mov [i_ship_base_player_iid], r12d
+
+  mov r12d, [rdi+E8]
+  mov [i_ship_base_player_iid3], r12d
+
+  mov r12, [rdi+58]
+  mov [i_ship_base_player_pointer], r12
+  test r12, r12
+  je code
+
+  mov r12d, [r12+18]
+  mov [i_ship_base_player_iid2], r12d
+
+code:
+  mov r12,r9
+  mov rsi,r8
+  jmp return
+align 10 cc
+  i_ship_info_base:
+  dq 0
+  i_ship_base_player_pointer:  // +58
+  dq 0
+  i_ship_r11:
+  dq 0
+  i_ship_r15:
+  dq 0
+  i_ship_base_player_iid:  // +324
+  dd 0
+  i_ship_base_player_iid2: // +58 +18
+  dd 0
+  i_ship_base_player_iid3: // +E8
+  dd 0
+
+
+
+INJECT_GET_SHIP_INFO:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_SHIP_INFO)
+registersymbol(i_ship_info_base)
+registersymbol(i_ship_base_player_pointer)
+registersymbol(i_ship_r11)
+registersymbol(i_ship_r15)
+registersymbol(i_ship_base_player_iid)
+registersymbol(i_ship_base_player_iid2)
+registersymbol(i_ship_base_player_iid3)
+
+[DISABLE]
+
+INJECT_GET_SHIP_INFO:
+  db 4D 8B E1 49 8B F0
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+84B959
+
+stellaris.exe+84B93A: 48 89 4C 24 08           - mov [rsp+08],rcx
+stellaris.exe+84B93F: 55                       - push rbp
+stellaris.exe+84B940: 56                       - push rsi
+stellaris.exe+84B941: 57                       - push rdi
+stellaris.exe+84B942: 41 54                    - push r12
+stellaris.exe+84B944: 41 55                    - push r13
+stellaris.exe+84B946: 41 56                    - push r14
+stellaris.exe+84B948: 41 57                    - push r15
+stellaris.exe+84B94A: 48 8D AC 24 10 FF FF FF  - lea rbp,[rsp-000000F0]
+stellaris.exe+84B952: 48 81 EC F0 01 00 00     - sub rsp,000001F0
+// ---------- INJECTING HERE ----------
+stellaris.exe+84B959: 4D 8B E1                 - mov r12,r9
+// ---------- DONE INJECTING  ----------
+stellaris.exe+84B95C: 49 8B F0                 - mov rsi,r8
+stellaris.exe+84B95F: 4C 8B EA                 - mov r13,rdx
+stellaris.exe+84B962: 45 33 F6                 - xor r14d,r14d
+stellaris.exe+84B965: 44 89 74 24 30           - mov [rsp+30],r14d
+stellaris.exe+84B96A: 48 8B 85 50 01 00 00     - mov rax,[rbp+00000150]
+stellaris.exe+84B971: 4C 8B 00                 - mov r8,[rax]
+stellaris.exe+84B974: B8 52 00 00 00           - mov eax,00000052
+stellaris.exe+84B979: 41 BF 47 00 00 00        - mov r15d,00000047
+stellaris.exe+84B97F: 4D 39 01                 - cmp [r9],r8
+stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
+}
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>164</ID>
+                      <Description>"i_ship_info_base"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>165</ID>
+                      <Description>"i_ship_base_player_pointer"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_base_player_pointer</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>171</ID>
+                      <Description>"Race name"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>24</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_ship_base_player_pointer</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>172</ID>
+                      <Description>"Obj name (if available)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                        <Offset>68</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>179</ID>
+                      <Description>"Type"</Description>
+                      <DropDownList DisplayValueAsItem="1">3:Corvette
+9:Construction Ship
+13:Research Ship
+18:Mining Station
+19:Research Station
+37:Star port
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>4C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>173</ID>
+                      <Description>"Hull"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>150</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>174</ID>
+                      <Description>"Armor"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>158</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>175</ID>
+                      <Description>"Shield"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>160</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>176</ID>
+                      <Description>"Max Hull"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>758</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>177</ID>
+                      <Description>"Max Armor"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>760</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>178</ID>
+                      <Description>"Max Shield"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_info_base</Address>
+                      <Offsets>
+                        <Offset>768</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>166</ID>
+                      <Description>"i_ship_r11"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_r11</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>167</ID>
+                      <Description>"i_ship_r15"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_ship_r15</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>168</ID>
+                      <Description>"i_ship_base_player_iid"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_ship_base_player_iid</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>169</ID>
+                      <Description>"i_ship_base_player_iid2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_ship_base_player_iid2</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>170</ID>
+                      <Description>"i_ship_base_player_iid3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_ship_base_player_iid3</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>155</ID>
+                  <Description>"chk id"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_iid</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>156</ID>
+                  <Description>"chk id2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_iid2</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>157</ID>
+                  <Description>"chk id3"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_iid3</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>147</ID>
+                  <Description>"Base addr"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_base_player_pointer</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>116</ID>
@@ -2405,9 +2739,21 @@ compare_data:
   cmp dword ptr [r14+000000324], ebx
   jne endp
 
+  //mov ebx, dword ptr [i_base_player_iid3]
+  //cmp dword ptr [r14+000000E8], ebx
+  //jne endp
+
   mov rax, [i_base_player_pointer]
   mov rbx, [r14+00000058]
+
+  test rbx, rbx
+  jz endp
+
   cmp rax, rbx
+  jne endp
+
+  mov ebx, [rbx+00000018]
+  cmp ebx, dword ptr [i_base_player_iid2]
   jne endp
 
   mov rbx, [r14+00000758]
@@ -2509,6 +2855,10 @@ newmem:
   cmp dword ptr [rdi+00000324], ebx
   jne code
 
+  //mov ebx, dword ptr [i_base_player_iid3]
+  //cmp dword ptr [rdi+000000E8], ebx
+  //jne code
+
   cmp qword ptr [i_base_player_pointer], 0
   jne compare_data
   jmp code
@@ -2520,7 +2870,14 @@ compare_data:
 
   mov rax, [i_base_player_pointer]
   mov rbx, [rdi+00000058]
+  test rbx, rbx
+  jz endp
+
   cmp rax, rbx
+  jne endp
+
+  mov ebx, [rbx+00000018]
+  cmp ebx, dword ptr [i_base_player_iid2]
   jne endp
 
   vmovss xmm14, [vf_sci_ship_survey_multi]
@@ -2762,6 +3119,111 @@ stellaris.exe+C87CEF: EB 07                 - jmp stellaris.exe+C87CF8
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>183</ID>
+      <Description>"_WIP"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>180</ID>
+          <Description>"Get player base"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-12-01
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_PLAYER_BASE,stellaris.exe,48 8B 86 F0 18 00 00 8B) // should be unique
+alloc(newmem,$1000,INJECT_GET_PLAYER_BASE)
+
+label(code)
+label(return)
+label(i_player_data_base)
+
+newmem:
+  mov [i_player_data_base], rsi
+
+
+code:
+  mov rax,[rsi+000018F0]
+  jmp return
+align 10 cc
+  i_player_data_base:
+  dq 0
+
+
+INJECT_GET_PLAYER_BASE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_PLAYER_BASE)
+registersymbol(i_player_data_base)
+[DISABLE]
+
+INJECT_GET_PLAYER_BASE:
+  db 48 8B 86 F0 18 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+E637BE
+
+stellaris.exe+E63797: 44 39 46 10           - cmp [rsi+10],r8d
+stellaris.exe+E6379B: 74 07                 - je stellaris.exe+E637A4
+stellaris.exe+E6379D: 48 8B 35 7C 76 8B 01  - mov rsi,[stellaris.exe+271AE20]
+stellaris.exe+E637A4: 33 FF                 - xor edi,edi
+stellaris.exe+E637A6: 4C 63 BE FC 18 00 00  - movsxd  r15,dword ptr [rsi+000018FC]
+stellaris.exe+E637AD: 4D 85 FF              - test r15,r15
+stellaris.exe+E637B0: 7E 73                 - jle stellaris.exe+E63825
+stellaris.exe+E637B2: 48 8B 1D C7 94 8B 01  - mov rbx,[stellaris.exe+271CC80]
+stellaris.exe+E637B9: 48 85 DB              - test rbx,rbx
+stellaris.exe+E637BC: 74 2C                 - je stellaris.exe+E637EA
+// ---------- INJECTING HERE ----------
+stellaris.exe+E637BE: 48 8B 86 F0 18 00 00  - mov rax,[rsi+000018F0]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+E637C5: 8B 0C B8              - mov ecx,[rax+rdi*4]
+stellaris.exe+E637C8: 8B C1                 - mov eax,ecx
+stellaris.exe+E637CA: 25 FF FF FF 00        - and eax,00FFFFFF
+stellaris.exe+E637CF: 3B 43 20              - cmp eax,[rbx+20]
+stellaris.exe+E637D2: 73 16                 - jae stellaris.exe+E637EA
+stellaris.exe+E637D4: 48 03 C0              - add rax,rax
+stellaris.exe+E637D7: 48 8B 5B 18           - mov rbx,[rbx+18]
+stellaris.exe+E637DB: 48 8B 5C C3 08        - mov rbx,[rbx+rax*8+08]
+stellaris.exe+E637E0: 48 85 DB              - test rbx,rbx
+stellaris.exe+E637E3: 74 05                 - je stellaris.exe+E637EA
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>181</ID>
+              <Description>"base addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_player_data_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>182</ID>
+              <Description>"ID"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_data_base</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>35</ID>
       <Description>"Stellaris 3.6.0 (0028)  /  http://opencheattables.com  /  CE 7.4+"</Description>
       <Color>400080</Color>
@@ -2773,6 +3235,10 @@ stellaris.exe+C87CEF: EB 07                 - jmp stellaris.exe+C87CF8
 ---&gt;&gt; stellaris.exe+8FA17B: 48 8B 08           - mov rcx,[rax]
 stellaris.exe+8FA17E: 48 39 4B 38        - cmp [rbx+38],rcx
 stellaris.exe+8FA182: 0F 9D C0           - setge al
+
+
+
+stellaris.exe+784D11 - 48 8B 01              - mov rax,[rcx]
 </Comments>
   <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
