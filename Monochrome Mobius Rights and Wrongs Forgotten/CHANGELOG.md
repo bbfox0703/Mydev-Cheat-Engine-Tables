@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/12/02
+1. Revised for 12/02 update
+
 ## 2022/11/28
 1. Revised for 11/28 update
 
