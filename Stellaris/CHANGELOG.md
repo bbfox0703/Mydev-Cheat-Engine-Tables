@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022/12/02
+1. Revised sci-ship survey multiplier
+2. Added Ship Hull/Armor/Shield Viewer
+
 ## 2022/11/30
 1. Added sci-ship survey multiplier
 
