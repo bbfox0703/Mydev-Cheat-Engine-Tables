@@ -1,5 +1,11 @@
 # Changelog
 
+## 2022/12/03
+1. Revise Ship Hull/Armor/Shield Viewer up to 64 objects
+1. Added Construction ship build multiplier
+1. Added Get colonization progress
+1. Added Colonization multiplier
+
 ## 2022/12/02
 1. Revised sci-ship survey multiplier
 2. Added Ship Hull/Armor/Shield Viewer
