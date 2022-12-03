@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/12/04
+1. Update for game ver 1.31 (2022/11/30)
+
 ## 2022/09/01  
 1. Revised for 09/01 game update (9416322)  
 
