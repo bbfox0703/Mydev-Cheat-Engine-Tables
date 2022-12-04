@@ -2898,7 +2898,13 @@ stellaris.exe+ED4A28: 74 56                 - je stellaris.exe+ED4A80
               <CheatEntries>
                 <CheatEntry>
                   <ID>196</ID>
-                  <Description>"To update: click on any player ship/fleet"</Description>
+                  <Description>"    To update: click on any player ship/fleet"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>150</ID>
+                  <Description>"    *** not fully working, may not apply to all ships / starports"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
@@ -2920,6 +2926,9 @@ alloc(newmem,$1000,INJECT_MONITOR_ALL_FLEETS)
 
 label(code)
 label(return)
+label(vf_ship_shield_multiplier)
+label(vf_ship_armor_multiplier)
+
 
 newmem:
   cmp qword ptr [i_base_player_pointer], 0
@@ -2966,10 +2975,18 @@ compare_data:
   mov rbx, [r14+00000758]
   mov [r14+00000150], rbx
 
-  mov rbx, [r14+00000760]
+  mov rbx, [r14+00000760]  // Shield
+  vmovss xmm14, [vf_ship_shield_multiplier]
+  cvtsi2ss xmm15, rbx
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si rbx, xmm15
   mov [r14+00000158], rbx
 
-  mov rbx, [r14+00000768]
+  mov rbx, [r14+00000768]  // Armor
+  vmovss xmm14, [vf_ship_armor_multiplier]
+  cvtsi2ss xmm15, rbx
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si rbx, xmm15
   mov [r14+00000160], rbx
 
 endp:
@@ -2978,19 +2995,27 @@ endp:
 code:
   mov rax,[r14+00000158]
   jmp return
+align 10 cc
+  vf_ship_shield_multiplier:
+  dd (float)3
+  vf_ship_armor_multiplier:
+  dd (float)1.25
+
 
 INJECT_MONITOR_ALL_FLEETS:
   jmp newmem
   nop 2
 return:
 registersymbol(INJECT_MONITOR_ALL_FLEETS)
+registersymbol(vf_ship_shield_multiplier)
+registersymbol(vf_ship_armor_multiplier)
 
 [DISABLE]
 
 INJECT_MONITOR_ALL_FLEETS:
   db 49 8B 86 58 01 00 00
 
-unregistersymbol(INJECT_MONITOR_ALL_FLEETS)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -3029,10 +3054,20 @@ stellaris.exe+840B02: 48 3B C7                 - cmp rax,rdi
                       <GroupHeader>1</GroupHeader>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>150</ID>
-                      <Description>"*** not fully tested, may not apply to all ships / starports"</Description>
-                      <Color>8000FF</Color>
-                      <GroupHeader>1</GroupHeader>
+                      <ID>813</ID>
+                      <Description>"Shield multiplier (during battle)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>vf_ship_shield_multiplier</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>814</ID>
+                      <Description>"Shield multiplier (during battle)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>vf_ship_armor_multiplier</Address>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
@@ -3176,6 +3211,132 @@ stellaris.exe+8FC8CF: 74 1D                          - je stellaris.exe+8FC8EE
                       <Color>C08000</Color>
                       <VariableType>Float</VariableType>
                       <Address>vf_sci_ship_survey_multi</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>816</ID>
+                  <Description>"Option 3: Ship EXP multiplier"</Description>
+                  <Options moHideChildren="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2022-12-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SHIP_EXP_MULTI,stellaris.exe,48 01 83 90 06 00 00 48 8B 43) // should be unique
+alloc(newmem,$1000,INJECT_SHIP_EXP_MULTI)
+
+label(code)
+label(return)
+label(vf_ship_exp_multi)
+
+newmem:
+
+  cmp qword ptr [i_base_player_pointer], 0
+  jne compare_data
+  jmp code
+
+  push r15
+  mov r15d, dword ptr [i_base_player_iid4]
+  cmp dword ptr [rbx+000001B0], r15d
+  pop r15
+  jne code
+
+compare_data:
+  push r15
+  push rcx
+
+  mov r15, [i_base_player_pointer]
+  mov rcx, [rbx+00000058]
+  test r15, rcx
+  jz endp
+
+  cmp r15, rcx
+  jne endp
+
+  mov r15d, [rcx+00000020]
+  cmp r15d, dword ptr [i_base_player_iid5]
+  jne endp
+
+  mov r15d, [rcx+00000018]
+  cmp r15d, dword ptr [i_base_player_iid2]
+  jne endp
+
+  mov cx, [rcx+00000016]
+  cmp cx, word ptr [i_base_player_iid]
+  jne endp
+  mov rcx, [rbx+00000058] // debug
+
+  vmovss xmm14, [vf_ship_exp_multi]
+  cvtsi2ss xmm15, rax
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si rax, xmm15
+
+endp:
+  pop rcx
+  pop r15
+
+code:
+  add [rbx+00000690],rax
+  jmp return
+vf_ship_exp_multi:
+  dd (float)3
+
+INJECT_SHIP_EXP_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SHIP_EXP_MULTI)
+registersymbol(vf_ship_exp_multi)
+
+[DISABLE]
+
+INJECT_SHIP_EXP_MULTI:
+  db 48 01 83 90 06 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+8414E8
+
+stellaris.exe+8414BC: 74 06                 - je stellaris.exe+8414C4
+stellaris.exe+8414BE: 44 39 41 20           - cmp [rcx+20],r8d
+stellaris.exe+8414C2: 74 07                 - je stellaris.exe+8414CB
+stellaris.exe+8414C4: 48 8B 0D 35 99 ED 01  - mov rcx,[stellaris.exe+271AE00]
+stellaris.exe+8414CB: 48 8B 81 10 05 00 00  - mov rax,[rcx+00000510]
+stellaris.exe+8414D2: 83 78 74 00           - cmp dword ptr [rax+74],00
+stellaris.exe+8414D6: 74 17                 - je stellaris.exe+8414EF
+stellaris.exe+8414D8: 83 B9 9C 04 00 00 00  - cmp dword ptr [rcx+0000049C],00
+stellaris.exe+8414DF: 74 0E                 - je stellaris.exe+8414EF
+stellaris.exe+8414E1: 48 8B 05 38 BE DB 01  - mov rax,[stellaris.exe+25FD320]
+// ---------- INJECTING HERE ----------
+stellaris.exe+8414E8: 48 01 83 90 06 00 00  - add [rbx+00000690],rax
+// ---------- DONE INJECTING  ----------
+stellaris.exe+8414EF: 48 8B 43 28           - mov rax,[rbx+28]
+stellaris.exe+8414F3: 48 8D 4B 28           - lea rcx,[rbx+28]
+stellaris.exe+8414F7: FF 50 08              - call qword ptr [rax+08]
+stellaris.exe+8414FA: 48 8B 15 87 B7 ED 01  - mov rdx,[stellaris.exe+271CC88]
+stellaris.exe+841501: 48 85 D2              - test rdx,rdx
+stellaris.exe+841504: 74 2A                 - je stellaris.exe+841530
+stellaris.exe+841506: 44 8B 40 18           - mov r8d,[rax+18]
+stellaris.exe+84150A: 41 8B C0              - mov eax,r8d
+stellaris.exe+84150D: 25 FF FF FF 00        - and eax,00FFFFFF
+stellaris.exe+841512: 3B 42 20              - cmp eax,[rdx+20]
+}
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>817</ID>
+                      <Description>"Multiplier"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>vf_ship_exp_multi</Address>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
@@ -10309,7 +10470,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
         </CheatEntry>
         <CheatEntry>
           <ID>172</ID>
-          <Description>"Obj name (if available)"</Description>
+          <Description>"Obj suffix name (if available)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>String</VariableType>
@@ -10327,7 +10488,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
         </CheatEntry>
         <CheatEntry>
           <ID>475</ID>
-          <Description>"in fleet position#"</Description>
+          <Description>"in fleet position# (same type)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
@@ -10337,8 +10498,21 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>818</ID>
+          <Description>"EXP * 10,000"</Description>
+          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:N/A
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_ship_info_base</Address>
+          <Offsets>
+            <Offset>690</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>173</ID>
-          <Description>"Hull"</Description>
+          <Description>"Hull * 10,000"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>8 Bytes</VariableType>
@@ -10349,7 +10523,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
           <CheatEntries>
             <CheatEntry>
               <ID>176</ID>
-              <Description>"Max Hull"</Description>
+              <Description>"Max Hull * 10,000"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>8 Bytes</VariableType>
@@ -10362,7 +10536,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
         </CheatEntry>
         <CheatEntry>
           <ID>175</ID>
-          <Description>"Armor"</Description>
+          <Description>"Armor * 10,000"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>8 Bytes</VariableType>
@@ -10373,7 +10547,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
           <CheatEntries>
             <CheatEntry>
               <ID>178</ID>
-              <Description>"Max Armor"</Description>
+              <Description>"Max Armor * 10,000"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>8 Bytes</VariableType>
@@ -10386,7 +10560,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
         </CheatEntry>
         <CheatEntry>
           <ID>174</ID>
-          <Description>"Shield"</Description>
+          <Description>"Shield * 10,000"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>8 Bytes</VariableType>
@@ -10397,7 +10571,7 @@ stellaris.exe+84B982: 44 0F 4C F8              - cmovl r15d,eax
           <CheatEntries>
             <CheatEntry>
               <ID>177</ID>
-              <Description>"Max Shield"</Description>
+              <Description>"Max Shield * 10,000"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>8 Bytes</VariableType>
@@ -10781,6 +10955,35 @@ stellaris.exe+E637E3: 74 05                 - je stellaris.exe+E637EA
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code ship xp:add [rbx+00000690],rax</Description>
+      <AddressString>stellaris.exe+8414E8</AddressString>
+      <Before>
+        <Byte>05</Byte>
+        <Byte>38</Byte>
+        <Byte>BE</Byte>
+        <Byte>DB</Byte>
+        <Byte>01</Byte>
+      </Before>
+      <Actual>
+        <Byte>48</Byte>
+        <Byte>01</Byte>
+        <Byte>83</Byte>
+        <Byte>90</Byte>
+        <Byte>06</Byte>
+        <Byte>00</Byte>
+        <Byte>00</Byte>
+      </Actual>
+      <After>
+        <Byte>48</Byte>
+        <Byte>8B</Byte>
+        <Byte>43</Byte>
+        <Byte>28</Byte>
+        <Byte>48</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
   <UserdefinedSymbols/>
   <Comments>stellaris.exe+8FA175: FF 90 C8 00 00 00  - call qword ptr [rax+000000C8]
 ---&gt;&gt; stellaris.exe+8FA17B: 48 8B 08           - mov rcx,[rax]
