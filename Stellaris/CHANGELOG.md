@@ -1,5 +1,9 @@
 # Changelog
 
+## 2022/12/05
+1. Added Ship EXP multiplier
+1. Minor improvements
+
 ## 2022/12/03
 1. Revise Ship Hull/Armor/Shield Viewer up to 64 objects
 1. Added Construction ship build multiplier
