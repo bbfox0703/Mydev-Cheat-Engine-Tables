@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/12/06
+1. Updated for gamever 3.6.1
+
 ## 2022/12/05
 1. Added Ship EXP multiplier
 1. Minor improvements
