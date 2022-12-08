@@ -1,7 +1,10 @@
 # Changelog
 
+## 2022/12/08
+1. Added Galactic community information
+
 ## 2022/12/06
-1. Updated for gamever 3.6.1
+1. Updated for game ver 3.6.1
 
 ## 2022/12/05
 1. Added Ship EXP multiplier
