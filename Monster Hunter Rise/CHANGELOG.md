@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/12/09
+1. Revised for ver 13.0.0.1
+
 ## 2022/11/26
 1. Fixed script "Get weapon usage / May not fully working / 取得武器使用次數資料" 
 1. Added monster size record
