@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/12/09
+1. Updated for ver 3.12
+
 ## 2022/11/26
 1. Added Use Skill once ==> max proficiency
 
