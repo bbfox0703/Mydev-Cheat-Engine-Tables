@@ -16,6 +16,7 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>1</ID>
       <Description>"Enable (Enable twice)"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 {$lua}
@@ -36,15 +37,28 @@ else
     end
 end
 
+KingmakerItemsItemEntitySpendChargesProc = findMethodAddrBySignature('Kingmaker.Items', 'ItemEntity', 'SpendCharges', 'Kingmaker.UnitLogic.UnitDescriptor', false)
+mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Items:ItemEntity:SpendCharges')).method)
+
 {$asm}
 define(KingmakerUnitLogicSpellbookSpendProc,"Kingmaker.UnitLogic:Spellbook:Spend")
-define(KingmakerItemsItemEntitySpendChargesProc, "Kingmaker.Items:ItemEntity:SpendCharges")
+//define(KingmakerItemsItemEntitySpendChargesProc, "Kingmaker.Items:ItemEntity:SpendCharges")
 define(KingmakerItemsItemEntityDecrementCountProc, "Kingmaker.Items.ItemEntity:DecrementCount")
+define(KingmakerUIServiceWindowInventoryUpdatePlayerMoneyAndInventoryWeightProc, "Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight")
+define(KingmakerUnitLogicUnitAbilityResourceCollectionSpendProc, "Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend")
+define(KingmakerUnitLogicClassLevelUpLevelUpStatectorProc, "Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor")
+define(KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc, "Kingmaker.RuleSystem.Rules.Damage:RuleDealDamage:OnTrigger")
+define(KingmakerGameTickProc, "Kingmaker:Game:Tick")
+
 
 registersymbol(KingmakerUnitLogicSpellbookSpendProc)
-registersymbol(KingmakerItemsItemEntitySpendChargesProc)
+//registersymbol(KingmakerItemsItemEntitySpendChargesProc)
 registersymbol(KingmakerItemsItemEntityDecrementCountProc)
-
+registersymbol(KingmakerUIServiceWindowInventoryUpdatePlayerMoneyAndInventoryWeightProc)
+registersymbol(KingmakerUnitLogicUnitAbilityResourceCollectionSpendProc)
+registersymbol(KingmakerUnitLogicClassLevelUpLevelUpStatectorProc)
+registersymbol(KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc)
+registersymbol(KingmakerGameTickProc)
 
 [DISABLE]
 {$lua}
@@ -56,7 +70,7 @@ unregistersymbol(*)
       <CheatEntries>
         <CheatEntry>
           <ID>3</ID>
-          <Description>"inf casting times"</Description>
+          <Description>"inf spell casting times"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript Async="1">{ Game   : Kingmaker.exe
   Version: 
@@ -139,22 +153,196 @@ Kingmaker.UnitLogic.Spellbook:Spend+4c: C3                             - ret
 }
 </AssemblerScript>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>4</ID>
-      <Description>"No description"</Description>
-      <VariableType>4 Bytes</VariableType>
-      <Address>23033661A38</Address>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>5</ID>
-      <Description>"Auto Assemble script"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Kingmaker.exe
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"inf. ability use"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
   Version: 
   Date   : 2022-12-11
-  Author :
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_USE_ABILITY,49 63 46 18 2B C6) // should be unique
+aobscanregion(INJECT_USE_ABILITY,KingmakerUnitLogicUnitAbilityResourceCollectionSpendProc+1d0,KingmakerUnitLogicUnitAbilityResourceCollectionSpendProc+202,49 63 46 18 2B C6) // should be unique
+alloc(newmem,$1000,INJECT_USE_ABILITY)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  push r12
+  mov r12, [r15+10]  //m_owner
+  test r12, r12
+  jz to_enemy
+
+  mov r12, [r12+B0]  //&lt;Unit&gt;k__BackingField
+  mov r12, [r12+38]  //m_Group
+  cmp byte ptr [r12+40], 1  //IsPlayerParty
+  jne to_enemy
+
+  mov r12, [r14+10]  //&lt;Blueprint&gt;k__BackingField
+  mov eax, [r12+48]  //m_MaxAmount
+  cmp eax, 0
+  jne do_next
+  mov eax, 1
+
+do_next:
+  mov [r14+18], eax
+
+  jmp endp
+to_enemy:
+  movsxd  rax,dword ptr [r14+18]
+  sub eax,esi
+
+endp:
+
+  pop r12
+  popfq
+
+code:
+  //movsxd  rax,dword ptr [r14+18]
+  //sub eax,esi
+  jmp return
+
+INJECT_USE_ABILITY:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_USE_ABILITY)
+
+[DISABLE]
+
+INJECT_USE_ABILITY:
+  db 49 63 46 18 2B C6
+
+unregistersymbol(INJECT_USE_ABILITY)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1df
+
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1ae: 48 8B 00                       - mov rax,[rax]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1b1: FF 90 08 01 00 00              - call qword ptr [rax+00000108]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1b7: 48 8B 55 D0                    - mov rdx,[rbp-30]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1bb: 48 B9 30 0F 21 53 FB 01 00 00  - mov rcx,000001FB53210F30
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1c5: 90                             - nop 
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1c6: 49 BB E7 BD A8 18 FA 01 00 00  - mov r11,000001FA18A8BDE7
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1d0: 41 FF D3                       - call r11
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1d3: 41 83 3E 00                    - cmp dword ptr [r14],00
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1d7: 49 63 76 18                    - movsxd  rsi,dword ptr [r14+18]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1db: 41 83 3E 00                    - cmp dword ptr [r14],00
+// ---------- INJECTING HERE ----------
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1df: 49 63 46 18                    - movsxd  rax,dword ptr [r14+18]
+// ---------- DONE INJECTING  ----------
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1e3: 2B C6                          - sub eax,esi
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1e5: 41 83 3E 00                    - cmp dword ptr [r14],00
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1e9: 41 89 46 18                    - mov [r14+18],eax
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1ed: 48 8B 75 E0                    - mov rsi,[rbp-20]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1f1: 48 8B 7D E8                    - mov rdi,[rbp-18]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1f5: 4C 8B 75 F0                    - mov r14,[rbp-10]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1f9: 4C 8B 7D F8                    - mov r15,[rbp-08]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+1fd: 48 8D 65 00                    - lea rsp,[rbp+00]
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+201: 5D                             - pop rbp
+Kingmaker.UnitLogic.UnitAbilityResourceCollection:Spend+202: C3                             - ret 
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"inf. item charges"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_INF_CHARGES,89 87 90 00 00 00 EB 30) // should be unique
+aobscanregion(INJECT_INF_CHARGES,KingmakerItemsItemEntitySpendChargesProc+2ab, KingmakerItemsItemEntitySpendChargesProc+36b,89 87 90 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_CHARGES)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  push r12
+  mov r12, [rdi+30]
+  test r12, r12
+  jz endp
+  mov r12, [r12+B0]
+  mov r12, [r12+38]
+  cmp byte ptr [r12+40], 1
+  jne endp
+  mov r12, [rdi+10]
+  mov eax, [r12+C0]
+
+endp:
+  pop r12
+  popfq
+
+code:
+  mov [rdi+00000090],eax
+  jmp return
+
+INJECT_INF_CHARGES:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_INF_CHARGES)
+
+[DISABLE]
+
+INJECT_INF_CHARGES:
+  db 89 87 90 00 00 00
+
+unregistersymbol(INJECT_INF_CHARGES)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.Items.ItemEntity:SpendCharges+30b
+
+Kingmaker.Items.ItemEntity:SpendCharges+2da: 48 8D 6D 00                    - lea rbp,[rbp+00]
+Kingmaker.Items.ItemEntity:SpendCharges+2de: 49 BB 72 A6 E5 38 FA 01 00 00  - mov r11,000001FA38E5A672
+Kingmaker.Items.ItemEntity:SpendCharges+2e8: 41 FF D3                       - call r11
+Kingmaker.Items.ItemEntity:SpendCharges+2eb: 48 63 45 88                    - movsxd  rax,dword ptr [rbp-78]
+Kingmaker.Items.ItemEntity:SpendCharges+2ef: 83 F8 19                       - cmp eax,19
+Kingmaker.Items.ItemEntity:SpendCharges+2f2: 0F 8F 0A 00 00 00              - jg Kingmaker.Items.ItemEntity:SpendCharges+302
+Kingmaker.Items.ItemEntity:SpendCharges+2f8: B8 01 00 00 00                 - mov eax,00000001
+Kingmaker.Items.ItemEntity:SpendCharges+2fd: E9 CC 00 00 00                 - jmp Kingmaker.Items.ItemEntity:SpendCharges+3ce
+Kingmaker.Items.ItemEntity:SpendCharges+302: 48 63 87 90 00 00 00           - movsxd  rax,dword ptr [rdi+00000090]
+Kingmaker.Items.ItemEntity:SpendCharges+309: FF C8                          - dec eax
+// ---------- INJECTING HERE ----------
+Kingmaker.Items.ItemEntity:SpendCharges+30b: 89 87 90 00 00 00              - mov [rdi+00000090],eax
+// ---------- DONE INJECTING  ----------
+Kingmaker.Items.ItemEntity:SpendCharges+311: EB 30                          - jmp Kingmaker.Items.ItemEntity:SpendCharges+343
+Kingmaker.Items.ItemEntity:SpendCharges+313: B8 01 00 00 00                 - mov eax,00000001
+Kingmaker.Items.ItemEntity:SpendCharges+318: 4C 0F B6 F0                    - movzx r14,al
+Kingmaker.Items.ItemEntity:SpendCharges+31c: 48 B9 40 F1 C2 78 FA 01 00 00  - mov rcx,000001FA78C2F140
+Kingmaker.Items.ItemEntity:SpendCharges+326: 48 BA A0 8E 08 0D FA 01 00 00  - mov rdx,000001FA0D088EA0
+Kingmaker.Items.ItemEntity:SpendCharges+330: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+Kingmaker.Items.ItemEntity:SpendCharges+335: 90                             - nop 
+Kingmaker.Items.ItemEntity:SpendCharges+336: 49 BB E7 BD A8 18 FA 01 00 00  - mov r11,000001FA18A8BDE7
+Kingmaker.Items.ItemEntity:SpendCharges+340: 41 FF D3                       - call r11
+Kingmaker.Items.ItemEntity:SpendCharges+343: 48 63 87 90 00 00 00           - movsxd  rax,dword ptr [rdi+00000090]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Set item count in inventory to 4"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
@@ -177,9 +365,9 @@ newmem:
   je endp
   //cmp eax, 1
   //je endp
-  cmp eax, 8
+  cmp eax, 4
   jae endp
-  mov eax, 8
+  mov eax, 4
 
 endp:
   pop r15
@@ -231,7 +419,524 @@ Kingmaker.Items.ItemEntity:DecrementCount+2a: C3              - ret
 23076E168F8: 00 00           - add [rax],al
 }
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"At least count &gt;1 &amp; stackable"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Set # of attribute points when LV up"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_SET_LVUP_ATTR_PT,85 C0 75 08 41 C7 47 48 01 00 00 00) // should be unique
+aobscanregion(INJECT_SET_LVUP_ATTR_PT,KingmakerUnitLogicClassLevelUpLevelUpStatectorProc+282,KingmakerUnitLogicClassLevelUpLevelUpStatectorProc+2b2,85 C0 75 08 41 C7 47 48 01 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SET_LVUP_ATTR_PT)
+
+label(code)
+label(return)
+label(i_attr_pt_when_lvup)
+
+newmem:
+  cmp qword ptr [i_attr_pt_when_lvup], 0
+  je code
+
+  push r12
+  mov r12,[r15+10]
+  test r12, r12
+  jz endp
+  mov r12,[r12+C0]
+  test r12, r12
+  jz endp
+  cmp byte ptr [r12+4B], 0
+  je endp
+  mov r12, [i_attr_pt_when_lvup]
+  mov [r15+48], r12
+
+endp:
+  pop r12
+
+code:
+  test eax,eax
+  reassemble(INJECT_SET_LVUP_ATTR_PT+2)
+  //jne Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+299
+  mov [r15+48],00000001
+  jmp return
+align 10 cc
+  i_attr_pt_when_lvup: // 0 = disable
+  dq #10
+
+INJECT_SET_LVUP_ATTR_PT:
+  jmp newmem
+  nop 7
+return:
+registersymbol(INJECT_SET_LVUP_ATTR_PT)
+registersymbol(i_attr_pt_when_lvup)
+[DISABLE]
+
+INJECT_SET_LVUP_ATTR_PT:
+  db 85 C0 75 08 41 C7 47 48 01 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+28d
+
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+26b: 83 FE 03                 - cmp esi,03
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+26e: 74 08                    - je Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+278
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+270: 41 C7 47 5C 00 00 00 00  - mov [r15+5C],00000000
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+278: 49 63 47 40              - movsxd  rax,dword ptr [r15+40]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+27c: 48 8B C8                 - mov rcx,rax
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+27f: C1 F9 1F                 - sar ecx,1F
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+282: C1 E9 1E                 - shr ecx,1E
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+285: 03 C1                    - add eax,ecx
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+287: 48 83 E0 03              - and rax,03
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+28b: 2B C1                    - sub eax,ecx
+// ---------- INJECTING HERE ----------
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+28d: 85 C0                    - test eax,eax
+// ---------- DONE INJECTING  ----------
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+28f: 75 08                    - jne Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+299
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+291: 41 C7 47 48 01 00 00 00  - mov [r15+48],00000001
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+299: 48 8B 5D D0              - mov rbx,[rbp-30]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+29d: 48 8B 75 D8              - mov rsi,[rbp-28]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+2a1: 48 8B 7D E0              - mov rdi,[rbp-20]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+2a5: 4C 8B 65 E8              - mov r12,[rbp-18]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+2a9: 4C 8B 75 F0              - mov r14,[rbp-10]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+2ad: 4C 8B 7D F8              - mov r15,[rbp-08]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+2b1: 48 8D 65 00              - lea rsp,[rbp+00]
+Kingmaker.UnitLogic.Class.LevelUp.LevelUpState:.ctor+2b5: 5D                       - pop rbp
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>23</ID>
+              <Description>"Attribute points when LV up"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Disabled
+10:10
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_attr_pt_when_lvup</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"Get money"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_GET_INVENTORY_DATA,48 8B 80 B0 01 00 00 48 89 45 F8) // should be unique
+aobscanregion(INJECT_GET_INVENTORY_DATA,KingmakerUIServiceWindowInventoryUpdatePlayerMoneyAndInventoryWeightProc+30,KingmakerUIServiceWindowInventoryUpdatePlayerMoneyAndInventoryWeightProc+60,48 8B 80 B0 01 00 00) // should be unique
+
+alloc(newmem,$1000,INJECT_GET_INVENTORY_DATA)
+
+label(code)
+label(return)
+label(i_base_inv_data_addr)
+
+newmem:
+  mov [i_base_inv_data_addr], rax
+
+code:
+  mov rax,[rax+000001B0]
+  jmp return
+align 10 cc
+  i_base_inv_data_addr:
+  dq 0
+
+INJECT_GET_INVENTORY_DATA:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_INVENTORY_DATA)
+registersymbol(i_base_inv_data_addr)
+[DISABLE]
+
+INJECT_GET_INVENTORY_DATA:
+  db 48 8B 80 B0 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+41
+
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+18: 48 8B 40 48                    - mov rax,[rax+48]
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+1c: 48 89 45 E8                    - mov [rbp-18],rax
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+20: 48 B8 E0 FA 3B 05 FA 01 00 00  - mov rax,000001FA053BFAE0
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+2a: 48 8B 00                       - mov rax,[rax]
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+2d: 48 8B C8                       - mov rcx,rax
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+30: 83 39 00                       - cmp dword ptr [rcx],00
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+33: 48 8B 40 50                    - mov rax,[rax+50]
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+37: 48 8B 40 48                    - mov rax,[rax+48]
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+3b: 48 8B C8                       - mov rcx,rax
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+3e: 83 39 00                       - cmp dword ptr [rcx],00
+// ---------- INJECTING HERE ----------
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+41: 48 8B 80 B0 01 00 00           - mov rax,[rax+000001B0]
+// ---------- DONE INJECTING  ----------
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+48: 48 89 45 F8                    - mov [rbp-08],rax
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+4c: 48 8B CD                       - mov rcx,rbp
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+4f: 48 83 C1 F8                    - add rcx,-08
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+53: 66 66 90                       - nop 3
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+56: 49 BB A0 04 A1 3B FA 01 00 00  - mov r11,System.Int64:ToString
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+60: 41 FF D3                       - call r11
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+63: 48 8B D0                       - mov rdx,rax
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+66: 48 8B 45 E8                    - mov rax,[rbp-18]
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+6a: 48 8B C8                       - mov rcx,rax
+Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+6d: 83 38 00                       - cmp dword ptr [rax],00
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"Usage: open inventory"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9</ID>
+              <Description>"GameTime (10,000,000 = 1 sec)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>170</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>30</ID>
+              <Description>"RealTime (10,000,000 = 1 sec)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>178</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>31</ID>
+              <Description>"About time"</Description>
+              <Options moHideChildren="1"/>
+              <Color>808080</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>32</ID>
+                  <Description>"36,000,000,000: 1 Hour"</Description>
+                  <Color>808080</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>33</ID>
+                  <Description>"864,000,000,000:1 Day"</Description>
+                  <Color>808080</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>34</ID>
+                  <Description>"6,048,000,000,000:1 Week"</Description>
+                  <Color>808080</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>35</ID>
+                  <Description>"26,208,000,000,000:1 Month"</Description>
+                  <Color>808080</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>29</ID>
+              <Description>"ExperienceRatePercent"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1A8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"&lt;Money&gt;k__BackingField"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1B0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"Chapter"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1B8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"&lt;Encumbrance&gt;k__BackingField"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1BC</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>14</ID>
+              <Description>"&lt;RespecsUsed&gt;k__BackingField"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1C0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>15</ID>
+              <Description>"m_CharacterListsValid"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1C4</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>16</ID>
+              <Description>"&lt;IsInCombat&gt;k__BackingField"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>1C5</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17</ID>
+              <Description>"CurrentWeather"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+                <Offset>138</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"NextWeatherChange"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_inv_data_addr</Address>
+              <Offsets>
+                <Offset>18</Offset>
+                <Offset>138</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Damage multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_CALC_DAMAGE,89 86 88 00 00 00 48 63 8E) // should be unique
+aobscanregion(INJECT_CALC_DAMAGE,KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc+404,KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc+464,89 86 88 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_CALC_DAMAGE)
+
+label(code)
+label(return)
+label(vf_damage_multi)
+label(vf_damage_to_party_multi)
+
+newmem:
+  // deal damage to target
+  push r12
+  mov r12, [rsi+30] //Target
+  test r12, r12
+  jz endp
+
+  mov r12, [r12+38] //m_Group
+  cmp byte ptr [r12+40], 1 //IsPlayerParty
+  jne to_enemy
+
+  vmovss xmm14, [vf_damage_to_party_multi]
+  cvtsi2ss xmm15, eax
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+  jmp endp
+
+to_enemy:
+  mov r12, [rsi+10] //Initiator
+  test r12, r12
+  jz endp
+  mov r12, [r12+38] //m_Group
+  cmp byte ptr [r12+40], 1 //IsPlayerParty
+  jne endp
+
+  vmovss xmm14, [vf_damage_multi]
+  cvtsi2ss xmm15, eax
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+endp:
+  pop r12
+
+code:
+  mov [rsi+00000088],eax
+  jmp return
+align 10 cc
+  vf_damage_multi:
+  dd (float)1.25
+  vf_damage_to_party_multi:
+  dd (float)0.75
+
+INJECT_CALC_DAMAGE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CALC_DAMAGE)
+registersymbol(vf_damage_multi)
+registersymbol(vf_damage_to_party_multi)
+
+[DISABLE]
+
+INJECT_CALC_DAMAGE:
+  db 89 86 88 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+424
+
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+400: 41 FF D3              - call r11
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+403: 48 8B C8              - mov rcx,rax
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+406: 48 8B 85 28 FF FF FF  - mov rax,[rbp-000000D8]
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+40d: 48 8B D8              - mov rbx,rax
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+410: 2B D9                 - sub ebx,ecx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+412: 48 8B FB              - mov rdi,rbx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+415: 48 63 8E 88 00 00 00  - movsxd  rcx,dword ptr [rsi+00000088]
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+41c: 48 8B C3              - mov rax,rbx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+41f: 3B C1                 - cmp eax,ecx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+421: 0F 4F C1              - cmovg eax,ecx
+// ---------- INJECTING HERE ----------
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+424: 89 86 88 00 00 00     - mov [rsi+00000088],eax
+// ---------- DONE INJECTING  ----------
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+42a: 48 63 8E 8C 00 00 00  - movsxd  rcx,dword ptr [rsi+0000008C]
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+431: 48 8B C3              - mov rax,rbx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+434: 3B C1                 - cmp eax,ecx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+436: 0F 4F C1              - cmovg eax,ecx
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+439: 89 86 8C 00 00 00     - mov [rsi+0000008C],eax
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+43f: 0F B6 86 9C 00 00 00  - movzx eax,byte ptr [rsi+0000009C]
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+446: 85 C0                 - test eax,eax
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+448: 74 0D                 - je Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+457
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+44a: 48 63 86 8C 00 00 00  - movsxd  rax,dword ptr [rsi+0000008C]
+Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+451: 89 86 88 00 00 00     - mov [rsi+00000088],eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"Damage to enemy multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>26</ID>
+              <Description>"Damage to player party multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_to_party_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
+  <LuaScript>AddressList.Header.OnSectionClick = nil
+
+function tohex(n)return string.format('%X',n or 0)end
+
+--[[
+from https://forum.cheatengine.org/viewtopic.php?p=5659739&amp;sid=72bd2d145c30bf0d344304bce17ea990#5659739
+FauDrei
+--]]
+
+function reEscape(s)
+  local escPatChars = [[().%+-*?[^]]
+  s = s:gsub('.',function(c) if escPatChars:find(c,1,true) then return '%'..c end end)
+  return s
+end
+
+function findMethodAddrBySignature(namespace,classname,methodname,signature,check)
+  local meth = findMethodBySignature(namespace,classname,methodname,signature,check)
+  if meth~=nil and meth&gt;0 then
+    return mono_compile_method(meth)
+  end
+end
+
+function findMethodBySignature(namespace,classname,methodname,signature,check)
+  assert(type(signature)=='string',"invalid signature")
+  signature="^"..reEscape(signature:gsub(";",","))
+  local class = mono_findClass(namespace,classname)
+  if type(class)~='number' or class==0 then return nil end
+  local methods=mono_class_enumMethods(class)
+  if type(methods)~='table' or #methods&lt;1 then return nil end
+  if check then  print('check:'..methodname..": &lt;"..signature.."&gt; vs ") end
+  for i=1,#methods do
+   if methodname == methods[i].name then
+     local sign = mono_method_getSignature(methods[i].method)
+     if check then  print("  &gt;&gt; &lt;"..sign..'&gt;') end
+     if sign:match(signature) then
+       return methods[i].method
+     end
+   end
+  end
+end
+
+registerLuaFunctionHighlight('tohex')
+registerLuaFunctionHighlight('reEscape')
+registerLuaFunctionHighlight('findMethodAddrBySignature')
+registerLuaFunctionHighlight('findMethodBySignature')
+</LuaScript>
 </CheatTable>
