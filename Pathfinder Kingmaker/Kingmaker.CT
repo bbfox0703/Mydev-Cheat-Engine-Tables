@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Enable (Enable twice)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then
+    return
+end
+if process == nil then
+    ShowMessage("Process is not selected.")
+elseif readInteger(process) == 0 then
+    ShowMessage("Process cannot be opened.")
+else
+    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
+        monopipe.destroy()
+        monopipe = nil
+    end
+    if monopipe == nil then
+        LaunchMonoDataCollector()
+    end
+end
+
+{$asm}
+define(KingmakerUnitLogicSpellbookSpendProc,"Kingmaker.UnitLogic:Spellbook:Spend")
+define(KingmakerItemsItemEntitySpendChargesProc, "Kingmaker.Items:ItemEntity:SpendCharges")
+define(KingmakerItemsItemEntityDecrementCountProc, "Kingmaker.Items.ItemEntity:DecrementCount")
+
+registersymbol(KingmakerUnitLogicSpellbookSpendProc)
+registersymbol(KingmakerItemsItemEntitySpendChargesProc)
+registersymbol(KingmakerItemsItemEntityDecrementCountProc)
+
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
+--Timer1.Destroy()
+{$asm}
+unregistersymbol(*)
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"inf casting times"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_INF_CASTING,F0 4C 8B C7 41 B9 01 00 00 00) // should be unique
+aobscanregion(INJECT_INF_CASTING,KingmakerUnitLogicSpellbookSpendProc+1b, KingmakerUnitLogicSpellbookSpendProc+40,4C 8B C7 41 B9 01 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_CASTING)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  mov r15, [rdi+18] //Caster
+  test r15, r15
+  jz endp
+
+  mov r15, [r15+B0] //&lt;Unit&gt;k__BackingField
+  mov r15, [r15+38] //m_Group
+  cmp byte ptr [r15+40], 1 //IsPlayerParty
+  jne to_enemy
+  mov r9d, 00000000
+  jmp endp
+to_enemy:
+  mov r9d, 00000001
+endp:
+  pop r15
+
+
+code:
+  mov r8,rdi
+  //mov r9d,00000001
+  jmp return
+
+INJECT_INF_CASTING:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_INF_CASTING)
+
+[DISABLE]
+
+INJECT_INF_CASTING:
+  db 4C 8B C7 41 B9 01 00 00 00
+
+unregistersymbol(INJECT_INF_CASTING)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.UnitLogic.Spellbook:Spend+28
+
+Kingmaker.UnitLogic.Spellbook:Spend+1: 48 8B EC                       - mov rbp,rsp
+Kingmaker.UnitLogic.Spellbook:Spend+4: 48 83 EC 40                    - sub rsp,40
+Kingmaker.UnitLogic.Spellbook:Spend+8: 48 89 7D F8                    - mov [rbp-08],rdi
+Kingmaker.UnitLogic.Spellbook:Spend+c: 48 89 4D F0                    - mov [rbp-10],rcx
+Kingmaker.UnitLogic.Spellbook:Spend+10: 48 8B FA                       - mov rdi,rdx
+Kingmaker.UnitLogic.Spellbook:Spend+13: 4C 89 45 E8                    - mov [rbp-18],r8
+Kingmaker.UnitLogic.Spellbook:Spend+17: 48 8B 57 10                    - mov rdx,[rdi+10]
+Kingmaker.UnitLogic.Spellbook:Spend+1b: 0F B6 45 E8                    - movzx eax,byte ptr [rbp-18]
+Kingmaker.UnitLogic.Spellbook:Spend+1f: 48 89 44 24 20                 - mov [rsp+20],rax
+Kingmaker.UnitLogic.Spellbook:Spend+24: 48 8B 4D F0                    - mov rcx,[rbp-10]
+// ---------- INJECTING HERE ----------
+Kingmaker.UnitLogic.Spellbook:Spend+28: 4C 8B C7                       - mov r8,rdi
+// ---------- DONE INJECTING  ----------
+Kingmaker.UnitLogic.Spellbook:Spend+2b: 41 B9 01 00 00 00              - mov r9d,00000001
+Kingmaker.UnitLogic.Spellbook:Spend+31: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+Kingmaker.UnitLogic.Spellbook:Spend+36: 49 BB B0 42 4A 41 30 02 00 00  - mov r11,Kingmaker.UnitLogic.Spellbook:SpendInternal
+Kingmaker.UnitLogic.Spellbook:Spend+40: 41 FF D3                       - call r11
+Kingmaker.UnitLogic.Spellbook:Spend+43: 48 8B 7D F8                    - mov rdi,[rbp-08]
+Kingmaker.UnitLogic.Spellbook:Spend+47: 48 8D 65 00                    - lea rsp,[rbp+00]
+Kingmaker.UnitLogic.Spellbook:Spend+4b: 5D                             - pop rbp
+Kingmaker.UnitLogic.Spellbook:Spend+4c: C3                             - ret 
+23081731E2D: 00 00                          - add [rax],al
+23081731E2F: 00 01                          - add [rcx],al
+}
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"No description"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>23033661A38</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"Auto Assemble script"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-11
+  Author :
+}
+
+[ENABLE]
+
+//aobscan(INJECT_INVENTORY_INF_ITEM,89 47 78 48 8B 3C 24) // should be unique
+aobscanregion(INJECT_INVENTORY_INF_ITEM,KingmakerItemsItemEntityDecrementCountProc+10,KingmakerItemsItemEntityDecrementCountProc+30,89 47 78 48 8B 3C 24) // should be unique
+
+alloc(newmem,$1000,INJECT_INVENTORY_INF_ITEM)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  mov r15d, [rdi+7C]
+  cmp r15d, -1
+  je endp
+  mov r15d, [rdi+90]
+  cmp r15d, -1
+  je endp
+  //cmp eax, 1
+  //je endp
+  cmp eax, 8
+  jae endp
+  mov eax, 8
+
+endp:
+  pop r15
+
+code:
+  mov [rdi+78],eax
+  mov rdi,[rsp]
+  jmp return
+
+INJECT_INVENTORY_INF_ITEM:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INVENTORY_INF_ITEM)
+
+[DISABLE]
+
+INJECT_INVENTORY_INF_ITEM:
+  db 89 47 78 48 8B 3C 24
+
+unregistersymbol(INJECT_INVENTORY_INF_ITEM)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.Items.ItemEntity:DecrementCount+1f
+
+23076E168BE: 00 00           - add [rax],al
+KingmakerItemsItemEntityDecrementCountProc: 48 83 EC 18     - sub rsp,18
+Kingmaker.Items.ItemEntity:DecrementCount+4: 48 89 3C 24     - mov [rsp],rdi
+Kingmaker.Items.ItemEntity:DecrementCount+8: 48 8B F9        - mov rdi,rcx
+Kingmaker.Items.ItemEntity:DecrementCount+b: 48 89 54 24 08  - mov [rsp+08],rdx
+Kingmaker.Items.ItemEntity:DecrementCount+10: 33 C0           - xor eax,eax
+Kingmaker.Items.ItemEntity:DecrementCount+12: 48 63 4F 78     - movsxd  rcx,dword ptr [rdi+78]
+Kingmaker.Items.ItemEntity:DecrementCount+16: 2B 4C 24 08     - sub ecx,[rsp+08]
+Kingmaker.Items.ItemEntity:DecrementCount+1a: 3B C1           - cmp eax,ecx
+Kingmaker.Items.ItemEntity:DecrementCount+1c: 0F 4C C1        - cmovl eax,ecx
+// ---------- INJECTING HERE ----------
+Kingmaker.Items.ItemEntity:DecrementCount+1f: 89 47 78        - mov [rdi+78],eax
+// ---------- DONE INJECTING  ----------
+Kingmaker.Items.ItemEntity:DecrementCount+22: 48 8B 3C 24     - mov rdi,[rsp]
+Kingmaker.Items.ItemEntity:DecrementCount+26: 48 83 C4 18     - add rsp,18
+Kingmaker.Items.ItemEntity:DecrementCount+2a: C3              - ret 
+23076E168EB: 00 00           - add [rax],al
+23076E168ED: 00 00           - add [rax],al
+23076E168EF: 00 01           - add [rcx],al
+23076E168F1: 04 01           - add al,01
+23076E168F3: 00 04 22        - add [rdx],al
+23076E168F6: 00 00           - add [rax],al
+23076E168F8: 00 00           - add [rax],al
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
