@@ -154,6 +154,9 @@ zh-TW: 舊世界 Old World
 ## Orbital Bullet  
 [Orbital Bullet – The 360° Rogue-lite (Steam)](https://store.steampowered.com/app/1167680/Orbital_Bullet__The_360_Roguelite/)  
 
+## Pathfinder Kingmaker
+[Pathfinder: Kingmaker - Enhanced Plus Edition (Steam)](https://store.steampowered.com/app/640820/Pathfinder_Kingmaker__Enhanced_Plus_Edition/)
+
 ## Persona 5 Royal  
 [Persona 5 Royal (Steam)](https://store.steampowered.com/app/1687950/5//)  
 zh-TW: 女神異聞錄5皇家版  
