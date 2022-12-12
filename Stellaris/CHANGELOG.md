@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/12/12
+1. bug fix
+
 ## 2022/12/08
 1. Added Galactic community information
 
