@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="42">
+<CheatTable CheatEngineTableVersion="44">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
@@ -47,6 +47,7 @@ mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.UnitLogic.Class.LevelU
 
 
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.RuleSystem.Rules.Damage:RuleDealDamage:OnTrigger')).method)
+mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomState:set_BuildPoints')).method)
 {$asm}
 define(KingmakerUnitLogicSpellbookSpendProc,"Kingmaker.UnitLogic:Spellbook:Spend")
 //define(KingmakerItemsItemEntitySpendChargesProc, "Kingmaker.Items:ItemEntity:SpendCharges")
@@ -57,6 +58,9 @@ define(KingmakerUnitLogicClassLevelUpLevelUpStatectorProc, "Kingmaker.UnitLogic.
 define(KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc, "Kingmaker.RuleSystem.Rules.Damage:RuleDealDamage:OnTrigger")
 define(KingmakerGameTickProc, "Kingmaker:Game:Tick")
 define(KingmakerControllersTimeControllerTickRealTimeProc, "Kingmaker.Controllers.TimeController:TickRealTime")
+define(KingmakerKingdomKingdomStateset_BuildPointsProc, "Kingmaker.Kingdom.KingdomState:set_BuildPoints")
+
+
 
 
 registersymbol(KingmakerUnitLogicSpellbookSpendProc)
@@ -68,6 +72,7 @@ registersymbol(KingmakerUnitLogicClassLevelUpLevelUpStatectorProc)
 registersymbol(KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc)
 registersymbol(KingmakerGameTickProc)
 registersymbol(KingmakerControllersTimeControllerTickRealTimeProc)
+registersymbol(KingmakerKingdomKingdomStateset_BuildPointsProc)
 
 [DISABLE]
 {$lua}
@@ -1039,6 +1044,79 @@ Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+6d: 83 
               </Offsets>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"No BP decrease (building)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_BP_CHANGE,89 B7 E8 00 00 00 48 85 C0) // should be unique
+aobscanregion(INJECT_BP_CHANGE,KingmakerKingdomKingdomStateset_BuildPointsProc+3a,KingmakerKingdomKingdomStateset_BuildPointsProc+8a,89 B7 E8 00 00 00) // should be unique
+
+alloc(newmem,$1000,INJECT_BP_CHANGE)
+
+label(code)
+label(return)
+
+newmem:
+  cmp esi, [rdi+000000E8]
+  jb endp
+
+code:
+  mov [rdi+000000E8],esi
+
+endp:
+  jmp return
+
+INJECT_BP_CHANGE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BP_CHANGE)
+
+[DISABLE]
+
+INJECT_BP_CHANGE:
+  db 89 B7 E8 00 00 00
+
+unregistersymbol(INJECT_BP_CHANGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.Kingdom.KingdomState:set_BuildPoints+4d
+
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+25: 90                             - nop 
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+26: 49 BB A0 0F 6B BC 01 02 00 00  - mov r11,System.Object:__icall_wrapper_ves_icall_object_new_specific
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+30: 41 FF D3                       - call r11
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+33: 48 89 78 10                    - mov [rax+10],rdi
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+37: 48 8B C8                       - mov rcx,rax
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+3a: 48 89 4D E8                    - mov [rbp-18],rcx
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+3e: 48 63 97 E8 00 00 00           - movsxd  rdx,dword ptr [rdi+000000E8]
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+45: 48 8B CE                       - mov rcx,rsi
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+48: 2B CA                          - sub ecx,edx
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+4a: 89 48 18                       - mov [rax+18],ecx
+// ---------- INJECTING HERE ----------
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+4d: 89 B7 E8 00 00 00              - mov [rdi+000000E8],esi
+// ---------- DONE INJECTING  ----------
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+53: 48 85 C0                       - test rax,rax
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+56: 0F 84 A7 00 00 00              - je Kingmaker.Kingdom.KingdomState:set_BuildPoints+103
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+5c: 48 B9 08 84 5F 8B 02 02 00 00  - mov rcx,000002028B5F8408
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+66: 49 BB A0 0F 6B BC 01 02 00 00  - mov r11,System.Object:__icall_wrapper_ves_icall_object_new_specific
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+70: 41 FF D3                       - call r11
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+73: 48 8B C8                       - mov rcx,rax
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+76: 48 8B 45 E8                    - mov rax,[rbp-18]
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+7a: 48 85 C0                       - test rax,rax
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+7d: 0F 84 66 00 00 00              - je Kingmaker.Kingdom.KingdomState:set_BuildPoints+e9
+Kingmaker.Kingdom.KingdomState:set_BuildPoints+83: 48 89 41 20                    - mov [rcx+20],rax
+}
+</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>24</ID>
