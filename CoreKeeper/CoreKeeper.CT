@@ -462,25 +462,42 @@ GameAssembly.dll+A7A058: E8 23 98 B9 FF        - call GameAssembly.dll+613880
 [ENABLE]
 
 
-aobscanregion(INJECT_PLAYER_DATA,PlayerControllerManagedUpdateProc+200,PlayerControllerManagedUpdateProc+480,39 B7 00 0A 00 00) // should be unique
+aobscanregion(INJECT_PLAYER_DATA,PlayerControllerManagedUpdateProc+200,PlayerControllerManagedUpdateProc+480,39 B7 ?? ?? ?? 00 7F 61 48 8B 8F ?? ?? ?? 00 48 85 C9 0F 84) // should be unique
 alloc(newmem,$1000,INJECT_PLAYER_DATA)
+
+alloc(INJECT_PLAYER_DATAo, 6)
 
 label(code)
 label(return)
-label(i_char_base_addr)
+//label(i_char_base_addr)
+label(i_char_localHealth_addr)
+
+INJECT_PLAYER_DATAo:
+  readmem(INJECT_PLAYER_DATA, 6)
 
 newmem:
+  push r13
   push rax
-  mov [i_char_base_addr], rdi
+
+  lea rax, [INJECT_PLAYER_DATAo+2]
+  mov eax, [rax]
+  lea r13, [rdi+eax]
+  mov [i_char_localHealth_addr], r13
+
   pop rax
+  pop r13
+
+  //mov [i_char_base_addr], rdi
 
 code:
-  //cmp [rdi+00000998],r14d
-  cmp [rdi+00000A00],esi
+  //cmp [rdi+00000A20],esi
+  reassemble(INJECT_PLAYER_DATA)
   jmp return
 
 align 10 cc
   i_char_base_addr:
+  dq 0
+  i_char_localHealth_addr:
   dq 0
 
 INJECT_PLAYER_DATA:
@@ -488,55 +505,61 @@ INJECT_PLAYER_DATA:
   nop
 return:
 
-registersymbol(i_char_base_addr)
+//registersymbol(i_char_base_addr)
 registersymbol(INJECT_PLAYER_DATA)
+registersymbol(INJECT_PLAYER_DATAo)
+registersymbol(i_char_localHealth_addr)
 
 [DISABLE]
 
 INJECT_PLAYER_DATA:
-  db 39 B7 00 0A 00 00
+  //db 39 B7 20 0A 00 00
+  readmem(INJECT_PLAYER_DATAo, 6)
 
 unregistersymbol(*)
+unregistersymbol(INJECT_PLAYER_DATAo)
 dealloc(newmem)
-
+dealloc(INJECT_PLAYER_DATAo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1850173
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+18BE9E3
 
-GameAssembly.dll+1850140: 48 8B CF                 - mov rcx,rdi
-GameAssembly.dll+1850143: C6 87 14 04 00 00 01     - mov byte ptr [rdi+00000414],01
-GameAssembly.dll+185014A: 48 8B 90 70 04 00 00     - mov rdx,[rax+00000470]
-GameAssembly.dll+1850151: FF 90 68 04 00 00        - call qword ptr [rax+00000468]
-GameAssembly.dll+1850157: 48 85 C0                 - test rax,rax
-GameAssembly.dll+185015A: 0F 84 99 12 00 00        - je GameAssembly.dll+18513F9
-GameAssembly.dll+1850160: F3 0F 10 0D 50 A1 C8 01  - movss xmm1,[GameAssembly.dll+34DA2B8]
-GameAssembly.dll+1850168: 45 33 C0                 - xor r8d,r8d
-GameAssembly.dll+185016B: 48 8B C8                 - mov rcx,rax
-GameAssembly.dll+185016E: E8 ED D8 90 00           - call PlayerInput.DisableInputFor
+GameAssembly.dll+18BE9B0: 48 8B CF                 - mov rcx,rdi
+GameAssembly.dll+18BE9B3: C6 87 34 04 00 00 01     - mov byte ptr [rdi+00000434],01
+GameAssembly.dll+18BE9BA: 48 8B 90 70 04 00 00     - mov rdx,[rax+00000470]
+GameAssembly.dll+18BE9C1: FF 90 68 04 00 00        - call qword ptr [rax+00000468]
+GameAssembly.dll+18BE9C7: 48 85 C0                 - test rax,rax
+GameAssembly.dll+18BE9CA: 0F 84 99 12 00 00        - je GameAssembly.dll+18BFC69
+GameAssembly.dll+18BE9D0: F3 0F 10 0D E0 C8 C2 01  - movss xmm1,[GameAssembly.dll+34EB2B8]
+GameAssembly.dll+18BE9D8: 45 33 C0                 - xor r8d,r8d
+GameAssembly.dll+18BE9DB: 48 8B C8                 - mov rcx,rax
+GameAssembly.dll+18BE9DE: E8 DD 94 86 00           - call PlayerInput.DisableInputFor
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+1850173: 39 B7 00 0A 00 00        - cmp [rdi+00000A00],esi
+GameAssembly.dll+18BE9E3: 39 B7 20 0A 00 00        - cmp [rdi+00000A20],esi
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+1850179: 7F 61                    - jg GameAssembly.dll+18501DC
-GameAssembly.dll+185017B: 48 8B 8F 60 03 00 00     - mov rcx,[rdi+00000360]
-GameAssembly.dll+1850182: 48 85 C9                 - test rcx,rcx
-GameAssembly.dll+1850185: 0F 84 6E 12 00 00        - je GameAssembly.dll+18513F9
-GameAssembly.dll+185018B: 33 D2                    - xor edx,edx
-GameAssembly.dll+185018D: E8 DE A5 18 00           - call PlayerState.State.get_isActive
-GameAssembly.dll+1850192: 84 C0                    - test al,al
-GameAssembly.dll+1850194: 75 46                    - jne GameAssembly.dll+18501DC
-GameAssembly.dll+1850196: 48 8B 8F 30 03 00 00     - mov rcx,[rdi+00000330]
-GameAssembly.dll+185019D: 48 85 C9                 - test rcx,rcx
+GameAssembly.dll+18BE9E9: 7F 61                    - jg GameAssembly.dll+18BEA4C
+GameAssembly.dll+18BE9EB: 48 8B 8F 80 03 00 00     - mov rcx,[rdi+00000380]
+GameAssembly.dll+18BE9F2: 48 85 C9                 - test rcx,rcx
+GameAssembly.dll+18BE9F5: 0F 84 6E 12 00 00        - je GameAssembly.dll+18BFC69
+GameAssembly.dll+18BE9FB: 33 D2                    - xor edx,edx
+GameAssembly.dll+18BE9FD: E8 3E CD 11 00           - call PlayerState.State.get_isActive
+GameAssembly.dll+18BEA02: 84 C0                    - test al,al
+GameAssembly.dll+18BEA04: 75 46                    - jne GameAssembly.dll+18BEA4C
+GameAssembly.dll+18BEA06: 48 8B 8F 50 03 00 00     - mov rcx,[rdi+00000350]
+GameAssembly.dll+18BEA0D: 48 85 C9                 - test rcx,rcx
 }
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
               <ID>186</ID>
-              <Description>"Base addr"</Description>
-              <ShowAsHex>1</ShowAsHex>
+              <Description>"localHealth"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>i_char_base_addr</Address>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_char_localHealth_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
             </CheatEntry>
             <CheatEntry>
               <ID>698</ID>
@@ -544,9 +567,9 @@ GameAssembly.dll+185019D: 48 85 C9                 - test rcx,rcx
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>Float</VariableType>
-              <Address>i_char_base_addr</Address>
+              <Address>i_char_localHealth_addr</Address>
               <Offsets>
-                <Offset>488</Offset>
+                <Offset>-578</Offset>
               </Offsets>
             </CheatEntry>
           </CheatEntries>
@@ -564,24 +587,44 @@ GameAssembly.dll+185019D: 48 85 C9                 - test rcx,rcx
 
 [ENABLE]
 
-aobscanregion(INJECT_HP_DAMAGE,PlayerControllerDealDamageToPlayerProc+a0,PlayerControllerDealDamageToPlayerProc+5a0,29 9F 00 0A 00 00) // should be unique
+aobscanregion(INJECT_HP_DAMAGE,PlayerControllerDealDamageToPlayerProc+a0,PlayerControllerDealDamageToPlayerProc+5a0,29 9F ?? ?? ?? ?? 45 33 E4 44 39 A7 ?? ?? ?? ?? 0F 8F ?? ?? ?? ?? 48 8B 5F 30) // should be unique
 alloc(newmem,$1000,INJECT_HP_DAMAGE)
+
+alloc(INJECT_HP_DAMAGEo, 6)
 
 label(code)
 label(return)
 label(i_player_base_addr)
 label(i_player_hp_option)
+
+INJECT_HP_DAMAGEo:
+  readmem(INJECT_HP_DAMAGE, 6)
+
 newmem:
   push r13
-  lea r13, [rdi+00000A00]
+  push rax
+
+  lea rax, [INJECT_HP_DAMAGEo+2]
+  mov eax, [rax]
+  //mov [i_player_base_addr], eax
+  lea r13, [rdi+eax]
   mov [i_player_base_addr], r13
+
+  //lea r13, [rdi+00000A00]
+ // mov [i_player_base_addr], r13
+
+  pop rax
   pop r13
 
   cmp dword ptr [i_player_hp_option], 0
   je code
   cmp dword ptr [i_player_hp_option], 1
   jne check_hp2
-  add [rdi+00000A00], ebx
+  //add [rdi+00000A00], ebx
+  push r13
+  mov r13, [i_player_base_addr]
+  add [r13], ebx
+  pop r13
   jmp endp
 
 check_hp2:
@@ -599,7 +642,7 @@ check_hp3:
 endp:
 
 code:
-  sub [rdi+00000A00],ebx
+  reassemble(INJECT_HP_DAMAGE)
   jmp return
 
 align 10 cc
@@ -615,42 +658,45 @@ return:
 registersymbol(i_player_base_addr)
 registersymbol(i_player_hp_option)
 registersymbol(INJECT_HP_DAMAGE)
+registersymbol(INJECT_HP_DAMAGEo)
 
 [DISABLE]
 
 INJECT_HP_DAMAGE:
-  db 29 9F 00 0A 00 00
+  //db 29 9F 00 0A 00 00
+  readmem(INJECT_HP_DAMAGEo, 6)
 
 unregistersymbol(*)
+unregistersymbol(INJECT_HP_DAMAGEo)
 dealloc(newmem)
-
+dealloc(INJECT_HP_DAMAGEo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1845B0C
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+18B436C
 
-GameAssembly.dll+1845AC3: C6 05 87 8C C2 02 01     - mov byte ptr [GameAssembly.dll+446E751],01
-GameAssembly.dll+1845ACA: 80 BF 20 03 00 00 00     - cmp byte ptr [rdi+00000320],00
-GameAssembly.dll+1845AD1: 0F 85 D0 04 00 00        - jne GameAssembly.dll+1845FA7
-GameAssembly.dll+1845AD7: 80 BF 1C 0A 00 00 00     - cmp byte ptr [rdi+00000A1C],00
-GameAssembly.dll+1845ADE: 0F 85 C3 04 00 00        - jne GameAssembly.dll+1845FA7
-GameAssembly.dll+1845AE4: 48 89 B4 24 D0 01 00 00  - mov [rsp+000001D0],rsi
-GameAssembly.dll+1845AEC: 4C 89 A4 24 D8 01 00 00  - mov [rsp+000001D8],r12
-GameAssembly.dll+1845AF4: 4C 89 B4 24 E0 01 00 00  - mov [rsp+000001E0],r14
-GameAssembly.dll+1845AFC: 4C 89 BC 24 A0 01 00 00  - mov [rsp+000001A0],r15
-GameAssembly.dll+1845B04: 0F 29 B4 24 90 01 00 00  - movaps [rsp+00000190],xmm6
+GameAssembly.dll+18B4323: C6 05 16 E4 BC 02 01     - mov byte ptr [GameAssembly.dll+4482740],01
+GameAssembly.dll+18B432A: 80 BF 40 03 00 00 00     - cmp byte ptr [rdi+00000340],00
+GameAssembly.dll+18B4331: 0F 85 D0 04 00 00        - jne GameAssembly.dll+18B4807
+GameAssembly.dll+18B4337: 80 BF 3C 0A 00 00 00     - cmp byte ptr [rdi+00000A3C],00
+GameAssembly.dll+18B433E: 0F 85 C3 04 00 00        - jne GameAssembly.dll+18B4807
+GameAssembly.dll+18B4344: 48 89 B4 24 D0 01 00 00  - mov [rsp+000001D0],rsi
+GameAssembly.dll+18B434C: 4C 89 A4 24 D8 01 00 00  - mov [rsp+000001D8],r12
+GameAssembly.dll+18B4354: 4C 89 B4 24 E0 01 00 00  - mov [rsp+000001E0],r14
+GameAssembly.dll+18B435C: 4C 89 BC 24 A0 01 00 00  - mov [rsp+000001A0],r15
+GameAssembly.dll+18B4364: 0F 29 B4 24 90 01 00 00  - movaps [rsp+00000190],xmm6
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+1845B0C: 29 9F 00 0A 00 00        - sub [rdi+00000A00],ebx
+GameAssembly.dll+18B436C: 29 9F 20 0A 00 00        - sub [rdi+00000A20],ebx
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+1845B12: 45 33 E4                 - xor r12d,r12d
-GameAssembly.dll+1845B15: 44 39 A7 00 0A 00 00     - cmp [rdi+00000A00],r12d
-GameAssembly.dll+1845B1C: 0F 8F 17 01 00 00        - jg GameAssembly.dll+1845C39
-GameAssembly.dll+1845B22: 48 8B 5F 30              - mov rbx,[rdi+30]
-GameAssembly.dll+1845B26: 33 D2                    - xor edx,edx
-GameAssembly.dll+1845B28: 48 8B CF                 - mov rcx,rdi
-GameAssembly.dll+1845B2B: E8 00 D4 42 00           - call UIelement.get_world
-GameAssembly.dll+1845B30: 48 8B 0D 49 70 A2 02     - mov rcx,[GameAssembly.dll+426CB80]
-GameAssembly.dll+1845B37: 48 8B F0                 - mov rsi,rax
-GameAssembly.dll+1845B3A: F6 81 33 01 00 00 04     - test byte ptr [rcx+00000133],04
+GameAssembly.dll+18B4372: 45 33 E4                 - xor r12d,r12d
+GameAssembly.dll+18B4375: 44 39 A7 20 0A 00 00     - cmp [rdi+00000A20],r12d
+GameAssembly.dll+18B437C: 0F 8F 17 01 00 00        - jg GameAssembly.dll+18B4499
+GameAssembly.dll+18B4382: 48 8B 5F 30              - mov rbx,[rdi+30]
+GameAssembly.dll+18B4386: 33 D2                    - xor edx,edx
+GameAssembly.dll+18B4388: 48 8B CF                 - mov rcx,rdi
+GameAssembly.dll+18B438B: E8 40 27 52 00           - call UIelement.get_world
+GameAssembly.dll+18B4390: 48 8B 0D D9 B7 9C 02     - mov rcx,[GameAssembly.dll+427FB70]
+GameAssembly.dll+18B4397: 48 8B F0                 - mov rsi,rax
+GameAssembly.dll+18B439A: F6 81 33 01 00 00 04     - test byte ptr [rcx+00000133],04
 }
 </AssemblerScript>
           <CheatEntries>
@@ -666,6 +712,17 @@ GameAssembly.dll+1845B3A: F6 81 33 01 00 00 04     - test byte ptr [rcx+00000133
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_player_hp_option</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1004</ID>
+              <Description>"HP now (when hit)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_player_base_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -1710,7 +1767,7 @@ GameAssembly.dll+D598E9: 48 8D 0D 50 8D 25 03  - lea rcx,[GameAssembly.dll+3FB26
     </CheatEntry>
     <CheatEntry>
       <ID>501</ID>
-      <Description>"*** Core Keeper 0.5.1.0-c249 EA  /  https://opencheattables.com  /  CE 7.4+ ***"</Description>
+      <Description>"*** Core Keeper 0.5.1.0-5633 EA  /  https://opencheattables.com  /  CE 7.4+ ***"</Description>
       <Options moHideChildren="1"/>
       <Color>800080</Color>
       <GroupHeader>1</GroupHeader>
