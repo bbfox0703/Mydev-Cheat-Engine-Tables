@@ -16,7 +16,7 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>1</ID>
       <Description>"Enable (Enable twice)"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
@@ -48,6 +48,7 @@ mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.UnitLogic.Class.LevelU
 
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.RuleSystem.Rules.Damage:RuleDealDamage:OnTrigger')).method)
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomState:set_BuildPoints')).method)
+mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline')).method)
 {$asm}
 define(KingmakerUnitLogicSpellbookSpendProc,"Kingmaker.UnitLogic:Spellbook:Spend")
 //define(KingmakerItemsItemEntitySpendChargesProc, "Kingmaker.Items:ItemEntity:SpendCharges")
@@ -59,7 +60,7 @@ define(KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc, "Kingmaker.Rul
 define(KingmakerGameTickProc, "Kingmaker:Game:Tick")
 define(KingmakerControllersTimeControllerTickRealTimeProc, "Kingmaker.Controllers.TimeController:TickRealTime")
 define(KingmakerKingdomKingdomStateset_BuildPointsProc, "Kingmaker.Kingdom.KingdomState:set_BuildPoints")
-
+define(KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc, "Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline")
 
 
 
@@ -73,7 +74,7 @@ registersymbol(KingmakerRuleSystemRulesDamageRuleDealDamageOnTriggerProc)
 registersymbol(KingmakerGameTickProc)
 registersymbol(KingmakerControllersTimeControllerTickRealTimeProc)
 registersymbol(KingmakerKingdomKingdomStateset_BuildPointsProc)
-
+registersymbol(KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc)
 [DISABLE]
 {$lua}
 if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
@@ -1280,6 +1281,338 @@ Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+451: 89 86 88 00 00 0
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_damage_friendlyfire_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>58</ID>
+          <Description>"Get Kingdom State"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-15
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_GET_KINGDOM_TIMELINE,48 63 89 E8 00 00 00 89 88 DC) // should be unique
+aobscanregion(INJECT_GET_KINGDOM_TIMELINE,KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc+4a0,KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc+4c0,48 63 89 E8 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_KINGDOM_TIMELINE)
+
+label(code)
+label(return)
+label(i_base_kingdonstate_addr)
+
+newmem:
+  mov [i_base_kingdonstate_addr], rcx
+
+code:
+  movsxd  rcx,dword ptr [rcx+000000E8]
+  jmp return
+align 10 cc
+  i_base_kingdonstate_addr:
+  dq 0
+
+INJECT_GET_KINGDOM_TIMELINE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_KINGDOM_TIMELINE)
+registersymbol(i_base_kingdonstate_addr)
+[DISABLE]
+
+INJECT_GET_KINGDOM_TIMELINE:
+  db 48 63 89 E8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4ad
+
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+47e: 48 8B 80 F8 00 00 00           - mov rax,[rax+000000F8]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+485: 48 B9 E0 FA 01 C8 58 02 00 00  - mov rcx,00000258C801FAE0
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+48f: 48 8B 09                       - mov rcx,[rcx]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+492: 48 8B D1                       - mov rdx,rcx
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+495: 83 3A 00                       - cmp dword ptr [rdx],00
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+498: 48 8B 49 50                    - mov rcx,[rcx+50]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+49c: 48 8B 49 48                    - mov rcx,[rcx+48]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4a0: 48 8B 89 F8 00 00 00           - mov rcx,[rcx+000000F8]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4a7: 48 8B D1                       - mov rdx,rcx
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4aa: 83 3A 00                       - cmp dword ptr [rdx],00
+// ---------- INJECTING HERE ----------
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4ad: 48 63 89 E8 00 00 00           - movsxd  rcx,dword ptr [rcx+000000E8]
+// ---------- DONE INJECTING  ----------
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4b4: 89 88 DC 00 00 00              - mov [rax+000000DC],ecx
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4ba: 48 B8 E0 FA 01 C8 58 02 00 00  - mov rax,00000258C801FAE0
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4c4: 48 8B 00                       - mov rax,[rax]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4c7: 48 8B C8                       - mov rcx,rax
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4ca: 83 39 00                       - cmp dword ptr [rcx],00
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4cd: 48 8B 40 50                    - mov rax,[rax+50]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4d1: 48 8B 40 48                    - mov rax,[rax+48]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4d5: 48 8B 80 F8 00 00 00           - mov rax,[rax+000000F8]
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4dc: 48 B9 E0 FA 01 C8 58 02 00 00  - mov rcx,00000258C801FAE0
+Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4e6: 48 8B 09                       - mov rcx,[rcx]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>60</ID>
+              <Description>"Usage: Enter kingdom management UI"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>59</ID>
+              <Description>"Base addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_kingdonstate_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>88</ID>
+              <Description>"Stats"</Description>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>61</ID>
+                  <Description>"KingdomNameIsSet"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+D0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>62</ID>
+                  <Description>"&lt;CurrentDay&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>D4</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>63</ID>
+                  <Description>"LastRavenVisitDay"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>D8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>64</ID>
+                  <Description>"BPOnLastRavenVisit"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+DC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>65</ID>
+                  <Description>"UnrestOnLastRavenVisit"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"CurrentTurn"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>E4</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>67</ID>
+                  <Description>"BP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>E8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>68</ID>
+                  <Description>"BPPerTurn"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+EC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>69</ID>
+                  <Description>"BPPrevious"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>70</ID>
+                  <Description>"&lt;BPPerRegion&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>71</ID>
+                  <Description>"&lt;BPPerUpgrade&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>72</ID>
+                  <Description>"ConsumableEventBonus"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>FC</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>73</ID>
+                  <Description>"&lt;Unrest&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+100</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>74</ID>
+                  <Description>"Alignment"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+104</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>75</ID>
+                  <Description>"&lt;ExitSettlementToGlobalMap&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+108</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>76</ID>
+                  <Description>"&lt;REModifierUnclaimed&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>10C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>77</ID>
+                  <Description>"&lt;REModifierClaimed&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>110</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>78</ID>
+                  <Description>"&lt;REModifierUpgraded&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>114</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>79</ID>
+                  <Description>"&lt;ClaimCostModifier&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>118</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>80</ID>
+                  <Description>"&lt;ClaimTimeModifier&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>11C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>81</ID>
+                  <Description>"&lt;RankupTimeModifier&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>120</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>82</ID>
+                  <Description>"&lt;BuildingTimeModifier&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>124</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>83</ID>
+                  <Description>"m_UnrestDeckActive"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+128</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>84</ID>
+                  <Description>"&lt;StartDay&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>12C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>85</ID>
+                  <Description>"m_NavigationType"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>138</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>86</ID>
+                  <Description>"&lt;BPPerTurnTotal&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_kingdonstate_addr</Address>
+                  <Offsets>
+                    <Offset>13C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>87</ID>
+                  <Description>"&lt;Disabled&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_kingdonstate_addr]+140</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
