@@ -49,6 +49,8 @@ mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.UnitLogic.Class.LevelU
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.RuleSystem.Rules.Damage:RuleDealDamage:OnTrigger')).method)
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomState:set_BuildPoints')).method)
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline')).method)
+mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap')).method)
+
 {$asm}
 define(KingmakerUnitLogicSpellbookSpendProc,"Kingmaker.UnitLogic:Spellbook:Spend")
 //define(KingmakerItemsItemEntitySpendChargesProc, "Kingmaker.Items:ItemEntity:SpendCharges")
@@ -61,7 +63,7 @@ define(KingmakerGameTickProc, "Kingmaker:Game:Tick")
 define(KingmakerControllersTimeControllerTickRealTimeProc, "Kingmaker.Controllers.TimeController:TickRealTime")
 define(KingmakerKingdomKingdomStateset_BuildPointsProc, "Kingmaker.Kingdom.KingdomState:set_BuildPoints")
 define(KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc, "Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline")
-
+define(KingmakerKingdomKingdomStateget_CanSeeKingdomFromGlobalMapProc, "Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap")
 
 
 registersymbol(KingmakerUnitLogicSpellbookSpendProc)
@@ -75,6 +77,8 @@ registersymbol(KingmakerGameTickProc)
 registersymbol(KingmakerControllersTimeControllerTickRealTimeProc)
 registersymbol(KingmakerKingdomKingdomStateset_BuildPointsProc)
 registersymbol(KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc)
+registersymbol(KingmakerKingdomKingdomStateget_CanSeeKingdomFromGlobalMapProc)
+
 [DISABLE]
 {$lua}
 if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
@@ -1283,6 +1287,75 @@ Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+451: 89 86 88 00 00 0
               <Address>vf_damage_friendlyfire_multi</Address>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>89</ID>
+          <Description>"Access kingdom from non-claimed region"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_SET_REGION_CLAIMED,41 0F B6 45 40 85 C0 74) // should be unique
+aobscanregion(INJECT_SET_REGION_CLAIMED,KingmakerKingdomKingdomStateget_CanSeeKingdomFromGlobalMapProc+8b,KingmakerKingdomKingdomStateget_CanSeeKingdomFromGlobalMapProc+bc,41 0F B6 45 40 85 C0) // should be unique
+alloc(newmem,$1000,INJECT_SET_REGION_CLAIMED)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  movzx eax,byte ptr [r13+40]
+  mov al, 1 //&lt;IsClaimed&gt;k__BackingField
+
+  jmp return
+
+INJECT_SET_REGION_CLAIMED:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_REGION_CLAIMED)
+
+[DISABLE]
+
+INJECT_SET_REGION_CLAIMED:
+  db 41 0F B6 45 40
+
+unregistersymbol(INJECT_SET_REGION_CLAIMED)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+97
+
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+6e: 48 8B CE                       - mov rcx,rsi
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+71: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+76: 49 BB 60 C7 99 91 34 02 00 00  - mov r11,Kingmaker.Kingdom.KingdomState:GetRegion
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+80: 41 FF D3                       - call r11
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+83: 4C 8B E8                       - mov r13,rax
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+86: 48 85 C0                       - test rax,rax
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+89: 75 07                          - jne Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+92
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+8b: 33 C0                          - xor eax,eax
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+8d: E9 4B 01 00 00                 - jmp Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+1dd
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+92: 41 83 7D 00 00                 - cmp dword ptr [r13+00],00
+// ---------- INJECTING HERE ----------
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+97: 41 0F B6 45 40                 - movzx eax,byte ptr [r13+40]
+// ---------- DONE INJECTING  ----------
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+9c: 85 C0                          - test eax,eax
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+9e: 74 0A                          - je Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+aa
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+a0: B8 01 00 00 00                 - mov eax,00000001
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+a5: E9 33 01 00 00                 - jmp Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+1dd
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+aa: 49 8B 45 10                    - mov rax,[r13+10]
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+ae: 48 8B 40 40                    - mov rax,[rax+40]
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+b2: 48 8B D5                       - mov rdx,rbp
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+b5: 48 83 C2 B0                    - add rdx,-50
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+b9: 48 8B C8                       - mov rcx,rax
+Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+bc: 83 38 00                       - cmp dword ptr [rax],00
+}
+</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>58</ID>
