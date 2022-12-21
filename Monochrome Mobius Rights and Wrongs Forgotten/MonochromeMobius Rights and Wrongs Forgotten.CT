@@ -85,15 +85,14 @@ unregistersymbol(*)
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
   Version: 
-  Date   : 2022-11-19
+  Date   : 2022-12-21
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
-
-//aobscanmodule(INJECT_BATTLE_PARTY_HP_FORCE,GameAssembly.dll,50 FF 76 5C 56) // should be unique
-aobscanregion(INJECT_BATTLE_PARTY_HP_FORCE,BattleSequenceControlCharaStatusControlForwardTimeProc+CF,BattleSequenceControlCharaStatusControlForwardTimeProc+16F,50 FF 76 5C 56) // should be unique
-alloc(newmem,$1000)
+//aobscanmodule(INJECT_BATTLE_PARTY_HP_FORCE,GameAssembly.dll,4C 8D 83 80 00 00 00 48 89 7C) // should be unique
+aobscanregion(INJECT_BATTLE_PARTY_HP_FORCE,BattleSequenceControlCharaStatusControlForwardTimeProc+F0,BattleSequenceControlCharaStatusControlForwardTimeProc+1F0,4C 8D 83 80 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_PARTY_HP_FORCE)
 
 label(code)
 label(return)
@@ -101,42 +100,41 @@ label(vf_player_hp_min_ratio2)
 label(vf_player_force_min_ratio2)
 
 newmem:
-  push edx
-  mov edx, [esi+10] //bcc_
-  test edx, edx
+  push rdx
+  mov rdx, [rbx+20] //bcc_
+  test rdx, rdx
   jz endp
-  mov edx, [edx+C] //&lt;CharaData_&gt;k__BackingField
-  test edx, edx
+  mov rdx, [rdx+18] //&lt;CharaData_&gt;k__BackingField
+  test rdx, rdx
   jz endp
-  cmp dword ptr [edx+70], 0 //pKind_
+  cmp dword ptr [rdx+A0], 0 //pKind_
   jnz endp
-  movss xmm7, [edx+20] // lifeMax_
-  movss xmm6, [vf_player_hp_min_ratio2]
-  mulss xmm6, xmm7
-  movss xmm7, [edx+1C] // life_
-  comiss xmm7, xmm6
+  vmovss xmm15, [rdx+38] // lifeMax_
+  vmovss xmm14, [vf_player_hp_min_ratio2]
+  vmulss xmm14, xmm14, xmm15
+  vmovss xmm15, [rdx+34] // life_
+  vcomiss xmm15, xmm14
   jae check_p_force
-  movss [edx+1C], xmm6
+  vmovss [rdx+34], xmm14
 
 check_p_force:
-  movss xmm7, [edx+28] // forceMax_
-  movss xmm6, [vf_player_force_min_ratio2]
-  mulss xmm6, xmm7
-  movss xmm7, [edx+24] // force_
-  comiss xmm7, xmm6
+  vmovss xmm15, [rdx+40] // forceMax_
+  vmovss xmm14, [vf_player_force_min_ratio2]
+  vmulss xmm15, xmm14, xmm15
+  vmovss xmm15, [rdx+3C] // force_
+  vcomiss xmm15, xmm14
   jae player_endp
-  movss [edx+24], xmm6
+  vmovss [rdx+3C], xmm14
 
 player_endp:
 
 endp:
-  pop edx
+  pop rdx
 
 code:
-  push eax
-  push [esi+5C]
-  push esi
+  lea r8,[rbx+00000080]
   jmp return
+
 align 10 cc
   vf_player_hp_min_ratio2:
   dd (float)0.333333
@@ -152,6 +150,7 @@ align 10 cc
 
 INJECT_BATTLE_PARTY_HP_FORCE:
   jmp newmem
+  nop 2
 return:
 registersymbol(INJECT_BATTLE_PARTY_HP_FORCE)
 registersymbol(vf_player_hp_min_ratio2)
@@ -159,37 +158,37 @@ registersymbol(vf_player_force_min_ratio2)
 [DISABLE]
 
 INJECT_BATTLE_PARTY_HP_FORCE:
-  db 50 FF 76 5C 56
+  db 4C 8D 83 80 00 00 00
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+C86DE4
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1083C8C
 
-GameAssembly.dll+C86DC8: 8B 06              - mov eax,[esi]
-GameAssembly.dll+C86DCA: FF B0 70 01 00 00  - push [eax+00000170]
-GameAssembly.dll+C86DD0: 8B 80 6C 01 00 00  - mov eax,[eax+0000016C]
-GameAssembly.dll+C86DD6: 56                 - push esi
-GameAssembly.dll+C86DD7: FF D0              - call eax
-GameAssembly.dll+C86DD9: 6A 00              - push 00
-GameAssembly.dll+C86DDB: 6A 01              - push 01
-GameAssembly.dll+C86DDD: 8D 46 64           - lea eax,[esi+64]
-GameAssembly.dll+C86DE0: 50                 - push eax
-GameAssembly.dll+C86DE1: 8D 46 50           - lea eax,[esi+50]
+GameAssembly.dll+1083C55: F3 0F 11 83 94 00 00 00  - movss [rbx+00000094],xmm0
+GameAssembly.dll+1083C5D: 0F 2F B3 98 00 00 00     - comiss xmm6,[rbx+00000098]
+GameAssembly.dll+1083C64: 0F 28 74 24 30           - movaps xmm6,[rsp+30]
+GameAssembly.dll+1083C69: 76 14                    - jna GameAssembly.dll+1083C7F
+GameAssembly.dll+1083C6B: 33 C9                    - xor ecx,ecx
+GameAssembly.dll+1083C6D: E8 3E 25 F3 00           - call UnityEngine.Time.get_time
+GameAssembly.dll+1083C72: F3 0F 58 43 38           - addss xmm0,[rbx+38]
+GameAssembly.dll+1083C77: F3 0F 11 83 98 00 00 00  - movss [rbx+00000098],xmm0
+GameAssembly.dll+1083C7F: 8B 93 8C 00 00 00        - mov edx,[rbx+0000008C]
+GameAssembly.dll+1083C85: 4C 8D 8B 94 00 00 00     - lea r9,[rbx+00000094]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+C86DE4: 50                 - push eax
+GameAssembly.dll+1083C8C: 4C 8D 83 80 00 00 00     - lea r8,[rbx+00000080]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+C86DE5: FF 76 5C           - push [esi+5C]
-GameAssembly.dll+C86DE8: 56                 - push esi
-GameAssembly.dll+C86DE9: E8 32 00 00 00     - call BattleSequenceControl.CharaStatusControl.GaugeDiffValue
-GameAssembly.dll+C86DEE: 8B 06              - mov eax,[esi]
-GameAssembly.dll+C86DF0: FF B0 78 01 00 00  - push [eax+00000178]
-GameAssembly.dll+C86DF6: 8B 80 74 01 00 00  - mov eax,[eax+00000174]
-GameAssembly.dll+C86DFC: 56                 - push esi
-GameAssembly.dll+C86DFD: FF D0              - call eax
-GameAssembly.dll+C86DFF: 83 C4 40           - add esp,40
-GameAssembly.dll+C86E02: 6A 00              - push 00
+GameAssembly.dll+1083C93: 48 89 7C 24 28           - mov [rsp+28],rdi
+GameAssembly.dll+1083C98: 48 8B CB                 - mov rcx,rbx
+GameAssembly.dll+1083C9B: C6 44 24 20 01           - mov byte ptr [rsp+20],01
+GameAssembly.dll+1083CA0: E8 6B 00 00 00           - call BattleSequenceControl.CharaStatusControl.GaugeDiffValue
+GameAssembly.dll+1083CA5: 48 8B 03                 - mov rax,[rbx]
+GameAssembly.dll+1083CA8: 48 8B CB                 - mov rcx,rbx
+GameAssembly.dll+1083CAB: 48 8B 90 A0 02 00 00     - mov rdx,[rax+000002A0]
+GameAssembly.dll+1083CB2: FF 90 98 02 00 00        - call qword ptr [rax+00000298]
+GameAssembly.dll+1083CB8: 8B 93 90 00 00 00        - mov edx,[rbx+00000090]
+GameAssembly.dll+1083CBE: 4C 8D 8B 98 00 00 00     - lea r9,[rbx+00000098]
 }
 </AssemblerScript>
           <CheatEntries>
@@ -218,37 +217,35 @@ GameAssembly.dll+C86E02: 6A 00              - push 00
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
   Version: 
-  Date   : 2022-11-19
+  Date   : 2022-12-21
   Author : bbfox2https://opencheattables.com
 }
 
 [ENABLE]
-//aobscanmodule(INJECT_ENERGY_MULTI,GameAssembly.dll,03 45 0C 66 0F 6E C0) // should be unique
-aobscanregion(INJECT_ENERGY_MULTI,BattleSequenceControlEnergyControlAddEnergyProc+50,BattleSequenceControlEnergyControlAddEnergyProc+e0,03 45 0C 66 0F 6E C0) // should be unique
-alloc(newmem,$1000)
+//aobscanmodule(INJECT_ENERGY_MULTI,GameAssembly.dll,03 C7 66 0F 6E C0) // should be unique
+aobscanregion(INJECT_ENERGY_MULTI,BattleSequenceControlEnergyControlAddEnergyProc+50,BattleSequenceControlEnergyControlAddEnergyProc+e0,03 C7 66 0F 6E C0) // should be unique
+alloc(newmem,$1000,INJECT_ENERGY_MULTI)
 
 label(code)
 label(return)
 label(vf_battle_energy_multi)
 
 newmem:
-  push eax
-  mov eax, [ecx+70]
-  test eax, eax
+  push r14
+  mov r14d, [r8+A0] //pKind_
+  test r14d, r14d
   jnz endp
 
-  mov eax, [ebp+0C]
-  cvtsi2ss xmm7, eax
-  movss xmm6, [vf_battle_energy_multi]
-  mulss xmm7, xmm6
-  cvtss2si eax, xmm7
-  mov [ebp+0C], eax
+  cvtsi2ss xmm15, edi
+  vmovss xmm14, [vf_battle_energy_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si edi, xmm15
 
 endp:
-  pop eax
+  pop r14
 
 code:
-  add eax,[ebp+0C]
+  add eax,edi
   movd xmm0,eax
   jmp return
 align 10 cc
@@ -257,7 +254,8 @@ align 10 cc
 
 INJECT_ENERGY_MULTI:
   jmp newmem
-  nop 2
+  nop
+
 return:
 registersymbol(INJECT_ENERGY_MULTI)
 registersymbol(vf_battle_energy_multi)
@@ -265,37 +263,37 @@ registersymbol(vf_battle_energy_multi)
 [DISABLE]
 
 INJECT_ENERGY_MULTI:
-  db 03 45 0C 66 0F 6E C0
+  db 03 C7 66 0F 6E C0
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+A4849C
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+DFBF40
 
-GameAssembly.dll+A48477: 85 C0                    - test eax,eax
-GameAssembly.dll+A48479: 0F 84 89 00 00 00        - je GameAssembly.dll+A48508
-GameAssembly.dll+A4847F: 8B 80 B0 00 00 00        - mov eax,[eax+000000B0]
-GameAssembly.dll+A48485: 85 C0                    - test eax,eax
-GameAssembly.dll+A48487: 74 7F                    - je GameAssembly.dll+A48508
-GameAssembly.dll+A48489: 0F B6 50 09              - movzx edx,byte ptr [eax+09]
-GameAssembly.dll+A4848D: F3 0F 10 41 2C           - movss xmm0,[ecx+2C]
-GameAssembly.dll+A48492: 0F 57 C9                 - xorps xmm1,xmm1
-GameAssembly.dll+A48495: 0F 5A C0                 - cvtps2pd xmm0,xmm0
-GameAssembly.dll+A48498: F2 0F 2C C0              - cvttsd2si eax,xmm0
+GameAssembly.dll+DFBF14: 0F 84 94 00 00 00        - je GameAssembly.dll+DFBFAE
+GameAssembly.dll+DFBF1A: 48 8B 48 18              - mov rcx,[rax+18]
+GameAssembly.dll+DFBF1E: 48 85 C9                 - test rcx,rcx
+GameAssembly.dll+DFBF21: 0F 84 87 00 00 00        - je GameAssembly.dll+DFBFAE
+GameAssembly.dll+DFBF27: 48 8B 81 10 01 00 00     - mov rax,[rcx+00000110]
+GameAssembly.dll+DFBF2E: 48 85 C0                 - test rax,rax
+GameAssembly.dll+DFBF31: 74 7B                    - je GameAssembly.dll+DFBFAE
+GameAssembly.dll+DFBF33: 0F B6 50 11              - movzx edx,byte ptr [rax+11]
+GameAssembly.dll+DFBF37: F3 41 0F 2C 40 44        - cvttss2si eax,[r8+44]
+GameAssembly.dll+DFBF3D: 0F 57 C9                 - xorps xmm1,xmm1
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+A4849C: 03 45 0C                 - add eax,[ebp+0C]
+GameAssembly.dll+DFBF40: 03 C7                    - add eax,edi
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+A4849F: 66 0F 6E C0              - movd xmm0,eax
-GameAssembly.dll+A484A3: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
-GameAssembly.dll+A484A6: 0F 2F C8                 - comiss xmm1,xmm0
-GameAssembly.dll+A484A9: 77 12                    - ja GameAssembly.dll+A484BD
-GameAssembly.dll+A484AB: F3 0F 10 0D F4 5F 54 0C  - movss xmm1,[GameAssembly.dll+2F45FF4]
-GameAssembly.dll+A484B3: 0F 2F C1                 - comiss xmm0,xmm1
-GameAssembly.dll+A484B6: 76 08                    - jna GameAssembly.dll+A484C0
-GameAssembly.dll+A484B8: 0F 28 C1                 - movaps xmm0,xmm1
-GameAssembly.dll+A484BB: EB 03                    - jmp GameAssembly.dll+A484C0
-GameAssembly.dll+A484BD: 0F 57 C0                 - xorps xmm0,xmm0
+GameAssembly.dll+DFBF42: 66 0F 6E C0              - movd xmm0,eax
+GameAssembly.dll+DFBF46: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+GameAssembly.dll+DFBF49: 0F 2F C8                 - comiss xmm1,xmm0
+GameAssembly.dll+DFBF4C: 77 12                    - ja GameAssembly.dll+DFBF60
+GameAssembly.dll+DFBF4E: F3 0F 10 0D 26 9D EC 02  - movss xmm1,[GameAssembly.dll+3CC5C7C]
+GameAssembly.dll+DFBF56: 0F 2F C1                 - comiss xmm0,xmm1
+GameAssembly.dll+DFBF59: 76 08                    - jna GameAssembly.dll+DFBF63
+GameAssembly.dll+DFBF5B: 0F 28 C1                 - movaps xmm0,xmm1
+GameAssembly.dll+DFBF5E: EB 03                    - jmp GameAssembly.dll+DFBF63
+GameAssembly.dll+DFBF60: 0F 57 C0                 - xorps xmm0,xmm0
 }
 </AssemblerScript>
           <CheatEntries>
@@ -315,17 +313,16 @@ GameAssembly.dll+A484BD: 0F 57 C0                 - xorps xmm0,xmm0
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
-  Version: 
-  Date   : 2022-11-19
+  Version:
+  Date   : 2022-12-21
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-//aobscanmodule(INJECT_BATTLE_DAMAGE_CONTROL,GameAssembly.dll,F3 0F 58 46 1C E8 14) // should be unique
-aobscanregion(INJECT_BATTLE_DAMAGE_CONTROL,BattleSequenceControlbattleCharaControlSubLifeProc+12,BattleSequenceControlbattleCharaControlSubLifeProc+92,F3 0F 58 46 1C) // should be unique
-
-alloc(newmem,$1000)
+//aobscanmodule(INJECT_BATTLE_DAMAGE_CONTROL,GameAssembly.dll,F3 0F 58 43 34 E8 E4) // should be unique
+aobscanregion(INJECT_BATTLE_DAMAGE_CONTROL,BattleSequenceControlbattleCharaControlSubLifeProc+12,BattleSequenceControlbattleCharaControlSubLifeProc+92,F3 0F 58 43 34) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_DAMAGE_CONTROL)
 
 label(code)
 label(return)
@@ -333,20 +330,20 @@ label(vf_damage_to_player_multi)
 label(vf_damage_to_enemy_multi)
 
 newmem:
-  cmp dword ptr [esi+70], 0
+  cmp dword ptr [esi+A0], 0 //pKind_
   jne to_enemy
 to_player:
-  movss xmm6, [vf_damage_to_player_multi]
-  mulss xmm0, xmm6
+  vmovss xmm14, [vf_damage_to_player_multi]
+  vmulss xmm0, xmm0, xmm14
   jmp code
 
 to_enemy:
-  movss xmm6, [vf_damage_to_enemy_multi]
-  mulss xmm0, xmm6
+  vmovss xmm14, [vf_damage_to_enemy_multi]
+  vmulss xmm0, xmm0, xmm14
   jmp code
 
 code:
-  addss xmm0,[esi+1C]
+  addss xmm0,[rbx+34]
   jmp return
 align 10 cc
   vf_damage_to_player_multi:
@@ -364,37 +361,37 @@ registersymbol(vf_damage_to_enemy_multi)
 [DISABLE]
 
 INJECT_BATTLE_DAMAGE_CONTROL:
-  db F3 0F 58 46 1C
+  db F3 0F 58 43 34
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+9BF652
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+D4329A
 
-GameAssembly.dll+9BF636: 56                    - push esi
-GameAssembly.dll+9BF637: 57                    - push edi
-GameAssembly.dll+9BF638: 8B 7D 08              - mov edi,[ebp+08]
-GameAssembly.dll+9BF63B: 8B 77 0C              - mov esi,[edi+0C]
-GameAssembly.dll+9BF63E: 85 F6                 - test esi,esi
-GameAssembly.dll+9BF640: 0F 84 F4 01 00 00     - je GameAssembly.dll+9BF83A
-GameAssembly.dll+9BF646: 8B 45 0C              - mov eax,[ebp+0C]
-GameAssembly.dll+9BF649: F7 D8                 - neg eax
-GameAssembly.dll+9BF64B: 66 0F 6E C0           - movd xmm0,eax
-GameAssembly.dll+9BF64F: 0F 5B C0              - cvtdq2ps xmm0,xmm0
+GameAssembly.dll+D43274: 48 8B 59 18           - mov rbx,[rcx+18]
+GameAssembly.dll+D43278: 41 0F B6 F1           - movzx esi,r9l
+GameAssembly.dll+D4327C: 0F 29 74 24 20        - movaps [rsp+20],xmm6
+GameAssembly.dll+D43281: 41 0F B6 E8           - movzx ebp,r8l
+GameAssembly.dll+D43285: 48 8B F9              - mov rdi,rcx
+GameAssembly.dll+D43288: 48 85 DB              - test rbx,rbx
+GameAssembly.dll+D4328B: 0F 84 0B 02 00 00     - je GameAssembly.dll+D4349C
+GameAssembly.dll+D43291: F7 DA                 - neg edx
+GameAssembly.dll+D43293: 66 0F 6E C2           - movd xmm0,edx
+GameAssembly.dll+D43297: 0F 5B C0              - cvtdq2ps xmm0,xmm0
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+9BF652: F3 0F 58 46 1C        - addss xmm0,[esi+1C]
+GameAssembly.dll+D4329A: F3 0F 58 43 34        - addss xmm0,[rbx+34]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+9BF657: E8 14 84 7D FF        - call GameAssembly.dll+197A70
-GameAssembly.dll+9BF65C: 0F 28 C8              - movaps xmm1,xmm0
-GameAssembly.dll+9BF65F: F3 0F 10 46 20        - movss xmm0,[esi+20]
-GameAssembly.dll+9BF664: 0F 2F C8              - comiss xmm1,xmm0
-GameAssembly.dll+9BF667: F3 0F 11 4E 1C        - movss [esi+1C],xmm1
-GameAssembly.dll+9BF66C: 77 11                 - ja GameAssembly.dll+9BF67F
-GameAssembly.dll+9BF66E: 0F 57 C0              - xorps xmm0,xmm0
-GameAssembly.dll+9BF671: 0F 2F C1              - comiss xmm0,xmm1
-GameAssembly.dll+9BF674: 76 0E                 - jna GameAssembly.dll+9BF684
-GameAssembly.dll+9BF676: C7 46 1C 00 00 00 00  - mov [esi+1C],00000000
+GameAssembly.dll+D4329F: E8 E4 3F 8B FF        - call GameAssembly.dll+5F7288
+GameAssembly.dll+D432A4: F3 0F 10 4B 38        - movss xmm1,[rbx+38]
+GameAssembly.dll+D432A9: 0F 57 F6              - xorps xmm6,xmm6
+GameAssembly.dll+D432AC: 0F 2F C1              - comiss xmm0,xmm1
+GameAssembly.dll+D432AF: F3 0F 11 43 34        - movss [rbx+34],xmm0
+GameAssembly.dll+D432B4: 77 0E                 - ja GameAssembly.dll+D432C4
+GameAssembly.dll+D432B6: 0F 2F F0              - comiss xmm6,xmm0
+GameAssembly.dll+D432B9: 76 0E                 - jna GameAssembly.dll+D432C9
+GameAssembly.dll+D432BB: C7 43 34 00 00 00 00  - mov [rbx+34],00000000
+GameAssembly.dll+D432C2: EB 05                 - jmp GameAssembly.dll+D432C9
 }
 </AssemblerScript>
           <CheatEntries>
@@ -422,31 +419,30 @@ GameAssembly.dll+9BF676: C7 46 1C 00 00 00 00  - mov [esi+1C],00000000
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
-  Version: 
-  Date   : 2022-11-19
+  Version:
+  Date   : 2022-12-21
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-//aobscanmodule(INJECT_BATTLE_EXP_MULTI,GameAssembly.dll,8B 41 48 03 C3) // should be unique
-aobscanregion(INJECT_BATTLE_EXP_MULTI,utrpg_guiBattleResultCharaTabProcAdditiveExpProc+166,utrpg_guiBattleResultCharaTabProcAdditiveExpProc+1F6,8B 41 48 03 C3) // should be unique
-
-alloc(newmem,$1000)
+//aobscanmodule(INJECT_BATTLE_EXP_MULTI,GameAssembly.dll,8B 4A 60 41 03 C9) // should be unique
+aobscanregion(INJECT_BATTLE_EXP_MULTI,utrpg_guiBattleResultCharaTabProcAdditiveExpProc+166,utrpg_guiBattleResultCharaTabProcAdditiveExpProc+1F6,8B 4A 60 41 03 C9) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_EXP_MULTI)
 
 label(code)
 label(return)
 label(vf_battle_exp_multi)
 
 newmem:
-  cvtsi2ss xmm7, ebx
-  movss xmm6, [vf_battle_exp_multi]
-  mulss xmm7, xmm6
-  cvtss2si ebx, xmm7
+  cvtsi2ss xmm15, r9d
+  vmovss xmm14, [vf_battle_exp_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r9d, xmm15
 
 code:
-  mov eax,[ecx+48]
-  add eax,ebx
+  mov ecx,[rdx+60]
+  add ecx,r9d
   jmp return
 align 10 cc
   vf_battle_exp_multi:
@@ -455,43 +451,44 @@ align 10 cc
 
 INJECT_BATTLE_EXP_MULTI:
   jmp newmem
+  nop
 return:
 registersymbol(INJECT_BATTLE_EXP_MULTI)
 registersymbol(vf_battle_exp_multi)
 [DISABLE]
 
 INJECT_BATTLE_EXP_MULTI:
-  db 8B 41 48 03 C3
+  db 8B 4A 60 41 03 C9
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1390306
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1935178
 
-GameAssembly.dll+13902E6: 2B CF              - sub ecx,edi
-GameAssembly.dll+13902E8: 3B D7              - cmp edx,edi
-GameAssembly.dll+13902EA: 0F 4F C1           - cmovg eax,ecx
-GameAssembly.dll+13902ED: 8B 4E 28           - mov ecx,[esi+28]
-GameAssembly.dll+13902F0: 89 46 30           - mov [esi+30],eax
-GameAssembly.dll+13902F3: 85 C9              - test ecx,ecx
-GameAssembly.dll+13902F5: 0F 84 E0 03 00 00  - je GameAssembly.dll+13906DB
-GameAssembly.dll+13902FB: 8B 49 0C           - mov ecx,[ecx+0C]
-GameAssembly.dll+13902FE: 85 C9              - test ecx,ecx
-GameAssembly.dll+1390300: 0F 84 D5 03 00 00  - je GameAssembly.dll+13906DB
+GameAssembly.dll+1935152: 41 2B C8           - sub ecx,r8d
+GameAssembly.dll+1935155: 41 3B D0           - cmp edx,r8d
+GameAssembly.dll+1935158: 48 8B 53 50        - mov rdx,[rbx+50]
+GameAssembly.dll+193515C: 0F 4F C1           - cmovg eax,ecx
+GameAssembly.dll+193515F: 89 43 5C           - mov [rbx+5C],eax
+GameAssembly.dll+1935162: 48 85 D2           - test rdx,rdx
+GameAssembly.dll+1935165: 0F 84 5F 05 00 00  - je GameAssembly.dll+19356CA
+GameAssembly.dll+193516B: 48 8B 52 18        - mov rdx,[rdx+18]
+GameAssembly.dll+193516F: 48 85 D2           - test rdx,rdx
+GameAssembly.dll+1935172: 0F 84 52 05 00 00  - je GameAssembly.dll+19356CA
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+1390306: 8B 41 48           - mov eax,[ecx+48]
+GameAssembly.dll+1935178: 8B 4A 60           - mov ecx,[rdx+60]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+1390309: 03 C3              - add eax,ebx
-GameAssembly.dll+139030B: 78 0E              - js GameAssembly.dll+139031B
-GameAssembly.dll+139030D: 3D FF E0 F5 05     - cmp eax,05F5E0FF
-GameAssembly.dll+1390312: 7E 09              - jle GameAssembly.dll+139031D
-GameAssembly.dll+1390314: B8 FF E0 F5 05     - mov eax,05F5E0FF
-GameAssembly.dll+1390319: EB 02              - jmp GameAssembly.dll+139031D
-GameAssembly.dll+139031B: 33 C0              - xor eax,eax
-GameAssembly.dll+139031D: 89 41 48           - mov [ecx+48],eax
-GameAssembly.dll+1390320: 8B 46 28           - mov eax,[esi+28]
-GameAssembly.dll+1390323: 85 C0              - test eax,eax
+GameAssembly.dll+193517B: 41 03 C9           - add ecx,r9d
+GameAssembly.dll+193517E: 78 0F              - js GameAssembly.dll+193518F
+GameAssembly.dll+1935180: 81 F9 FF E0 F5 05  - cmp ecx,05F5E0FF
+GameAssembly.dll+1935186: 7E 0A              - jle GameAssembly.dll+1935192
+GameAssembly.dll+1935188: B9 FF E0 F5 05     - mov ecx,05F5E0FF
+GameAssembly.dll+193518D: EB 03              - jmp GameAssembly.dll+1935192
+GameAssembly.dll+193518F: 41 8B CE           - mov ecx,r14d
+GameAssembly.dll+1935192: 89 4A 60           - mov [rdx+60],ecx
+GameAssembly.dll+1935195: 48 8B 53 50        - mov rdx,[rbx+50]
+GameAssembly.dll+1935199: 48 85 D2           - test rdx,rdx
 }
 </AssemblerScript>
           <CheatEntries>
