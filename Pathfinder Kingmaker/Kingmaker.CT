@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="44">
+<CheatTable CheatEngineTableVersion="42">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
@@ -16,7 +16,7 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>1</ID>
       <Description>"Enable (Enable twice)"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
@@ -50,6 +50,7 @@ mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.RuleSystem.Rules.Damag
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomState:set_BuildPoints')).method)
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline')).method)
 mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap')).method)
+mono_compile_method(mono_getJitInfo(getAddress('Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader')).method)
 
 {$asm}
 define(KingmakerUnitLogicSpellbookSpendProc,"Kingmaker.UnitLogic:Spellbook:Spend")
@@ -64,6 +65,8 @@ define(KingmakerControllersTimeControllerTickRealTimeProc, "Kingmaker.Controller
 define(KingmakerKingdomKingdomStateset_BuildPointsProc, "Kingmaker.Kingdom.KingdomState:set_BuildPoints")
 define(KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc, "Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline")
 define(KingmakerKingdomKingdomStateget_CanSeeKingdomFromGlobalMapProc, "Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap")
+define(KingmakerItemsItemEntityget_TotalWeightProc, "Kingmaker.Items.ItemEntity:get_TotalWeight")
+define(KingmakerUIKingdomKingdomUIEventWindowSetHeaderProc, "Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader")
 
 
 registersymbol(KingmakerUnitLogicSpellbookSpendProc)
@@ -78,6 +81,8 @@ registersymbol(KingmakerControllersTimeControllerTickRealTimeProc)
 registersymbol(KingmakerKingdomKingdomStateset_BuildPointsProc)
 registersymbol(KingmakerKingdomKingdomTimelineManagerUpdateTimelineProc)
 registersymbol(KingmakerKingdomKingdomStateget_CanSeeKingdomFromGlobalMapProc)
+registersymbol(KingmakerItemsItemEntityget_TotalWeightProc)
+registersymbol(KingmakerUIKingdomKingdomUIEventWindowSetHeaderProc)
 
 [DISABLE]
 {$lua}
@@ -354,6 +359,116 @@ Kingmaker.Items.ItemEntity:SpendCharges+343: 48 63 87 90 00 00 00           - mo
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>92</ID>
+          <Description>"Set all scrolls, potions stack count, at least to 3 (include belt items)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_SET_ITEM_COUNT,F1 48 63 46 78 F3 0F 2A C0) // should be unique
+aobscanregion(INJECT_SET_ITEM_COUNT,KingmakerItemsItemEntityget_TotalWeightProc+8,KingmakerItemsItemEntityget_TotalWeightProc+20,F1 48 63 46 78 F3 0F 2A C0) // should be unique
+alloc(newmem,$1000,INJECT_SET_ITEM_COUNT)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+
+  mov r15d, [rsi+90]
+  cmp r15d, 1
+  jne endp
+
+  mov r15, [rsi+10]
+  test r15, r15
+  jz endp
+
+  mov r15b, [r15+80]
+  cmp r15b, 1
+  jne endp
+  mov r15, [rsi+10]
+  mov r15d, [r15+E8]
+  cmp r15d, 3
+  je do_next
+  cmp r15d, 2
+  je do_next
+  cmp r15d, 0
+  je do_next
+  jmp endp
+
+do_next:
+  mov r15d, [rsi+78]
+  cmp r15d, 3
+  jae endp
+  mov r15d, 3
+  mov [rsi+78], r15d
+
+endp:
+  pop r15
+
+code:
+  movsxd  rax,dword ptr [rsi+78]
+  cvtsi2ss xmm0,eax
+  jmp return
+
+INJECT_SET_ITEM_COUNT+01:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_ITEM_COUNT)
+
+[DISABLE]
+
+INJECT_SET_ITEM_COUNT+01:
+  db 48 63 46 78 F3 0F 2A C0
+
+unregistersymbol(INJECT_SET_ITEM_COUNT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.Items.ItemEntity:get_TotalWeight+f
+
+26DA5C74623: 05 04 03 01 50     - add eax,50010304
+26DA5C74628: 00 00              - add [rax],al
+26DA5C7462A: 00 00              - add [rax],al
+26DA5C7462C: 00 00              - add [rax],al
+26DA5C7462E: 00 00              - add [rax],al
+KingmakerItemsItemEntityget_TotalWeightProc: 55                 - push rbp
+Kingmaker.Items.ItemEntity:get_TotalWeight+1: 48 8B EC           - mov rbp,rsp
+Kingmaker.Items.ItemEntity:get_TotalWeight+4: 48 83 EC 30        - sub rsp,30
+Kingmaker.Items.ItemEntity:get_TotalWeight+8: 48 89 75 F8        - mov [rbp-08],rsi
+Kingmaker.Items.ItemEntity:get_TotalWeight+c: 48 8B F1           - mov rsi,rcx
+// ---------- INJECTING HERE ----------
+Kingmaker.Items.ItemEntity:get_TotalWeight+f: 48 63 46 78        - movsxd  rax,dword ptr [rsi+78]
+// ---------- DONE INJECTING  ----------
+Kingmaker.Items.ItemEntity:get_TotalWeight+13: F3 0F 2A C0        - cvtsi2ss xmm0,eax
+Kingmaker.Items.ItemEntity:get_TotalWeight+17: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
+Kingmaker.Items.ItemEntity:get_TotalWeight+1b: F2 0F 11 45 F0     - movsd [rbp-10],xmm0
+Kingmaker.Items.ItemEntity:get_TotalWeight+20: 48 8B 46 10        - mov rax,[rsi+10]
+Kingmaker.Items.ItemEntity:get_TotalWeight+24: 48 8B C8           - mov rcx,rax
+Kingmaker.Items.ItemEntity:get_TotalWeight+27: 48 8B 00           - mov rax,[rax]
+Kingmaker.Items.ItemEntity:get_TotalWeight+2a: FF 90 28 01 00 00  - call qword ptr [rax+00000128]
+Kingmaker.Items.ItemEntity:get_TotalWeight+30: F3 0F 5A C8        - cvtss2sd xmm1,xmm0
+Kingmaker.Items.ItemEntity:get_TotalWeight+34: F2 0F 10 45 F0     - movsd xmm0,[rbp-10]
+Kingmaker.Items.ItemEntity:get_TotalWeight+39: F2 0F 59 C1        - mulsd xmm0,xmm1
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>140</ID>
+              <Description>"Only enable this script when needed!"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>5</ID>
           <Description>"Set stackable item count in inventory &gt;= 4"</Description>
           <Options moHideChildren="1"/>
@@ -368,7 +483,6 @@ Kingmaker.Items.ItemEntity:SpendCharges+343: 48 63 87 90 00 00 00           - mo
 
 //aobscan(INJECT_INVENTORY_INF_ITEM,89 47 78 48 8B 3C 24) // should be unique
 aobscanregion(INJECT_INVENTORY_INF_ITEM,KingmakerItemsItemEntityDecrementCountProc+10,KingmakerItemsItemEntityDecrementCountProc+30,89 47 78 48 8B 3C 24) // should be unique
-
 alloc(newmem,$1000,INJECT_INVENTORY_INF_ITEM)
 
 label(code)
@@ -497,7 +611,7 @@ code:
   jmp return
 align 10 cc
   i_attr_pt_when_lvup: // 0 = disable
-  dq #10
+  dq #12
   is_modified:
   dd 0
 
@@ -1051,79 +1165,6 @@ Kingmaker.UI.ServiceWindow.Inventory:UpdatePlayerMoneyAndInventoryWeight+6d: 83 
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>55</ID>
-          <Description>"No BP decrease (building)"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Kingmaker.exe
-  Version: 
-  Date   : 2022-12-14
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-//aobscan(INJECT_BP_CHANGE,89 B7 E8 00 00 00 48 85 C0) // should be unique
-aobscanregion(INJECT_BP_CHANGE,KingmakerKingdomKingdomStateset_BuildPointsProc+3a,KingmakerKingdomKingdomStateset_BuildPointsProc+8a,89 B7 E8 00 00 00) // should be unique
-
-alloc(newmem,$1000,INJECT_BP_CHANGE)
-
-label(code)
-label(return)
-
-newmem:
-  cmp esi, [rdi+000000E8]
-  jb endp
-
-code:
-  mov [rdi+000000E8],esi
-
-endp:
-  jmp return
-
-INJECT_BP_CHANGE:
-  jmp newmem
-  nop
-return:
-registersymbol(INJECT_BP_CHANGE)
-
-[DISABLE]
-
-INJECT_BP_CHANGE:
-  db 89 B7 E8 00 00 00
-
-unregistersymbol(INJECT_BP_CHANGE)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Kingmaker.Kingdom.KingdomState:set_BuildPoints+4d
-
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+25: 90                             - nop 
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+26: 49 BB A0 0F 6B BC 01 02 00 00  - mov r11,System.Object:__icall_wrapper_ves_icall_object_new_specific
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+30: 41 FF D3                       - call r11
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+33: 48 89 78 10                    - mov [rax+10],rdi
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+37: 48 8B C8                       - mov rcx,rax
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+3a: 48 89 4D E8                    - mov [rbp-18],rcx
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+3e: 48 63 97 E8 00 00 00           - movsxd  rdx,dword ptr [rdi+000000E8]
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+45: 48 8B CE                       - mov rcx,rsi
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+48: 2B CA                          - sub ecx,edx
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+4a: 89 48 18                       - mov [rax+18],ecx
-// ---------- INJECTING HERE ----------
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+4d: 89 B7 E8 00 00 00              - mov [rdi+000000E8],esi
-// ---------- DONE INJECTING  ----------
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+53: 48 85 C0                       - test rax,rax
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+56: 0F 84 A7 00 00 00              - je Kingmaker.Kingdom.KingdomState:set_BuildPoints+103
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+5c: 48 B9 08 84 5F 8B 02 02 00 00  - mov rcx,000002028B5F8408
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+66: 49 BB A0 0F 6B BC 01 02 00 00  - mov r11,System.Object:__icall_wrapper_ves_icall_object_new_specific
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+70: 41 FF D3                       - call r11
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+73: 48 8B C8                       - mov rcx,rax
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+76: 48 8B 45 E8                    - mov rax,[rbp-18]
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+7a: 48 85 C0                       - test rax,rax
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+7d: 0F 84 66 00 00 00              - je Kingmaker.Kingdom.KingdomState:set_BuildPoints+e9
-Kingmaker.Kingdom.KingdomState:set_BuildPoints+83: 48 89 41 20                    - mov [rcx+20],rax
-}
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
           <ID>24</ID>
           <Description>"Damage multiplier"</Description>
           <Options moHideChildren="1"/>
@@ -1290,7 +1331,7 @@ Kingmaker.RuleSystem.Rules.Damage.RuleDealDamage:OnTrigger+451: 89 86 88 00 00 0
         </CheatEntry>
         <CheatEntry>
           <ID>89</ID>
-          <Description>"Access kingdom from non-claimed region"</Description>
+          <Description>"Can access kingdom from non-claimed region"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Kingmaker.exe
   Version: 
@@ -1356,6 +1397,105 @@ Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+b9: 48 8B C8      
 Kingmaker.Kingdom.KingdomState:get_CanSeeKingdomFromGlobalMap+bc: 83 38 00                       - cmp dword ptr [rax],00
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>137</ID>
+          <Description>"Set selected "unassigned kingdom task" data"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Kingmaker.exe
+  Version: 
+  Date   : 2022-12-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_SET_UNRESOLVE_EVENT,49 63 55 58 48 8B C8) // should be unique
+aobscanregion(INJECT_SET_UNRESOLVE_EVENT,KingmakerUIKingdomKingdomUIEventWindowSetHeaderProc+500,KingmakerUIKingdomKingdomUIEventWindowSetHeaderProc+550,49 63 55 58 48 8B C8) // should be unique
+alloc(newmem,$1000,INJECT_SET_UNRESOLVE_EVENT)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  push rbx
+  mov bl, [r13+5C] // m_IsPlanned
+  cmp bl, 0
+  jne endp
+  mov r15d, [rax+D4] // &lt;CurrentDay&gt;k__BackingField
+  mov [r13+58], r15d // set m_StartedOn
+  mov r15, [r13+10] // EventBlueprint
+  mov ebx, 1
+  mov [r15+5C], ebx // ResolutionTime
+
+endp:
+  pop rbx
+  pop r15
+
+
+code:
+  movsxd  rdx,dword ptr [r13+58]
+  mov rcx,rax
+  jmp return
+
+INJECT_SET_UNRESOLVE_EVENT:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SET_UNRESOLVE_EVENT)
+
+[DISABLE]
+
+INJECT_SET_UNRESOLVE_EVENT:
+  db 49 63 55 58 48 8B C8
+
+unregistersymbol(INJECT_SET_UNRESOLVE_EVENT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+510
+
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4e2: 83 38 00                       - cmp dword ptr [rax],00
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4e5: 4C 8B 68 18                    - mov r13,[rax+18]
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4e9: 48 B8 E0 FA 36 7F 38 02 00 00  - mov rax,000002387F36FAE0
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4f3: 48 8B 00                       - mov rax,[rax]
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4f6: 48 8B C8                       - mov rcx,rax
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4f9: 83 39 00                       - cmp dword ptr [rcx],00
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+4fc: 48 8B 40 50                    - mov rax,[rax+50]
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+500: 48 8B 40 48                    - mov rax,[rax+48]
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+504: 48 8B 80 F8 00 00 00           - mov rax,[rax+000000F8]
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+50b: 41 83 7D 00 00                 - cmp dword ptr [r13+00],00
+// ---------- INJECTING HERE ----------
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+510: 49 63 55 58                    - movsxd  rdx,dword ptr [r13+58]
+// ---------- DONE INJECTING  ----------
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+514: 48 8B C8                       - mov rcx,rax
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+517: 83 38 00                       - cmp dword ptr [rax],00
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+51a: 48 8D 6D 00                    - lea rbp,[rbp+00]
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+51e: 49 BB 20 FD E5 78 38 02 00 00  - mov r11,Kingmaker.Kingdom.KingdomState:ToDate
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+528: 41 FF D3                       - call r11
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+52b: 48 89 85 60 FF FF FF           - mov [rbp-000000A0],rax
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+532: 48 8B CD                       - mov rcx,rbp
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+535: 48 81 C1 60 FF FF FF           - add rcx,FFFFFFFFFFFFFF60
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+53c: 66 90                          - nop 2
+Kingmaker.UI.Kingdom.KingdomUIEventWindow:SetHeader+53e: 49 BB A0 39 BF 32 38 02 00 00  - mov r11,System.DateTime:get_Month
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>138</ID>
+              <Description>"Set  find date to today and resultion time to 1 day"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>139</ID>
+              <Description>"Click on event, close it, then open again to see result"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>58</ID>
@@ -1447,8 +1587,487 @@ Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4e6: 48 8B 09           
               <Address>i_base_kingdonstate_addr</Address>
             </CheatEntry>
             <CheatEntry>
+              <ID>98</ID>
+              <Description>"Stats (Attributes)"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>99</ID>
+                  <Description>"01"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>93</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>20</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>96</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>20</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>97</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>20</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>100</ID>
+                  <Description>"02"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>101</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>102</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>28</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>103</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>28</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>104</ID>
+                  <Description>"03"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>105</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>30</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>106</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>30</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>107</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>30</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>108</ID>
+                  <Description>"04"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>109</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>38</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>110</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>38</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>111</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>38</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>112</ID>
+                  <Description>"05"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>113</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>40</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>114</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>40</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>115</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>40</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>116</ID>
+                  <Description>"06"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>117</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>48</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>118</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>48</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>119</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>48</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>120</ID>
+                  <Description>"07"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>121</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>50</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>122</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>50</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>123</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>50</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>124</ID>
+                  <Description>"08"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>125</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>58</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>126</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>58</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>127</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>58</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>128</ID>
+                  <Description>"09"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>129</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>60</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>130</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>60</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>131</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>60</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>132</ID>
+                  <Description>"10"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>133</ID>
+                      <Description>"Type"</Description>
+                      <DropDownListLink>-Stats ID-</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                        <Offset>68</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>134</ID>
+                      <Description>"Rank"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>14</Offset>
+                        <Offset>68</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>135</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_kingdonstate_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>68</Offset>
+                        <Offset>10</Offset>
+                        <Offset>28</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
               <ID>88</ID>
-              <Description>"Stats"</Description>
+              <Description>"Kingdom"</Description>
+              <Options moHideChildren="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
@@ -1692,10 +2311,37 @@ Kingmaker.Kingdom.KingdomTimelineManager:UpdateTimeline+4e6: 48 8B 09           
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>141</ID>
+      <Description>"Disable scripts when restart game / return to main menu"</Description>
+      <Color>8000FF</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+    <CheatEntry>
       <ID>52</ID>
       <Description>"Pathfinder: Kingmaker - Enhanced Plus Edition 2.1.7b  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Options moHideChildren="1"/>
       <Color>800080</Color>
       <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>142</ID>
+          <Description>"-Stats ID-"</Description>
+          <DropDownList DisplayValueAsItem="1">0:Community
+1:Loyality
+2:Military
+3:Economy
+4:Relations
+5:Divine
+6:Arcane
+7:Stability
+8:Culture
+9:Espionage
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>0000</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
@@ -1709,7 +2355,7 @@ end
 
 
 
-IDs = {25, 26, 32, 33, 34, 35, 6, 50, 51, 40, 41,
+IDs = {52, 25, 26, 32, 33, 34, 35, 6, 50, 51, 40, 41,
        }
 
 function contains(table, val)
