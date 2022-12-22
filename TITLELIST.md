@@ -67,6 +67,11 @@ ja-JP: ブリガンダイン ルーナジア戦記
 ## Brotato
 [Brotato (Steam)](https://store.steampowered.com/app/1942280/Brotato/)  
 
+## Chrono Trigger  
+[CHRONO TRIGGER (Steam)](https://store.steampowered.com/app/613830/CHRONO_TRIGGER/)  
+ja-JP: クロノ・トリガー  
+zh-TW: 超時空之鑰  
+
 ## CoreKeeper  
 [Core Keeper (Steam)](https://store.steampowered.com/app/1621690/Core_Keeper/)  
 
