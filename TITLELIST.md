@@ -88,6 +88,9 @@ zh-TW: 超時空之鑰
 [Dōkyūsei Bangin' Summer  (Steam)](https://store.steampowered.com/app/1689910/Remake/)  
 zh-TW: 同級生Remake  
 
+## ENDER LILIES Quietus of the Knights  
+[ENDER LILIES: Quietus of the Knights (Steam)](https://store.steampowered.com/app/1369630/ENDER_LILIES_Quietus_of_the_Knights/)  
+
 ## Endless Space 2    
 [Endless Space 2 (Steam)](https://store.steampowered.com/app/392110/ENDLESS_Space_2/)  
 
