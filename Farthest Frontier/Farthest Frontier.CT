@@ -17,6 +17,7 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>1</ID>
       <Description>"Enable"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 {$lua}
@@ -84,8 +85,9 @@ unregistersymbol(*)
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>13</ID>
-          <Description>"Firewood do not decrease"</Description>
+          <ID>18</ID>
+          <Description>"Item gather number mutiplier"</Description>
+          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
@@ -94,154 +96,96 @@ unregistersymbol(*)
 }
 
 [ENABLE]
-
-//aobscanmodule(INJECT_INF_FIREWOOD,GameAssembly.dll,F3 0F 58 87 78 05 00 00) // should be unique
-aobscanregion(INJECT_INF_FIREWOOD,ResidenceUpdateFirewoodProc+190,ResidenceUpdateFirewoodProc+1F0,F3 0F 58 87 ?? ?? 00 00 F3 0F 11 87 ?? ?? 00 00) // should be unique
-alloc(newmem,$1000,INJECT_INF_FIREWOOD)
-
-alloc(INJECT_INF_FIREWOODo,8)
+//ItemBundle.AddItems #2
+aobscanmodule(INJECT_MASS_ADD,GameAssembly.dll,01 41 20 41 83 F8 65) // should be unique
+alloc(newmem,$1000,INJECT_MASS_ADD)
 
 label(code)
 label(return)
-
-INJECT_INF_FIREWOODo:
-  readmem(INJECT_INF_FIREWOOD, 8)
+label(vf_item_add_multi)
 
 newmem:
+  cmp eax, 0
+  je code
+  cvtsi2ss xmm15, eax
+  vmovss xmm14, [vf_item_add_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
 
 code:
-  //addss xmm0,[rdi+00000578]
+  add [rcx+20],eax
+  cmp r8d,65
   jmp return
+align 10 cc
+  vf_item_add_multi:
+  dd (float)10
 
-INJECT_INF_FIREWOOD:
+INJECT_MASS_ADD:
   jmp newmem
-  nop 3
+  nop 2
 return:
-registersymbol(INJECT_INF_FIREWOOD)
-registersymbol(INJECT_INF_FIREWOODo)
+registersymbol(INJECT_MASS_ADD)
+registersymbol(vf_item_add_multi)
+
 [DISABLE]
 
-INJECT_INF_FIREWOOD:
-  //db F3 0F 58 87 78 05 00 00
-  readmem(INJECT_INF_FIREWOODo,8)
+INJECT_MASS_ADD:
+  db 01 41 20 41 83 F8 65
 
 unregistersymbol(*)
 dealloc(newmem)
-dealloc(INJECT_INF_FIREWOODo)
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+80E9E4
-
-GameAssembly.dll+80E9B8: E8 33 F0 F9 FF           - call ParticleFXPlayer.Stop
-GameAssembly.dll+80E9BD: 4C 8B 7C 24 50           - mov r15,[rsp+50]
-GameAssembly.dll+80E9C2: 48 8B B4 24 80 00 00 00  - mov rsi,[rsp+00000080]
-GameAssembly.dll+80E9CA: 48 8B 6C 24 78           - mov rbp,[rsp+78]
-GameAssembly.dll+80E9CF: 48 8B 5C 24 70           - mov rbx,[rsp+70]
-GameAssembly.dll+80E9D4: 48 83 C4 58              - add rsp,58
-GameAssembly.dll+80E9D8: 41 5E                    - pop r14
-GameAssembly.dll+80E9DA: 5F                       - pop rdi
-GameAssembly.dll+80E9DB: C3                       - ret 
-GameAssembly.dll+80E9DC: F3 0F 10 87 7C 05 00 00  - movss xmm0,[rdi+0000057C]
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+80E9E4: F3 0F 58 87 78 05 00 00  - addss xmm0,[rdi+00000578]
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+80E9EC: F3 0F 11 87 7C 05 00 00  - movss [rdi+0000057C],xmm0
-GameAssembly.dll+80E9F4: 48 8B 0D 15 3C 6F 01     - mov rcx,[GameAssembly.dll+1F02610]
-GameAssembly.dll+80E9FB: F6 81 33 01 00 00 01     - test byte ptr [rcx+00000133],01
-GameAssembly.dll+80EA02: 74 0E                    - je GameAssembly.dll+80EA12
-GameAssembly.dll+80EA04: 44 39 B1 E0 00 00 00     - cmp [rcx+000000E0],r14d
-GameAssembly.dll+80EA0B: 75 05                    - jne GameAssembly.dll+80EA12
-GameAssembly.dll+80EA0D: E8 BE 30 98 FF           - call GameAssembly.il2cpp_runtime_class_init
-GameAssembly.dll+80EA12: 45 33 C0                 - xor r8d,r8d
-GameAssembly.dll+80EA15: 33 D2                    - xor edx,edx
-GameAssembly.dll+80EA17: 48 8B CB                 - mov rcx,rbx
-}
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>14</ID>
-          <Description>"Water do not decrease"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-04
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-//aobscanmodule(INJECT_INF_WATER,GameAssembly.dll,F3 0F 58 8F 80 05 00 00) // should be unique
-aobscanregion(INJECT_INF_WATER,ResidenceUpdateWaterProc+100,ResidenceUpdateWaterProc+150,F3 0F 58 8F ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 0F 11 8F ?? ?? 00 00) // should be unique
-alloc(newmem,$1000,INJECT_INF_WATER)
-
-alloc(INJECT_INF_WATERo,8)
-
-label(code)
-label(return)
-
-INJECT_INF_WATERo:
-  readmem(INJECT_INF_WATER, 8)
-
-newmem:
-
-code:
-  //addss xmm1,[rdi+00000580]
-  jmp return
-
-INJECT_INF_WATER:
-  jmp newmem
-  nop 3
-return:
-registersymbol(INJECT_INF_WATER)
-registersymbol(INJECT_INF_WATERo)
-[DISABLE]
-
-INJECT_INF_WATER:
-  //db F3 0F 58 8F 80 05 00 00
-  readmem(INJECT_INF_WATERo, 8)
-
-unregistersymbol(*)
-dealloc(newmem)
-dealloc(INJECT_INF_WATERo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+80EF68
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B0855
 
-GameAssembly.dll+80EF38: 89 9F 84 05 00 00        - mov [rdi+00000584],ebx
-GameAssembly.dll+80EF3E: 4C 8B 7C 24 50           - mov r15,[rsp+50]
-GameAssembly.dll+80EF43: 4C 8B 74 24 58           - mov r14,[rsp+58]
-GameAssembly.dll+80EF48: 48 8B B4 24 80 00 00 00  - mov rsi,[rsp+00000080]
-GameAssembly.dll+80EF50: 48 8B 6C 24 78           - mov rbp,[rsp+78]
-GameAssembly.dll+80EF55: 48 8B 5C 24 70           - mov rbx,[rsp+70]
-GameAssembly.dll+80EF5A: 48 83 C4 60              - add rsp,60
-GameAssembly.dll+80EF5E: 5F                       - pop rdi
-GameAssembly.dll+80EF5F: C3                       - ret 
-GameAssembly.dll+80EF60: F3 0F 10 8F 84 05 00 00  - movss xmm1,[rdi+00000584]
+GameAssembly.dll+4B0832: 4A 8D 0C 80           - lea rcx,[rax+r8*4]
+GameAssembly.dll+4B0836: 48 85 D2              - test rdx,rdx
+GameAssembly.dll+4B0839: 74 28                 - je GameAssembly.dll+4B0863
+GameAssembly.dll+4B083B: 48 8B 82 98 00 00 00  - mov rax,[rdx+00000098]
+GameAssembly.dll+4B0842: 48 85 C0              - test rax,rax
+GameAssembly.dll+4B0845: 74 1C                 - je GameAssembly.dll+4B0863
+GameAssembly.dll+4B0847: 44 3B 40 18           - cmp r8d,[rax+18]
+GameAssembly.dll+4B084B: 73 1C                 - jae GameAssembly.dll+4B0869
+GameAssembly.dll+4B084D: 42 8B 44 80 20        - mov eax,[rax+r8*4+20]
+GameAssembly.dll+4B0852: 41 FF C0              - inc r8d
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+80EF68: F3 0F 58 8F 80 05 00 00  - addss xmm1,[rdi+00000580]
+GameAssembly.dll+4B0855: 01 41 20              - add [rcx+20],eax
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+80EF70: 0F 2F 0D 29 20 11 01     - comiss xmm1,[GameAssembly.dll+1920FA0]
-GameAssembly.dll+80EF77: F3 0F 11 8F 84 05 00 00  - movss [rdi+00000584],xmm1
-GameAssembly.dll+80EF7F: 72 BD                    - jb GameAssembly.dll+80EF3E
-GameAssembly.dll+80EF81: 0F 57 C0                 - xorps xmm0,xmm0
-GameAssembly.dll+80EF84: 8B C0                    - mov eax,eax
-GameAssembly.dll+80EF86: 45 33 C0                 - xor r8d,r8d
-GameAssembly.dll+80EF89: F2 48 0F 2A C0           - cvtsi2sd xmm0,rax
-GameAssembly.dll+80EF8E: 66 0F 5A C0              - cvtpd2ps xmm0,xmm0
-GameAssembly.dll+80EF92: E8 C9 31 50 00           - call UnityEngine.Mathf.Min
-GameAssembly.dll+80EF97: F3 48 0F 2C F0           - cvttss2si rsi,xmm0
+GameAssembly.dll+4B0858: 41 83 F8 65           - cmp r8d,65
+GameAssembly.dll+4B085C: 72 C2                 - jb GameAssembly.dll+4B0820
+GameAssembly.dll+4B085E: 48 83 C4 28           - add rsp,28
+GameAssembly.dll+4B0862: C3                    - ret 
+GameAssembly.dll+4B0863: E8 38 75 D5 FF        - call GameAssembly.dll+207DA0
+GameAssembly.dll+4B0868: CC                    - int 3 
+GameAssembly.dll+4B0869: E8 42 71 D5 FF        - call GameAssembly.dll+2079B0
+GameAssembly.dll+4B086E: 48 8B C8              - mov rcx,rax
+GameAssembly.dll+4B0871: 33 D2                 - xor edx,edx
+GameAssembly.dll+4B0873: E8 E8 74 D5 FF        - call GameAssembly.dll+207D60
 }
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"Multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_item_add_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>16</ID>
-          <Description>"_WIP"</Description>
+          <ID>27</ID>
+          <Description>"Experimental"</Description>
+          <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
               <ID>11</ID>
-              <Description>"Selected resource (pause game)"</Description>
+              <Description>"Selected resource"</Description>
+              <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Farthest Frontier.exe
+              <AssemblerScript Async="1">{ Game   : Farthest Frontier.exe
   Version: 
   Date   : 2023-01-03
   Author : bbfox@https://opencheattables.com
@@ -254,15 +198,78 @@ alloc(newmem,$1000,INJECT_SELECTED_OBJECT)
 
 label(code)
 label(return)
-label(i_base_sel_object_addr)
+label(i_base_sel_object_addr1)
+label(i_base_sel_object_addr2)
+label(i_base_sel_object_addr3)
+label(i_base_sel_object_addr4)
+label(i_base_sel_object_addr5)
+label(is_reset_data1)
 
 newmem:
-  push r15
-  push r14
-  lea r15, [rax+rcx*4+20]
+  cmp dword ptr [is_reset_data1], 1
+  jne do_start
+  mov qword ptr [i_base_sel_object_addr1], 0
+  mov qword ptr [i_base_sel_object_addr2], 0
+  mov qword ptr [i_base_sel_object_addr3], 0
+  mov qword ptr [i_base_sel_object_addr4], 0
+  mov qword ptr [i_base_sel_object_addr5], 0
+  mov dword ptr [is_reset_data1], 0
 
-  mov [i_base_sel_object_addr], r15
-  pop r14
+do_start:
+  push r15
+
+  lea r15, [rax+rcx*4+20]
+  cmp [r15], 0
+  je endp
+
+check1:
+  cmp [i_base_sel_object_addr1], r15
+  je endp
+
+  cmp qword ptr [i_base_sel_object_addr1], 0
+  jne check2
+  mov [i_base_sel_object_addr1], r15
+  jmp endp
+
+check2:
+  cmp [i_base_sel_object_addr2], r15
+  je endp
+
+  cmp qword ptr [i_base_sel_object_addr2], 0
+  jne check3
+  mov [i_base_sel_object_addr2], r15
+  jmp endp
+
+check3:
+  cmp [i_base_sel_object_addr3], r15
+  je endp
+
+  cmp qword ptr [i_base_sel_object_addr3], 0
+  jne check4
+  mov [i_base_sel_object_addr3], r15
+  jmp endp
+
+check4:
+  cmp [i_base_sel_object_addr4], r15
+  je endp
+
+  cmp qword ptr [i_base_sel_object_addr4], 0
+  jne check5
+  mov [i_base_sel_object_addr4], r15
+  jmp endp
+
+check5:
+  cmp [i_base_sel_object_addr5], r15
+  je endp
+
+  cmp qword ptr [i_base_sel_object_addr5], 0
+  jne endp
+  mov [i_base_sel_object_addr5], r15
+  jmp endp
+
+
+endp:
+
   pop r15
 
 code:
@@ -270,21 +277,32 @@ code:
   mov [rdx+rcx*4+20],eax
   jmp return
 align 10 cc
-  i_base_sel_object_addr:
+  i_base_sel_object_addr1:
   dq 0
-  align 10 cc
-  db 0
-  align 10 cc
-  db 0
-  i_idx:
+  i_base_sel_object_addr2:
+  dq 0
+  i_base_sel_object_addr3:
+  dq 0
+  i_base_sel_object_addr4:
+  dq 0
+  i_base_sel_object_addr5:
+  dq 0
+  is_reset_data1:
   dd 0
+
 
 INJECT_SELECTED_OBJECT:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_SELECTED_OBJECT)
-registersymbol(i_base_sel_object_addr)
+registersymbol(i_base_sel_object_addr1)
+registersymbol(i_base_sel_object_addr2)
+registersymbol(i_base_sel_object_addr3)
+registersymbol(i_base_sel_object_addr4)
+registersymbol(i_base_sel_object_addr5)
+registersymbol(is_reset_data1)
+
 [DISABLE]
 
 INJECT_SELECTED_OBJECT:
@@ -323,88 +341,92 @@ GameAssembly.dll+4B1870: 89 87 A4 00 00 00     - mov [rdi+000000A4],eax
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>12</ID>
-                  <Description>"Count"</Description>
+                  <ID>20</ID>
+                  <Description>"1. Pause game"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>21</ID>
+                  <Description>"2. Restart script for each different resource spot"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>26</ID>
+                  <Description>"Reset data?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr</Address>
+                  <Address>is_reset_data1</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"Number 1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_sel_object_addr1</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>23</ID>
+                  <Description>"Number 2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_sel_object_addr2</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>22</ID>
+                  <Description>"Number 3"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_sel_object_addr3</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>24</ID>
+                  <Description>"Number 4"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_sel_object_addr4</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>25</ID>
+                  <Description>"Number 5"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_sel_object_addr5</Address>
                   <Offsets>
                     <Offset>0</Offset>
                   </Offsets>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-            <CheatEntry>
-              <ID>15</ID>
-              <Description>"Items in storage do not decrease"</Description>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-04
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-//aobscanmodule(INJECT_INF_ITEMS,GameAssembly.dll,C6 44 24 60 00 E8) // should be unique
-aobscanregion(INJECT_INF_ITEMS,ItemStorageRemoveItemsProc+10,ItemStorageRemoveItemsProc+40,C6 44 24 60 00 E8) // should be unique
-alloc(newmem,$1000,INJECT_INF_ITEMS)
-
-label(code)
-label(return)
-
-newmem:
-  mov r8d, 0
-
-code:
-  mov byte ptr [rsp+60],00
-  jmp return
-
-INJECT_INF_ITEMS:
-  jmp newmem
-return:
-registersymbol(INJECT_INF_ITEMS)
-
-[DISABLE]
-
-INJECT_INF_ITEMS:
-  db C6 44 24 60 00
-
-unregistersymbol(INJECT_INF_ITEMS)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+938C9B
-
-GameAssembly.dll+938C6E: CC                          - int 3 
-GameAssembly.dll+938C6F: CC                          - int 3 
-ItemStorageRemoveItemsProc: 48 83 EC 48                 - sub rsp,48
-GameAssembly.dll+938C74: 48 C7 44 24 38 00 00 00 00  - mov qword ptr [rsp+38],00000000
-GameAssembly.dll+938C7D: 48 8D 44 24 60              - lea rax,[rsp+60]
-GameAssembly.dll+938C82: C6 44 24 30 00              - mov byte ptr [rsp+30],00
-GameAssembly.dll+938C87: 48 89 44 24 28              - mov [rsp+28],rax
-GameAssembly.dll+938C8C: 48 8D 44 24 58              - lea rax,[rsp+58]
-GameAssembly.dll+938C91: 48 89 44 24 20              - mov [rsp+20],rax
-GameAssembly.dll+938C96: C6 44 24 58 00              - mov byte ptr [rsp+58],00
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+938C9B: C6 44 24 60 00              - mov byte ptr [rsp+60],00
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+938CA0: E8 0B 00 00 00              - call ItemStorage.RemoveItems
-GameAssembly.dll+938CA5: 48 83 C4 48                 - add rsp,48
-GameAssembly.dll+938CA9: C3                          - ret 
-GameAssembly.dll+938CAA: CC                          - int 3 
-GameAssembly.dll+938CAB: CC                          - int 3 
-GameAssembly.dll+938CAC: CC                          - int 3 
-GameAssembly.dll+938CAD: CC                          - int 3 
-GameAssembly.dll+938CAE: CC                          - int 3 
-GameAssembly.dll+938CAF: CC                          - int 3 
-ItemStorage.RemoveItems: 48 89 5C 24 10              - mov [rsp+10],rbx
-}
-</AssemblerScript>
-            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>28</ID>
+      <Description>"Farthest Frontier v0.8.0  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
