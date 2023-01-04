@@ -40,19 +40,33 @@ end
 
 {$asm}
 define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+define(ResidenceUpdateFirewoodProc, "Residence.UpdateFirewood")
+define(ResidenceUpdateWaterProc, "Residence.UpdateWater")
+define(VillagerEatIfNecessaryProc, "Villager.EatIfNecessary")
+define(ItemStorageRemoveItemsProc, "ItemStorage.RemoveItems")
 
 //Residence.UpdateFirewood
 //GameAssembly.dll+80E9DC
 
-//Residence.UpdateWater
-//GameAssembly.dll+80EF60
+//Residence.UpdateWater GameAssembly.dll+80EE42
+//GameAssembly.dll+80EF60 (11E)
 
 //Villager.EatIfNecessary
 //GameAssembly.dll+5A64EF - 41 B8 01000000        - mov r8d,00000001
 
+//Villager.CalculateToolWear   GameAssembly.dll+5A4CD0
+//GameAssembly.dll+5A4E49
+
+
+//ItemStorage.RemoveItems  GameAssembly.dll+938C74
+
 
 
 registersymbol(ResourceManagerClearItemCountsProc)
+registersymbol(ResidenceUpdateFirewoodProc)
+registersymbol(ResidenceUpdateWaterProc)
+registersymbol(VillagerEatIfNecessaryProc)
+registersymbol(ItemStorageRemoveItemsProc)
 
 [DISABLE]
 {$lua}
@@ -70,104 +84,164 @@ unregistersymbol(*)
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>6</ID>
-          <Description>"Set min resource temporary (fake number)"</Description>
+          <ID>13</ID>
+          <Description>"Firewood do not decrease"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
-  Date   : 2023-01-03
+  Date   : 2023-01-04
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-//aobscanmodule(INJECT_MIN_RES,GameAssembly.dll,89 58 18 89 58 24) // should be unique
-aobscanregion(INJECT_MIN_RES,ResourceManagerClearItemCountsProc+A0,ResourceManagerClearItemCountsProc+F0,89 58 18 89 58 24) // should be unique
-alloc(newmem,$1000,INJECT_MIN_RES)
+//aobscanmodule(INJECT_INF_FIREWOOD,GameAssembly.dll,F3 0F 58 87 78 05 00 00) // should be unique
+aobscanregion(INJECT_INF_FIREWOOD,ResidenceUpdateFirewoodProc+190,ResidenceUpdateFirewoodProc+1F0,F3 0F 58 87 ?? ?? 00 00 F3 0F 11 87 ?? ?? 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_FIREWOOD)
+
+alloc(INJECT_INF_FIREWOODo,8)
 
 label(code)
 label(return)
-label(i_min_res_cnt)
+
+INJECT_INF_FIREWOODo:
+  readmem(INJECT_INF_FIREWOOD, 8)
 
 newmem:
-  cmp ebx, 0
-  jne code
-  mov ebx, [i_min_res_cnt]
 
 code:
-  mov [rax+18],ebx
-  mov [rax+24],ebx
+  //addss xmm0,[rdi+00000578]
   jmp return
-align 10 cc
-  i_min_res_cnt:
-  dd 64
 
-INJECT_MIN_RES:
+INJECT_INF_FIREWOOD:
   jmp newmem
-  nop
+  nop 3
 return:
-registersymbol(INJECT_MIN_RES)
-registersymbol(i_min_res_cnt)
+registersymbol(INJECT_INF_FIREWOOD)
+registersymbol(INJECT_INF_FIREWOODo)
 [DISABLE]
 
-INJECT_MIN_RES:
-  db 89 58 18 89 58 24
+INJECT_INF_FIREWOOD:
+  //db F3 0F 58 87 78 05 00 00
+  readmem(INJECT_INF_FIREWOODo,8)
 
 unregistersymbol(*)
 dealloc(newmem)
-
+dealloc(INJECT_INF_FIREWOODo)
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2DBD8F
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+80E9E4
 
-GameAssembly.dll+2DBD64: 33 DB                          - xor ebx,ebx
-GameAssembly.dll+2DBD66: 66 66 0F 1F 84 00 00 00 00 00  - nop word ptr [rax+rax+00000000]
-GameAssembly.dll+2DBD70: 48 8B 15 E9 38 C6 01           - mov rdx,[GameAssembly.dll+1F3F660]
-GameAssembly.dll+2DBD77: 48 8D 4C 24 28                 - lea rcx,[rsp+28]
-GameAssembly.dll+2DBD7C: E8 FF 2C C2 00                 - call GameAssembly.dll+EFEA80
-GameAssembly.dll+2DBD81: 84 C0                          - test al,al
-GameAssembly.dll+2DBD83: 74 1E                          - je GameAssembly.dll+2DBDA3
-GameAssembly.dll+2DBD85: 48 8B 44 24 38                 - mov rax,[rsp+38]
-GameAssembly.dll+2DBD8A: 48 85 C0                       - test rax,rax
-GameAssembly.dll+2DBD8D: 74 48                          - je GameAssembly.dll+2DBDD7
+GameAssembly.dll+80E9B8: E8 33 F0 F9 FF           - call ParticleFXPlayer.Stop
+GameAssembly.dll+80E9BD: 4C 8B 7C 24 50           - mov r15,[rsp+50]
+GameAssembly.dll+80E9C2: 48 8B B4 24 80 00 00 00  - mov rsi,[rsp+00000080]
+GameAssembly.dll+80E9CA: 48 8B 6C 24 78           - mov rbp,[rsp+78]
+GameAssembly.dll+80E9CF: 48 8B 5C 24 70           - mov rbx,[rsp+70]
+GameAssembly.dll+80E9D4: 48 83 C4 58              - add rsp,58
+GameAssembly.dll+80E9D8: 41 5E                    - pop r14
+GameAssembly.dll+80E9DA: 5F                       - pop rdi
+GameAssembly.dll+80E9DB: C3                       - ret 
+GameAssembly.dll+80E9DC: F3 0F 10 87 7C 05 00 00  - movss xmm0,[rdi+0000057C]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+2DBD8F: 89 58 18                       - mov [rax+18],ebx
+GameAssembly.dll+80E9E4: F3 0F 58 87 78 05 00 00  - addss xmm0,[rdi+00000578]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+2DBD92: 89 58 24                       - mov [rax+24],ebx
-GameAssembly.dll+2DBD95: 48 89 58 2C                    - mov [rax+2C],rbx
-GameAssembly.dll+2DBD99: 48 89 58 34                    - mov [rax+34],rbx
-GameAssembly.dll+2DBD9D: 48 89 58 3C                    - mov [rax+3C],rbx
-GameAssembly.dll+2DBDA1: EB CD                          - jmp GameAssembly.dll+2DBD70
-GameAssembly.dll+2DBDA3: 48 8B 15 26 38 C6 01           - mov rdx,[GameAssembly.dll+1F3F5D0]
-GameAssembly.dll+2DBDAA: 48 8D 4C 24 28                 - lea rcx,[rsp+28]
-GameAssembly.dll+2DBDAF: E8 6C 0F F8 FF                 - call &lt;SelectEverySelectableCoroutine&gt;d__63.System.IDisposable.Dispose
-GameAssembly.dll+2DBDB4: EB 1B                          - jmp GameAssembly.dll+2DBDD1
-GameAssembly.dll+2DBDB6: 48 8B 15 13 38 C6 01           - mov rdx,[GameAssembly.dll+1F3F5D0]
+GameAssembly.dll+80E9EC: F3 0F 11 87 7C 05 00 00  - movss [rdi+0000057C],xmm0
+GameAssembly.dll+80E9F4: 48 8B 0D 15 3C 6F 01     - mov rcx,[GameAssembly.dll+1F02610]
+GameAssembly.dll+80E9FB: F6 81 33 01 00 00 01     - test byte ptr [rcx+00000133],01
+GameAssembly.dll+80EA02: 74 0E                    - je GameAssembly.dll+80EA12
+GameAssembly.dll+80EA04: 44 39 B1 E0 00 00 00     - cmp [rcx+000000E0],r14d
+GameAssembly.dll+80EA0B: 75 05                    - jne GameAssembly.dll+80EA12
+GameAssembly.dll+80EA0D: E8 BE 30 98 FF           - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+80EA12: 45 33 C0                 - xor r8d,r8d
+GameAssembly.dll+80EA15: 33 D2                    - xor edx,edx
+GameAssembly.dll+80EA17: 48 8B CB                 - mov rcx,rbx
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"Water do not decrease"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_INF_WATER,GameAssembly.dll,F3 0F 58 8F 80 05 00 00) // should be unique
+aobscanregion(INJECT_INF_WATER,ResidenceUpdateWaterProc+100,ResidenceUpdateWaterProc+150,F3 0F 58 8F ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 0F 11 8F ?? ?? 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_WATER)
+
+alloc(INJECT_INF_WATERo,8)
+
+label(code)
+label(return)
+
+INJECT_INF_WATERo:
+  readmem(INJECT_INF_WATER, 8)
+
+newmem:
+
+code:
+  //addss xmm1,[rdi+00000580]
+  jmp return
+
+INJECT_INF_WATER:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_INF_WATER)
+registersymbol(INJECT_INF_WATERo)
+[DISABLE]
+
+INJECT_INF_WATER:
+  //db F3 0F 58 8F 80 05 00 00
+  readmem(INJECT_INF_WATERo, 8)
+
+unregistersymbol(*)
+dealloc(newmem)
+dealloc(INJECT_INF_WATERo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+80EF68
+
+GameAssembly.dll+80EF38: 89 9F 84 05 00 00        - mov [rdi+00000584],ebx
+GameAssembly.dll+80EF3E: 4C 8B 7C 24 50           - mov r15,[rsp+50]
+GameAssembly.dll+80EF43: 4C 8B 74 24 58           - mov r14,[rsp+58]
+GameAssembly.dll+80EF48: 48 8B B4 24 80 00 00 00  - mov rsi,[rsp+00000080]
+GameAssembly.dll+80EF50: 48 8B 6C 24 78           - mov rbp,[rsp+78]
+GameAssembly.dll+80EF55: 48 8B 5C 24 70           - mov rbx,[rsp+70]
+GameAssembly.dll+80EF5A: 48 83 C4 60              - add rsp,60
+GameAssembly.dll+80EF5E: 5F                       - pop rdi
+GameAssembly.dll+80EF5F: C3                       - ret 
+GameAssembly.dll+80EF60: F3 0F 10 8F 84 05 00 00  - movss xmm1,[rdi+00000584]
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+80EF68: F3 0F 58 8F 80 05 00 00  - addss xmm1,[rdi+00000580]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+80EF70: 0F 2F 0D 29 20 11 01     - comiss xmm1,[GameAssembly.dll+1920FA0]
+GameAssembly.dll+80EF77: F3 0F 11 8F 84 05 00 00  - movss [rdi+00000584],xmm1
+GameAssembly.dll+80EF7F: 72 BD                    - jb GameAssembly.dll+80EF3E
+GameAssembly.dll+80EF81: 0F 57 C0                 - xorps xmm0,xmm0
+GameAssembly.dll+80EF84: 8B C0                    - mov eax,eax
+GameAssembly.dll+80EF86: 45 33 C0                 - xor r8d,r8d
+GameAssembly.dll+80EF89: F2 48 0F 2A C0           - cvtsi2sd xmm0,rax
+GameAssembly.dll+80EF8E: 66 0F 5A C0              - cvtpd2ps xmm0,xmm0
+GameAssembly.dll+80EF92: E8 C9 31 50 00           - call UnityEngine.Mathf.Min
+GameAssembly.dll+80EF97: F3 48 0F 2C F0           - cvttss2si rsi,xmm0
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"_WIP"</Description>
+          <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>8</ID>
-              <Description>"Resource will roll back to "real number" if this script disabled"</Description>
-              <Color>8000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>7</ID>
-              <Description>"Min. resource fake number"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_min_res_cnt</Address>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>11</ID>
-      <Description>"Selected resource (pause game)"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Farthest Frontier.exe
+              <ID>11</ID>
+              <Description>"Selected resource (pause game)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
   Date   : 2023-01-03
   Author : bbfox@https://opencheattables.com
@@ -184,8 +258,11 @@ label(i_base_sel_object_addr)
 
 newmem:
   push r15
+  push r14
   lea r15, [rax+rcx*4+20]
+
   mov [i_base_sel_object_addr], r15
+  pop r14
   pop r15
 
 code:
@@ -195,6 +272,12 @@ code:
 align 10 cc
   i_base_sel_object_addr:
   dq 0
+  align 10 cc
+  db 0
+  align 10 cc
+  db 0
+  i_idx:
+  dd 0
 
 INJECT_SELECTED_OBJECT:
   jmp newmem
@@ -238,127 +321,157 @@ GameAssembly.dll+4B186B: 48 8B 74 24 40        - mov rsi,[rsp+40]
 GameAssembly.dll+4B1870: 89 87 A4 00 00 00     - mov [rdi+000000A4],eax
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>12</ID>
-          <Description>"Count"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_base_sel_object_addr</Address>
-          <Offsets>
-            <Offset>0</Offset>
-          </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>12</ID>
+                  <Description>"Count"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_sel_object_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>15</ID>
+              <Description>"Items in storage do not decrease"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_INF_ITEMS,GameAssembly.dll,C6 44 24 60 00 E8) // should be unique
+aobscanregion(INJECT_INF_ITEMS,ItemStorageRemoveItemsProc+10,ItemStorageRemoveItemsProc+40,C6 44 24 60 00 E8) // should be unique
+alloc(newmem,$1000,INJECT_INF_ITEMS)
+
+label(code)
+label(return)
+
+newmem:
+  mov r8d, 0
+
+code:
+  mov byte ptr [rsp+60],00
+  jmp return
+
+INJECT_INF_ITEMS:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_ITEMS)
+
+[DISABLE]
+
+INJECT_INF_ITEMS:
+  db C6 44 24 60 00
+
+unregistersymbol(INJECT_INF_ITEMS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+938C9B
+
+GameAssembly.dll+938C6E: CC                          - int 3 
+GameAssembly.dll+938C6F: CC                          - int 3 
+ItemStorageRemoveItemsProc: 48 83 EC 48                 - sub rsp,48
+GameAssembly.dll+938C74: 48 C7 44 24 38 00 00 00 00  - mov qword ptr [rsp+38],00000000
+GameAssembly.dll+938C7D: 48 8D 44 24 60              - lea rax,[rsp+60]
+GameAssembly.dll+938C82: C6 44 24 30 00              - mov byte ptr [rsp+30],00
+GameAssembly.dll+938C87: 48 89 44 24 28              - mov [rsp+28],rax
+GameAssembly.dll+938C8C: 48 8D 44 24 58              - lea rax,[rsp+58]
+GameAssembly.dll+938C91: 48 89 44 24 20              - mov [rsp+20],rax
+GameAssembly.dll+938C96: C6 44 24 58 00              - mov byte ptr [rsp+58],00
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+938C9B: C6 44 24 60 00              - mov byte ptr [rsp+60],00
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+938CA0: E8 0B 00 00 00              - call ItemStorage.RemoveItems
+GameAssembly.dll+938CA5: 48 83 C4 48                 - add rsp,48
+GameAssembly.dll+938CA9: C3                          - ret 
+GameAssembly.dll+938CAA: CC                          - int 3 
+GameAssembly.dll+938CAB: CC                          - int 3 
+GameAssembly.dll+938CAC: CC                          - int 3 
+GameAssembly.dll+938CAD: CC                          - int 3 
+GameAssembly.dll+938CAE: CC                          - int 3 
+GameAssembly.dll+938CAF: CC                          - int 3 
+ItemStorage.RemoveItems: 48 89 5C 24 10              - mov [rsp+10],rbx
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <CheatCodes>
-    <CodeEntry>
-      <Description>Code item count :mov [rcx+1C],eax</Description>
-      <AddressString>GameAssembly.dll+2E75B6</AddressString>
-      <Before>
-        <Byte>74</Byte>
-        <Byte>3C</Byte>
-        <Byte>8B</Byte>
-        <Byte>41</Byte>
-        <Byte>18</Byte>
-      </Before>
-      <Actual>
-        <Byte>89</Byte>
-        <Byte>41</Byte>
-        <Byte>1C</Byte>
-      </Actual>
-      <After>
-        <Byte>EB</Byte>
-        <Byte>D9</Byte>
-        <Byte>48</Byte>
-        <Byte>8B</Byte>
-        <Byte>15</Byte>
-      </After>
-    </CodeEntry>
-  </CheatCodes>
   <UserdefinedSymbols/>
-  <Structures StructVersion="2">
-    <Structure Name="UInt32[]" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-      <Elements>
-        <Element Offset="24" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000018" Description="Count" DisplayMethod="unsigned integer"/>
-        <Element Offset="32" Vartype="Pointer" Bytesize="8" OffsetHex="00000020" Description="Item[0]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="40" Vartype="Pointer" Bytesize="8" OffsetHex="00000028" Description="Item[1]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="48" Vartype="Pointer" Bytesize="8" OffsetHex="00000030" Description="Item[2]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="56" Vartype="Pointer" Bytesize="8" OffsetHex="00000038" Description="Item[3]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="64" Vartype="Pointer" Bytesize="8" OffsetHex="00000040" Description="Item[4]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="72" Vartype="Pointer" Bytesize="8" OffsetHex="00000048" Description="Item[5]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="80" Vartype="Pointer" Bytesize="8" OffsetHex="00000050" Description="Item[6]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="88" Vartype="Pointer" Bytesize="8" OffsetHex="00000058" Description="Item[7]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="96" Vartype="Pointer" Bytesize="8" OffsetHex="00000060" Description="Item[8]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-        <Element Offset="104" Vartype="Pointer" Bytesize="8" OffsetHex="00000068" Description="Item[9]" DisplayMethod="unsigned integer">
-          <Structure Name="System.UInt32" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-            <Elements>
-              <Element Offset="16" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000010" Description="m_value" DisplayMethod="unsigned integer"/>
-            </Elements>
-          </Structure>
-        </Element>
-      </Elements>
-    </Structure>
-    <Structure Name="UInt32[]" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-      <Elements>
-        <Element Offset="24" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000018" Description="Count" DisplayMethod="unsigned integer"/>
-        <Element Offset="32" Vartype="4 Bytes" Bytesize="4" RLECount="114" OffsetHex="00000020" Description="Item[0]" DisplayMethod="unsigned integer"/>
-      </Elements>
-    </Structure>
-  </Structures>
+  <LuaScript>--[[
+from https://forum.cheatengine.org/viewtopic.php?p=5659739&amp;sid=72bd2d145c30bf0d344304bce17ea990#5659739
+FauDrei
+--]]
+function toHex(num)
+    if num == 0 then
+        return '0'
+    end
+    local neg = false
+    if num &lt; 0 then
+        neg = true
+        num = num * -1
+    end
+    local hexstr = "0123456789ABCDEF"
+    local result = ""
+    while num &gt; 0 do
+        local n = math.mod(num, 16)
+        result = string.sub(hexstr, n + 1, n + 1) .. result
+        num = math.floor(num / 16)
+    end
+    if neg then
+        result = '-' .. result
+    end
+    return result
+end
+
+
+function reEscape(s)
+  local escPatChars = [[().%+-*?[^]]
+  s = s:gsub('.',function(c) if escPatChars:find(c,1,true) then return '%'..c end end)
+  return s
+end
+
+function findMethodAddrBySignature(namespace,classname,methodname,signature,check)
+  local meth = findMethodBySignature(namespace,classname,methodname,signature,check)
+  if meth~=nil and meth&gt;0 then
+    return mono_compile_method(meth)
+  end
+end
+
+function findMethodBySignature(namespace,classname,methodname,signature,check)
+  assert(type(signature)=='string',"invalid signature")
+  signature="^"..reEscape(signature:gsub(";",","))
+  local class = mono_findClass(namespace,classname)
+  if type(class)~='number' or class==0 then return nil end
+  local methods=mono_class_enumMethods(class)
+  if type(methods)~='table' or #methods&lt;1 then return nil end
+  if check then  print('check:'..methodname..": &lt;"..signature.."&gt; vs ") end
+  for i=1,#methods do
+   if methodname == methods[i].name then
+     local sign = mono_method_getSignature(methods[i].method)
+     if check then  print("  &gt;&gt; &lt;"..sign..'&gt;') end
+     if sign:match(signature) then
+       return methods[i].method
+     end
+   end
+  end
+end
+
+--registerLuaFunctionHighlight('tohex')
+registerLuaFunctionHighlight('toHex')
+registerLuaFunctionHighlight('reEscape')
+registerLuaFunctionHighlight('findMethodAddrBySignature')
+registerLuaFunctionHighlight('findMethodBySignature')
+
+</LuaScript>
 </CheatTable>
