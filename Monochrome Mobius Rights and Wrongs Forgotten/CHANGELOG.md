@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/01/04
+1. fixed error in Battle: Damage control
+
 ## 2022/12/21
 1. Revised for 12/21 update
 
