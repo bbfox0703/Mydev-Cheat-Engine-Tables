@@ -316,7 +316,7 @@ GameAssembly.dll+5A651A: E8 91 5B 32 00        - call VillagerHealth.Eat
         </CheatEntry>
         <CheatEntry>
           <ID>111</ID>
-          <Description>"Set villager move speed"</Description>
+          <Description>"Set villager move speed / life"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
@@ -333,26 +333,82 @@ alloc(newmem,$1000,INJECT_SET_VILLAGER_DATA)
 label(code)
 label(return)
 label(vf_moving_speed_multi)
+label(vf_shoe_bonus_base)
+label(is_set_life)
+label(is_set_armor)
+label(vf_min_armor_value)
 
 newmem:
+  cmp dword ptr [is_set_life], 1
+  jne check_armor
+
+  push r15
+  mov r15, [rbx+70]
+  test r15, r15
+  jz endp1
+  vmovss xmm15, [r15+58] //&lt;baseMaxLife&gt;k__BackingField
+  vmovss xmm14, [r15+48] //_life
+  vucomiss xmm14, xmm15
+  jae endp1
+  vmovss [r15+48], xmm15 //_life
+
+endp1:
+  pop r15
+
+
+check_armor:
+  cmp dword ptr [is_set_armor], 1
+  jne code
+
+  push r15
+  mov r15, [rbx+70]
+  test r15, r15
+  jz endp2
+  vmovss xmm15, [vf_min_armor_value]
+  vmovss xmm14, [r15+5C] //baseArmor
+  vucomiss xmm14, xmm15
+  jae endp2
+  vmovss [r15+5C], xmm15
+
+endp2:
+  pop r15
+
 
 code:
+  // orig code
   movss xmm6,[rbx+44]
+  //
 
   vmovss xmm14, [vf_moving_speed_multi]
   vmulss xmm6, xmm6, xmm14
+
+  vmovss xmm15, [vf_shoe_bonus_base]
+  vmovss [rbx+4C], xmm15
 
   jmp return
 align 10 cc
   vf_moving_speed_multi:
   dd (float)2.2
+  vf_shoe_bonus_base:
+  dd (float)0.1000000015
+  is_set_life:
+  dd 0
+  is_set_armor:
+  dd 1
+  vf_20:
+  dd (float)20
+  vf_min_armor_value:
+  dd (float)24
 
 INJECT_SET_VILLAGER_DATA:
   jmp newmem
 return:
 registersymbol(INJECT_SET_VILLAGER_DATA)
 registersymbol(vf_moving_speed_multi)
-
+registersymbol(vf_shoe_bonus_base)
+registersymbol(is_set_life)
+registersymbol(is_set_armor)
+registersymbol(vf_min_armor_value)
 [DISABLE]
 
 INJECT_SET_VILLAGER_DATA:
@@ -397,6 +453,50 @@ GameAssembly.dll+A367DF: 48 8B CF              - mov rcx,rdi
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_moving_speed_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>113</ID>
+              <Description>"Shoe bonus"</Description>
+              <DropDownList DisplayValueAsItem="1">0.1000000015:Default
+0.3:3x
+1.5:15x
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_shoe_bonus_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>114</ID>
+              <Description>"Set life when moving?"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_set_life</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>115</ID>
+              <Description>"Set min. armor when moving?"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_set_armor</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>116</ID>
+                  <Description>"Min. armor value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_min_armor_value</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
