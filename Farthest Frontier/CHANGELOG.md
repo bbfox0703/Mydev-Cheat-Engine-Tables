@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/01/14
+1. Added Try to prevent item corruption
+
 ## 2023/01/10
 1. Revised Set villager move speed / life
 

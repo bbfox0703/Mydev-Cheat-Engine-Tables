@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="44">
+<CheatTable CheatEngineTableVersion="42">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
@@ -315,6 +315,115 @@ GameAssembly.dll+5A651A: E8 91 5B 32 00        - call VillagerHealth.Eat
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>121</ID>
+          <Description>"Try to prevent item corruption"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MIN_FIELD_RAW_FOOD,GameAssembly.dll,8B CA FF C2 41 03 44 88 20 83 FA 65) // should be unique
+alloc(newmem,$1000,INJECT_SET_MIN_FIELD_RAW_FOOD)
+
+label(code)
+label(return)
+//ItemBundle.get_numberOfItems
+
+newmem:
+  cmp edx, #33 // move/add 25% or below buckets to 100% one
+  ja code
+
+  pushfq
+  push r15
+  push rcx
+
+  mov ecx,edx
+  mov r15d, [r8+rcx*4+20]
+  test r15d, r15d
+  jz endp
+
+
+  push r15
+  xor r15, r15
+  mov [r8+rcx*4+20], r15d
+  pop r15
+
+  mov ecx, 64
+
+  cmp dword ptr [r8+rcx*4+20], 0
+  jne do_add_it
+
+do_set_it:
+  mov [r8+rcx*4+20], r15d
+  jmp endp
+
+do_add_it:
+  add [r8+rcx*4+20], r15d
+
+endp:
+  pop rcx
+  pop r15
+  popfq
+
+
+code:
+  mov ecx,edx
+  inc edx
+  add eax,[r8+rcx*4+20]
+  jmp return
+align 10 cc
+  i_tmp1:
+  dd 0
+  i_last_var_addr:
+  dq 0
+
+INJECT_SET_MIN_FIELD_RAW_FOOD:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SET_MIN_FIELD_RAW_FOOD)
+[DISABLE]
+
+INJECT_SET_MIN_FIELD_RAW_FOOD:
+  db 8B CA FF C2 41 03 44 88 20
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B1A0B
+
+GameAssembly.dll+4B19EE: CC                    - int 3 
+GameAssembly.dll+4B19EF: CC                    - int 3 
+ItemBundle.get_numberOfItems: 48 83 EC 28           - sub rsp,28
+GameAssembly.dll+4B19F4: 4C 8B 81 98 00 00 00  - mov r8,[rcx+00000098]
+GameAssembly.dll+4B19FB: 33 C0                 - xor eax,eax
+GameAssembly.dll+4B19FD: 8D 50 01              - lea edx,[rax+01]
+GameAssembly.dll+4B1A00: 4D 85 C0              - test r8,r8
+GameAssembly.dll+4B1A03: 74 19                 - je GameAssembly.dll+4B1A1E
+GameAssembly.dll+4B1A05: 41 3B 50 18           - cmp edx,[r8+18]
+GameAssembly.dll+4B1A09: 73 19                 - jae GameAssembly.dll+4B1A24
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+4B1A0B: 8B CA                 - mov ecx,edx
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+4B1A0D: FF C2                 - inc edx
+GameAssembly.dll+4B1A0F: 41 03 44 88 20        - add eax,[r8+rcx*4+20]
+GameAssembly.dll+4B1A14: 83 FA 65              - cmp edx,65
+GameAssembly.dll+4B1A17: 7C E7                 - jl GameAssembly.dll+4B1A00
+GameAssembly.dll+4B1A19: 48 83 C4 28           - add rsp,28
+GameAssembly.dll+4B1A1D: C3                    - ret 
+GameAssembly.dll+4B1A1E: E8 7D 63 D5 FF        - call GameAssembly.dll+207DA0
+GameAssembly.dll+4B1A23: CC                    - int 3 
+GameAssembly.dll+4B1A24: E8 87 5F D5 FF        - call GameAssembly.dll+2079B0
+GameAssembly.dll+4B1A29: 48 8B C8              - mov rcx,rax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>111</ID>
           <Description>"Set villager move speed / life"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -398,7 +507,7 @@ align 10 cc
   vf_20:
   dd (float)20
   vf_min_armor_value:
-  dd (float)32
+  dd (float)45
 
 INJECT_SET_VILLAGER_DATA:
   jmp newmem
@@ -459,6 +568,7 @@ GameAssembly.dll+A367DF: 48 8B CF              - mov rcx,rdi
               <Description>"Shoe bonus"</Description>
               <DropDownList DisplayValueAsItem="1">0.1000000015:Default
 0.3:3x
+0.8999999762:0.9x
 1.5:15x
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
@@ -549,6 +659,8 @@ align 10 cc
   db 2F 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
   i_item_cnt_threshold:
   dd 64
+  i_item_min_cnt_threshold:
+  dd 2
 
 INJECT_MASS_ADD:
   jmp newmem
@@ -1921,19 +2033,17 @@ GameAssembly.dll+4B1870: 89 87 A4 00 00 00     - mov [rdi+000000A4],eax
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>119</ID>
-      <Description>"_WIP"</Description>
-      <Options moHideChildren="1"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
         <CheatEntry>
-          <ID>118</ID>
-          <Description>"UIBuildingInfoWindowTradingPost.UpdateGoldDisplays "</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
+          <ID>119</ID>
+          <Description>"_WIP"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>118</ID>
+              <Description>"UIBuildingInfoWindowTradingPost.UpdateGoldDisplays "</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
   Date   : 2023-01-12
   Author :
@@ -2001,6 +2111,8 @@ GameAssembly.dll+4B1A2C: 33 D2                 - xor edx,edx
 GameAssembly.dll+4B1A2E: E8 2D 63 D5 FF        - call GameAssembly.dll+207D60
 }
 </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
