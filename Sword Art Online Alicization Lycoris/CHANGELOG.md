@@ -1,5 +1,8 @@
 # Change log
 
+## 2022/01/14
+1. Fixed Level EXP multiplier
+
 ## 2022/12/09
 1. Updated for ver 3.12
 
