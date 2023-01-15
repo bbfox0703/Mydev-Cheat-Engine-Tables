@@ -317,10 +317,11 @@ GameAssembly.dll+5A651A: E8 91 5B 32 00        - call VillagerHealth.Eat
         <CheatEntry>
           <ID>121</ID>
           <Description>"Try to prevent item corruption"</Description>
+          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
-  Date   : 2023-01-14
+  Date   : 2023-01-15
   Author : bbfox@https://opencheattables.com
 }
 
@@ -331,12 +332,20 @@ alloc(newmem,$1000,INJECT_SET_MIN_FIELD_RAW_FOOD)
 
 label(code)
 label(return)
+label(is_inf_arrow)
+
 //ItemBundle.get_numberOfItems
 
 newmem:
-  cmp edx, #33 // move/add 25% or below buckets to 100% one
+  mov dword ptr [is_cur_object_arrow], 0
+
+
+normal_items:
+  cmp edx, #51 // move/add 51% or below buckets to 100% one
   ja code
 
+
+start_chk_corruption:
   pushfq
   push r15
   push rcx
@@ -354,6 +363,7 @@ newmem:
 
   mov ecx, 64
 
+check_100_percent_bucket:
   cmp dword ptr [r8+rcx*4+20], 0
   jne do_add_it
 
@@ -377,15 +387,21 @@ code:
   jmp return
 align 10 cc
   i_tmp1:
-  dd 0
+  dq 0
   i_last_var_addr:
   dq 0
+  is_inf_arrow:
+  dd 0
+  is_cur_object_arrow:
+  dd 0
 
 INJECT_SET_MIN_FIELD_RAW_FOOD:
   jmp newmem
   nop 4
 return:
 registersymbol(INJECT_SET_MIN_FIELD_RAW_FOOD)
+registersymbol(is_inf_arrow)
+
 [DISABLE]
 
 INJECT_SET_MIN_FIELD_RAW_FOOD:
@@ -446,8 +462,19 @@ label(vf_shoe_bonus_base)
 label(is_set_life)
 label(is_set_armor)
 label(vf_min_armor_value)
+label(is_weaken_raider)
+label(vf_raider_moving_speed_multi)
 
 newmem:
+  // Raider:
+  // Float: 44: _movementSpeedBase = 3 (Villager = 4.199999809)
+  // Pointer: E0: _raiderGroup &lt;&gt; 0 (Villiger = 0 (E0 equals to onDeath)
+  // Byte: 70:94 &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
+  // Float: 70: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998
+  // Pointer: 70:80 &lt;immuneSystem&gt;k__BackingField = 0
+
+  mov dword ptr [is_this_object_rider], 0
+
   cmp dword ptr [is_set_life], 1
   jne check_armor
 
@@ -455,6 +482,14 @@ newmem:
   mov r15, [rbx+70]
   test r15, r15
   jz endp1
+
+  mov dword ptr [is_this_object_rider], 1
+  cmp byte ptr [r15+94], 1 //canBeWounded = 0 -&gt; assume Rider
+  jne endp1
+
+  // Villager
+  mov dword ptr [is_this_object_rider], 0
+
   vmovss xmm15, [r15+58] //&lt;baseMaxLife&gt;k__BackingField
   vmovss xmm14, [r15+48] //_life
   vucomiss xmm14, xmm15
@@ -467,12 +502,20 @@ endp1:
 
 check_armor:
   cmp dword ptr [is_set_armor], 1
-  jne code
+  jne check_rider
 
   push r15
   mov r15, [rbx+70]
   test r15, r15
   jz endp2
+
+  mov dword ptr [is_this_object_rider], 1
+  cmp byte ptr [r15+94], 1 //canBeWounded = 0 -&gt; assume Rider
+  jne endp2
+
+  //Villager
+  mov dword ptr [is_this_object_rider], 0
+
   vmovss xmm15, [vf_min_armor_value]
   vmovss xmm14, [r15+5C] //baseArmor
   vucomiss xmm14, xmm15
@@ -483,23 +526,60 @@ endp2:
   pop r15
 
 
+check_rider:
+  cmp dword ptr [is_weaken_raider], 1
+  jne code
+
+  push r15
+  mov r15, [rbx+70]
+  test r15, r15
+  jz endp3
+
+  mov dword ptr [is_this_object_rider], 0
+  cmp byte ptr [r15+94], 0 //canBeWounded = 0 -&gt; assume Rider
+  jne endp3
+
+  // Rider
+  mov dword ptr [is_this_object_rider], 1
+
+  mov dword ptr [r15+5C], 0 // baseArmor
+  mov dword ptr [r15+A4], 0 // _trainingLevel
+
+endp3:
+  pop r15
+
+
 code:
   // orig code
   movss xmm6,[rbx+44]
   //
+
+  cmp dword ptr [is_this_object_rider], 1
+  je set_rider_moving_speed
 
   vmovss xmm14, [vf_moving_speed_multi]
   vmulss xmm6, xmm6, xmm14
 
   vmovss xmm15, [vf_shoe_bonus_base]
   vmovss [rbx+4C], xmm15
+  jmp return
+
+set_rider_moving_speed:
+  vmovss xmm14, [vf_raider_moving_speed_multi]
+  vmulss xmm6, xmm6, xmm14
+
+  //vmovss xmm15, [vf_shoe_bonus_base]
+  vxorps xmm15, xmm15, xmm15
+  vmovss [rbx+4C], xmm15
 
   jmp return
 align 10 cc
   vf_moving_speed_multi:
-  dd (float)1.5
+  dd (float)1.2
+  vf_raider_moving_speed_multi:
+  dd (float)0.66666666666
   vf_shoe_bonus_base:
-  dd (float)0.9
+  dd (float)1.5
   is_set_life:
   dd 0
   is_set_armor:
@@ -508,6 +588,10 @@ align 10 cc
   dd (float)20
   vf_min_armor_value:
   dd (float)45
+  is_weaken_raider:
+  dd 1
+  is_this_object_rider:
+  dd 0
 
 INJECT_SET_VILLAGER_DATA:
   jmp newmem
@@ -518,6 +602,9 @@ registersymbol(vf_shoe_bonus_base)
 registersymbol(is_set_life)
 registersymbol(is_set_armor)
 registersymbol(vf_min_armor_value)
+registersymbol(is_weaken_raider)
+registersymbol(vf_raider_moving_speed_multi)
+
 [DISABLE]
 
 INJECT_SET_VILLAGER_DATA:
@@ -555,6 +642,12 @@ GameAssembly.dll+A367DF: 48 8B CF              - mov rcx,rdi
 }
 </AssemblerScript>
           <CheatEntries>
+            <CheatEntry>
+              <ID>125</ID>
+              <Description>"May not apply to all NPCs"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
             <CheatEntry>
               <ID>112</ID>
               <Description>"Moving speed multiplier"</Description>
@@ -607,6 +700,25 @@ GameAssembly.dll+A367DF: 48 8B CF              - mov rcx,rdi
                   <Address>vf_min_armor_value</Address>
                 </CheatEntry>
               </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>122</ID>
+              <Description>"Make rider weak? (training level 0 &amp; no base armor)"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_weaken_raider</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>124</ID>
+              <Description>"Rider moving speed multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_raider_moving_speed_multi</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>

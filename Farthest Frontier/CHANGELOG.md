@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/01/15
+1. Revised movement speed and armor for rider
+
 ## 2023/01/14
 1. Added Try to prevent item corruption
 
