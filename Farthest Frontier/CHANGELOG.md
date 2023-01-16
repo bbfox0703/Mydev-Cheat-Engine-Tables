@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/01/16
+1. Added No HP damage to building
+
 ## 2023/01/15
 1. Revised movement speed and armor for rider
 
