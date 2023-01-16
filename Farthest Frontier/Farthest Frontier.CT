@@ -337,7 +337,7 @@ label(is_inf_arrow)
 //ItemBundle.get_numberOfItems
 
 newmem:
-  mov dword ptr [is_cur_object_arrow], 0
+  //mov dword ptr [is_cur_object_arrow], 0
 
 
 normal_items:
@@ -436,6 +436,80 @@ GameAssembly.dll+4B1A1E: E8 7D 63 D5 FF        - call GameAssembly.dll+207DA0
 GameAssembly.dll+4B1A23: CC                    - int 3 
 GameAssembly.dll+4B1A24: E8 87 5F D5 FF        - call GameAssembly.dll+2079B0
 GameAssembly.dll+4B1A29: 48 8B C8              - mov rcx,rax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>131</ID>
+          <Description>"No damage (HP) to building"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_BUILDING_LIFE,GameAssembly.dll,F3 0F 11 47 48 48 8B CF) // should be unique
+alloc(newmem,$1000,INJECT_SET_BUILDING_LIFE)
+
+label(code)
+label(return)
+
+newmem:
+//DamageableComponent.set_life
+  cmp byte ptr [rdi+B8], 1 //_stationary
+  jne code
+  vmovss xmm15, [rdi+58] //&lt;baseMaxLife&gt;k__BackingField
+  vucomiss xmm0, xmm15
+  jae code
+  vmovss xmm0, [rdi+58]
+
+
+code:
+  movss [rdi+48],xmm0
+  jmp return
+
+INJECT_SET_BUILDING_LIFE:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_BUILDING_LIFE)
+
+[DISABLE]
+
+INJECT_SET_BUILDING_LIFE:
+  db F3 0F 11 47 48
+
+unregistersymbol(INJECT_SET_BUILDING_LIFE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+428A59
+
+GameAssembly.dll+428A27: 0F 57 F6                 - xorps xmm6,xmm6
+GameAssembly.dll+428A2A: F3 0F 59 D3              - mulss xmm2,xmm3
+GameAssembly.dll+428A2E: F3 0F 58 D3              - addss xmm2,xmm3
+GameAssembly.dll+428A32: E8 59 91 8E 00           - call UnityEngine.Mathf.Clamp
+GameAssembly.dll+428A37: F3 0F 10 4F 48           - movss xmm1,[rdi+48]
+GameAssembly.dll+428A3C: 0F 28 7C 24 50           - movaps xmm7,[rsp+50]
+GameAssembly.dll+428A41: F3 0F 5C C8              - subss xmm1,xmm0
+GameAssembly.dll+428A45: 0F 54 0D 54 89 4F 01     - andps xmm1,[GameAssembly.dll+19213A0]
+GameAssembly.dll+428A4C: 0F 2F 0D C1 95 4F 01     - comiss xmm1,[GameAssembly.dll+1922014]
+GameAssembly.dll+428A53: 0F 82 A9 01 00 00        - jb GameAssembly.dll+428C02
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+428A59: F3 0F 11 47 48           - movss [rdi+48],xmm0
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+428A5E: 48 8B CF                 - mov rcx,rdi
+GameAssembly.dll+428A61: 48 8B 15 80 F1 B1 01     - mov rdx,[GameAssembly.dll+1F47BE8]
+GameAssembly.dll+428A68: 48 89 9C 24 80 00 00 00  - mov [rsp+00000080],rbx
+GameAssembly.dll+428A70: E8 2B AA 5E 00           - call GameAssembly.dll+A134A0
+GameAssembly.dll+428A75: 48 8B 0D 94 9B AD 01     - mov rcx,[GameAssembly.dll+1F02610]
+GameAssembly.dll+428A7C: 48 8B D8                 - mov rbx,rax
+GameAssembly.dll+428A7F: F6 81 33 01 00 00 01     - test byte ptr [rcx+00000133],01
+GameAssembly.dll+428A86: 74 0E                    - je GameAssembly.dll+428A96
+GameAssembly.dll+428A88: 83 B9 E0 00 00 00 00     - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+428A8F: 75 05                    - jne GameAssembly.dll+428A96
 }
 </AssemblerScript>
         </CheatEntry>
@@ -2223,6 +2297,97 @@ GameAssembly.dll+4B1A2C: 33 D2                 - xor edx,edx
 GameAssembly.dll+4B1A2E: E8 2D 63 D5 FF        - call GameAssembly.dll+207D60
 }
 </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>128</ID>
+              <Description>"Set min. usused item count in trading center"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_UNUSED_COUNT,GameAssembly.dll,8B 41 18 89 41 1C) // should be unique
+alloc(newmem,$1000,INJECT_SET_UNUSED_COUNT)
+
+label(code)
+label(return)
+label(i_min_unused_count)
+//ResourceManager.UpdateUnusedCount
+
+newmem:
+
+code:
+  mov eax,[rcx+18]
+  // code start
+  cmp eax, [i_min_unused_count]
+  jae endp
+  mov eax, [i_min_unused_count]
+
+endp:
+  // code end
+  mov [rcx+1C],eax
+  jmp return
+align 10 cc
+  i_min_unused_count:
+  dd A
+
+INJECT_SET_UNUSED_COUNT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_UNUSED_COUNT)
+registersymbol(i_min_unused_count)
+[DISABLE]
+
+INJECT_SET_UNUSED_COUNT:
+  db 8B 41 18 89 41 1C
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2E75B3
+
+GameAssembly.dll+2E7588: F2 0F 10 4C 24 50     - movsd xmm1,[rsp+50]
+GameAssembly.dll+2E758E: F2 0F 11 4C 24 38     - movsd [rsp+38],xmm1
+GameAssembly.dll+2E7594: 48 8B 15 C5 80 C5 01  - mov rdx,[GameAssembly.dll+1F3F660]
+GameAssembly.dll+2E759B: 48 8D 4C 24 28        - lea rcx,[rsp+28]
+GameAssembly.dll+2E75A0: E8 DB 74 C1 00        - call GameAssembly.dll+EFEA80
+GameAssembly.dll+2E75A5: 84 C0                 - test al,al
+GameAssembly.dll+2E75A7: 74 12                 - je GameAssembly.dll+2E75BB
+GameAssembly.dll+2E75A9: 48 8B 4C 24 38        - mov rcx,[rsp+38]
+GameAssembly.dll+2E75AE: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+2E75B1: 74 3C                 - je GameAssembly.dll+2E75EF
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+2E75B3: 8B 41 18              - mov eax,[rcx+18]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+2E75B6: 89 41 1C              - mov [rcx+1C],eax
+GameAssembly.dll+2E75B9: EB D9                 - jmp GameAssembly.dll+2E7594
+GameAssembly.dll+2E75BB: 48 8B 15 0E 80 C5 01  - mov rdx,[GameAssembly.dll+1F3F5D0]
+GameAssembly.dll+2E75C2: 48 8D 4C 24 28        - lea rcx,[rsp+28]
+GameAssembly.dll+2E75C7: E8 54 57 F7 FF        - call &lt;SelectEverySelectableCoroutine&gt;d__63.System.IDisposable.Dispose
+GameAssembly.dll+2E75CC: EB 1B                 - jmp GameAssembly.dll+2E75E9
+GameAssembly.dll+2E75CE: 48 8B 15 FB 7F C5 01  - mov rdx,[GameAssembly.dll+1F3F5D0]
+GameAssembly.dll+2E75D5: 48 8D 4C 24 28        - lea rcx,[rsp+28]
+GameAssembly.dll+2E75DA: E8 41 57 F7 FF        - call &lt;SelectEverySelectableCoroutine&gt;d__63.System.IDisposable.Dispose
+GameAssembly.dll+2E75DF: 48 8B 4C 24 70        - mov rcx,[rsp+70]
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>129</ID>
+                  <Description>"Min. count"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_min_unused_count</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
