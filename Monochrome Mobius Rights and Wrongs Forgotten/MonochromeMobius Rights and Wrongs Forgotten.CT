@@ -98,9 +98,11 @@ label(code)
 label(return)
 label(vf_player_hp_min_ratio2)
 label(vf_player_force_min_ratio2)
-
+label(vf_min_energy)
 newmem:
   push rdx
+  push r15
+
   mov rdx, [rbx+20] //bcc_
   test rdx, rdx
   jz endp
@@ -116,19 +118,33 @@ newmem:
   vcomiss xmm15, xmm14
   jae check_p_force
   vmovss [rdx+34], xmm14
+  vcvtss2si r15d, xmm14
+  mov [rbx+8C], r15d //targetHP_
+
 
 check_p_force:
   vmovss xmm15, [rdx+40] // forceMax_
   vmovss xmm14, [vf_player_force_min_ratio2]
-  vmulss xmm15, xmm14, xmm15
+  vmulss xmm14, xmm14, xmm15
   vmovss xmm15, [rdx+3C] // force_
   vcomiss xmm15, xmm14
-  jae player_endp
+  jae check_min_energy
   vmovss [rdx+3C], xmm14
+  vcvtss2si r15d, xmm14
+  mov [rbx+90], r15d //targetMP_
+
+check_min_energy:
+  vmovss xmm15, [rdx+44] // energy_
+  vmovss xmm14, [vf_min_energy]
+  vcomiss xmm15, xmm14
+  jae player_endp
+  vmovss [rdx+44], xmm14
 
 player_endp:
 
 endp:
+  //vzeroupper
+  pop r15
   pop rdx
 
 code:
@@ -137,9 +153,11 @@ code:
 
 align 10 cc
   vf_player_hp_min_ratio2:
-  dd (float)0.333333
+  dd (float)0.45
   vf_player_force_min_ratio2:
-  dd (float)0.333333
+  dd (float)0.66666666
+  vf_min_energy:
+  dd (float)66
   db EB 3B 54 68 69 73 20 74
   db 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20
   db 68 74 74 70 73 3A 2F
@@ -155,6 +173,7 @@ return:
 registersymbol(INJECT_BATTLE_PARTY_HP_FORCE)
 registersymbol(vf_player_hp_min_ratio2)
 registersymbol(vf_player_force_min_ratio2)
+registersymbol(vf_min_energy)
 [DISABLE]
 
 INJECT_BATTLE_PARTY_HP_FORCE:
@@ -207,6 +226,14 @@ GameAssembly.dll+1083CBE: 4C 8D 8B 98 00 00 00     - lea r9,[rbx+00000098]
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_player_force_min_ratio2</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>103</ID>
+              <Description>"Min. energy"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_energy</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -501,6 +528,94 @@ GameAssembly.dll+1935199: 48 85 D2           - test rdx,rdx
               <Address>vf_battle_exp_multi</Address>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>102</ID>
+          <Description>"Battle: Auto orb"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
+  Version: 
+  Date   : 2023-01-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_AUTO_ORB,GameAssembly.dll,4C 63 41 20 45 39 46 28) // should be unique
+alloc(newmem,$1000,INJECT_AUTO_ORB)
+
+label(code)
+label(return)
+//BattleSequenceControl.CharaStatusControl.SetOrbs
+newmem:
+  push rax
+
+  mov rax, [rcx+18] // bcc_
+  test rax, rax
+  jz endp
+
+  mov rax, [rax+18] //&lt;CharaData_&gt;k__BackingField
+  test rax, rax
+  jz endp
+
+  mov eax, [rax+A0] // pKind_
+  cmp eax, 0
+  jne endp
+
+  mov eax, [rcx+24] // max_
+  mov [rcx+20], eax // count_
+
+
+endp:
+  pop rax
+
+code:
+  movsxd  r8,dword ptr [rcx+20]
+  cmp [r14+28],r8d
+  jmp return
+
+INJECT_AUTO_ORB:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_AUTO_ORB)
+
+[DISABLE]
+
+INJECT_AUTO_ORB:
+  db 4C 63 41 20 45 39 46 28
+
+unregistersymbol(INJECT_AUTO_ORB)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1084757
+
+GameAssembly.dll+1084728: 48 89 7C 24 58                 - mov [rsp+58],rdi
+GameAssembly.dll+108472D: 4C 89 64 24 28                 - mov [rsp+28],r12
+GameAssembly.dll+1084732: 4C 89 7C 24 20                 - mov [rsp+20],r15
+GameAssembly.dll+1084737: 48 85 C0                       - test rax,rax
+GameAssembly.dll+108473A: 0F 84 67 02 00 00              - je GameAssembly.dll+10849A7
+GameAssembly.dll+1084740: 48 8B 48 60                    - mov rcx,[rax+60]
+GameAssembly.dll+1084744: 48 85 C9                       - test rcx,rcx
+GameAssembly.dll+1084747: 0F 84 5A 02 00 00              - je GameAssembly.dll+10849A7
+GameAssembly.dll+108474D: 83 79 24 00                    - cmp dword ptr [rcx+24],00
+GameAssembly.dll+1084751: 0F 8E 2B 02 00 00              - jng GameAssembly.dll+1084982
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+1084757: 4C 63 41 20                    - movsxd  r8,dword ptr [rcx+20]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+108475B: 45 39 46 28                    - cmp [r14+28],r8d
+GameAssembly.dll+108475F: 0F 84 1D 02 00 00              - je GameAssembly.dll+1084982
+GameAssembly.dll+1084765: 33 DB                          - xor ebx,ebx
+GameAssembly.dll+1084767: 45 89 46 28                    - mov [r14+28],r8d
+GameAssembly.dll+108476B: 8B D3                          - mov edx,ebx
+GameAssembly.dll+108476D: 4D 8B E0                       - mov r12,r8
+GameAssembly.dll+1084770: 44 8B FB                       - mov r15d,ebx
+GameAssembly.dll+1084773: 8D 7B 20                       - lea edi,[rbx+20]
+GameAssembly.dll+1084776: 66 66 0F 1F 84 00 00 00 00 00  - nop word ptr [rax+rax+00000000]
+GameAssembly.dll+1084780: 48 8B 48 60                    - mov rcx,[rax+60]
+}
+</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>86</ID>

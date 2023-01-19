@@ -1,6 +1,10 @@
 # Change log
 
-## 2022/01/04
+## 2023/01/20
+1. fixed bug for Battle: Party HP/Force
+1. Added Battle: Auto orb
+
+## 2023/01/04
 1. fixed error in Battle: Damage control
 
 ## 2022/12/21
