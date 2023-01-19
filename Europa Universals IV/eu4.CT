@@ -2,11 +2,81 @@
 <CheatTable CheatEngineTableVersion="44">
   <CheatEntries>
     <CheatEntry>
-      <ID>0</ID>
-      <Description>"init."</Description>
+      <ID>24</ID>
+      <Description>"&lt;== Enable me"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : eu4.exe
+      <AssemblerScript>[ENABLE]
+{$lua}
+
+if _eu4_customFloat == nil then
+
+registerCustomTypeAutoAssembler([[
+alloc(TypeName,256)
+alloc(ByteSize,8)
+alloc(ConvertRoutine,1024)
+alloc(ConvertBackRoutine,1024)
+alloc(UsesFloat,1)
+
+TypeName:
+db 'EU4 Float',0
+
+ByteSize:
+dd 4
+
+UsesFloat:
+db 1
+
+ConvertRoutine:
+//at this point ecx contains the address where the bytes are stored
+xor rax,rax
+
+mov eax, dword ptr [rcx]
+cvtsi2ss xmm15, eax
+mov eax, (float)1000
+movd xmm14, eax
+vdivss xmm15, xmm15, xmm14
+//vcvtss2si eax, xmm15
+movd eax, xmm15
+
+ret
+
+ConvertBackRoutine:
+//at this point edx contains the address to write the value to
+//and ecx contains the value
+
+push rax
+mov  eax, ecx
+movd xmm15, eax
+//cvtsi2ss xmm15, eax
+mov eax, (float)1000
+movd xmm14, eax
+vmulss xmm15, xmm15, xmm14
+vcvtss2si eax, xmm15
+//movd eax, xmm15
+
+mov dword ptr [rdx], eax
+pop rax
+ret
+
+]])
+
+_eu4_customFloat = true
+end
+
+{$asm}
+
+[DISABLE]
+
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>0</ID>
+          <Description>"Step 2: Player ID detection"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : eu4.exe
   Version: 
   Date   : 2023-01-18
   Author : bbfox@https://opencheattables.com
@@ -105,31 +175,117 @@ eu4.exe+706D8F - 48 85 C9              - test rcx,rcx
 
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1</ID>
-          <Description>"uid"</Description>
-          <ShowAsHex>1</ShowAsHex>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>808080</Color>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_pid</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>2</ID>
-          <Description>"Addr."</Description>
-          <ShowAsHex>1</ShowAsHex>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>808080</Color>
-          <VariableType>8 Bytes</VariableType>
-          <Address>i_pid_addr</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>3</ID>
-          <Description>"Get info."</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : eu4.exe
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1</ID>
+              <Description>"uid"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_pid</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>2</ID>
+              <Description>"Addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_pid_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"decat grow up when spend"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : eu4.exe
+  Version: 
+  Date   : 2023-01-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ADD_DUCAT,eu4.exe,01 87 A8 0B 00 00) // should be unique
+alloc(newmem,$1000,INJECT_ADD_DUCAT)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  push r15
+
+  mov r15d, [rdi+24]
+  cmp r15d, [i_pid]
+
+  jne pre_code
+
+  //abs()
+  mov r15d, eax
+  neg eax
+  cmovl eax, r15d
+  //
+
+  mov [rsi], eax
+
+pre_code:
+  pop r15
+  popfq
+
+code:
+  add [rdi+00000BA8],eax
+  jmp return
+
+INJECT_ADD_DUCAT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_ADD_DUCAT)
+
+[DISABLE]
+
+INJECT_ADD_DUCAT:
+  db 01 87 A8 0B 00 00
+
+unregistersymbol(INJECT_ADD_DUCAT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: eu4.exe+3378F1
+
+eu4.exe+3378C2: 48 89 44 24 58                 - mov [rsp+58],rax
+eu4.exe+3378C7: 89 54 24 20                    - mov [rsp+20],edx
+eu4.exe+3378CB: 4C 8D 4C 24 58                 - lea r9,[rsp+58]
+eu4.exe+3378D0: 4C 8D 05 E9 CF 7A 01           - lea r8,[eu4.exe+1AE48C0]
+eu4.exe+3378D7: BA C9 58 00 00                 - mov edx,000058C9
+eu4.exe+3378DC: 48 8D 0D FD 8D 7A 01           - lea rcx,[eu4.exe+1AE06E0]
+eu4.exe+3378E3: E8 38 05 FB 00                 - call eu4.exe+12E7E20
+eu4.exe+3378E8: 90                             - nop 
+eu4.exe+3378E9: 88 1D 88 B5 D7 01              - mov [eu4.exe+20B2E77],bl
+eu4.exe+3378EF: 8B 06                          - mov eax,[rsi]
+// ---------- INJECTING HERE ----------
+eu4.exe+3378F1: 01 87 A8 0B 00 00              - add [rdi+00000BA8],eax
+// ---------- DONE INJECTING  ----------
+eu4.exe+3378F7: 8B 87 A8 0B 00 00              - mov eax,[rdi+00000BA8]
+eu4.exe+3378FD: 3D 00 CA 9A 3B                 - cmp eax,3B9ACA00
+eu4.exe+337902: 7E 0C                          - jle eu4.exe+337910
+eu4.exe+337904: C7 87 A8 0B 00 00 00 CA 9A 3B  - mov [rdi+00000BA8],3B9ACA00
+eu4.exe+33790E: EB 11                          - jmp eu4.exe+337921
+eu4.exe+337910: 3D 00 36 65 C4                 - cmp eax,C4653600
+eu4.exe+337915: 7D 0A                          - jnl eu4.exe+337921
+eu4.exe+337917: C7 87 A8 0B 00 00 00 36 65 C4  - mov [rdi+00000BA8],C4653600
+eu4.exe+337921: 48 8B 15 B0 07 0A 02           - mov rdx,[eu4.exe+23D80D8]
+eu4.exe+337928: 80 BA 9C 74 00 00 00           - cmp byte ptr [rdx+0000749C],00
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"Get info."</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : eu4.exe
   Version: 
   Date   : 2023-01-18
   Author : bbfox@https://opencheattables.com
@@ -236,267 +392,299 @@ eu4.exe+1258839 - 41 B8 02000000        - mov r8d,00000002
 
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>18</ID>
-              <Description>"decat grow up when spend"</Description>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : eu4.exe
-  Version: 
-  Date   : 2023-01-18
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_ADD_DUCAT,eu4.exe,01 87 A8 0B 00 00) // should be unique
-alloc(newmem,$1000,INJECT_ADD_DUCAT)
-
-label(code)
-label(return)
-
-newmem:
-  pushfq
-  push r15
-
-  mov r15d, [rdi+24]
-  cmp r15d, [i_pid]
-
-  jne pre_code
-
-  //abs()
-  mov r15d, eax
-  neg eax
-  cmovl eax, r15d
-  //
-
-  mov [rsi], eax
-
-pre_code:
-  pop r15
-  popfq
-
-code:
-  add [rdi+00000BA8],eax
-  jmp return
-
-INJECT_ADD_DUCAT:
-  jmp newmem
-  nop
-return:
-registersymbol(INJECT_ADD_DUCAT)
-
-[DISABLE]
-
-INJECT_ADD_DUCAT:
-  db 01 87 A8 0B 00 00
-
-unregistersymbol(INJECT_ADD_DUCAT)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: eu4.exe+3378F1
-
-eu4.exe+3378C2: 48 89 44 24 58                 - mov [rsp+58],rax
-eu4.exe+3378C7: 89 54 24 20                    - mov [rsp+20],edx
-eu4.exe+3378CB: 4C 8D 4C 24 58                 - lea r9,[rsp+58]
-eu4.exe+3378D0: 4C 8D 05 E9 CF 7A 01           - lea r8,[eu4.exe+1AE48C0]
-eu4.exe+3378D7: BA C9 58 00 00                 - mov edx,000058C9
-eu4.exe+3378DC: 48 8D 0D FD 8D 7A 01           - lea rcx,[eu4.exe+1AE06E0]
-eu4.exe+3378E3: E8 38 05 FB 00                 - call eu4.exe+12E7E20
-eu4.exe+3378E8: 90                             - nop 
-eu4.exe+3378E9: 88 1D 88 B5 D7 01              - mov [eu4.exe+20B2E77],bl
-eu4.exe+3378EF: 8B 06                          - mov eax,[rsi]
-// ---------- INJECTING HERE ----------
-eu4.exe+3378F1: 01 87 A8 0B 00 00              - add [rdi+00000BA8],eax
-// ---------- DONE INJECTING  ----------
-eu4.exe+3378F7: 8B 87 A8 0B 00 00              - mov eax,[rdi+00000BA8]
-eu4.exe+3378FD: 3D 00 CA 9A 3B                 - cmp eax,3B9ACA00
-eu4.exe+337902: 7E 0C                          - jle eu4.exe+337910
-eu4.exe+337904: C7 87 A8 0B 00 00 00 CA 9A 3B  - mov [rdi+00000BA8],3B9ACA00
-eu4.exe+33790E: EB 11                          - jmp eu4.exe+337921
-eu4.exe+337910: 3D 00 36 65 C4                 - cmp eax,C4653600
-eu4.exe+337915: 7D 0A                          - jnl eu4.exe+337921
-eu4.exe+337917: C7 87 A8 0B 00 00 00 36 65 C4  - mov [rdi+00000BA8],C4653600
-eu4.exe+337921: 48 8B 15 B0 07 0A 02           - mov rdx,[eu4.exe+23D80D8]
-eu4.exe+337928: 80 BA 9C 74 00 00 00           - cmp byte ptr [rdx+0000749C],00
-}
-</AssemblerScript>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>19</ID>
-              <Description>"Data"</Description>
-              <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>4</ID>
-                  <Description>"ducat * 1000 (國庫)"</Description>
-                  <Options moDeactivateChildrenAsWell="1"/>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>BA8</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>5</ID>
-                  <Description>"Manpower (人力)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>DB0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>6</ID>
-                  <Description>"Max manpower (最大人力)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>DB4</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>7</ID>
-                  <Description>"Sailors * 1000 (水手)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>DB8</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>8</ID>
-                  <Description>"Max sailors * 1000 (最大水手)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>DBC</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>9</ID>
-                  <Description>"Stability * 1000 (穩定度)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>BD0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>10</ID>
-                  <Description>"Prestige * 1000 (聲望)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>CF0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>11</ID>
-                  <Description>"Administrative power (行政點數)"</Description>
-                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1000:1000
+                  <ID>19</ID>
+                  <Description>"Data"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>4</ID>
+                      <Description>"ducat (國庫)"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>BA8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>5</ID>
+                      <Description>"Manpower (人力)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>DB0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>6</ID>
+                      <Description>"Max manpower (最大人力)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>DB4</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>7</ID>
+                      <Description>"Sailors (水手)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>DB8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>8</ID>
+                      <Description>"Max sailors (最大水手)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>DBC</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>9</ID>
+                      <Description>"Stability (穩定度)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>BD0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>10</ID>
+                      <Description>"Prestige (聲望)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>CF0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>11</ID>
+                      <Description>"Administrative power (行政點數)"</Description>
+                      <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1000:1000
 2000:2000
 </DropDownList>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>260</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>12</ID>
-                  <Description>"Diplomatic power (外交點數)"</Description>
-                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1000:1000
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>260</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>12</ID>
+                      <Description>"Diplomatic power (外交點數)"</Description>
+                      <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1000:1000
 2000:2000
 </DropDownList>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>264</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>13</ID>
-                  <Description>"Military power (軍事點數)"</Description>
-                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1000:1000
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>264</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>13</ID>
+                      <Description>"Military power (軍事點數)"</Description>
+                      <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1000:1000
 2000:2000
 </DropDownList>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>268</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>14</ID>
-                  <Description>"Army tradition * 1000 (陸軍傳統)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>E38</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>15</ID>
-                  <Description>"Navy tradition * 1000 (海軍傳統)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>E3C</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>16</ID>
-                  <Description>"Mercantilism (重商主義)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>1090</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>17</ID>
-                  <Description>"Legitimacy"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_ducat_addr</Address>
-                  <Offsets>
-                    <Offset>1088</Offset>
-                  </Offsets>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>268</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>14</ID>
+                      <Description>"Army tradition (陸軍傳統)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>E38</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>15</ID>
+                      <Description>"Navy tradition (海軍傳統)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>E3C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>16</ID>
+                      <Description>"Mercantilism (重商主義)"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>1090</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>17</ID>
+                      <Description>"Legitimacy"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Custom</VariableType>
+                      <CustomType>EU4 Float</CustomType>
+                      <Address>i_base_ducat_addr</Address>
+                      <Offsets>
+                        <Offset>1088</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"Enable achievements"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : eu4.exe
+  Version: 
+  Date   : 2023-01-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+//38 5E 01 74 ?? 38 5F 14 74 ?? 38 5E 02
+//38 ?? 01 74 ?? 38 ?? 14 74 ?? 38 ?? 02 74 ?? 45 ?? ?? 75
+//38 5E 01 74 21 38 5F 14 74 1C 38 5E 02 74 17 45 84 C9 75 05
+aobscanmodule(INJECT_BYPASS_ACHI_CHK,eu4.exe,38 ?? 01 74 ?? 38 ?? 14 74 ?? 38 ?? 02 74 ?? 45 ?? ?? 75) // should be unique
+alloc(newmem,$1000,INJECT_BYPASS_ACHI_CHK)
+
+alloc(INJECT_BYPASS_ACHI_CHKo,5)
+
+label(code)
+label(return)
+
+INJECT_BYPASS_ACHI_CHKo:
+  readmem(INJECT_BYPASS_ACHI_CHK, 5)
+
+newmem:
+
+  jmp INJECT_BYPASS_ACHI_CHK+1E
+
+code:
+  //cmp [rsi+01],bl
+  //reassemble(INJECT_BYPASS_ACHI_CHK+3)
+
+  //je eu4.exe+C4A94
+  jmp return
+
+INJECT_BYPASS_ACHI_CHK:
+  jmp newmem
+return:
+registersymbol(INJECT_BYPASS_ACHI_CHK)
+registersymbol(INJECT_BYPASS_ACHI_CHKo)
+
+[DISABLE]
+
+INJECT_BYPASS_ACHI_CHK:
+  //db 38 5E 01 74 21
+  readmem(INJECT_BYPASS_ACHI_CHKo, 5)
+
+unregistersymbol(INJECT_BYPASS_ACHI_CHK)
+unregistersymbol(INJECT_BYPASS_ACHI_CHKo)
+dealloc(newmem)
+dealloc(INJECT_BYPASS_ACHI_CHKo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: eu4.exe+C4A6E
+
+eu4.exe+C4A14 - 33 C0                 - xor eax,eax
+eu4.exe+C4A16 - 48 89 85 A8000000     - mov [rbp+000000A8],rax
+eu4.exe+C4A1D - 66 C7 85 A8000000 2D2D - mov word ptr [rbp+000000A8],2D2D
+eu4.exe+C4A26 - C7 85 AA000000 2D000000 - mov [rbp+000000AA],0000002D
+eu4.exe+C4A30 - 66 89 85 AE000000     - mov [rbp+000000AE],ax
+eu4.exe+C4A37 - 48 8B 89 80000000     - mov rcx,[rcx+00000080]
+eu4.exe+C4A3E - 48 8B D1              - mov rdx,rcx
+eu4.exe+C4A41 - 48 C1 EA 20           - shr rdx,20
+eu4.exe+C4A45 - 48 8B 85 A8000000     - mov rax,[rbp+000000A8]
+eu4.exe+C4A4C - 48 C1 E8 20           - shr rax,20
+eu4.exe+C4A50: 66 3B D0     - cmp dx,ax
+eu4.exe+C4A53: 74 16        - je eu4.exe+C4A6B
+eu4.exe+C4A55: 48 8B 47 0C  - mov rax,[rdi+0C]
+eu4.exe+C4A59: 48 C1 E8 20  - shr rax,20
+eu4.exe+C4A5D: 48 C1 E9 20  - shr rcx,20
+eu4.exe+C4A61: 66 3B C1     - cmp ax,cx
+eu4.exe+C4A64: 74 05        - je eu4.exe+C4A6B
+eu4.exe+C4A66: 45 32 F6     - xor r14b,r14l
+eu4.exe+C4A69: EB 03        - jmp eu4.exe+C4A6E
+eu4.exe+C4A6B: 41 B6 01     - mov r14b,01
+// ---------- INJECTING HERE ----------
+eu4.exe+C4A6E: 38 5E 01     - cmp [rsi+01],bl
+// ---------- DONE INJECTING  ----------
+eu4.exe+C4A71: 74 21        - je eu4.exe+C4A94
+eu4.exe+C4A73: 38 5F 14     - cmp [rdi+14],bl
+eu4.exe+C4A76: 74 1C        - je eu4.exe+C4A94
+eu4.exe+C4A78: 38 5E 02     - cmp [rsi+02],bl
+eu4.exe+C4A7B: 74 17        - je eu4.exe+C4A94
+eu4.exe+C4A7D: 45 84 C9     - test r9l,r9b
+eu4.exe+C4A80: 75 05        - jne eu4.exe+C4A87
+eu4.exe+C4A82: 38 5F 09     - cmp [rdi+09],bl
+eu4.exe+C4A85: 74 0D        - je eu4.exe+C4A94
+eu4.exe+C4A87: 45 84 F6     - test r14l,r14b
+eu4.exe+C4A8A - 74 08                 - je eu4.exe+C4A94
+eu4.exe+C4A8C - 41 B4 01              - mov r12b,01
+eu4.exe+C4A8F - E9 DB030000           - jmp eu4.exe+C4E6F
+eu4.exe+C4A94 - 45 32 E4              - xor r12b,r12b
+eu4.exe+C4A97 - 4D 85 FF              - test r15,r15
+eu4.exe+C4A9A - 0F84 CF030000         - je eu4.exe+C4E6F
+eu4.exe+C4AA0 - 38 5F 09              - cmp [rdi+09],bl
+eu4.exe+C4AA3 - 0F85 A3000000         - jne eu4.exe+C4B4C
+eu4.exe+C4AA9 - 45 84 C9              - test r9l,r9b
+eu4.exe+C4AAC - 0F85 9A000000         - jne eu4.exe+C4B4C
+eu4.exe+C4AB2 - 48 8D 15 07D79F01     - lea rdx,[eu4.exe+1AC21C0]
+eu4.exe+C4AB9 - 48 8D 4C 24 60        - lea rcx,[rsp+60]
+eu4.exe+C4ABE - E8 1DC5FFFF           - call eu4.exe+C0FE0
+eu4.exe+C4AC3 - 90                    - nop
+
+}
+</AssemblerScript>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
