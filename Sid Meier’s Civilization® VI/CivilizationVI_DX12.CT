@@ -7,6 +7,64 @@
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
+{$lua}
+
+if _civ6_customFloat == nil then
+
+registerCustomTypeAutoAssembler([[
+alloc(TypeName,256)
+alloc(ByteSize,8)
+alloc(ConvertRoutine,1024)
+alloc(ConvertBackRoutine,1024)
+alloc(UsesFloat,1)
+
+TypeName:
+db 'Civ6 Float',0
+
+ByteSize:
+dd 4
+
+UsesFloat:
+db 1
+
+ConvertRoutine:
+//at this point ecx contains the address where the bytes are stored
+xor rax,rax
+
+mov eax, dword ptr [rcx]
+cvtsi2ss xmm15, eax
+mov eax, (float)256
+movd xmm14, eax
+vdivss xmm15, xmm15, xmm14
+//vcvtss2si eax, xmm15
+movd eax, xmm15
+
+ret
+
+ConvertBackRoutine:
+//at this point edx contains the address to write the value to
+//and ecx contains the value
+
+push rax
+mov  eax, ecx
+movd xmm15, eax
+//cvtsi2ss xmm15, eax
+mov eax, (float)256
+movd xmm14, eax
+vmulss xmm15, xmm15, xmm14
+vcvtss2si eax, xmm15
+//movd eax, xmm15
+
+mov dword ptr [rdx], eax
+pop rax
+ret
+
+]])
+
+_civ6_customFloat = true
+end
+
+
 {$asm}
 //define(maindll, "????")
 define(game_exp2, "GameCore_XP2_FinalRelease.dll")
@@ -80,7 +138,7 @@ unregistersymbol(maindll_base)
           <CheatEntries>
             <CheatEntry>
               <ID>91</ID>
-              <Description>"Info: Loaded module: No expansion (Base)"</Description>
+              <Description>"Info: Loaded module: Gathering Storm (XP2)"</Description>
               <Color>A2A2A2</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
@@ -183,6 +241,7 @@ GameCore_XP2_FinalRelease.dll+3338F8: C1 E0 08                 - shl eax,08
                   <ID>47</ID>
                   <Description>"Last research"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>i_last_research_addr</Address>
                   <Offsets>
@@ -360,24 +419,33 @@ GameCore_XP2_FinalRelease.dll+313505: 8B 92 D8 00 00 00     - mov edx,[rdx+00000
               <CheatEntries>
                 <CheatEntry>
                   <ID>25</ID>
-                  <Description>"Faith * 256"</Description>
+                  <Description>"~Faith"</Description>
+                  <Options moHideChildren="1"/>
                   <DropDownList DisplayValueAsItem="1">25600:100
 256000:1000
 </DropDownList>
                   <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>4 Bytes</VariableType>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Civ6 Float</CustomType>
                   <Address>i_base_faith_addr</Address>
                   <Offsets>
                     <Offset>B0</Offset>
                   </Offsets>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>26</ID>
-                      <Description>"Display value"</Description>
+                      <ID>110</ID>
+                      <Description>"raw"</Description>
+                      <DropDownList DisplayValueAsItem="1">25600:100
+256000:1000
+</DropDownList>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>808080</Color>
                       <VariableType>4 Bytes</VariableType>
-                      <Address>i_faith_display</Address>
+                      <Address>i_base_faith_addr</Address>
+                      <Offsets>
+                        <Offset>B0</Offset>
+                      </Offsets>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
@@ -597,6 +665,7 @@ GameCore_XP2_FinalRelease.dll+26C722: 48 8D 86 C0 00 00 00  - lea rax,[rsi+00000
                       <ID>100</ID>
                       <Description>"Diplomatic Favor"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>4 Bytes</VariableType>
                       <Address>i_base_dipl_favor_addr</Address>
                       <Offsets>
@@ -607,26 +676,18 @@ GameCore_XP2_FinalRelease.dll+26C722: 48 8D 86 C0 00 00 00  - lea rax,[rsi+00000
                 </CheatEntry>
                 <CheatEntry>
                   <ID>28</ID>
-                  <Description>"Gold * 256 (after turn changed)"</Description>
+                  <Description>"~Gold (after turn changed)"</Description>
                   <DropDownList DisplayValueAsItem="1">2560000:10000
 25600000:100000
 </DropDownList>
                   <ShowAsSigned>0</ShowAsSigned>
-                  <VariableType>4 Bytes</VariableType>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>Civ6 Float</CustomType>
                   <Address>i_base_player_gold_addr</Address>
                   <Offsets>
                     <Offset>A8</Offset>
                   </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>12</ID>
-                      <Description>"Approx. display value (previous turn)"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>808080</Color>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>i_gold_display</Address>
-                    </CheatEntry>
-                  </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>45</ID>
@@ -652,6 +713,20 @@ GameCore_XP2_FinalRelease.dll+26C722: 48 8D 86 C0 00 00 00  - lea rax,[rsi+00000
                       <Color>808080</Color>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_base_player_gold_addr</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>109</ID>
+                      <Description>"Gold raw"</Description>
+                      <DropDownList DisplayValueAsItem="1">2560000:10000
+25600000:100000
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_player_gold_addr</Address>
+                      <Offsets>
+                        <Offset>A8</Offset>
+                      </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>32</ID>

@@ -1,5 +1,8 @@
 # Changelog
 
+## 2022/01/19
+1. Revised gold and faith value display to "readable" format
+
 ## 2022/12/16
 1. Revised for 1.0.12.28 (846892)
 
