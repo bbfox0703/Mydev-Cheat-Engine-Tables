@@ -769,18 +769,39 @@ label(return)
 label(IS_FAST_LB)
 label(CUR_LB_VALUE)
 label(LB_ADD_VALUE)
+label(vf_lb_multiplier)
 
 newmem:
-  movq [CUR_LB_VALUE], xmm6
-  cmp [IS_FAST_LB], 1
-  jne @F
-  push rax
-  movq [XMM_TMP1], xmm5
-  mov rax, [LB_ADD_VALUE]
-  movq xmm5, rax
-  addss xmm6, xmm5
-  movq xmm5, [XMM_TMP1]
-  pop rax
+  vmovss [CUR_LB_VALUE], xmm6
+
+  vmovss xmm14, [lb_limit]
+  vcomiss xmm6, xmm14
+  jae code
+
+  cmp dword ptr [IS_FAST_LB], 1
+  jne next1
+
+  vmovss xmm15, [LB_ADD_VALUE]
+  vaddss xmm6, xmm15, xmm6
+
+  vcomiss xmm6, xmm14
+  jbe code
+  vmovss xmm6, [lb_limit]
+  jmp code
+
+next1:  //multiplier
+  cmp dword ptr [IS_FAST_LB], 2
+  jne code
+
+  vmovss xmm15, dword ptr [rax+rcx+24]
+  vcomiss xmm6, xmm15
+  jbe code
+
+  vmovss xmm14, [vf_lb_multiplier]
+  vsubss xmm13, xmm6, xmm15
+  vmulss xmm13, xmm14, xmm13
+  vaddss xmm6, xmm15, xmm13
+
 
 code:
   movss [rax+rcx+24],xmm6
@@ -790,11 +811,15 @@ align 10 cc
   XMM_TMP1:
   dq 0
   IS_FAST_LB:
-  dd 1
+  dd 2
   CUR_LB_VALUE:
-  dq 0
+  dd 0
   LB_ADD_VALUE:
   dd (float)500
+  lb_limit:
+  dd (float)1000
+  vf_lb_multiplier:
+  dd (float)3.3333333
 
 INJECT_FAST_LB:
   jmp newmem
@@ -805,16 +830,13 @@ registersymbol(LB_ADD_VALUE)
 registersymbol(CUR_LB_VALUE)
 registersymbol(IS_FAST_LB)
 registersymbol(INJECT_FAST_LB)
-
+registersymbol(vf_lb_multiplier)
 [DISABLE]
 
 INJECT_FAST_LB:
   db F3 0F 11 74 08 24
 
-unregistersymbol(LB_ADD_VALUE)
-unregistersymbol(CUR_LB_VALUE)
-unregistersymbol(IS_FAST_LB)
-unregistersymbol(INJECT_FAST_LB)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -856,9 +878,10 @@ ff7remake_.exe+AFBAD7: CC                    - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>194</ID>
-          <Description>"Fast LB?"</Description>
-          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
-1:Yes
+          <Description>"LB growth mode"</Description>
+          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:None
+1:Fast LB
+2:By multiplier
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -877,6 +900,14 @@ ff7remake_.exe+AFBAD7: CC                    - int 3
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
           <Address>LB_ADD_VALUE</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337092302</ID>
+          <Description>"Multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_lb_multiplier</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
