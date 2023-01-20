@@ -50,6 +50,7 @@ define(utrpg_guiBattleResultCharaTabProcAdditiveExpProc, "utrpg_gui.BattleResult
 define(BattleSequenceControlCharaStatusControlForwardTimeProc, "BattleSequenceControl.CharaStatusControl.ForwardTime")
 define(BattleSequenceControlbattleCharaControlSubLifeProc, "BattleSequenceControl.battleCharaControl.SubLife")
 define(CurrentMoveExecPlayerMoveInputProc, "CurrentMove.ExecPlayerMoveInput")
+define(FieldMonsterMoveThroughCalculateExperiencePointProc, "FieldMonsterMoveThrough.CalculateExperiencePoint")
 
 
 registersymbol(BattleSequenceControlbattleConditionIsAnnihilateProc)
@@ -62,6 +63,7 @@ registersymbol(utrpg_guiBattleResultCharaTabProcAdditiveExpProc)
 registersymbol(BattleSequenceControlCharaStatusControlForwardTimeProc)
 registersymbol(BattleSequenceControlbattleCharaControlSubLifeProc)
 registersymbol(CurrentMoveExecPlayerMoveInputProc)
+registersymbol(FieldMonsterMoveThroughCalculateExperiencePointProc)
 
 [DISABLE]
 {$lua}
@@ -157,7 +159,7 @@ align 10 cc
   vf_player_force_min_ratio2:
   dd (float)0.66666666
   vf_min_energy:
-  dd (float)66
+  dd (float)67
   db EB 3B 54 68 69 73 20 74
   db 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20
   db 68 74 74 70 73 3A 2F
@@ -262,6 +264,9 @@ newmem:
   mov r14d, [r8+A0] //pKind_
   test r14d, r14d
   jnz endp
+
+  test edi, edi
+  jz endp
 
   cvtsi2ss xmm15, edi
   vmovss xmm14, [vf_battle_energy_multi]
@@ -447,7 +452,7 @@ GameAssembly.dll+D432C2: EB 05                 - jmp GameAssembly.dll+D432C9
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
   Version:
-  Date   : 2022-12-21
+  Date   : 2023-01-20
   Author : bbfox@https://opencheattables.com
 }
 
@@ -460,12 +465,18 @@ alloc(newmem,$1000,INJECT_BATTLE_EXP_MULTI)
 label(code)
 label(return)
 label(vf_battle_exp_multi)
+label(i_org_exp)
+label(i_new_xp)
 
 newmem:
+  test r9d, r9d
+  jz code
+  mov [i_org_exp], r9d
   cvtsi2ss xmm15, r9d
   vmovss xmm14, [vf_battle_exp_multi]
   vmulss xmm15, xmm15, xmm14
   vcvtss2si r9d, xmm15
+  mov [i_new_xp], r9d
 
 code:
   mov ecx,[rdx+60]
@@ -473,7 +484,11 @@ code:
   jmp return
 align 10 cc
   vf_battle_exp_multi:
-  dd (float)1.333333333
+  dd (float)3.333333
+  i_org_exp:
+  dd 0
+  i_new_xp:
+  dd 0
 
 
 INJECT_BATTLE_EXP_MULTI:
@@ -482,6 +497,9 @@ INJECT_BATTLE_EXP_MULTI:
 return:
 registersymbol(INJECT_BATTLE_EXP_MULTI)
 registersymbol(vf_battle_exp_multi)
+registersymbol(i_org_exp)
+registersymbol(i_new_xp)
+
 [DISABLE]
 
 INJECT_BATTLE_EXP_MULTI:
@@ -526,6 +544,22 @@ GameAssembly.dll+1935199: 48 85 D2           - test rdx,rdx
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_battle_exp_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>104</ID>
+              <Description>"Orig. EXP gain"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_org_exp</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>105</ID>
+              <Description>"New EXP gained"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_new_xp</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -616,6 +650,95 @@ GameAssembly.dll+1084776: 66 66 0F 1F 84 00 00 00 00 00  - nop word ptr [rax+rax
 GameAssembly.dll+1084780: 48 8B 48 60                    - mov rcx,[rax+60]
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>107</ID>
+          <Description>"Field: EXP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : MonochromeMobius Rights and Wrongs Forgotten.exe
+  Version: 
+  Date   : 2023-01-20
+  Author :
+}
+
+[ENABLE]
+//aobscanmodule(INJECT_FIELD_EXP_MULTI,GameAssembly.dll,48 8B 54 24 30 48 85 D2 0F 84 92) // should be unique
+aobscanregion(INJECT_FIELD_EXP_MULTI,FieldMonsterMoveThroughCalculateExperiencePointProc+790,FieldMonsterMoveThroughCalculateExperiencePointProc+7F0,48 8B 54 24 30 48 85 D2) // should be unique
+alloc(newmem,$1000,INJECT_FIELD_EXP_MULTI)
+
+label(code)
+label(return)
+label(vf_field_exp_multi)
+
+newmem:
+  test eax, eax
+  jz code
+
+  vmovss xmm14, [vf_field_exp_multi]
+  cvtsi2ss xmm15, eax
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si eax, xmm15
+
+code:
+  mov rdx,[rsp+30]
+  jmp return
+align 10 cc
+  vf_field_exp_multi:
+  dd (float)3.3333333
+
+INJECT_FIELD_EXP_MULTI:
+  jmp newmem
+return:
+registersymbol(INJECT_FIELD_EXP_MULTI)
+registersymbol(vf_field_exp_multi)
+
+[DISABLE]
+
+INJECT_FIELD_EXP_MULTI:
+  db 48 8B 54 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+13A20E1
+
+GameAssembly.dll+13A20B4: 48 8B 0D AD 3A D3 02  - mov rcx,[GameAssembly.dll+40D5B68]
+GameAssembly.dll+13A20BB: F6 81 33 01 00 00 04  - test byte ptr [rcx+00000133],04
+GameAssembly.dll+13A20C2: 74 0E                 - je GameAssembly.dll+13A20D2
+GameAssembly.dll+13A20C4: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+13A20CB: 75 05                 - jne GameAssembly.dll+13A20D2
+GameAssembly.dll+13A20CD: E8 7E 55 1F FF        - call GameAssembly.dll+597650
+GameAssembly.dll+13A20D2: 45 33 C0              - xor r8d,r8d
+GameAssembly.dll+13A20D5: 8B D3                 - mov edx,ebx
+GameAssembly.dll+13A20D7: 48 8D 4C 24 30        - lea rcx,[rsp+30]
+GameAssembly.dll+13A20DC: E8 1F D2 D5 FF        - call DLCManager.EffectEquipment2595
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+13A20E1: 48 8B 54 24 30        - mov rdx,[rsp+30]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+13A20E6: 48 85 D2              - test rdx,rdx
+GameAssembly.dll+13A20E9: 0F 84 92 01 00 00     - je GameAssembly.dll+13A2281
+GameAssembly.dll+13A20EF: 03 42 60              - add eax,[rdx+60]
+GameAssembly.dll+13A20F2: 78 0E                 - js GameAssembly.dll+13A2102
+GameAssembly.dll+13A20F4: 3D FF E0 F5 05        - cmp eax,05F5E0FF
+GameAssembly.dll+13A20F9: 7E 09                 - jle GameAssembly.dll+13A2104
+GameAssembly.dll+13A20FB: B8 FF E0 F5 05        - mov eax,05F5E0FF
+GameAssembly.dll+13A2100: EB 02                 - jmp GameAssembly.dll+13A2104
+GameAssembly.dll+13A2102: 33 C0                 - xor eax,eax
+GameAssembly.dll+13A2104: 89 42 60              - mov [rdx+60],eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>108</ID>
+              <Description>"Multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_field_exp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>86</ID>
