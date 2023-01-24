@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="44">
+<CheatTable CheatEngineTableVersion="42">
   <CheatEntries>
     <CheatEntry>
       <ID>113</ID>
@@ -528,12 +528,12 @@ label(GAUGE_DOWN_DIV)
 newmem:
 
 code:
-  movq [XMM_TMP2], xmm2
+  movq [XMM_TMP2], xmm15
 
   movss xmm2, [GAUGE_DOWN_DIV]
   divss xmm7, xmm2
 
-  movq xmm2, [XMM_TMP2]
+  movq xmm15, [XMM_TMP2]
 
   subss xmm0,xmm7
   comiss xmm0,xmm6
@@ -4166,6 +4166,82 @@ ff7remake_.exe+894AF2: 83 B9 BC 63 10 01 00     - cmp dword ptr [rcx+011063BC],0
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>1337092306</ID>
+      <Description>"Intermission: fort condor ATB"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7remake_.exe
+  Version: 
+  Date   : 2023-01-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CONDOR_ATB,ff7remake_.exe,42 0F 2F 04 39) // should be unique
+alloc(newmem,$1000,INJECT_CONDOR_ATB)
+
+label(code)
+label(return)
+
+newmem:
+  cmp rcx, 39C
+  je to_player
+  jmp to_enemy
+
+to_player:
+  mov dword ptr [rcx+r15], (float)100
+  jmp code
+
+to_enemy:
+  mov dword ptr [rcx+r15], 0
+
+code:
+  comiss xmm0,[rcx+r15]
+  jmp return
+
+INJECT_CONDOR_ATB:
+  jmp newmem
+return:
+registersymbol(INJECT_CONDOR_ATB)
+
+[DISABLE]
+
+INJECT_CONDOR_ATB:
+  db 42 0F 2F 04 39
+
+unregistersymbol(INJECT_CONDOR_ATB)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7remake_.exe+11D52E3
+
+ff7remake_.exe+11D52B5: B8 EC 04 00 00        - mov eax,000004EC
+ff7remake_.exe+11D52BA: B9 9C 03 00 00        - mov ecx,0000039C
+ff7remake_.exe+11D52BF: 0F 44 C8              - cmove ecx,eax
+ff7remake_.exe+11D52C2: 41 B8 48 05 00 00     - mov r8d,00000548
+ff7remake_.exe+11D52C8: B8 F8 03 00 00        - mov eax,000003F8
+ff7remake_.exe+11D52CD: 41 0F 44 C0           - cmove eax,r8d
+ff7remake_.exe+11D52D1: 42 8B 04 38           - mov eax,[rax+r15]
+ff7remake_.exe+11D52D5: 0F AF 87 E8 03 00 00  - imul eax,[rdi+000003E8]
+ff7remake_.exe+11D52DC: 66 0F 6E C0           - movd xmm0,eax
+ff7remake_.exe+11D52E0: 0F 5B C0              - cvtdq2ps xmm0,xmm0
+// ---------- INJECTING HERE ----------
+ff7remake_.exe+11D52E3: 42 0F 2F 04 39        - comiss xmm0,[rcx+r15]
+// ---------- DONE INJECTING  ----------
+ff7remake_.exe+11D52E8: 0F 96 C1              - setbe cl
+ff7remake_.exe+11D52EB: 83 FA 04              - cmp edx,04
+ff7remake_.exe+11D52EE: 0F 9C C0              - setl al
+ff7remake_.exe+11D52F1: 22 C8                 - and cl,al
+ff7remake_.exe+11D52F3: 0F B6 D9              - movzx ebx,cl
+ff7remake_.exe+11D52F6: 83 FA 04              - cmp edx,04
+ff7remake_.exe+11D52F9: B9 01 00 00 00        - mov ecx,00000001
+ff7remake_.exe+11D52FE: 0F 4D D9              - cmovge ebx,ecx
+ff7remake_.exe+11D5301: 38 9F FB 03 00 00     - cmp [rdi+000003FB],bl
+ff7remake_.exe+11D5307: 75 09                 - jne ff7remake_.exe+11D5312
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
       <ID>105</ID>
       <Description>"_wip"</Description>
       <Options moHideChildren="1" moAllowManualCollapseAndExpand="1"/>
@@ -4597,33 +4673,4 @@ ff7remake_.exe+13E7222: 48 8D 0C 40        - lea rcx,[rax+rax*2]
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <LuaScript>function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
-	--checkArgType(moduleName, 1, 'string')
-	if not signature or not moduleName then return end
-	index = index or 1
-	local modStartAddr = getAddress(moduleName)
-	local modEndAddr = modStartAddr + getModuleSize(moduleName)
-	local ms = createMemScan()
-	if type(signature) == 'table' then
-		local sig = ''
-		for i, byte in ipairs(signature) do
-			sig = sig..string.format('%02X', byte)
-		end
-		signature = sig
-	end
-	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
-				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
-	ms.waitTillDone()
-	local results = createFoundList(ms)
-	results.initialize()
-	ms.destroy()
-	return results
-end
-registerLuaFunctionHighlight('AOBScanModule')
-
-
-
-AddressList.Header.OnSectionClick = nil
-
-</LuaScript>
 </CheatTable>
