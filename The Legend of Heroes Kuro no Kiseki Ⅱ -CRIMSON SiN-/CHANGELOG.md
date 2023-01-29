@@ -2,6 +2,8 @@
 
 ## 2023/01/29  
 1. Added 快速釣魚 / Fast fishing
+1. Added 戰鬥傷害統計倍率 / Total damage calculation multiplier
+1. Added 七曜卡戰生命值 / Card game life data
 1. Revised 取得部份統計值 / Some stats
 
 ## 2023/01/28  
