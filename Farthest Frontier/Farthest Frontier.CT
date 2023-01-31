@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="44">
+<CheatTable CheatEngineTableVersion="42">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
@@ -312,132 +312,6 @@ GameAssembly.dll+CE39F3: 45 33 C9              - xor r9d,r9d
 GameAssembly.dll+CE39F6: 45 8D 41 01           - lea r8d,[r9+01]
 GameAssembly.dll+CE39FA: 48 8B D6              - mov rdx,rsi
 GameAssembly.dll+CE39FD: E8 FE AF 01 00        - call VillagerHealth.Eat
-}
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>121</ID>
-          <Description>"(not working) Try to prevent item corruption"</Description>
-          <Options moHideChildren="1"/>
-          <Color>808080</Color>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-15
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_SET_MIN_FIELD_RAW_FOOD,GameAssembly.dll,8B CA FF C2 41 03 44 88 20 83 FA 65) // should be unique
-alloc(newmem,$1000,INJECT_SET_MIN_FIELD_RAW_FOOD)
-
-label(code)
-label(return)
-label(is_inf_arrow)
-
-//ItemBundle.get_numberOfItems
-
-newmem:
-  //mov dword ptr [is_cur_object_arrow], 0
-
-
-normal_items:
-  cmp edx, #51 // move/add 51% or below buckets to 100% one
-  ja code
-
-
-start_chk_corruption:
-  pushfq
-  push r15
-  push rcx
-
-  mov ecx,edx
-  mov r15d, [r8+rcx*4+20]
-  test r15d, r15d
-  jz endp
-
-
-  push r15
-  xor r15, r15
-  mov [r8+rcx*4+20], r15d
-  pop r15
-
-  mov ecx, 64
-
-check_100_percent_bucket:
-  cmp dword ptr [r8+rcx*4+20], 0
-  jne do_add_it
-
-do_set_it:
-  mov [r8+rcx*4+20], r15d
-  jmp endp
-
-do_add_it:
-  add [r8+rcx*4+20], r15d
-
-endp:
-  pop rcx
-  pop r15
-  popfq
-
-
-code:
-  mov ecx,edx
-  inc edx
-  add eax,[r8+rcx*4+20]
-  jmp return
-align 10 cc
-  i_tmp1:
-  dq 0
-  i_last_var_addr:
-  dq 0
-  is_inf_arrow:
-  dd 0
-  is_cur_object_arrow:
-  dd 0
-
-INJECT_SET_MIN_FIELD_RAW_FOOD:
-  jmp newmem
-  nop 4
-return:
-registersymbol(INJECT_SET_MIN_FIELD_RAW_FOOD)
-registersymbol(is_inf_arrow)
-
-[DISABLE]
-
-INJECT_SET_MIN_FIELD_RAW_FOOD:
-  db 8B CA FF C2 41 03 44 88 20
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B1A0B
-
-GameAssembly.dll+4B19EE: CC                    - int 3 
-GameAssembly.dll+4B19EF: CC                    - int 3 
-ItemBundle.get_numberOfItems: 48 83 EC 28           - sub rsp,28
-GameAssembly.dll+4B19F4: 4C 8B 81 98 00 00 00  - mov r8,[rcx+00000098]
-GameAssembly.dll+4B19FB: 33 C0                 - xor eax,eax
-GameAssembly.dll+4B19FD: 8D 50 01              - lea edx,[rax+01]
-GameAssembly.dll+4B1A00: 4D 85 C0              - test r8,r8
-GameAssembly.dll+4B1A03: 74 19                 - je GameAssembly.dll+4B1A1E
-GameAssembly.dll+4B1A05: 41 3B 50 18           - cmp edx,[r8+18]
-GameAssembly.dll+4B1A09: 73 19                 - jae GameAssembly.dll+4B1A24
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+4B1A0B: 8B CA                 - mov ecx,edx
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+4B1A0D: FF C2                 - inc edx
-GameAssembly.dll+4B1A0F: 41 03 44 88 20        - add eax,[r8+rcx*4+20]
-GameAssembly.dll+4B1A14: 83 FA 65              - cmp edx,65
-GameAssembly.dll+4B1A17: 7C E7                 - jl GameAssembly.dll+4B1A00
-GameAssembly.dll+4B1A19: 48 83 C4 28           - add rsp,28
-GameAssembly.dll+4B1A1D: C3                    - ret 
-GameAssembly.dll+4B1A1E: E8 7D 63 D5 FF        - call GameAssembly.dll+207DA0
-GameAssembly.dll+4B1A23: CC                    - int 3 
-GameAssembly.dll+4B1A24: E8 87 5F D5 FF        - call GameAssembly.dll+2079B0
-GameAssembly.dll+4B1A29: 48 8B C8              - mov rcx,rax
 }
 </AssemblerScript>
         </CheatEntry>
@@ -810,16 +684,33 @@ GameAssembly.dll+A367DF: 48 8B CF              - mov rcx,rdi
 }
 
 [ENABLE]
-//ItemBundle.AddItems #2
 aobscanmodule(INJECT_MASS_ADD,GameAssembly.dll,42 01 04 09 41 83 F8 65) // should be unique
 alloc(newmem,$1000,INJECT_MASS_ADD)
 
 label(code)
 label(return)
 label(vf_item_add_multi)
+label(vf_item_add_gold_multi)
 label(i_item_cnt_threshold)
+label(is_prevent_corruption)
+label(is_skip_gold_limit)
 
+//ItemBundle.AddItems #2
+//ID: 66 ItemPoop
+//ID: 51 ItemGoldIngot
 newmem:
+  push r15
+  mov r15d, [rdx+10]
+  cmp r15d, #66 //ItemPoop
+  pop r15
+  je code
+
+  push r15
+  mov r15d, [rdx+10]
+  cmp r15d, #51 //ItemGoldIngot
+  pop r15
+  je start_gold_multi //No threshold for GoldIngot
+
   cmp eax, 0
   je code
   push r15
@@ -827,14 +718,36 @@ newmem:
   cmp dword ptr [rcx+r9], r15d
   pop r15
   jae code
+  jmp start_multi
 
-  cvtsi2ss xmm15, eax
+start_gold_multi:
+  vmovss xmm14, [vf_item_add_gold_multi]
+  jmp start_multi_calc
+
+start_multi:
   vmovss xmm14, [vf_item_add_multi]
+
+start_multi_calc:
+  cvtsi2ss xmm15, eax
   vmulss xmm15, xmm15, xmm14
   vcvtss2si eax, xmm15
   push r15
   mov r15d, [rcx+r9]
   pop r15
+
+chk_corrupt:
+  cmp r8d, #40
+  ja code
+  cmp dword ptr [is_prevent_corruption], 1
+  jne code
+
+  add [rcx+r9],eax
+  mov eax, [rcx+r9]
+  mov dword ptr [rcx+r9], 0
+
+  add [r9+1B0], eax //0020 + 64*4 = 1B0, slot 100% address
+  mov eax, 0
+
 
 code:
   add [rcx+r9],eax
@@ -842,13 +755,19 @@ code:
   jmp return
 align 10 cc
   vf_item_add_multi:
-  dd (float)1.4
+  dd (float)3.333333334
+  vf_item_add_gold_multi:
+  dd (float)10
   db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20 68 74 74 70 73 3A 2F
   db 2F 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
   i_item_cnt_threshold:
   dd 64
   i_item_min_cnt_threshold:
   dd 2
+  is_prevent_corruption:
+  dd 1
+  is_skip_gold_limit:
+  dd 1
 
 INJECT_MASS_ADD:
   jmp newmem
@@ -857,6 +776,10 @@ return:
 registersymbol(INJECT_MASS_ADD)
 registersymbol(vf_item_add_multi)
 registersymbol(i_item_cnt_threshold)
+registersymbol(is_prevent_corruption)
+registersymbol(is_skip_gold_limit)
+registersymbol(vf_item_add_gold_multi)
+
 [DISABLE]
 
 INJECT_MASS_ADD:
@@ -866,37 +789,53 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B0855
-
-GameAssembly.dll+4B0832: 4A 8D 0C 80           - lea rcx,[rax+r8*4]
-GameAssembly.dll+4B0836: 48 85 D2              - test rdx,rdx
-GameAssembly.dll+4B0839: 74 28                 - je GameAssembly.dll+4B0863
-GameAssembly.dll+4B083B: 48 8B 82 98 00 00 00  - mov rax,[rdx+00000098]
-GameAssembly.dll+4B0842: 48 85 C0              - test rax,rax
-GameAssembly.dll+4B0845: 74 1C                 - je GameAssembly.dll+4B0863
-GameAssembly.dll+4B0847: 44 3B 40 18           - cmp r8d,[rax+18]
-GameAssembly.dll+4B084B: 73 1C                 - jae GameAssembly.dll+4B0869
-GameAssembly.dll+4B084D: 42 8B 44 80 20        - mov eax,[rax+r8*4+20]
-GameAssembly.dll+4B0852: 41 FF C0              - inc r8d
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+7021C7
+GameAssembly.dll+702190 - 4D 8B 8A 98000000     - mov r9,[r10+00000098]
+GameAssembly.dll+702197 - 4D 85 C9              - test r9,r9
+GameAssembly.dll+70219A - 74 71                 - je GameAssembly.dll+70220D
+GameAssembly.dll+70219C - 45 3B 41 18           - cmp r8d,[r9+18]
+GameAssembly.dll+7021A0 - 73 71                 - jae GameAssembly.dll+702213
+GameAssembly.dll+7021A2: 4A 8D 0C 85 20 00 00 00           - lea rcx,[r8*4+00000020]
+GameAssembly.dll+7021AA: 48 85 D2                          - test rdx,rdx
+GameAssembly.dll+7021AD: 74 5E                             - je GameAssembly.dll+70220D
+GameAssembly.dll+7021AF: 48 8B 82 98 00 00 00              - mov rax,[rdx+00000098]
+GameAssembly.dll+7021B6: 48 85 C0                          - test rax,rax
+GameAssembly.dll+7021B9: 74 52                             - je GameAssembly.dll+70220D
+GameAssembly.dll+7021BB: 44 3B 40 18                       - cmp r8d,[rax+18]
+GameAssembly.dll+7021BF: 73 52                             - jae GameAssembly.dll+702213
+GameAssembly.dll+7021C1: 8B 04 01                          - mov eax,[rcx+rax]
+GameAssembly.dll+7021C4: 41 FF C0                          - inc r8d
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+4B0855: 01 41 20              - add [rcx+20],eax
+GameAssembly.dll+7021C7: 42 01 04 09                       - add [rcx+r9],eax
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+4B0858: 41 83 F8 65           - cmp r8d,65
-GameAssembly.dll+4B085C: 72 C2                 - jb GameAssembly.dll+4B0820
-GameAssembly.dll+4B085E: 48 83 C4 28           - add rsp,28
-GameAssembly.dll+4B0862: C3                    - ret 
-GameAssembly.dll+4B0863: E8 38 75 D5 FF        - call GameAssembly.dll+207DA0
-GameAssembly.dll+4B0868: CC                    - int 3 
-GameAssembly.dll+4B0869: E8 42 71 D5 FF        - call GameAssembly.dll+2079B0
-GameAssembly.dll+4B086E: 48 8B C8              - mov rcx,rax
-GameAssembly.dll+4B0871: 33 D2                 - xor edx,edx
-GameAssembly.dll+4B0873: E8 E8 74 D5 FF        - call GameAssembly.dll+207D60
+GameAssembly.dll+7021CB: 41 83 F8 65                       - cmp r8d,65
+GameAssembly.dll+7021CF: 72 BF                             - jb GameAssembly.dll+702190
+GameAssembly.dll+7021D1: 4D 8B 82 98 00 00 00              - mov r8,[r10+00000098]
+GameAssembly.dll+7021D8: BA 01 00 00 00                    - mov edx,00000001
+GameAssembly.dll+7021DD: 41 C7 82 90 00 00 00 00 00 00 00  - mov [r10+00000090],00000000
+GameAssembly.dll+7021E8: 4D 85 C0                          - test r8,r8
+GameAssembly.dll+7021EB: 74 20                             - je GameAssembly.dll+70220D
+GameAssembly.dll+7021ED: 41 3B 50 18                       - cmp edx,[r8+18]
+GameAssembly.dll+7021F1: 73 20                             - jae GameAssembly.dll+702213
+GameAssembly.dll+7021F3: 8B C2                             - mov eax,edx
+GameAssembly.dll+7021F5 - FF C2                 - inc edx
+GameAssembly.dll+7021F7 - 41 8B 4C 80 20        - mov ecx,[r8+rax*4+20]
+GameAssembly.dll+7021FC - 41 01 8A 90000000     - add [r10+00000090],ecx
+GameAssembly.dll+702203 - 83 FA 65              - cmp edx,65
+GameAssembly.dll+702206 - 7C E0                 - jl GameAssembly.dll+7021E8
+GameAssembly.dll+702208 - 48 83 C4 28           - add rsp,28
+GameAssembly.dll+70220C - C3                    - ret
+GameAssembly.dll+70220D - E8 0E6AB2FF           - call GameAssembly.il2cpp_value_box+70
+GameAssembly.dll+702212 - CC                    - int 3
+GameAssembly.dll+702213 - E8 186AB2FF           - call GameAssembly.il2cpp_value_box+80
+GameAssembly.dll+702218 - CC                    - int 3
+
 }
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
               <ID>20</ID>
-              <Description>"All items include wastes"</Description>
+              <Description>"No threshold for GoldIngot; multiplier no apply to poop"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
@@ -909,28 +848,348 @@ GameAssembly.dll+4B0873: E8 E8 74 D5 FF        - call GameAssembly.dll+207D60
               <Address>vf_item_add_multi</Address>
             </CheatEntry>
             <CheatEntry>
+              <ID>139</ID>
+              <Description>"Multiplier for Gold ingot"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_item_add_gold_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
               <ID>29</ID>
-              <Description>"Threshold"</Description>
+              <Description>"Multiplier threshold limt"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_item_cnt_threshold</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>138</ID>
+                  <Description>"multiplier disabled if stock# exceed this value"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>136</ID>
+              <Description>"Try to prevent corruption?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_prevent_corruption</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>140</ID>
+                  <Description>"Only checked during adding item"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>137</ID>
+              <Description>"No threshold limit for gold ingot?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_skip_gold_limit</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>27</ID>
-          <Description>"Experimental: Object values (choose one)"</Description>
+          <ID>143</ID>
+          <Description>"When item remove: try to prevent corruption"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_REMOVE_ITEM,GameAssembly.dll,01 8E 90 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_REMOVE_ITEM)
+
+label(code)
+label(return)
+label(vf_item_remove_multi)
+label(is_prevent_corrupt_after_remove)
+
+//ItemBundle.RemoveItems
+
+newmem:
+  jmp start_p
+  cvtsi2ss xmm15, ecx
+  vmovss xmm14, [vf_item_remove_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si ecx, xmm15
+
+start_p:
+  cmp dword ptr [is_prevent_corrupt_after_remove], 1
+  jne code
+  cmp eax, #40
+  ja code
+
+  mov ecx, [r8+rax*4+20]
+  mov dword ptr [r8+rax*4+20], 0
+  add [r8+1B0], ecx
+  mov ecx, 0
+
+code:
+  add [rsi+00000090],ecx
+
+  jmp return
+align 10 cc
+  vf_item_remove_multi:
+  dd (float)1.05
+  is_prevent_corrupt_after_remove:
+  dd 1
+
+INJECT_REMOVE_ITEM:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_REMOVE_ITEM)
+registersymbol(vf_item_remove_multi)
+registersymbol(is_prevent_corrupt_after_remove)
+
+[DISABLE]
+
+INJECT_REMOVE_ITEM:
+  db 01 8E 90 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+7023C4
+
+GameAssembly.dll+70239F: BA 01 00 00 00        - mov edx,00000001
+GameAssembly.dll+7023A4: 44 89 A6 90 00 00 00  - mov [rsi+00000090],r12d
+GameAssembly.dll+7023AB: 0F 1F 44 00 00        - nop dword ptr [rax+rax+00]
+GameAssembly.dll+7023B0: 4D 85 C0              - test r8,r8
+GameAssembly.dll+7023B3: 74 39                 - je GameAssembly.dll+7023EE
+GameAssembly.dll+7023B5: 41 3B 50 18           - cmp edx,[r8+18]
+GameAssembly.dll+7023B9: 73 39                 - jae GameAssembly.dll+7023F4
+GameAssembly.dll+7023BB: 8B C2                 - mov eax,edx
+GameAssembly.dll+7023BD: FF C2                 - inc edx
+GameAssembly.dll+7023BF: 41 8B 4C 80 20        - mov ecx,[r8+rax*4+20]
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+7023C4: 01 8E 90 00 00 00     - add [rsi+00000090],ecx
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+7023CA: 83 FA 65              - cmp edx,65
+GameAssembly.dll+7023CD: 7C E1                 - jl GameAssembly.dll+7023B0
+GameAssembly.dll+7023CF: 4C 8B 74 24 50        - mov r14,[rsp+50]
+GameAssembly.dll+7023D4: 49 8B C7              - mov rax,r15
+GameAssembly.dll+7023D7: 4C 8B 7C 24 58        - mov r15,[rsp+58]
+GameAssembly.dll+7023DC: 4C 8B 64 24 48        - mov r12,[rsp+48]
+GameAssembly.dll+7023E1: 48 8B 7C 24 40        - mov rdi,[rsp+40]
+GameAssembly.dll+7023E6: 48 83 C4 20           - add rsp,20
+GameAssembly.dll+7023EA: 5E                    - pop rsi
+GameAssembly.dll+7023EB: 5D                    - pop rbp
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>145</ID>
+              <Description>"Try to prevent corruption?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_prevent_corrupt_after_remove</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>132</ID>
+          <Description>"When add item to storage"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-01-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_STOR_ITEM_MULTI,GameAssembly.dll,41 01 04 10 83 F9 65 72 AE) // should be unique
+alloc(newmem,$1000,INJECT_STOR_ITEM_MULTI)
+
+label(code)
+label(return)
+label(vf_item_count_multi)
+label(i_min_storage_item)
+label(i_max_poop_count)
+label(i_min_gold_count)
+//ItemStorage.AddItems
+
+newmem:
+  //cmp ecx, 64
+  //jne do_next
+  mov [i_tmp1], eax
+  cvtsi2ss xmm15, eax
+  vmovss xmm14, [vf_item_count_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si eax, xmm15
+
+
+do_next:
+  push r15
+  push r14
+
+  mov r15d, [rdi+10]
+  cmp r15d, #66 //ItemPoop
+  jne chk_gold
+  // Poop
+  mov eax, [i_tmp1]
+  mov r15, [rdi+98] //percentDegradationQtyArray
+  mov r14d, [r15+1B0] //100%
+  cmp r14d, [i_max_poop_count]
+  jbe chk_gold
+  mov r14d, [i_max_poop_count]
+  mov [r15+1B0], r14d
+
+chk_gold:
+  mov r15d, [rdi+10]
+  cmp r15d, #51 //ItemGoldIngot
+  jne endp
+  mov r15, [rdi+98] //percentDegradationQtyArray
+  mov r14d, [r15+1B0] //100%
+  cmp r14d, [i_min_gold_count]
+  jae endp
+  mov r14d, [i_min_gold_count]
+  mov [r15+1B0], r14d
+
+endp:
+  pop r14
+  pop r15
+
+code:
+  add [r8+rdx],eax
+  cmp ecx,65
+  jmp return
+align 10 cc
+  vf_item_count_multi:
+  dd (float)1.5
+  i_min_storage_item:
+  dd A
+  i_max_poop_count:
+  dd 14
+  i_min_gold_count:
+  dd #200
+  i_tmp1:
+  dd 0
+
+INJECT_STOR_ITEM_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_STOR_ITEM_MULTI)
+registersymbol(vf_item_count_multi)
+registersymbol(i_min_storage_item)
+registersymbol(i_max_poop_count)
+registersymbol(i_min_gold_count)
+[DISABLE]
+
+INJECT_STOR_ITEM_MULTI:
+  db 41 01 04 10 83 F9 65
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+706199
+
+GameAssembly.dll+706169: 4C 8D 04 8D 20 00 00 00        - lea r8,[rcx*4+00000020]
+GameAssembly.dll+706171: 48 85 FF                       - test rdi,rdi
+GameAssembly.dll+706174: 0F 84 6F 01 00 00              - je GameAssembly.dll+7062E9
+GameAssembly.dll+70617A: 48 8B 87 98 00 00 00           - mov rax,[rdi+00000098]
+GameAssembly.dll+706181: 48 85 C0                       - test rax,rax
+GameAssembly.dll+706184: 0F 84 5F 01 00 00              - je GameAssembly.dll+7062E9
+GameAssembly.dll+70618A: 3B 48 18                       - cmp ecx,[rax+18]
+GameAssembly.dll+70618D: 0F 83 5C 01 00 00              - jae GameAssembly.dll+7062EF
+GameAssembly.dll+706193: 41 8B 04 00                    - mov eax,[r8+rax]
+GameAssembly.dll+706197: FF C1                          - inc ecx
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+706199: 41 01 04 10                    - add [r8+rdx],eax
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+70619D: 83 F9 65                       - cmp ecx,65
+GameAssembly.dll+7061A0: 72 AE                          - jb GameAssembly.dll+706150
+GameAssembly.dll+7061A2: 4C 8B 83 98 00 00 00           - mov r8,[rbx+00000098]
+GameAssembly.dll+7061A9: BA 01 00 00 00                 - mov edx,00000001
+GameAssembly.dll+7061AE: C7 83 90 00 00 00 00 00 00 00  - mov [rbx+00000090],00000000
+GameAssembly.dll+7061B8: 0F 1F 84 00 00 00 00 00        - nop dword ptr [rax+rax+00000000]
+GameAssembly.dll+7061C0: 4D 85 C0                       - test r8,r8
+GameAssembly.dll+7061C3: 0F 84 20 01 00 00              - je GameAssembly.dll+7062E9
+GameAssembly.dll+7061C9: 41 3B 50 18                    - cmp edx,[r8+18]
+GameAssembly.dll+7061CD: 0F 83 1C 01 00 00              - jae GameAssembly.dll+7062EF
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>141</ID>
+              <Description>"Affect traiding ceter"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>133</ID>
+              <Description>"Multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_item_count_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>134</ID>
+              <Description>"Max poop count"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_max_poop_count</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>135</ID>
+              <Description>"Min. gold amount"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_gold_count</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>119</ID>
+          <Description>"_WIP"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>11</ID>
-              <Description>"(not working) Selected resource, type 1"</Description>
+              <ID>27</ID>
+              <Description>"Experimental: Object values (choose one)"</Description>
               <Options moHideChildren="1"/>
-              <Color>808080</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript Async="1">{ Game   : Farthest Frontier.exe
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>11</ID>
+                  <Description>"(not working) Selected resource, type 1"</Description>
+                  <Options moHideChildren="1"/>
+                  <Color>808080</Color>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript Async="1">{ Game   : Farthest Frontier.exe
   Version: 
   Date   : 2023-01-03
   Author : bbfox@https://opencheattables.com
@@ -1170,161 +1429,161 @@ GameAssembly.dll+4B186B: 48 8B 74 24 40        - mov rsi,[rsp+40]
 GameAssembly.dll+4B1870: 89 87 A4 00 00 00     - mov [rdi+000000A4],eax
 }
 </AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>37</ID>
-                  <Description>"1. Pause game"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>21</ID>
-                  <Description>"2. Select object"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>39</ID>
-                  <Description>"3. Up to 10 values for single object"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>55</ID>
-                  <Description>"4. Data refresh speed is fast"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>26</ID>
-                  <Description>"Reset data?"</Description>
-                  <DropDownList DisplayValueAsItem="1">0:No
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>37</ID>
+                      <Description>"1. Pause game"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>21</ID>
+                      <Description>"2. Select object"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>39</ID>
+                      <Description>"3. Up to 10 values for single object"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>55</ID>
+                      <Description>"4. Data refresh speed is fast"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>26</ID>
+                      <Description>"Reset data?"</Description>
+                      <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
 </DropDownList>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>C08000</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>is_reset_data1</Address>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_reset_data1</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>12</ID>
+                      <Description>"Number 1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr1</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>23</ID>
+                      <Description>"Number 2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>22</ID>
+                      <Description>"Number 3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr3</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>24</ID>
+                      <Description>"Number 4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr4</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>25</ID>
+                      <Description>"Number 5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr5</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>31</ID>
+                      <Description>"Number 6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr6</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>32</ID>
+                      <Description>"Number 7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr7</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>33</ID>
+                      <Description>"Number 8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>34</ID>
+                      <Description>"Number 9"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr9</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>35</ID>
+                      <Description>"Number 10"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr10</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>12</ID>
-                  <Description>"Number 1"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr1</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>23</ID>
-                  <Description>"Number 2"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>22</ID>
-                  <Description>"Number 3"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr3</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>24</ID>
-                  <Description>"Number 4"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr4</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>25</ID>
-                  <Description>"Number 5"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr5</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>31</ID>
-                  <Description>"Number 6"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr6</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>32</ID>
-                  <Description>"Number 7"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr7</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>33</ID>
-                  <Description>"Number 8"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>34</ID>
-                  <Description>"Number 9"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr9</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>35</ID>
-                  <Description>"Number 10"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr10</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>40</ID>
-              <Description>"(not working) Selected resource, type 2"</Description>
-              <Options moHideChildren="1"/>
-              <Color>808080</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript Async="1">{ Game   : Farthest Frontier.exe
+                  <ID>40</ID>
+                  <Description>"(not working) Selected resource, type 2"</Description>
+                  <Options moHideChildren="1"/>
+                  <Color>808080</Color>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript Async="1">{ Game   : Farthest Frontier.exe
   Version: 
   Date   : 2023-01-05
   Author : bbfox@https://opencheattables.com
@@ -1490,945 +1749,841 @@ GameAssembly.dll+4B186B: 48 8B 74 24 40        - mov rsi,[rsp+40]
 GameAssembly.dll+4B1870: 89 87 A4 00 00 00     - mov [rdi+000000A4],eax
 }
 </AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>41</ID>
-                  <Description>"1. Pause game"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>42</ID>
-                  <Description>"2. Select object"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>43</ID>
-                  <Description>"3. Up to 64 values for single object"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>56</ID>
-                  <Description>"4. Data refresh speed is slower (~ 5 seconds)"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>45</ID>
-                  <Description>"Number 1"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>46</ID>
-                  <Description>"Number 2"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>47</ID>
-                  <Description>"Number 3"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+10</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>48</ID>
-                  <Description>"Number 4"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+18</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>49</ID>
-                  <Description>"Number 5"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+20</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>50</ID>
-                  <Description>"Number 6"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+28</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>51</ID>
-                  <Description>"Number 7"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+30</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>52</ID>
-                  <Description>"Number 8"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+38</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>53</ID>
-                  <Description>"Number 9"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+40</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>54</ID>
-                  <Description>"Number 10"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+48</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>57</ID>
-                  <Description>"Number 11"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+50</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>58</ID>
-                  <Description>"Number 12"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+58</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>59</ID>
-                  <Description>"Number 13"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+60</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>60</ID>
-                  <Description>"Number 14"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+68</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>61</ID>
-                  <Description>"Number 15"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+70</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>62</ID>
-                  <Description>"Number 16"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+78</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>63</ID>
-                  <Description>"Number 17"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+80</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>64</ID>
-                  <Description>"Number 18"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+88</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>65</ID>
-                  <Description>"Number 19"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+90</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>66</ID>
-                  <Description>"Number 20"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+98</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>67</ID>
-                  <Description>"Number 21"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+A0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>68</ID>
-                  <Description>"Number 22"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+A8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>69</ID>
-                  <Description>"Number 23"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+B0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>70</ID>
-                  <Description>"Number 24"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+B8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>71</ID>
-                  <Description>"Number 25"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+C0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>72</ID>
-                  <Description>"Number 26"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+C8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>73</ID>
-                  <Description>"Number 27"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+D0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>74</ID>
-                  <Description>"Number 28"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+D8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>75</ID>
-                  <Description>"Number 29"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+E0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>76</ID>
-                  <Description>"Number 30"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+E8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>77</ID>
-                  <Description>"Number 31"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+F0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>78</ID>
-                  <Description>"Number 32"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+F8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>79</ID>
-                  <Description>"Number 33"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+100</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>80</ID>
-                  <Description>"Number 34"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+108</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>81</ID>
-                  <Description>"Number 35"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+110</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>82</ID>
-                  <Description>"Number 36"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+118</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>83</ID>
-                  <Description>"Number 37"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+120</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>84</ID>
-                  <Description>"Number 38"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+128</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>85</ID>
-                  <Description>"Number 39"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+130</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>86</ID>
-                  <Description>"Number 40"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+138</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>87</ID>
-                  <Description>"Number 41"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+140</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>88</ID>
-                  <Description>"Number 42"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+148</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>89</ID>
-                  <Description>"Number 43"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+150</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>90</ID>
-                  <Description>"Number 44"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+158</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>91</ID>
-                  <Description>"Number 45"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+160</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>92</ID>
-                  <Description>"Number 46"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+168</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>93</ID>
-                  <Description>"Number 47"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+170</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>94</ID>
-                  <Description>"Number 48"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+178</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>95</ID>
-                  <Description>"Number 49"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+180</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>96</ID>
-                  <Description>"Number 50"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+188</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>97</ID>
-                  <Description>"Number 51"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+190</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>98</ID>
-                  <Description>"Number 52"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+198</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>99</ID>
-                  <Description>"Number 53"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1A0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>100</ID>
-                  <Description>"Number 54"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1A8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>101</ID>
-                  <Description>"Number 55"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1B0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>102</ID>
-                  <Description>"Number 56"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1B8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>103</ID>
-                  <Description>"Number 57"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1C0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>104</ID>
-                  <Description>"Number 58"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1C8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>105</ID>
-                  <Description>"Number 59"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1D0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>106</ID>
-                  <Description>"Number 60"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1D8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>107</ID>
-                  <Description>"Number 61"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1E0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>108</ID>
-                  <Description>"Number 62"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1E8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>109</ID>
-                  <Description>"Number 63"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1F0</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>110</ID>
-                  <Description>"Number 64"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_sel_object_addr2_1+1F8</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>41</ID>
+                      <Description>"1. Pause game"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>42</ID>
+                      <Description>"2. Select object"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>43</ID>
+                      <Description>"3. Up to 64 values for single object"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>56</ID>
+                      <Description>"4. Data refresh speed is slower (~ 5 seconds)"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>45</ID>
+                      <Description>"Number 1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>46</ID>
+                      <Description>"Number 2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>47</ID>
+                      <Description>"Number 3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+10</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>48</ID>
+                      <Description>"Number 4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>49</ID>
+                      <Description>"Number 5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>50</ID>
+                      <Description>"Number 6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+28</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>51</ID>
+                      <Description>"Number 7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+30</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>52</ID>
+                      <Description>"Number 8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+38</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>53</ID>
+                      <Description>"Number 9"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+40</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>54</ID>
+                      <Description>"Number 10"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+48</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>57</ID>
+                      <Description>"Number 11"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+50</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>58</ID>
+                      <Description>"Number 12"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+58</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>59</ID>
+                      <Description>"Number 13"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+60</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>60</ID>
+                      <Description>"Number 14"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+68</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>61</ID>
+                      <Description>"Number 15"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+70</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>62</ID>
+                      <Description>"Number 16"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+78</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>63</ID>
+                      <Description>"Number 17"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+80</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>64</ID>
+                      <Description>"Number 18"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+88</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>65</ID>
+                      <Description>"Number 19"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+90</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>66</ID>
+                      <Description>"Number 20"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+98</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>67</ID>
+                      <Description>"Number 21"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+A0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>68</ID>
+                      <Description>"Number 22"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+A8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>69</ID>
+                      <Description>"Number 23"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+B0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>70</ID>
+                      <Description>"Number 24"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+B8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>71</ID>
+                      <Description>"Number 25"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+C0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>72</ID>
+                      <Description>"Number 26"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+C8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>73</ID>
+                      <Description>"Number 27"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+D0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>74</ID>
+                      <Description>"Number 28"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+D8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>75</ID>
+                      <Description>"Number 29"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+E0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>76</ID>
+                      <Description>"Number 30"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+E8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>77</ID>
+                      <Description>"Number 31"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+F0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>78</ID>
+                      <Description>"Number 32"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+F8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>79</ID>
+                      <Description>"Number 33"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+100</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>80</ID>
+                      <Description>"Number 34"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+108</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>81</ID>
+                      <Description>"Number 35"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+110</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>82</ID>
+                      <Description>"Number 36"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+118</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>83</ID>
+                      <Description>"Number 37"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+120</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>84</ID>
+                      <Description>"Number 38"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+128</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>85</ID>
+                      <Description>"Number 39"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+130</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>86</ID>
+                      <Description>"Number 40"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+138</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>87</ID>
+                      <Description>"Number 41"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+140</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>88</ID>
+                      <Description>"Number 42"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+148</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>89</ID>
+                      <Description>"Number 43"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+150</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>90</ID>
+                      <Description>"Number 44"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+158</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>91</ID>
+                      <Description>"Number 45"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+160</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>92</ID>
+                      <Description>"Number 46"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+168</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>93</ID>
+                      <Description>"Number 47"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+170</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>94</ID>
+                      <Description>"Number 48"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+178</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>95</ID>
+                      <Description>"Number 49"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+180</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>96</ID>
+                      <Description>"Number 50"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+188</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>97</ID>
+                      <Description>"Number 51"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+190</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>98</ID>
+                      <Description>"Number 52"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+198</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>99</ID>
+                      <Description>"Number 53"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1A0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>100</ID>
+                      <Description>"Number 54"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1A8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>101</ID>
+                      <Description>"Number 55"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1B0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>102</ID>
+                      <Description>"Number 56"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1B8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>103</ID>
+                      <Description>"Number 57"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1C0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>104</ID>
+                      <Description>"Number 58"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1C8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>105</ID>
+                      <Description>"Number 59"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1D0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>106</ID>
+                      <Description>"Number 60"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1D8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>107</ID>
+                      <Description>"Number 61"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1E0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>108</ID>
+                      <Description>"Number 62"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1E8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>109</ID>
+                      <Description>"Number 63"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1F0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>110</ID>
+                      <Description>"Number 64"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_base_sel_object_addr2_1+1F8</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>132</ID>
-          <Description>"When add item to storage"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
+            <CheatEntry>
+              <ID>121</ID>
+              <Description>"(not working) Try to prevent item corruption"</Description>
+              <Options moHideChildren="1"/>
+              <Color>808080</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
-  Date   : 2023-01-30
+  Date   : 2023-01-15
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_STOR_ITEM_MULTI,GameAssembly.dll,41 01 04 10 83 F9 65 72 AE) // should be unique
-alloc(newmem,$1000,INJECT_STOR_ITEM_MULTI)
+aobscanmodule(INJECT_SET_MIN_FIELD_RAW_FOOD,GameAssembly.dll,8B CA FF C2 41 03 44 88 20 83 FA 65) // should be unique
+alloc(newmem,$1000,INJECT_SET_MIN_FIELD_RAW_FOOD)
 
 label(code)
 label(return)
-label(vf_item_count_multi)
-label(i_min_storage_item)
-label(i_max_poop_count)
-label(i_min_gold_count)
-//ItemStorage.AddItems
+label(is_inf_arrow)
+
+//ItemBundle.get_numberOfItems
 
 newmem:
-  //cmp ecx, 64
-  //jne do_next
-  mov [i_tmp1], eax
-  cvtsi2ss xmm15, eax
-  vmovss xmm14, [vf_item_count_multi]
-  vmulss xmm15, xmm14, xmm15
-  vcvtss2si eax, xmm15
+  //mov dword ptr [is_cur_object_arrow], 0
 
 
-do_next:
+normal_items:
+  cmp edx, #51 // move/add 51% or below buckets to 100% one
+  ja code
+
+
+start_chk_corruption:
+  pushfq
   push r15
-  push r14
+  push rcx
 
-  mov r15d, [rdi+10]
-  cmp r15d, #66 //ItemPoop
-  jne chk_gold
-  // Poop
-  mov eax, [i_tmp1]
-  mov r15, [rdi+98] //percentDegradationQtyArray
-  mov r14d, [r15+1B0] //100%
-  cmp r14d, [i_max_poop_count]
-  jbe chk_gold
-  mov r14d, [i_max_poop_count]
-  mov [r15+1B0], r14d
+  mov ecx,edx
+  mov r15d, [r8+rcx*4+20]
+  test r15d, r15d
+  jz endp
 
-chk_gold:
-  mov r15d, [rdi+10]
-  cmp r15d, #51 //ItemGoldIngot
-  jne endp
-  mov r15, [rdi+98] //percentDegradationQtyArray
-  mov r14d, [r15+1B0] //100%
-  cmp r14d, [i_min_gold_count]
-  jae endp
-  mov r14d, [i_min_gold_count]
-  mov [r15+1B0], r14d
 
-endp:
-  pop r14
+  push r15
+  xor r15, r15
+  mov [r8+rcx*4+20], r15d
   pop r15
 
+  mov ecx, 64
+
+check_100_percent_bucket:
+  cmp dword ptr [r8+rcx*4+20], 0
+  jne do_add_it
+
+do_set_it:
+  mov [r8+rcx*4+20], r15d
+  jmp endp
+
+do_add_it:
+  add [r8+rcx*4+20], r15d
+
+endp:
+  pop rcx
+  pop r15
+  popfq
+
+
 code:
-  add [r8+rdx],eax
-  cmp ecx,65
+  mov ecx,edx
+  inc edx
+  add eax,[r8+rcx*4+20]
   jmp return
 align 10 cc
-  vf_item_count_multi:
-  dd (float)1.5
-  i_min_storage_item:
-  dd A
-  i_max_poop_count:
-  dd 14
-  i_min_gold_count:
-  dd #100
   i_tmp1:
+  dq 0
+  i_last_var_addr:
+  dq 0
+  is_inf_arrow:
+  dd 0
+  is_cur_object_arrow:
   dd 0
 
-INJECT_STOR_ITEM_MULTI:
+INJECT_SET_MIN_FIELD_RAW_FOOD:
   jmp newmem
-  nop 2
+  nop 4
 return:
-registersymbol(INJECT_STOR_ITEM_MULTI)
-registersymbol(vf_item_count_multi)
-registersymbol(i_min_storage_item)
-registersymbol(i_max_poop_count)
-registersymbol(i_min_gold_count)
+registersymbol(INJECT_SET_MIN_FIELD_RAW_FOOD)
+registersymbol(is_inf_arrow)
+
 [DISABLE]
 
-INJECT_STOR_ITEM_MULTI:
-  db 41 01 04 10 83 F9 65
+INJECT_SET_MIN_FIELD_RAW_FOOD:
+  db 8B CA FF C2 41 03 44 88 20
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+706199
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B1A0B
 
-GameAssembly.dll+706169: 4C 8D 04 8D 20 00 00 00        - lea r8,[rcx*4+00000020]
-GameAssembly.dll+706171: 48 85 FF                       - test rdi,rdi
-GameAssembly.dll+706174: 0F 84 6F 01 00 00              - je GameAssembly.dll+7062E9
-GameAssembly.dll+70617A: 48 8B 87 98 00 00 00           - mov rax,[rdi+00000098]
-GameAssembly.dll+706181: 48 85 C0                       - test rax,rax
-GameAssembly.dll+706184: 0F 84 5F 01 00 00              - je GameAssembly.dll+7062E9
-GameAssembly.dll+70618A: 3B 48 18                       - cmp ecx,[rax+18]
-GameAssembly.dll+70618D: 0F 83 5C 01 00 00              - jae GameAssembly.dll+7062EF
-GameAssembly.dll+706193: 41 8B 04 00                    - mov eax,[r8+rax]
-GameAssembly.dll+706197: FF C1                          - inc ecx
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+706199: 41 01 04 10                    - add [r8+rdx],eax
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+70619D: 83 F9 65                       - cmp ecx,65
-GameAssembly.dll+7061A0: 72 AE                          - jb GameAssembly.dll+706150
-GameAssembly.dll+7061A2: 4C 8B 83 98 00 00 00           - mov r8,[rbx+00000098]
-GameAssembly.dll+7061A9: BA 01 00 00 00                 - mov edx,00000001
-GameAssembly.dll+7061AE: C7 83 90 00 00 00 00 00 00 00  - mov [rbx+00000090],00000000
-GameAssembly.dll+7061B8: 0F 1F 84 00 00 00 00 00        - nop dword ptr [rax+rax+00000000]
-GameAssembly.dll+7061C0: 4D 85 C0                       - test r8,r8
-GameAssembly.dll+7061C3: 0F 84 20 01 00 00              - je GameAssembly.dll+7062E9
-GameAssembly.dll+7061C9: 41 3B 50 18                    - cmp edx,[r8+18]
-GameAssembly.dll+7061CD: 0F 83 1C 01 00 00              - jae GameAssembly.dll+7062EF
-}
-</AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>133</ID>
-              <Description>"Multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_item_count_multi</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>134</ID>
-              <Description>"Max poop count"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_max_poop_count</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>135</ID>
-              <Description>"Min. gold amount"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_min_gold_count</Address>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>119</ID>
-          <Description>"_WIP"</Description>
-          <Options moHideChildren="1"/>
-          <GroupHeader>1</GroupHeader>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>118</ID>
-              <Description>"UIBuildingInfoWindowTradingPost.UpdateGoldDisplays "</Description>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-12
-  Author :
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_T1,GameAssembly.dll,41 03 44 88 20 83 FA 65) // should be unique
-alloc(newmem,$1000,INJECT_T1)
-
-label(code)
-label(return)
-
-newmem:
-  push r15
-  lea r15, [r8+rcx*4+20]
-  lea r15, [r8+rcx*4+20]
-
-endp:
-  pop r15
-
-
-code:
-  add eax,[r8+rcx*4+20]
-  jmp return
-
-INJECT_T1:
-  jmp newmem
-return:
-registersymbol(INJECT_T1)
-
-[DISABLE]
-
-INJECT_T1:
-  db 41 03 44 88 20
-
-unregistersymbol(INJECT_T1)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B1A0F
-
+GameAssembly.dll+4B19EE: CC                    - int 3 
+GameAssembly.dll+4B19EF: CC                    - int 3 
 ItemBundle.get_numberOfItems: 48 83 EC 28           - sub rsp,28
 GameAssembly.dll+4B19F4: 4C 8B 81 98 00 00 00  - mov r8,[rcx+00000098]
 GameAssembly.dll+4B19FB: 33 C0                 - xor eax,eax
@@ -2437,11 +2592,11 @@ GameAssembly.dll+4B1A00: 4D 85 C0              - test r8,r8
 GameAssembly.dll+4B1A03: 74 19                 - je GameAssembly.dll+4B1A1E
 GameAssembly.dll+4B1A05: 41 3B 50 18           - cmp edx,[r8+18]
 GameAssembly.dll+4B1A09: 73 19                 - jae GameAssembly.dll+4B1A24
-GameAssembly.dll+4B1A0B: 8B CA                 - mov ecx,edx
-GameAssembly.dll+4B1A0D: FF C2                 - inc edx
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+4B1A0F: 41 03 44 88 20        - add eax,[r8+rcx*4+20]
+GameAssembly.dll+4B1A0B: 8B CA                 - mov ecx,edx
 // ---------- DONE INJECTING  ----------
+GameAssembly.dll+4B1A0D: FF C2                 - inc edx
+GameAssembly.dll+4B1A0F: 41 03 44 88 20        - add eax,[r8+rcx*4+20]
 GameAssembly.dll+4B1A14: 83 FA 65              - cmp edx,65
 GameAssembly.dll+4B1A17: 7C E7                 - jl GameAssembly.dll+4B1A00
 GameAssembly.dll+4B1A19: 48 83 C4 28           - add rsp,28
@@ -2450,101 +2605,8 @@ GameAssembly.dll+4B1A1E: E8 7D 63 D5 FF        - call GameAssembly.dll+207DA0
 GameAssembly.dll+4B1A23: CC                    - int 3 
 GameAssembly.dll+4B1A24: E8 87 5F D5 FF        - call GameAssembly.dll+2079B0
 GameAssembly.dll+4B1A29: 48 8B C8              - mov rcx,rax
-GameAssembly.dll+4B1A2C: 33 D2                 - xor edx,edx
-GameAssembly.dll+4B1A2E: E8 2D 63 D5 FF        - call GameAssembly.dll+207D60
 }
 </AssemblerScript>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>128</ID>
-              <Description>"Set min. usused item count in trading center"</Description>
-              <Options moHideChildren="1"/>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-16
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_SET_UNUSED_COUNT,GameAssembly.dll,8B 41 18 89 41 1C) // should be unique
-alloc(newmem,$1000,INJECT_SET_UNUSED_COUNT)
-
-label(code)
-label(return)
-label(i_min_unused_count)
-//ResourceManager.UpdateUnusedCount
-
-newmem:
-
-code:
-  mov eax,[rcx+18]
-  // code start
-  cmp eax, [i_min_unused_count]
-  jae endp
-  mov eax, [i_min_unused_count]
-  mov [rcx+18], eax
-endp:
-  // code end
-  mov [rcx+1C],eax
-  jmp return
-align 10 cc
-  i_min_unused_count:
-  dd A
-
-INJECT_SET_UNUSED_COUNT:
-  jmp newmem
-  nop
-return:
-registersymbol(INJECT_SET_UNUSED_COUNT)
-registersymbol(i_min_unused_count)
-[DISABLE]
-
-INJECT_SET_UNUSED_COUNT:
-  db 8B 41 18 89 41 1C
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2E75B3
-
-GameAssembly.dll+2E7588: F2 0F 10 4C 24 50     - movsd xmm1,[rsp+50]
-GameAssembly.dll+2E758E: F2 0F 11 4C 24 38     - movsd [rsp+38],xmm1
-GameAssembly.dll+2E7594: 48 8B 15 C5 80 C5 01  - mov rdx,[GameAssembly.dll+1F3F660]
-GameAssembly.dll+2E759B: 48 8D 4C 24 28        - lea rcx,[rsp+28]
-GameAssembly.dll+2E75A0: E8 DB 74 C1 00        - call GameAssembly.dll+EFEA80
-GameAssembly.dll+2E75A5: 84 C0                 - test al,al
-GameAssembly.dll+2E75A7: 74 12                 - je GameAssembly.dll+2E75BB
-GameAssembly.dll+2E75A9: 48 8B 4C 24 38        - mov rcx,[rsp+38]
-GameAssembly.dll+2E75AE: 48 85 C9              - test rcx,rcx
-GameAssembly.dll+2E75B1: 74 3C                 - je GameAssembly.dll+2E75EF
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+2E75B3: 8B 41 18              - mov eax,[rcx+18]
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+2E75B6: 89 41 1C              - mov [rcx+1C],eax
-GameAssembly.dll+2E75B9: EB D9                 - jmp GameAssembly.dll+2E7594
-GameAssembly.dll+2E75BB: 48 8B 15 0E 80 C5 01  - mov rdx,[GameAssembly.dll+1F3F5D0]
-GameAssembly.dll+2E75C2: 48 8D 4C 24 28        - lea rcx,[rsp+28]
-GameAssembly.dll+2E75C7: E8 54 57 F7 FF        - call &lt;SelectEverySelectableCoroutine&gt;d__63.System.IDisposable.Dispose
-GameAssembly.dll+2E75CC: EB 1B                 - jmp GameAssembly.dll+2E75E9
-GameAssembly.dll+2E75CE: 48 8B 15 FB 7F C5 01  - mov rdx,[GameAssembly.dll+1F3F5D0]
-GameAssembly.dll+2E75D5: 48 8D 4C 24 28        - lea rcx,[rsp+28]
-GameAssembly.dll+2E75DA: E8 41 57 F7 FF        - call &lt;SelectEverySelectableCoroutine&gt;d__63.System.IDisposable.Dispose
-GameAssembly.dll+2E75DF: 48 8B 4C 24 70        - mov rcx,[rsp+70]
-}
-</AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>129</ID>
-                  <Description>"Min. count"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>C08000</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_min_unused_count</Address>
-                </CheatEntry>
-              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -2557,60 +2619,7 @@ GameAssembly.dll+2E75DF: 48 8B 4C 24 70        - mov rcx,[rsp+70]
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <CheatCodes>
-    <CodeEntry>
-      <Description>Code additem count:add r9d,[rdx+rax*4+20]</Description>
-      <AddressString>GameAssembly.dll+706515</AddressString>
-      <Before>
-        <Byte>60</Byte>
-        <Byte>8B</Byte>
-        <Byte>C1</Byte>
-        <Byte>FF</Byte>
-        <Byte>C1</Byte>
-      </Before>
-      <Actual>
-        <Byte>44</Byte>
-        <Byte>03</Byte>
-        <Byte>4C</Byte>
-        <Byte>82</Byte>
-        <Byte>20</Byte>
-      </Actual>
-      <After>
-        <Byte>83</Byte>
-        <Byte>F9</Byte>
-        <Byte>64</Byte>
-        <Byte>7E</Byte>
-        <Byte>E8</Byte>
-      </After>
-    </CodeEntry>
-    <CodeEntry>
-      <Description>Code additems :add [r8+rdx],eax</Description>
-      <AddressString>GameAssembly.dll+706199</AddressString>
-      <Before>
-        <Byte>8B</Byte>
-        <Byte>04</Byte>
-        <Byte>00</Byte>
-        <Byte>FF</Byte>
-        <Byte>C1</Byte>
-      </Before>
-      <Actual>
-        <Byte>41</Byte>
-        <Byte>01</Byte>
-        <Byte>04</Byte>
-        <Byte>10</Byte>
-      </Actual>
-      <After>
-        <Byte>83</Byte>
-        <Byte>F9</Byte>
-        <Byte>65</Byte>
-        <Byte>72</Byte>
-        <Byte>AE</Byte>
-      </After>
-    </CodeEntry>
-  </CheatCodes>
   <UserdefinedSymbols/>
-  <Comments>ID: 66 ItemPoop
-ID: 51 ItemGoldIngot</Comments>
   <LuaScript>--[[
 from https://forum.cheatengine.org/viewtopic.php?p=5659739&amp;sid=72bd2d145c30bf0d344304bce17ea990#5659739
 FauDrei

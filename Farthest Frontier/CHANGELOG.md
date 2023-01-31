@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/01/31
+1. Revised for v0.8.1
+
 ## 2023/01/16
 1. Added No HP damage to building
 
