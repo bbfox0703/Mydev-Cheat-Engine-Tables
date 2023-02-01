@@ -46,6 +46,7 @@ define(ResidenceUpdateWaterProc, "Residence.UpdateWater")
 define(VillagerEatIfNecessaryProc, "Villager.EatIfNecessary")
 define(ItemStorageRemoveItemsProc, "ItemStorage.RemoveItems")
 define(Characterget_movementSpeedProc, "Character.get_movementSpeed")
+define(ItemBundleUpdateNumberOfItemsProc, "ItemBundle.UpdateNumberOfItems")
 
 
 //Residence.UpdateFirewood   GameAssembly.dll+80E820
@@ -63,14 +64,13 @@ define(Characterget_movementSpeedProc, "Character.get_movementSpeed")
 
 //ItemStorage.RemoveItems  GameAssembly.dll+938C74
 
-
-
 registersymbol(ResourceManagerClearItemCountsProc)
 registersymbol(ResidenceUpdateFirewoodProc)
 registersymbol(ResidenceUpdateWaterProc)
 registersymbol(VillagerEatIfNecessaryProc)
 registersymbol(ItemStorageRemoveItemsProc)
 registersymbol(Characterget_movementSpeedProc)
+registersymbol(ItemBundleUpdateNumberOfItemsProc)
 
 [DISABLE]
 {$lua}
@@ -318,6 +318,7 @@ GameAssembly.dll+CE39FD: E8 FE AF 01 00        - call VillagerHealth.Eat
         <CheatEntry>
           <ID>131</ID>
           <Description>"No HP damage to building"</Description>
+          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
@@ -386,6 +387,146 @@ GameAssembly.dll+50F86D: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
 GameAssembly.dll+50F874: 75 05                 - jne GameAssembly.dll+50F87B
 GameAssembly.dll+50F876: E8 05 3F D9 FF        - call GameAssembly.dll+2A3780
 GameAssembly.dll+50F87B: 80 3D 62 E5 5F 02 00  - cmp byte ptr [GameAssembly.dll+2B0DDE4],00
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>151</ID>
+              <Description>"Apply to all buildings, include enemy"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>121</ID>
+          <Description>"Try to prevent item corruption"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-02-01
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_SET_MIN_FIELD_RAW_FOOD,GameAssembly.dll,1F 00 4D 85 C0 74 20 41 3B 40 18 73 20 8B C8 FF C0 41 8B 54 88 20) // should be unique
+aobscanregion(INJECT_SET_MIN_FIELD_RAW_FOOD,ItemBundleUpdateNumberOfItemsProc+20, ItemBundleUpdateNumberOfItemsProc+60,8B C8 FF C0 41 8B 54 88 20) // should be unique
+alloc(newmem,$1000,INJECT_SET_MIN_FIELD_RAW_FOOD)
+
+label(code)
+label(return)
+label(is_inf_arrow)
+
+//ItemBundle.UpdateNumberOfItems
+
+newmem:
+  //mov dword ptr [is_cur_object_arrow], 0
+
+
+normal_items:
+  cmp eax, #67 // move/add 51% or below buckets to 100% one
+  ja code
+
+
+start_chk_corruption:
+  pushfq
+  push r15
+  push rcx
+
+  mov ecx,eax
+  mov r15d, [r8+rcx*4+20]
+  test r15d, r15d
+  jz endp
+
+
+  push r15
+  xor r15, r15
+  mov [r8+rcx*4+20], r15d
+  pop r15
+
+  mov ecx, 64
+
+check_100_percent_bucket:
+  cmp dword ptr [r8+rcx*4+20], 0
+  jne do_add_it
+
+do_set_it:
+  mov [r8+rcx*4+20], r15d
+  jmp endp
+
+do_add_it:
+  add [r8+rcx*4+20], r15d
+
+endp:
+  pop rcx
+  pop r15
+  popfq
+
+
+code:
+  //mov ecx,edx
+  //inc edx
+  //add eax,[r8+rcx*4+20]
+  //jmp return
+
+  mov ecx,eax
+  inc eax
+  mov edx,[r8+rcx*4+20]
+  jmp return
+align 10 cc
+  i_tmp1:
+  dq 0
+  i_last_var_addr:
+  dq 0
+  is_inf_arrow:
+  dd 0
+  is_cur_object_arrow:
+  dd 0
+
+INJECT_SET_MIN_FIELD_RAW_FOOD:
+  jmp newmem
+  nop 4
+return:
+
+registersymbol(INJECT_SET_MIN_FIELD_RAW_FOOD)
+registersymbol(is_inf_arrow)
+
+[DISABLE]
+
+INJECT_SET_MIN_FIELD_RAW_FOOD:
+  db 8B C8 FF C0 41 8B 54 88 20
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+701A3B
+
+ItemBundle.UpdateNumberOfItems: 48 83 EC 28                    - sub rsp,28
+GameAssembly.dll+701A14: 4C 8B 81 98 00 00 00           - mov r8,[rcx+00000098]
+GameAssembly.dll+701A1B: 4C 8B C9                       - mov r9,rcx
+GameAssembly.dll+701A1E: C7 81 90 00 00 00 00 00 00 00  - mov [rcx+00000090],00000000
+GameAssembly.dll+701A28: B8 01 00 00 00                 - mov eax,00000001
+GameAssembly.dll+701A2D: 0F 1F 00                       - nop dword ptr [rax]
+GameAssembly.dll+701A30: 4D 85 C0                       - test r8,r8
+GameAssembly.dll+701A33: 74 20                          - je GameAssembly.dll+701A55
+GameAssembly.dll+701A35: 41 3B 40 18                    - cmp eax,[r8+18]
+GameAssembly.dll+701A39: 73 20                          - jae GameAssembly.dll+701A5B
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+701A3B: 8B C8                          - mov ecx,eax
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+701A3D: FF C0                          - inc eax
+GameAssembly.dll+701A3F: 41 8B 54 88 20                 - mov edx,[r8+rcx*4+20]
+GameAssembly.dll+701A44: 41 01 91 90 00 00 00           - add [r9+00000090],edx
+GameAssembly.dll+701A4B: 83 F8 65                       - cmp eax,65
+GameAssembly.dll+701A4E: 7C E0                          - jl GameAssembly.dll+701A30
+GameAssembly.dll+701A50: 48 83 C4 28                    - add rsp,28
+GameAssembly.dll+701A54: C3                             - ret
+GameAssembly.dll+701A55: E8 C6 71 B2 FF                 - call GameAssembly.il2cpp_value_box+70
+GameAssembly.dll+701A5A: CC                             - int 3
+GameAssembly.dll+701A5B: E8 D0 71 B2 FF                 - call GameAssembly.il2cpp_value_box+80
 }
 </AssemblerScript>
         </CheatEntry>
@@ -1006,7 +1147,6 @@ GameAssembly.dll+7023EB: 5D                    - pop rbp
 1:Yes
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>is_prevent_corrupt_after_remove</Address>
             </CheatEntry>
@@ -1098,7 +1238,7 @@ code:
   jmp return
 align 10 cc
   vf_item_count_multi:
-  dd (float)5
+  dd (float)3
   i_min_storage_item:
   dd A
   i_max_poop_count:
@@ -1160,7 +1300,7 @@ GameAssembly.dll+7061CD: 0F 83 1C 01 00 00              - jae GameAssembly.dll+7
           <CheatEntries>
             <CheatEntry>
               <ID>141</ID>
-              <Description>"Affect traiding ceter"</Description>
+              <Description>"Affect traiding post"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
@@ -1175,6 +1315,18 @@ GameAssembly.dll+7061CD: 0F 83 1C 01 00 00              - jae GameAssembly.dll+7
                 <CheatEntry>
                   <ID>150</ID>
                   <Description>"If you notice that the required amount of building materials is never met, please set this value to 1"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>152</ID>
+                  <Description>"If upgrade button is disabled, please set this value to 1"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>154</ID>
+                  <Description>"Transfer items between "town storage" &lt;=&gt; "trading post" in Trading post menu to increase item count"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
@@ -2509,139 +2661,13 @@ GameAssembly.dll+4B1870: 89 87 A4 00 00 00     - mov [rdi+000000A4],eax
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-            <CheatEntry>
-              <ID>121</ID>
-              <Description>"(not working) Try to prevent item corruption"</Description>
-              <Options moHideChildren="1"/>
-              <Color>808080</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-15
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_SET_MIN_FIELD_RAW_FOOD,GameAssembly.dll,8B CA FF C2 41 03 44 88 20 83 FA 65) // should be unique
-alloc(newmem,$1000,INJECT_SET_MIN_FIELD_RAW_FOOD)
-
-label(code)
-label(return)
-label(is_inf_arrow)
-
-//ItemBundle.get_numberOfItems
-
-newmem:
-  //mov dword ptr [is_cur_object_arrow], 0
-
-
-normal_items:
-  cmp edx, #51 // move/add 51% or below buckets to 100% one
-  ja code
-
-
-start_chk_corruption:
-  pushfq
-  push r15
-  push rcx
-
-  mov ecx,edx
-  mov r15d, [r8+rcx*4+20]
-  test r15d, r15d
-  jz endp
-
-
-  push r15
-  xor r15, r15
-  mov [r8+rcx*4+20], r15d
-  pop r15
-
-  mov ecx, 64
-
-check_100_percent_bucket:
-  cmp dword ptr [r8+rcx*4+20], 0
-  jne do_add_it
-
-do_set_it:
-  mov [r8+rcx*4+20], r15d
-  jmp endp
-
-do_add_it:
-  add [r8+rcx*4+20], r15d
-
-endp:
-  pop rcx
-  pop r15
-  popfq
-
-
-code:
-  mov ecx,edx
-  inc edx
-  add eax,[r8+rcx*4+20]
-  jmp return
-align 10 cc
-  i_tmp1:
-  dq 0
-  i_last_var_addr:
-  dq 0
-  is_inf_arrow:
-  dd 0
-  is_cur_object_arrow:
-  dd 0
-
-INJECT_SET_MIN_FIELD_RAW_FOOD:
-  jmp newmem
-  nop 4
-return:
-registersymbol(INJECT_SET_MIN_FIELD_RAW_FOOD)
-registersymbol(is_inf_arrow)
-
-[DISABLE]
-
-INJECT_SET_MIN_FIELD_RAW_FOOD:
-  db 8B CA FF C2 41 03 44 88 20
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+4B1A0B
-
-GameAssembly.dll+4B19EE: CC                    - int 3 
-GameAssembly.dll+4B19EF: CC                    - int 3 
-ItemBundle.get_numberOfItems: 48 83 EC 28           - sub rsp,28
-GameAssembly.dll+4B19F4: 4C 8B 81 98 00 00 00  - mov r8,[rcx+00000098]
-GameAssembly.dll+4B19FB: 33 C0                 - xor eax,eax
-GameAssembly.dll+4B19FD: 8D 50 01              - lea edx,[rax+01]
-GameAssembly.dll+4B1A00: 4D 85 C0              - test r8,r8
-GameAssembly.dll+4B1A03: 74 19                 - je GameAssembly.dll+4B1A1E
-GameAssembly.dll+4B1A05: 41 3B 50 18           - cmp edx,[r8+18]
-GameAssembly.dll+4B1A09: 73 19                 - jae GameAssembly.dll+4B1A24
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+4B1A0B: 8B CA                 - mov ecx,edx
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+4B1A0D: FF C2                 - inc edx
-GameAssembly.dll+4B1A0F: 41 03 44 88 20        - add eax,[r8+rcx*4+20]
-GameAssembly.dll+4B1A14: 83 FA 65              - cmp edx,65
-GameAssembly.dll+4B1A17: 7C E7                 - jl GameAssembly.dll+4B1A00
-GameAssembly.dll+4B1A19: 48 83 C4 28           - add rsp,28
-GameAssembly.dll+4B1A1D: C3                    - ret 
-GameAssembly.dll+4B1A1E: E8 7D 63 D5 FF        - call GameAssembly.dll+207DA0
-GameAssembly.dll+4B1A23: CC                    - int 3 
-GameAssembly.dll+4B1A24: E8 87 5F D5 FF        - call GameAssembly.dll+2079B0
-GameAssembly.dll+4B1A29: 48 8B C8              - mov rcx,rax
-}
-</AssemblerScript>
-            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>28</ID>
-      <Description>"Farthest Frontier v0.8.1  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Description>"Farthest Frontier v0.8.1a  /  https://opencheattables.com  /  CE 7.4+"</Description>
       <Color>800080</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
