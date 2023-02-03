@@ -319,8 +319,9 @@ GameAssembly.dll+CE39FD: E8 FE AF 01 00        - call VillagerHealth.Eat
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>155</ID>
-          <Description>"Storage: try to prevent item corruption #1 (below 25%)"</Description>
+          <ID>158</ID>
+          <Description>"Prevent item corruption &amp; set max count for some items"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
@@ -330,172 +331,486 @@ GameAssembly.dll+CE39FD: E8 FE AF 01 00        - call VillagerHealth.Eat
 
 [ENABLE]
 
-//aobscanmodule(INJECT_STORAGE_NO_DEGRADE_1,GameAssembly.dll,44 03 44 82 20 83 F9 19 7E E0 43) // should be unique
-aobscanregion(INJECT_STORAGE_NO_DEGRADE_1,ItemStorageUpdateItemInfoWithDegradeProc+140,ItemStorageUpdateItemInfoWithDegradeProc+1A0,44 03 44 82 20 83 F9 19 7E E0 43) // should be unique
-alloc(newmem,$1000,INJECT_STORAGE_NO_DEGRADE_1)
+//aobscanmodule(INJECT_UPDATE_MAX_ITEM_COUNT,GameAssembly.dll,03 B7 90 00 00 00 FF C3 E9 4B FF FF FF 48 8B 5C) // should be unique
+aobscanregion(INJECT_UPDATE_MAX_ITEM_COUNT,ReservableItemStorageGetItemCountOfAllUnneededItemsProc+110,ReservableItemStorageGetItemCountOfAllUnneededItemsProc+160,03 B7 90 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_UPDATE_MAX_ITEM_COUNT)
 
 label(code)
 label(return)
+label(is_prevent_corrput_in_unneeded)
+label(i_max_count_for_unneeded)
+label(i_min_count_for_unneeded)
+label(i_max_count_for_weapon_unneeded)
+label(i_min_count_for_weapon_unneeded)
+label(i_min_count_for_base_unneeded)
 
 newmem:
-  test dword ptr [rdx+rax*4+20], 0
-  jz code
+  pushfq
+  push rax
+  push r14
+  push rcx
+  push rdx
 
-  pushf
-  push r15
+  mov rax, [rdi+98]
+  test rax, rax
+  jz endp
 
-  mov r15d, [rdx+rax*4+20]
-  test dword ptr [rdx+1B0], 0
-  jz to_set_it
+  xor r14, r14
+  xor rcx, rcx
+  //mov dword ptr [i_tmp1], 0
 
-to_add_it:
-  add dword ptr [rdx+1B0], r15d
+calc_loop:
+  cmp dword ptr [rax+rcx*4+20], 0
+  jz to_next_loop
 
-  jmp set_zero
-to_set_it:
-  mov dword ptr [rdx+1B0], r15d
+  add r14d, [rax+rcx*4+20]
 
-set_zero:
-  mov dword ptr [rdx+rax*4+20], 0
+  cmp ecx, 64
+  jae to_100p_loop
 
-  pop r15
-  popf
+  // item no degrade
+
+  push r14
+  mov r14d, [rax+rcx*4+20]
+  mov dword ptr [rax+rcx*4+20], 0
+  add dword ptr [rax+1B0], r14d
+  pop r14
+  jmp to_next_loop
+
+to_100p_loop:
+
+to_next_loop:
+  inc ecx
+  cmp ecx, 65
+  jae calc_loop_sum
+  jmp calc_loop
+
+calc_loop_sum:
+  //set max for some items
+  //43: ItemSmokedMeat
+  //23: ItemHerbs
+  //39: ItemFish
+  //12: ItemMeat
+  //3:  ItemBerries
+  //6:  ItemBread
+  //15: ItemGreens
+  //44: ItemSmokedFish
+  //20: ItemFruit
+  //8: ItemFirewood
+  //63: ItemSoap
+  //64: ItemCandle
+  //70: ItemCheese
+  //14: ItemBeans
+  //18: ItemRoots
+  //56: ItemWillow
+  //10: ItemHide
+  //24: ItemEggs
+  //54: ItemHoney
+  //52: ItemPottery
+  //14: ItemBeans
+  //17: ItemMushroom
+  //19: ItemNuts
+  //40: ItemShoes
+  //55: ItemBasket
+  //62: ItemWax
+  //11: ItemHideCoat
+  //21: ItemPreservedVeg
+  //13: ItemRootVegetable
+  //45: ItemFlax
+  //28: ItemHeavyTool
+  //74: ItemGlass
+  //53: ItemWheatBeer
+  //22: ItemPreserves
+  //9: ItemFlour
+  //60: ItemFurniture
+  //76: ItemMedicine
+  //49: ItemWater
+  //65: ItemSpice
+  //27: ItemTool
+
+  cmp dword ptr [rdi+10], #43 //ItemSmokedMeat
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #23 //ItemHerbs
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #39 //ItemFish
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #12 //ItemMeat
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #3 //ItemBerries
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #6 //ItemBread
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #15 //ItemGreens
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #44 //ItemSmokedFish
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #20 //ItemFruit
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #63 //ItemSoap
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #64 //ItemCandle
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #70 //ItemCheese
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #14 //ItemCandle
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #8 //ItemFirewood
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #18 //ItemRoots
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #56 //ItemWillow
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #10 //ItemHide
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #24 //ItemEggs
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #54 //ItemHoney
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #52 //ItemPottery
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #14 //ItemBeans
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #17 //ItemMushroom
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #19 //ItemNuts
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #40 //ItemShoes
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #62 //ItemWax
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #11 //ItemHideCoat
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #21 //ItemPreservedVeg
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #13 //ItemRootVegetable
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #45 //ItemFlax
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #28 //ItemHeavyTool
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #74 //ItemGlass
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #53 //ItemWheatBeer
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #22 //ItemPreserves
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #9 //ItemFlour
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #60 //ItemFurniture
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #76 //ItemMedicine
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #49 //ItemWater
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #65 //ItemSpice
+  je do_set_limit
+
+  cmp dword ptr [rdi+10], #27 //ItemTool
+  je do_set_limit
+
+
+
+
+  // weapon/arrow/armor
+  cmp dword ptr [rdi+10], #29 //ItemWeapon
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #31 //ItemHeavyWeapon
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #32 //ItemShield
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #33 //ItemHauberk
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #34 //ItemPlatemail
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #35 //ItemArrow
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #37 //ItemBow
+  je do_weapon_set_limit
+
+  cmp dword ptr [rdi+10], #38 //ItemCrossbow
+  je do_weapon_set_limit
+
+
+
+
+  //base material
+  cmp dword ptr [rdi+10], #2 //ItemLogs
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #4 //ItemStone
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #5 //ItemPlunks
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #25 //ItemIronOre
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #26 //ItemIron
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #36 //ItemBrick
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #47 //ItemCoal
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #48 //ItemClay
+  je chk_base_lower_limit
+
+  cmp dword ptr [rdi+10], #73 //ItemSand
+  je chk_base_lower_limit
+
+
+  jmp endp_pre
+
+
+do_set_limit:
+  mov ecx, [rax+1B0]
+  cmp ecx, [i_max_count_for_unneeded]
+  jb chk_lower_limit
+  mov ecx, [i_max_count_for_unneeded]
+  mov [rax+1B0], ecx
+  mov r14d, ecx
+  jmp endp_pre
+
+chk_lower_limit:
+  mov ecx, [rax+1B0]
+  cmp ecx, [i_min_count_for_unneeded]
+  jae endp_pre
+  mov ecx, [i_min_count_for_unneeded]
+  mov [rax+1B0], ecx
+  mov r14d, ecx
+  jmp endp_pre
+
+
+do_weapon_set_limit:
+  mov ecx, [rax+1B0]
+  cmp ecx, [i_max_count_for_weapon_unneeded]
+  jb chk_weapon_lower_limit
+  mov ecx, [i_max_count_for_weapon_unneeded]
+  mov [rax+1B0], ecx
+  mov r14d, ecx
+  jmp endp_pre
+
+chk_weapon_lower_limit:
+  mov ecx, [rax+1B0]
+  cmp ecx, [i_min_count_for_weapon_unneeded]
+  jae endp_pre
+  mov ecx, [i_min_count_for_weapon_unneeded]
+  mov [rax+1B0], ecx
+  mov r14d, ecx
+  jmp endp_pre
+
+
+chk_base_lower_limit:
+  mov ecx, [rax+1B0]
+  cmp ecx, [i_min_count_for_base_unneeded]
+  jae endp_pre
+  mov ecx, [i_min_count_for_base_unneeded]
+  mov [rax+1B0], ecx
+  mov r14d, ecx
+  jmp endp_pre
+
+
+endp_pre:
+  mov [rdi+90], r14d
+endp:
+  pop rdx
+  pop rcx
+  pop r14
+  pop rax
+  popfq
 
 code:
-  add r8d,[rdx+rax*4+20]
+  add esi,[rdi+00000090]
   jmp return
+align 10 cc
+  is_prevent_corrput_in_unneeded:
+  dd 1
+  i_max_count_for_unneeded:
+  dd #280
+  i_min_count_for_unneeded:
+  dd #21
+  i_tmp1:
+  dd 0
+  i_max_count_for_weapon_unneeded:
+  dd #310
+  i_min_count_for_weapon_unneeded:
+  dd #31
+  i_min_count_for_base_unneeded:
+  dd #51
 
-INJECT_STORAGE_NO_DEGRADE_1:
+
+INJECT_UPDATE_MAX_ITEM_COUNT:
   jmp newmem
+  nop
 return:
-registersymbol(INJECT_STORAGE_NO_DEGRADE_1)
+registersymbol(INJECT_UPDATE_MAX_ITEM_COUNT)
+registersymbol(is_prevent_corrput_in_unneeded)
+registersymbol(i_max_count_for_unneeded)
+registersymbol(i_min_count_for_unneeded)
+registersymbol(i_max_count_for_weapon_unneeded)
+registersymbol(i_min_count_for_weapon_unneeded)
+registersymbol(i_min_count_for_base_unneeded)
 
 [DISABLE]
 
-INJECT_STORAGE_NO_DEGRADE_1:
-  db 44 03 44 82 20
+INJECT_UPDATE_MAX_ITEM_COUNT:
+  db 03 B7 90 00 00 00
 
-unregistersymbol(INJECT_STORAGE_NO_DEGRADE_1)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+706466
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+757218
 
-GameAssembly.dll+70643C: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
-GameAssembly.dll+706443: 45 8B C1              - mov r8d,r9d
-GameAssembly.dll+706446: 41 8D 49 01           - lea ecx,[r9+01]
-GameAssembly.dll+70644A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
-GameAssembly.dll+706450: 48 85 D2              - test rdx,rdx
-GameAssembly.dll+706453: 0F 84 12 01 00 00     - je GameAssembly.dll+70656B
-GameAssembly.dll+706459: 3B 4A 18              - cmp ecx,[rdx+18]
-GameAssembly.dll+70645C: 0F 83 0F 01 00 00     - jae GameAssembly.dll+706571
-GameAssembly.dll+706462: 8B C1                 - mov eax,ecx
-GameAssembly.dll+706464: FF C1                 - inc ecx
+GameAssembly.dll+7571FA: E8 81 C5 B4 FF     - call GameAssembly.dll+2A3780
+GameAssembly.dll+7571FF: 48 85 FF           - test rdi,rdi
+GameAssembly.dll+757202: 74 1A              - je GameAssembly.dll+75721E
+GameAssembly.dll+757204: 48 85 ED           - test rbp,rbp
+GameAssembly.dll+757207: 74 0F              - je GameAssembly.dll+757218
+GameAssembly.dll+757209: 48 8B D7           - mov rdx,rdi
+GameAssembly.dll+75720C: 48 8B CD           - mov rcx,rbp
+GameAssembly.dll+75720F: E8 2C E5 8C FF     - call GameAssembly.il2cpp_method_get_declaring_type+F10
+GameAssembly.dll+757214: 84 C0              - test al,al
+GameAssembly.dll+757216: 75 06              - jne GameAssembly.dll+75721E
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+706466: 44 03 44 82 20        - add r8d,[rdx+rax*4+20]
+GameAssembly.dll+757218: 03 B7 90 00 00 00  - add esi,[rdi+00000090]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+70646B: 83 F9 19              - cmp ecx,19
-GameAssembly.dll+70646E: 7E E0                 - jle GameAssembly.dll+706450
-GameAssembly.dll+706470: 43 8D 04 10           - lea eax,[r8+r10]
-GameAssembly.dll+706474: B9 1A 00 00 00        - mov ecx,0000001A
-GameAssembly.dll+706479: 89 43 2C              - mov [rbx+2C],eax
-GameAssembly.dll+70647C: 45 8B C1              - mov r8d,r9d
-GameAssembly.dll+70647F: 44 8B 53 30           - mov r10d,[rbx+30]
-GameAssembly.dll+706483: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
-GameAssembly.dll+70648A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
-GameAssembly.dll+706490: 48 85 D2              - test rdx,rdx
+GameAssembly.dll+75721E: FF C3              - inc ebx
+GameAssembly.dll+757220: E9 4B FF FF FF     - jmp GameAssembly.dll+757170
+GameAssembly.dll+757225: 48 8B 5C 24 30     - mov rbx,[rsp+30]
+GameAssembly.dll+75722A: 8B C6              - mov eax,esi
+GameAssembly.dll+75722C: 48 8B 74 24 40     - mov rsi,[rsp+40]
+GameAssembly.dll+757231: 48 8B 6C 24 38     - mov rbp,[rsp+38]
+GameAssembly.dll+757236: 48 8B 7C 24 48     - mov rdi,[rsp+48]
+GameAssembly.dll+75723B: 48 83 C4 20        - add rsp,20
+GameAssembly.dll+75723F: 41 5E              - pop r14
+GameAssembly.dll+757241: C3                 - ret 
 }
 </AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>156</ID>
-          <Description>"Storage: try to prevent item corruption #2 (below 50%)"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-02-03
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-//aobscanmodule(INJECT_STORAGE_NO_DEGRADE_2,GameAssembly.dll,44 03 44 82 20 83 F9 32 7E E0 43) // should be unique
-aobscanregion(INJECT_STORAGE_NO_DEGRADE_2,ItemStorageUpdateItemInfoWithDegradeProc+170,ItemStorageUpdateItemInfoWithDegradeProc+1F0,44 03 44 82 20 83 F9 32) // should be unique
-
-alloc(newmem,$1000,INJECT_STORAGE_NO_DEGRADE_2)
-
-label(code)
-label(return)
-
-newmem:
-  test dword ptr [rdx+rax*4+20], 0
-  jz code
-
-  pushf
-  push r15
-
-  mov r15d, [rdx+rax*4+20]
-  test dword ptr [rdx+1B0], 0
-  jz to_set_it
-
-to_add_it:
-  add dword ptr [rdx+1B0], r15d
-
-  jmp set_zero
-to_set_it:
-  mov dword ptr [rdx+1B0], r15d
-
-set_zero:
-  mov dword ptr [rdx+rax*4+20], 0
-
-  pop r15
-  popf
-
-code:
-  add r8d,[rdx+rax*4+20]
-  jmp return
-
-INJECT_STORAGE_NO_DEGRADE_2:
-  jmp newmem
-return:
-registersymbol(INJECT_STORAGE_NO_DEGRADE_2)
-
-[DISABLE]
-
-INJECT_STORAGE_NO_DEGRADE_2:
-  db 44 03 44 82 20
-
-unregistersymbol(INJECT_STORAGE_NO_DEGRADE_2)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+7064A6
-
-GameAssembly.dll+70647C: 45 8B C1              - mov r8d,r9d
-GameAssembly.dll+70647F: 44 8B 53 30           - mov r10d,[rbx+30]
-GameAssembly.dll+706483: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
-GameAssembly.dll+70648A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
-GameAssembly.dll+706490: 48 85 D2              - test rdx,rdx
-GameAssembly.dll+706493: 0F 84 D2 00 00 00     - je GameAssembly.dll+70656B
-GameAssembly.dll+706499: 3B 4A 18              - cmp ecx,[rdx+18]
-GameAssembly.dll+70649C: 0F 83 CF 00 00 00     - jae GameAssembly.dll+706571
-GameAssembly.dll+7064A2: 8B C1                 - mov eax,ecx
-GameAssembly.dll+7064A4: FF C1                 - inc ecx
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+7064A6: 44 03 44 82 20        - add r8d,[rdx+rax*4+20]
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+7064AB: 83 F9 32              - cmp ecx,32
-GameAssembly.dll+7064AE: 7E E0                 - jle GameAssembly.dll+706490
-GameAssembly.dll+7064B0: 43 8D 04 10           - lea eax,[r8+r10]
-GameAssembly.dll+7064B4: B9 33 00 00 00        - mov ecx,00000033
-GameAssembly.dll+7064B9: 89 43 30              - mov [rbx+30],eax
-GameAssembly.dll+7064BC: 45 8B C1              - mov r8d,r9d
-GameAssembly.dll+7064BF: 44 8B 53 34           - mov r10d,[rbx+34]
-GameAssembly.dll+7064C3: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
-GameAssembly.dll+7064CA: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
-GameAssembly.dll+7064D0: 48 85 D2              - test rdx,rdx
-}
-</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>162</ID>
+              <Description>"Set some items' min/max. amount in each storage location and market"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>168</ID>
+                  <Description>"Most foods, goods...."</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>163</ID>
+                  <Description>"Min."</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_min_count_for_unneeded</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>161</ID>
+                  <Description>"Max"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_max_count_for_unneeded</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>164</ID>
+              <Description>"Set weapon/arrow/armor's min/max. amount in each storage location."</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>166</ID>
+                  <Description>"Min."</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_min_count_for_weapon_unneeded</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>167</ID>
+                  <Description>"Max"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_max_count_for_weapon_unneeded</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>160</ID>
+              <Description>"Set base material min. amount in each storage location."</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>169</ID>
+                  <Description>"Logs, stone,..."</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>170</ID>
+                  <Description>"Min."</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_min_count_for_base_unneeded</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>131</ID>
@@ -1288,7 +1603,7 @@ code:
   jmp return
 align 10 cc
   vf_item_count_multi:
-  dd (float)3
+  dd (float)4.5
   i_min_storage_item:
   dd A
   i_max_poop_count:
@@ -2843,13 +3158,11 @@ GameAssembly.dll+701A5B: E8 D0 71 B2 FF                 - call GameAssembly.il2c
 }
 </AssemblerScript>
             </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>158</ID>
-          <Description>"Prevent item corruption &amp; set max count for some items"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
+            <CheatEntry>
+              <ID>155</ID>
+              <Description>"Storage: try to prevent item corruption #1 (below 25%)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
   Date   : 2023-02-03
   Author : bbfox@https://opencheattables.com
@@ -2857,141 +3170,174 @@ GameAssembly.dll+701A5B: E8 D0 71 B2 FF                 - call GameAssembly.il2c
 
 [ENABLE]
 
-//aobscanmodule(INJECT_UPDATE_MAX_ITEM_COUNT,GameAssembly.dll,03 B7 90 00 00 00 FF C3 E9 4B FF FF FF 48 8B 5C) // should be unique
-aobscanregion(INJECT_UPDATE_MAX_ITEM_COUNT,ReservableItemStorageGetItemCountOfAllUnneededItemsProc+110,ReservableItemStorageGetItemCountOfAllUnneededItemsProc+160,03 B7 90 00 00 00) // should be unique
-alloc(newmem,$1000,INJECT_UPDATE_MAX_ITEM_COUNT)
+//aobscanmodule(INJECT_STORAGE_NO_DEGRADE_1,GameAssembly.dll,44 03 44 82 20 83 F9 19 7E E0 43) // should be unique
+aobscanregion(INJECT_STORAGE_NO_DEGRADE_1,ItemStorageUpdateItemInfoWithDegradeProc+140,ItemStorageUpdateItemInfoWithDegradeProc+1A0,44 03 44 82 20 83 F9 19 7E E0 43) // should be unique
+alloc(newmem,$1000,INJECT_STORAGE_NO_DEGRADE_1)
 
 label(code)
 label(return)
-label(is_prevent_corrput_in_unneeded)
-label(i_max_count_for_unneeded)
 
 newmem:
-  pushfq
+  test dword ptr [rdx+rax*4+20], 0
+  jz code
+
+  pushf
   push r15
-  push r14
-  push rcx
 
+  mov r15d, [rdx+rax*4+20]
+  test dword ptr [rdx+1B0], 0
+  jz to_set_it
 
-  mov r15, [rdi+98]
-  test r15, r15
-  jz endp
+to_add_it:
+  add dword ptr [rdx+1B0], r15d
 
-  xor r14, r14
-  xor rcx, rcx
-  //mov dword ptr [i_tmp1], 0
+  jmp set_zero
+to_set_it:
+  mov dword ptr [rdx+1B0], r15d
 
-calc_loop:
-  cmp dword ptr [r15+rcx*4+20], 0
-  jz to_next_loop
+set_zero:
+  mov dword ptr [rdx+rax*4+20], 0
 
-  add r14d, [r15+rcx*4+20]
-
-  cmp ecx, 64
-  jae to_next_loop
-
-  // item no degrade
-
-  push r14
-  mov r14d, [r15+rcx*4+20]
-  mov dword ptr [r15+rcx*4+20], 0
-  add [r15+1B0], r14d
-  pop r14
-
-to_next_loop:
-  inc ecx
-  cmp ecx, 65
-  je calc_loop_sum
-  jmp calc_loop
-
-calc_loop_sum:
-  //set max for some items
-  //43: ItemSmokedMeat
-  //23: ItemHerbs
-  //39: ItemFish
-  //12: ItemMeat
-  //3:  ItemBerries
-  //6:  ItemBread
-  //15: ItemGreens
-  //44: ItemSmokedFish
-  //20: ItemFruit
-  //8: ItemFirewood
-  //63: ItemSoap
-  //64: ItemCandle
-  //70: ItemCheese
-  //14: ItemBeans
-
-
-  mov ecx, [r15+1B0]
-  cmp ecx, [i_max_count_for_unneeded]
-  jbe endp
-  mov ecx, [i_max_count_for_unneeded]
-  mov [r15+1B0], ecx
-  mov r14d, ecx
-
-endp:
-  mov [rsi+90], r14d
-
-  pop rcx
-  pop r14
   pop r15
-  popfq
+  popf
 
 code:
-  add esi,[rdi+00000090]
+  add r8d,[rdx+rax*4+20]
   jmp return
-align 10 cc
-  is_prevent_corrput_in_unneeded:
-  dd 1
-  i_max_count_for_unneeded:
-  dd #300
-  i_tmp1:
-  dd 0
 
-
-INJECT_UPDATE_MAX_ITEM_COUNT:
+INJECT_STORAGE_NO_DEGRADE_1:
   jmp newmem
-  nop
 return:
-registersymbol(INJECT_UPDATE_MAX_ITEM_COUNT)
-registersymbol(is_prevent_corrput_in_unneeded)
-registersymbol(i_max_count_for_unneeded)
+registersymbol(INJECT_STORAGE_NO_DEGRADE_1)
+
 [DISABLE]
 
-INJECT_UPDATE_MAX_ITEM_COUNT:
-  db 03 B7 90 00 00 00
+INJECT_STORAGE_NO_DEGRADE_1:
+  db 44 03 44 82 20
 
-unregistersymbol(*)
+unregistersymbol(INJECT_STORAGE_NO_DEGRADE_1)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+757218
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+706466
 
-GameAssembly.dll+7571FA: E8 81 C5 B4 FF     - call GameAssembly.dll+2A3780
-GameAssembly.dll+7571FF: 48 85 FF           - test rdi,rdi
-GameAssembly.dll+757202: 74 1A              - je GameAssembly.dll+75721E
-GameAssembly.dll+757204: 48 85 ED           - test rbp,rbp
-GameAssembly.dll+757207: 74 0F              - je GameAssembly.dll+757218
-GameAssembly.dll+757209: 48 8B D7           - mov rdx,rdi
-GameAssembly.dll+75720C: 48 8B CD           - mov rcx,rbp
-GameAssembly.dll+75720F: E8 2C E5 8C FF     - call GameAssembly.il2cpp_method_get_declaring_type+F10
-GameAssembly.dll+757214: 84 C0              - test al,al
-GameAssembly.dll+757216: 75 06              - jne GameAssembly.dll+75721E
+GameAssembly.dll+70643C: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
+GameAssembly.dll+706443: 45 8B C1              - mov r8d,r9d
+GameAssembly.dll+706446: 41 8D 49 01           - lea ecx,[r9+01]
+GameAssembly.dll+70644A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
+GameAssembly.dll+706450: 48 85 D2              - test rdx,rdx
+GameAssembly.dll+706453: 0F 84 12 01 00 00     - je GameAssembly.dll+70656B
+GameAssembly.dll+706459: 3B 4A 18              - cmp ecx,[rdx+18]
+GameAssembly.dll+70645C: 0F 83 0F 01 00 00     - jae GameAssembly.dll+706571
+GameAssembly.dll+706462: 8B C1                 - mov eax,ecx
+GameAssembly.dll+706464: FF C1                 - inc ecx
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+757218: 03 B7 90 00 00 00  - add esi,[rdi+00000090]
+GameAssembly.dll+706466: 44 03 44 82 20        - add r8d,[rdx+rax*4+20]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+75721E: FF C3              - inc ebx
-GameAssembly.dll+757220: E9 4B FF FF FF     - jmp GameAssembly.dll+757170
-GameAssembly.dll+757225: 48 8B 5C 24 30     - mov rbx,[rsp+30]
-GameAssembly.dll+75722A: 8B C6              - mov eax,esi
-GameAssembly.dll+75722C: 48 8B 74 24 40     - mov rsi,[rsp+40]
-GameAssembly.dll+757231: 48 8B 6C 24 38     - mov rbp,[rsp+38]
-GameAssembly.dll+757236: 48 8B 7C 24 48     - mov rdi,[rsp+48]
-GameAssembly.dll+75723B: 48 83 C4 20        - add rsp,20
-GameAssembly.dll+75723F: 41 5E              - pop r14
-GameAssembly.dll+757241: C3                 - ret 
+GameAssembly.dll+70646B: 83 F9 19              - cmp ecx,19
+GameAssembly.dll+70646E: 7E E0                 - jle GameAssembly.dll+706450
+GameAssembly.dll+706470: 43 8D 04 10           - lea eax,[r8+r10]
+GameAssembly.dll+706474: B9 1A 00 00 00        - mov ecx,0000001A
+GameAssembly.dll+706479: 89 43 2C              - mov [rbx+2C],eax
+GameAssembly.dll+70647C: 45 8B C1              - mov r8d,r9d
+GameAssembly.dll+70647F: 44 8B 53 30           - mov r10d,[rbx+30]
+GameAssembly.dll+706483: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
+GameAssembly.dll+70648A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
+GameAssembly.dll+706490: 48 85 D2              - test rdx,rdx
 }
 </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>156</ID>
+              <Description>"Storage: try to prevent item corruption #2 (below 50%)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_STORAGE_NO_DEGRADE_2,GameAssembly.dll,44 03 44 82 20 83 F9 32 7E E0 43) // should be unique
+aobscanregion(INJECT_STORAGE_NO_DEGRADE_2,ItemStorageUpdateItemInfoWithDegradeProc+170,ItemStorageUpdateItemInfoWithDegradeProc+1F0,44 03 44 82 20 83 F9 32) // should be unique
+
+alloc(newmem,$1000,INJECT_STORAGE_NO_DEGRADE_2)
+
+label(code)
+label(return)
+
+newmem:
+  test dword ptr [rdx+rax*4+20], 0
+  jz code
+
+  pushf
+  push r15
+
+  mov r15d, [rdx+rax*4+20]
+  test dword ptr [rdx+1B0], 0
+  jz to_set_it
+
+to_add_it:
+  add dword ptr [rdx+1B0], r15d
+
+  jmp set_zero
+to_set_it:
+  mov dword ptr [rdx+1B0], r15d
+
+set_zero:
+  mov dword ptr [rdx+rax*4+20], 0
+
+  pop r15
+  popf
+
+code:
+  add r8d,[rdx+rax*4+20]
+  jmp return
+
+INJECT_STORAGE_NO_DEGRADE_2:
+  jmp newmem
+return:
+registersymbol(INJECT_STORAGE_NO_DEGRADE_2)
+
+[DISABLE]
+
+INJECT_STORAGE_NO_DEGRADE_2:
+  db 44 03 44 82 20
+
+unregistersymbol(INJECT_STORAGE_NO_DEGRADE_2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+7064A6
+
+GameAssembly.dll+70647C: 45 8B C1              - mov r8d,r9d
+GameAssembly.dll+70647F: 44 8B 53 30           - mov r10d,[rbx+30]
+GameAssembly.dll+706483: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
+GameAssembly.dll+70648A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
+GameAssembly.dll+706490: 48 85 D2              - test rdx,rdx
+GameAssembly.dll+706493: 0F 84 D2 00 00 00     - je GameAssembly.dll+70656B
+GameAssembly.dll+706499: 3B 4A 18              - cmp ecx,[rdx+18]
+GameAssembly.dll+70649C: 0F 83 CF 00 00 00     - jae GameAssembly.dll+706571
+GameAssembly.dll+7064A2: 8B C1                 - mov eax,ecx
+GameAssembly.dll+7064A4: FF C1                 - inc ecx
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+7064A6: 44 03 44 82 20        - add r8d,[rdx+rax*4+20]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+7064AB: 83 F9 32              - cmp ecx,32
+GameAssembly.dll+7064AE: 7E E0                 - jle GameAssembly.dll+706490
+GameAssembly.dll+7064B0: 43 8D 04 10           - lea eax,[r8+r10]
+GameAssembly.dll+7064B4: B9 33 00 00 00        - mov ecx,00000033
+GameAssembly.dll+7064B9: 89 43 30              - mov [rbx+30],eax
+GameAssembly.dll+7064BC: 45 8B C1              - mov r8d,r9d
+GameAssembly.dll+7064BF: 44 8B 53 34           - mov r10d,[rbx+34]
+GameAssembly.dll+7064C3: 48 8B 95 98 00 00 00  - mov rdx,[rbp+00000098]
+GameAssembly.dll+7064CA: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
+GameAssembly.dll+7064D0: 48 85 D2              - test rdx,rdx
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -3002,6 +3348,30 @@ GameAssembly.dll+757241: C3                 - ret
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :mov edx,eax</Description>
+      <AddressString>GameAssembly.dll+BFA523</AddressString>
+      <Before>
+        <Byte>E8</Byte>
+        <Byte>DD</Byte>
+        <Byte>CB</Byte>
+        <Byte>B5</Byte>
+        <Byte>FF</Byte>
+      </Before>
+      <Actual>
+        <Byte>8B</Byte>
+        <Byte>D0</Byte>
+      </Actual>
+      <After>
+        <Byte>8B</Byte>
+        <Byte>8B</Byte>
+        <Byte>4C</Byte>
+        <Byte>05</Byte>
+        <Byte>00</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
   <UserdefinedSymbols/>
   <LuaScript>--[[
 from https://forum.cheatengine.org/viewtopic.php?p=5659739&amp;sid=72bd2d145c30bf0d344304bce17ea990#5659739
