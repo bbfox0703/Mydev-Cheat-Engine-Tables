@@ -573,7 +573,7 @@ ed9.exe+146CC0: 41 B1 01                          - mov r9l,01
     <CheatEntry>
       <ID>22</ID>
       <Description>"HP/EP/CP (受傷害時 / when get hit)"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ed9.exe
   Version:
@@ -596,6 +596,8 @@ label(i_last_orig_value)
 label(i_last_new_value)
 label(vf_damage_multi)
 label(i_char_id_threshold)
+label(i_last_orig_damage)
+label(i_last_calc_damage)
 
 newmem:
   push rax
@@ -681,6 +683,13 @@ player_hp_calc:
   db 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
 
   vsubss xmm13, xmm14, xmm15
+  vcvtss2si edx, xmm13
+  mov [i_last_orig_damage], edx
+
+  vmulss xmm13, xmm13, xmm12
+  vcvtss2si edx, xmm13
+  mov [i_last_calc_damage], edx
+
   vmulss xmm13, xmm13, xmm12
   vaddss xmm15, xmm15, xmm13
   cvtss2si edx, xmm15
@@ -716,7 +725,7 @@ align 10 cc
   is_1hk:
   dd 0
   vf_damage_multi:
-  dd (float)0.7800001
+  dd (float)0.8500001
   vf_0_5:
   dd (float)0.5
   vf_0_333:
@@ -729,8 +738,12 @@ align 10 cc
   dd 0
   i_last_new_value:
   dd 0
+  i_last_orig_damage:
+  dd 0
   i_char_id_threshold:
   dd 14
+  i_last_calc_damage:
+  dd 0
 
 INJECT_DMG_CTRL:
   jmp newmem
@@ -744,6 +757,9 @@ registersymbol(i_last_orig_value)
 registersymbol(i_last_new_value)
 registersymbol(vf_damage_multi)
 registersymbol(i_char_id_threshold)
+registersymbol(i_last_orig_damage)
+registersymbol(i_last_calc_damage)
+
 [DISABLE]
 
 INJECT_DMG_CTRL:
@@ -833,22 +849,6 @@ ed9.exe+F0681: 41 8B 4A 14  - mov ecx,[r10+14]
               <VariableType>4 Bytes</VariableType>
               <Address>is_cp_full</Address>
             </CheatEntry>
-            <CheatEntry>
-              <ID>107</ID>
-              <Description>"原本HP / Orig. HP"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_last_orig_value</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>106</ID>
-              <Description>"計算後HP / Calc HP"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_last_new_value</Address>
-            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
@@ -867,6 +867,47 @@ ed9.exe+F0681: 41 8B 4A 14  - mov ecx,[r10+14]
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>is_1hk</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1214</ID>
+          <Description>"_calc data"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <Color>808080</Color>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1212</ID>
+              <Description>"orig. damage"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_last_orig_damage</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1213</ID>
+              <Description>"Calc. damage"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_last_calc_damage</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>107</ID>
+              <Description>"原本HP / Orig. HP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_last_orig_value</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>106</ID>
+              <Description>"計算後HP / Calc HP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_last_new_value</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -4531,6 +4572,7 @@ ed9.exe+4FCE89: 8B 40 38              - mov eax,[rax+38]
 11:艾蕾因 / Elaine Auclair
 12:靜名 / Shizuna Rem Misurugi
 13:黑鐵 / Kurogane
+14:露克蕾琪亞 / Lucrezia Isselee
 17:斯溫 / Swin Abel
 18:娜狄雅 / Nadia Rayne
 62:莉夏 / Rixia Mao
@@ -4770,6 +4812,13 @@ ed9.exe+4FCE89: 8B 40 38              - mov eax,[rax+38]
         <CheatEntry>
           <ID>151</ID>
           <Description>"配件1 ID / Accessory ID 1"</Description>
+          <DropDownList DisplayValueAsItem="1">1762:星杯掛墜
+1763:石青寶珠
+1764:獅子王刻印
+1771:秩序護符
+1772:灰色護符
+1773:混沌寶珠
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -4781,6 +4830,7 @@ ed9.exe+4FCE89: 8B 40 38              - mov eax,[rax+38]
         <CheatEntry>
           <ID>150</ID>
           <Description>"配件2 ID / Accessory ID 2"</Description>
+          <DropDownListLink>配件1 ID / Accessory ID 1</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -5138,7 +5188,7 @@ ed9.exe+5DFD0: 75 19                    - jne ed9.exe+5DFEB
     </CheatEntry>
     <CheatEntry>
       <ID>226</ID>
-      <Description>"練成石使用時不減 / inf. Craft stone when use"</Description>
+      <Description>"練成石&amp;道具使用時不減 / inf. item/Craft stone when use"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ed9.exe
   Version: 
