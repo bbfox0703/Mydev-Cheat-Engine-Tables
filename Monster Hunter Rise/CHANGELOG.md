@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/02/07
+1. Revised for ver 14.0.0.0
+
 ## 2022/12/09
 1. Revised for ver 13.0.0.1
 
