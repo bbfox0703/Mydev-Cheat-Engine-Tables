@@ -2,6 +2,7 @@
 
 ## 2023/02/07
 1. Revised for ver 14.0.0.0
+1. Added item ID provided by CIKOMELANTIK@OCT
 
 ## 2022/12/09
 1. Revised for ver 13.0.0.1
