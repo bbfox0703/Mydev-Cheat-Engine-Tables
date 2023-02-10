@@ -119,6 +119,11 @@ ja-JP: ファイナルファンタジーVI ピクセルリマスター
 zh-TW: 初音未來 Project DIVA MEGA39’s＋  
 ja-JP: 初音ミク Project DIVA MEGA39’s＋  
 
+## Hogwarts Legacy  
+[Hogwarts Legacy (Steam)](https://store.steampowered.com/app/990080/_/)  
+zh-TW: 霍格華茲的傳承  
+ja-JP: ホグワーツ・レガシー  
+
 ## Kemono Friends Cellien May Cry  
 [Kemono Friends Cellien May Cry (Steam)](https://store.steampowered.com/app/1962920/_Cellien_May_Cry/)  
 zh-TW: 動物朋友 Cellien May Cry  
