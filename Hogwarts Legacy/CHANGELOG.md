@@ -3,6 +3,8 @@
 ## 2023/02/12
 1. Added "Set min bloom speed charges"
 1. Added "Fast spell cooldown" by Seneekikaant@OCT
+1. Added "Get challenges progress"
+1. Added "Fast challenges"
 
 ## 2023/02/11
 1. Update for game executable changed
