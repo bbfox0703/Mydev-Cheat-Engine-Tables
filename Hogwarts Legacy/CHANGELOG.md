@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/02/13:
+1. Added "Purchase an item from the vendor to increase your gold amount"
+
 ## 2023/02/12
 1. Added "Set min bloom speed charges"
 1. Added "Fast spell cooldown" by Seneekikaant@OCT
