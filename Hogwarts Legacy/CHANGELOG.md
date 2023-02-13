@@ -2,6 +2,7 @@
 
 ## 2023/02/13:
 1. Added "Purchase an item from the vendor to increase your gold amount"
+1. Added "Set max broom racing time"
 
 ## 2023/02/12
 1. Added "Set min bloom speed charges"
