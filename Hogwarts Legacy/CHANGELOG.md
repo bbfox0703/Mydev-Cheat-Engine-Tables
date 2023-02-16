@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/02/16
+1. Update for v1120320
+
 ## 2023/02/13:
 1. Added "Purchase an item from the vendor to increase your gold amount"
 1. Added "Set max broom racing time"
