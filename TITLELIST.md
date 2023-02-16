@@ -49,15 +49,15 @@ zh-TW: 萊莎的鍊金工房 ～常闇女王與秘密藏身處～
 ja-JP: ライザのアトリエ2 ～失われた伝承と秘密の妖精  
 zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～  
 
+## Atelier Sophie 2
+[Atelier Sophie 2: The Alchemist of the Mysterious Dream (Steam)](https://store.steampowered.com/app/1621310/_/)  
+zh-TW: 蘇菲的鍊金工房２ ～不可思議夢的鍊金術士～  
+ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～  
+
 ## Atelier Sophie DX  
 [Atelier Sophie: The Alchemist of the Mysterious Book DX (Steam)](https://store.steampowered.com/app/1502970/__DX/)  
 zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX  
 ja-JP: ソフィーのアトリエ ～不思議な本の錬金術士～ DX  
-
-## Atelier Sophie2 CT  
-[Atelier Sophie 2: The Alchemist of the Mysterious Dream (Steam)](https://store.steampowered.com/app/1621310/_/)  
-zh-TW: 蘇菲的鍊金工房２ ～不可思議夢的鍊金術士～  
-ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～  
 
 ## Brigandine The Legend of Runersia  
 [Brigandine The Legend of Runersia (Steam)](https://store.steampowered.com/app/1843940/Brigandine_The_Legend_of_Runersia/)  
