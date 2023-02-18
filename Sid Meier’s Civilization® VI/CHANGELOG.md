@@ -1,6 +1,10 @@
 # Changelog
 
-## 2022/01/19
+## 2023/02/18  
+1. Revised for 1.0.12.37 (871434)
+1. Added Gold does not decrease after purchase
+
+## 2023/01/19
 1. Revised gold and faith value display to "readable" format
 
 ## 2022/12/16
