@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/02/24
+1. Update for 0.5.2.5-47b7
+
 ## 2023/02/14
 1. Update for 0.5.2.3-d470
 
