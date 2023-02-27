@@ -1,5 +1,8 @@
 # Changelog  
 
+## 2023/02/27
+1. Revised "HP/EP/CP (受傷害時 / when get hit)" HP calculate incorrect if using option 5  
+
 ## 2023/01/31
 1. Revised 取得部份統計值 / Some stats
 1. Some wording change 
