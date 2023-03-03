@@ -1,5 +1,8 @@
 # Changelog  
 
+## 2023/03/03
+1. Revised for game ver 1.1.0
+
 ## 2022/08/21
 Added some attributes for 角色狀態 (開啟角色狀態選單) / Char. stats (usage: view char in menu)  
 * □武器 ID / Weapon ID
