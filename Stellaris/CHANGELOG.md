@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/03/20
+1. Revised for 3.7.2 (e793)
+
 ## 2022/12/12
 1. bug fix
 
@@ -28,7 +31,7 @@
 1. Added sci-ship survey multiplier
 
 ## 2022/11/29
-1. Update for v3.6
+1. Updated for v3.6
 
 ## 2022/10/14
 1. Added get Federation Data
