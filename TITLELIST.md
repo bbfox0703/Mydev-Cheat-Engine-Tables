@@ -55,7 +55,7 @@ zh-TW: 萊莎的鍊金工房３ ～終結之鍊金術士與秘密鑰匙～
 ja-JP: ライザのアトリエ３ ～終わりの錬金術士と秘密の鍵～  
 
 ## Atelier Sophie 2
-[Atelier Ryza 3: Alchemist of the End & the Secret Key (Steam)](https://store.steampowered.com/app/1621310/_/)  
+[Atelier Sophie 2: The Alchemist of the Mysterious Dream (Steam)](https://store.steampowered.com/app/1621310/_/)  
 zh-TW: 蘇菲的鍊金工房２ ～不可思議夢的鍊金術士～  
 ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～  
 
