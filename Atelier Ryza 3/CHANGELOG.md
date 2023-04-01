@@ -1,5 +1,10 @@
 # Change log
 
+## 2023/04/01
+1. Added Reset item level (enable item repeat again)
+1. Enhanced item editor
+1. Minor bug fix
+
 ## 2023/03/31:
 1. Added Quest: quicker completion: set count from menu
 1. Added Quest: quicker completion: when quest is in progress
