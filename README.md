@@ -14,4 +14,6 @@ Japanese (日本語) and Traditional Chinese (正體中文) title name included:
 [Title list](https://github.com/bbfox0703/Mydev-Cheat-Engine-Tables/blob/main/TITLELIST.md)
 
 ## Required: Cheat Engine  
-Cheat Engine: [7.4 or newer](https://github.com/cheat-engine/cheat-engine/releases)  
+Cheat Engine: [7.4 / 7.5](https://github.com/cheat-engine/cheat-engine/releases)  
+
+## For any issue, please post in the OCT forum under the game table topic: https://opencheattables.com 
