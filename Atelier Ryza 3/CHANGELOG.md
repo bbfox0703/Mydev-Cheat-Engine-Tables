@@ -3,6 +3,8 @@
 ## 2023/04/01
 1. Added Reset item level (enable item repeat again)
 1. Enhanced item editor
+1. Added Battle: faster order drive grow
+1. Added Battle: keep min. order drive after use
 1. Minor bug fix
 
 ## 2023/03/31:
