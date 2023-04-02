@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/04/02
+1. Added Battle: fast action for player  
+
 ## 2023/04/01
 1. Added Reset item level (enable item repeat again)
 1. Enhanced item editor
