@@ -2,6 +2,7 @@
 
 ## 2023/04/02
 1. Added Battle: fast action for player  
+1. Added Generate & overwrite pristine keys (無垢の鍵) in pristine key ring
 
 ## 2023/04/01
 1. Added Reset item level (enable item repeat again)
