@@ -1,4 +1,6 @@
 # Change log
+1. Update for game ver 1.02a
+1. Added Get puni stats / ぷに
 
 ## 2023/04/02
 1. Added Battle: fast action for player  
