@@ -1,6 +1,10 @@
 # Changelog
 
-## 2023/04/45
+## 2023/04/06
+1. Removed ship HP script
+1. Added "Selected player ship/building: HP refill (not god mode)"
+
+## 2023/04/05
 1. Updated for v17.0.1222998
 
 ## 2022/10/01

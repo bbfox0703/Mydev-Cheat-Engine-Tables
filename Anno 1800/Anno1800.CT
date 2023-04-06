@@ -394,7 +394,7 @@ Anno1800.exe+7528B0: FF 50 40        - call qword ptr [rax+40]
             </CheatEntry>
             <CheatEntry>
               <ID>48</ID>
-              <Description>"Player warehouse stock#"</Description>
+              <Description>"+Player warehouse stock#"</Description>
               <Options moHideChildren="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
@@ -448,149 +448,83 @@ Anno1800.exe+7528B0: FF 50 40        - call qword ptr [rax+40]
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>16</ID>
-          <Description>"(not working now) Ship HP (may affect buildings)"</Description>
-          <Options moHideChildren="1"/>
+          <ID>53</ID>
+          <Description>"Selected player ship/building: HP refill (not god mode)"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Anno1800.exe
   Version: 
-  Date   : 2022-04-06
-  Author : bbfox @ https://opencheattables.com
+  Date   : 2023-04-06
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_SHIP_HP,$process,66 89 7B 56 66 85 FF) // should be unique
-alloc(newmem,$1000,INJECT_SHIP_HP)
+aobscanmodule(INJECT_SELECTED_PLAYER_SHIP,$process,0F BF 56 3E E9 ?? ?? ?? ?? 48 83 7C 3B 10 01) // should be unique
+alloc(newmem,$1000,INJECT_SELECTED_PLAYER_SHIP)
+
+alloc(INJECT_SELECTED_PLAYER_SHIPo, 9)
 
 label(code)
 label(return)
-label(is_player_ship)
-label(is_lower_enemy_hp)
+
+INJECT_SELECTED_PLAYER_SHIPo:
+  readmem(INJECT_SELECTED_PLAYER_SHIP, 9)
 
 newmem:
-  mov dword ptr [is_player_ship], 0
-
-  push rax
-  push rcx
-
-  mov ax, [rbx+40]
-  test ax, ax
-  je endp
-  mov ax, [rbx+42]
-  test ax, ax
-  je endp
-  mov ax, [rbx+120]
-  test ax, ax
-  jne endp
-  //mov ax, [rbx+28]
-  //cmp ax, 1
-  //jne endp
-  mov dword ptr [is_player_ship], 1
-endp:
-  pop rcx
-  pop rax
-
-  cmp dword ptr [is_player_ship], 1
-  jne to_enemy
-
-  push rax
-  mov ax, [rbx+58]
-  mov di, ax
-  pop rax
-  jmp code
-
-to_enemy:
-  cmp dword ptr [is_lower_enemy_hp], 1
-  jne code
-  push rax
-  push rcx
-  xor rcx, rcx
-  xor rax, rax
-
-  movzx eax, word ptr [rbx+58]
-  cvtsi2ss xmm15, eax
-  vmovss xmm14, [vf_2]
-  divss xmm15, xmm14
-  cvtss2si eax, xmm15
-  cmp di, ax
-  jbe enemy_endp
-  mov di, ax
-
-enemy_endp:
-  pop rcx
-  pop rax
-
+  mov dx, [rsi+40]
+  mov [rsi+3E], dx
 
 code:
-  mov [rbx+56],di
-  test di,di
+  movsx edx,word ptr [rsi+3E]
+  //jmp Anno1800.exe+18DB331
+  reassemble(INJECT_SELECTED_PLAYER_SHIP+4)
   jmp return
-align 10 cc
-  is_player_ship:
-  dd 0
-  is_lower_enemy_hp:
-  dd 0
-  vf_2:
-  dd (float)2
 
-
-INJECT_SHIP_HP:
+INJECT_SELECTED_PLAYER_SHIP:
   jmp newmem
-  nop 2
+  nop 4
 return:
-
-registersymbol(is_lower_enemy_hp)
-registersymbol(INJECT_SHIP_HP)
+registersymbol(INJECT_SELECTED_PLAYER_SHIP)
+registersymbol(INJECT_SELECTED_PLAYER_SHIPo)
 
 [DISABLE]
 
-INJECT_SHIP_HP:
-  db 66 89 7B 56 66 85 FF
+INJECT_SELECTED_PLAYER_SHIP:
+  //db 0F BF 56 3E E9 A9 FE FF FF
+  readmem(INJECT_SELECTED_PLAYER_SHIPo, 9)
 
-unregistersymbol(*)
+unregistersymbol(INJECT_SELECTED_PLAYER_SHIP)
 dealloc(newmem)
-
+unregistersymbol(INJECT_SELECTED_PLAYER_SHIPo)
+dealloc(INJECT_SELECTED_PLAYER_SHIPo)
 {
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+149A2B
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+18DB47F
 
-Anno1800.exe+149A04: 48 8B 4A 28     - mov rcx,[rdx+28]
-Anno1800.exe+149A08: 8B 42 08        - mov eax,[rdx+08]
-Anno1800.exe+149A0B: 89 44 24 28     - mov [rsp+28],eax
-Anno1800.exe+149A0F: 48 89 4C 24 20  - mov [rsp+20],rcx
-Anno1800.exe+149A14: E8 67 DC 04 00  - call Anno1800.exe+197680
-Anno1800.exe+149A19: 33 C0           - xor eax,eax
-Anno1800.exe+149A1B: 66 3B C7        - cmp ax,di
-Anno1800.exe+149A1E: 66 0F 4D F8     - cmovge di,ax
-Anno1800.exe+149A22: 66 39 7B 58     - cmp [rbx+58],di
-Anno1800.exe+149A26: 66 0F 4C 7B 58  - cmovl di,[rbx+58]
+Anno1800.exe+18DB452: 48 8D 4D 97        - lea rcx,[rbp-69]
+Anno1800.exe+18DB456: E8 C5 C2 66 FF     - call Anno1800.exe+F47720
+Anno1800.exe+18DB45B: 90                 - nop 
+Anno1800.exe+18DB45C: 48 8B 7D A7        - mov rdi,[rbp-59]
+Anno1800.exe+18DB460: 48 85 FF           - test rdi,rdi
+Anno1800.exe+18DB463: 0F 84 D5 06 00 00  - je Anno1800.exe+18DBB3E
+Anno1800.exe+18DB469: BB FF FF FF FF     - mov ebx,FFFFFFFF
+Anno1800.exe+18DB46E: E9 D5 04 00 00     - jmp Anno1800.exe+18DB948
+Anno1800.exe+18DB473: 48 83 7C 3B 10 00  - cmp qword ptr [rbx+rdi+10],00
+Anno1800.exe+18DB479: 0F 85 8E 06 00 00  - jne Anno1800.exe+18DBB0D
 // ---------- INJECTING HERE ----------
-Anno1800.exe+149A2B: 66 89 7B 56     - mov [rbx+56],di
+Anno1800.exe+18DB47F: 0F BF 56 3E        - movsx edx,word ptr [rsi+3E]
 // ---------- DONE INJECTING  ----------
-Anno1800.exe+149A2F: 66 85 FF        - test di,di
-Anno1800.exe+149A32: 7F 17           - jg Anno1800.exe+149A4B
-Anno1800.exe+149A34: 48 8B 43 08     - mov rax,[rbx+08]
-Anno1800.exe+149A38: 8B 48 58        - mov ecx,[rax+58]
-Anno1800.exe+149A3B: C1 E9 04        - shr ecx,04
-Anno1800.exe+149A3E: F6 C1 01        - test cl,01
-Anno1800.exe+149A41: 75 08           - jne Anno1800.exe+149A4B
-Anno1800.exe+149A43: 48 8B CB        - mov rcx,rbx
-Anno1800.exe+149A46: E8 75 D7 FF FF  - call Anno1800.exe+1471C0
-Anno1800.exe+149A4B: 48 8B CB        - mov rcx,rbx
+Anno1800.exe+18DB483: E9 A9 FE FF FF     - jmp Anno1800.exe+18DB331
+Anno1800.exe+18DB488: 48 83 7C 3B 10 01  - cmp qword ptr [rbx+rdi+10],01
+Anno1800.exe+18DB48E: 0F 85 79 06 00 00  - jne Anno1800.exe+18DBB0D
+Anno1800.exe+18DB494: 4C 8B 44 3B 18     - mov r8,[rbx+rdi+18]
+Anno1800.exe+18DB499: 4D 8B CE           - mov r9,r14
+Anno1800.exe+18DB49C: 4D 8B 00           - mov r8,[r8]
+Anno1800.exe+18DB49F: 48 8D 55 AF        - lea rdx,[rbp-51]
+Anno1800.exe+18DB4A3: 48 8B 4D 7F        - mov rcx,[rbp+7F]
+Anno1800.exe+18DB4A7: E8 74 BE 66 FF     - call Anno1800.exe+F47320
+Anno1800.exe+18DB4AC: 90                 - nop 
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>17</ID>
-              <Description>"Non player ship half HP? (not recommended)"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>is_lower_enemy_hp</Address>
-            </CheatEntry>
-          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>39</ID>
@@ -642,35 +576,7 @@ INJECT_CLICK_CARGO:
 unregistersymbol(*)
 dealloc(newmem)
 
-{ 15.x
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+1FB0B98
-
-Anno1800.exe+1FB0B7B: 74 05           - je Anno1800.exe+1FB0B82
-Anno1800.exe+1FB0B7D: 8B 59 08        - mov ebx,[rcx+08]
-Anno1800.exe+1FB0B80: EB 03           - jmp Anno1800.exe+1FB0B85
-Anno1800.exe+1FB0B82: 41 8B DF        - mov ebx,r15d
-Anno1800.exe+1FB0B85: 48 8B 0F        - mov rcx,[rdi]
-Anno1800.exe+1FB0B88: 48 85 C9        - test rcx,rcx
-Anno1800.exe+1FB0B8B: 74 3E           - je Anno1800.exe+1FB0BCB
-Anno1800.exe+1FB0B8D: 41 8B D6        - mov edx,r14d
-Anno1800.exe+1FB0B90: E8 9B F7 29 FE  - call Anno1800.exe+250330
-Anno1800.exe+1FB0B95: 48 8B C8        - mov rcx,rax
-// ---------- INJECTING HERE ----------
-Anno1800.exe+1FB0B98: 8B 78 20        - mov edi,[rax+20]
-// ---------- DONE INJECTING  ----------
-Anno1800.exe+1FB0B9B: 85 FF           - test edi,edi
-Anno1800.exe+1FB0B9D: 78 2C           - js Anno1800.exe+1FB0BCB
-Anno1800.exe+1FB0B9F: 74 16           - je Anno1800.exe+1FB0BB7
-Anno1800.exe+1FB0BA1: 48 8B 40 10     - mov rax,[rax+10]
-Anno1800.exe+1FB0BA5: 48 2B 41 08     - sub rax,[rcx+08]
-Anno1800.exe+1FB0BA9: 48 83 E0 F0     - and rax,-10
-Anno1800.exe+1FB0BAD: 48 83 F8 10     - cmp rax,10
-Anno1800.exe+1FB0BB1: 41 0F 45 FF     - cmovne edi,r15d
-Anno1800.exe+1FB0BB5: EB 17           - jmp Anno1800.exe+1FB0BCE
-Anno1800.exe+1FB0BB7: 48 8B 78 10     - mov rdi,[rax+10]
-}
-
-{ 16.1
+{
 // ORIGINAL CODE - INJECTION POINT: Anno1800.exe+23B8C2A
 
 Anno1800.exe+23B8C09: 48 8B 48 08     - mov rcx,[rax+08]
@@ -770,7 +676,7 @@ code:
 
 align 10 cc
   i_min_stock_size:
-  dd #125
+  dd #31
 
 INJECT_CLICK_WAREHOUSE:
   jmp newmem
@@ -786,35 +692,7 @@ INJECT_CLICK_WAREHOUSE:
 unregistersymbol(*)
 dealloc(newmem)
 
-{ 15
-// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+1FD06A3
-
-Anno1800.exe+1FD067F: 90                 - nop
-Anno1800.exe+1FD0680: 48 3B C2           - cmp rax,rdx
-Anno1800.exe+1FD0683: 0F 84 C8 01 00 00  - je Anno1800.exe+1FD0851
-Anno1800.exe+1FD0689: 48 8B 40 08        - mov rax,[rax+08]
-Anno1800.exe+1FD068D: 44 3B 48 10        - cmp r9d,[rax+10]
-Anno1800.exe+1FD0691: 75 ED              - jne Anno1800.exe+1FD0680
-Anno1800.exe+1FD0693: 48 85 C0           - test rax,rax
-Anno1800.exe+1FD0696: 48 0F 44 C1        - cmove rax,rcx
-Anno1800.exe+1FD069A: 48 3B C1           - cmp rax,rcx
-Anno1800.exe+1FD069D: 0F 84 AE 01 00 00  - je Anno1800.exe+1FD0851
-// ---------- INJECTING HERE ----------
-Anno1800.exe+1FD06A3: 8B 48 20           - mov ecx,[rax+20]
-// ---------- DONE INJECTING  ----------
-Anno1800.exe+1FD06A6: 89 4D 4F           - mov [rbp+4F],ecx
-Anno1800.exe+1FD06A9: 44 8B 58 1C        - mov r11d,[rax+1C]
-Anno1800.exe+1FD06AD: 44 89 5D B3        - mov [rbp-4D],r11d
-Anno1800.exe+1FD06B1: 45 33 C0           - xor r8d,r8d
-Anno1800.exe+1FD06B4: 48 8B 50 48        - mov rdx,[rax+48]
-Anno1800.exe+1FD06B8: 4C 8B 50 50        - mov r10,[rax+50]
-Anno1800.exe+1FD06BC: 49 3B D2           - cmp rdx,r10
-Anno1800.exe+1FD06BF: 74 19              - je Anno1800.exe+1FD06DA
-Anno1800.exe+1FD06C1: 80 7A 24 00        - cmp byte ptr [rdx+24],00
-Anno1800.exe+1FD06C5: 75 0F              - jne Anno1800.exe+1FD06D6
-}
-
-{ 16.1
+{
 // ORIGINAL CODE - INJECTION POINT: Anno1800.exe+241D623
 
 Anno1800.exe+241D5F8: 0F 1F 84 00 00 00 00 00  - nop dword ptr [rax+rax+00000000]
@@ -857,10 +735,36 @@ Anno1800.exe+241D646: 75 0F                    - jne Anno1800.exe+241D657
     <CheatEntry>
       <ID>46</ID>
       <Description>"Anno 1800 17.0.1222998 /  https://opencheattables.com  /  CE 7.5+"</Description>
-      <Color>400080</Color>
+      <Color>800080</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :mov [rbx+3E],ax</Description>
+      <AddressString>Anno1800.exe+CAA131</AddressString>
+      <Before>
+        <Byte>C1</Byte>
+        <Byte>66</Byte>
+        <Byte>0F</Byte>
+        <Byte>4D</Byte>
+        <Byte>C1</Byte>
+      </Before>
+      <Actual>
+        <Byte>66</Byte>
+        <Byte>89</Byte>
+        <Byte>43</Byte>
+        <Byte>3E</Byte>
+      </Actual>
+      <After>
+        <Byte>66</Byte>
+        <Byte>85</Byte>
+        <Byte>C0</Byte>
+        <Byte>7F</Byte>
+        <Byte>17</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
   <UserdefinedSymbols/>
   <Comments>ｂｂｆｏｘ＠ｈｔｔｐｓ：／／ｏｐｅｎｃｈｅａｔｔａｂｌｅｓ．ｏｒｇ
 </Comments>
