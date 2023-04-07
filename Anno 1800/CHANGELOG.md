@@ -1,5 +1,9 @@
 # Changelog
 
+## 2023/04/07
+1. Added "Refill the HP of other players' ships or buildings if they ever clicked"
+1. Revised "Selected player ship/building: HP refill (not god mode)"
+
 ## 2023/04/06
 1. Removed ship HP script
 1. Added "Selected player ship/building: HP refill (not god mode)"
