@@ -1,4 +1,10 @@
 # Change log
+
+## 2023/04/11
+1. Enhanced item editor
+1. Revise script by using vcvtsi2ss (CE have disassambler display bug but working)
+
+## 2023/04/03
 1. Update for game ver 1.02a
 1. Added Get puni stats / ぷに
 
