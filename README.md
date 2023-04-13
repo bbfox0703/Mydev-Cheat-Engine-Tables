@@ -23,6 +23,7 @@ Notice: Tables may not be up-to-date.
 
 ## In order if you do not know how to download from here:  
 * The easy way is: browse from [OCT site](https://opencheattables.com)  
+or:  
 * Browse game directory  
 * Click on \*.CT file  
 * There is a "Download Raw" icon in the top-right of the file window. Click it.  
