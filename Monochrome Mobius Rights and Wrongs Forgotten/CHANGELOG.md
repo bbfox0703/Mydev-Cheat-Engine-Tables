@@ -1,7 +1,10 @@
 # Change log
 
+## 2023/04/17
+1. Revised for v1.10.50837
+
 ## 2023/01/24
-1. Revise for 01/23 update 
+1. Revised for 01/23 update 
 
 ## 2023/01/20
 1. fixed bug for Battle: Party HP/Force
