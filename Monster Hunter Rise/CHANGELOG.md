@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/04/20
+1. Revised for ver 15.0.0.0  
+
 ## 2023/02/07
 1. Revised for ver 14.0.0.0
 1. Added item ID provided by CIKOMELANTIK@OCT
