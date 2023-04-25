@@ -3,7 +3,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>1</ID>
-      <Description>"inf. mis #1"</Description>
+      <Description>"inf. second weapon (homing missile, etc)"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
   Version: 
@@ -21,6 +21,11 @@ label(return)
 
 newmem:
   inc eax
+  cmp eax, #18
+  jae endp
+  mov eax, #18
+
+endp:
 
 code:
   mov [rcx+00000108],eax
@@ -69,6 +74,1075 @@ ES2-Win64-Shipping.exe+12FCCA5: E8 76 E0 6C FF        - call ES2-Win64-Shipping.
 }
 </AssemblerScript>
     </CheatEntry>
+    <CheatEntry>
+      <ID>9</ID>
+      <Description>"Material multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GRAB_MATERIAL_MULTI,ES2-Win64-Shipping.exe,01 91 04 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GRAB_MATERIAL_MULTI)
+
+label(code)
+label(return)
+label(vf_mat_multi)
+
+newmem:
+  vmovss xmm14, [vf_mat_multi]
+  vcvtsi2ss xmm15, xmm15, edx
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si edx, xmm13
+
+code:
+  add [rcx+00000104],edx
+  jmp return
+align 10 cc
+  vf_mat_multi:
+  dd (float)2.5
+
+INJECT_GRAB_MATERIAL_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GRAB_MATERIAL_MULTI)
+registersymbol(vf_mat_multi)
+[DISABLE]
+
+INJECT_GRAB_MATERIAL_MULTI:
+  db 01 91 04 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+1539C92
+
+ES2-Win64-Shipping.exe+1539C6E: 8B 81 74 01 00 00  - mov eax,[rcx+00000174]
+ES2-Win64-Shipping.exe+1539C74: 89 86 74 01 00 00  - mov [rsi+00000174],eax
+ES2-Win64-Shipping.exe+1539C7A: 41 8B C1           - mov eax,r9d
+ES2-Win64-Shipping.exe+1539C7D: 2B C2              - sub eax,edx
+ES2-Win64-Shipping.exe+1539C7F: 41 8B D2           - mov edx,r10d
+ES2-Win64-Shipping.exe+1539C82: 41 3B C2           - cmp eax,r10d
+ES2-Win64-Shipping.exe+1539C85: 0F 4E D0           - cmovle edx,eax
+ES2-Win64-Shipping.exe+1539C88: 49 8B 06           - mov rax,[r14]
+ES2-Win64-Shipping.exe+1539C8B: 44 03 FA           - add r15d,edx
+ES2-Win64-Shipping.exe+1539C8E: 4A 8B 0C C0        - mov rcx,[rax+r8*8]
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+1539C92: 01 91 04 01 00 00  - add [rcx+00000104],edx
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+1539C98: 29 96 04 01 00 00  - sub [rsi+00000104],edx
+ES2-Win64-Shipping.exe+1539C9E: 44 2B D2           - sub r10d,edx
+ES2-Win64-Shipping.exe+1539CA1: 74 0F              - je ES2-Win64-Shipping.exe+1539CB2
+ES2-Win64-Shipping.exe+1539CA3: FF C5              - inc ebp
+ES2-Win64-Shipping.exe+1539CA5: 49 FF C0           - inc r8
+ES2-Win64-Shipping.exe+1539CA8: 41 3B 6E 08        - cmp ebp,[r14+08]
+ES2-Win64-Shipping.exe+1539CAC: 0F 8C 74 FF FF FF  - jl ES2-Win64-Shipping.exe+1539C26
+ES2-Win64-Shipping.exe+1539CB2: 45 85 FF           - test r15d,r15d
+ES2-Win64-Shipping.exe+1539CB5: 0F 8F 4C 01 00 00  - jg ES2-Win64-Shipping.exe+1539E07
+ES2-Win64-Shipping.exe+1539CBB: 80 7C 24 70 00     - cmp byte ptr [rsp+70],00
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>643</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_mat_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"Browse crafting to set min. amount"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BROWSE_CRAFTING,ES2-Win64-Shipping.exe,03 B0 04 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_BROWSE_CRAFTING)
+
+label(code)
+label(return)
+label(i_min_crafting_stock)
+label(i_last_crafting_item_base)
+
+newmem:
+  //mov [i_last_crafting_item_base], rax
+  push r15
+  mov r15d, [rax+00000104]
+  cmp r15d, [i_min_crafting_stock]
+  jae endp
+  mov r15d, [i_min_crafting_stock]
+  mov [rax+00000104], r15d
+
+endp:
+
+  pop r15
+
+
+code:
+  add esi,[rax+00000104]
+  jmp return
+align 10 cc
+  i_min_crafting_stock:
+  dd 65
+  i_last_crafting_item_base:
+  dq 0
+
+INJECT_BROWSE_CRAFTING:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BROWSE_CRAFTING)
+registersymbol(i_min_crafting_stock)
+registersymbol(i_last_crafting_item_base)
+[DISABLE]
+
+INJECT_BROWSE_CRAFTING:
+  db 03 B0 04 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+14E6388
+
+ES2-Win64-Shipping.exe+14E636B: 49 83 C0 07           - add r8,07
+ES2-Win64-Shipping.exe+14E636F: 49 C1 E8 03           - shr r8,03
+ES2-Win64-Shipping.exe+14E6373: 48 3B D0              - cmp rdx,rax
+ES2-Win64-Shipping.exe+14E6376: 4D 0F 47 C6           - cmova r8,r14
+ES2-Win64-Shipping.exe+14E637A: 4D 85 C0              - test r8,r8
+ES2-Win64-Shipping.exe+14E637D: 74 1B                 - je ES2-Win64-Shipping.exe+14E639A
+ES2-Win64-Shipping.exe+14E637F: 90                    - nop 
+ES2-Win64-Shipping.exe+14E6380: 48 8B 02              - mov rax,[rdx]
+ES2-Win64-Shipping.exe+14E6383: 48 85 C0              - test rax,rax
+ES2-Win64-Shipping.exe+14E6386: 74 06                 - je ES2-Win64-Shipping.exe+14E638E
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+14E6388: 03 B0 04 01 00 00     - add esi,[rax+00000104]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+14E638E: 48 83 C2 08           - add rdx,08
+ES2-Win64-Shipping.exe+14E6392: 48 FF C1              - inc rcx
+ES2-Win64-Shipping.exe+14E6395: 49 3B C8              - cmp rcx,r8
+ES2-Win64-Shipping.exe+14E6398: 75 E6                 - jne ES2-Win64-Shipping.exe+14E6380
+ES2-Win64-Shipping.exe+14E639A: 49 8B 8D E0 01 00 00  - mov rcx,[r13+000001E0]
+ES2-Win64-Shipping.exe+14E63A1: 48 8D 54 24 48        - lea rdx,[rsp+48]
+ES2-Win64-Shipping.exe+14E63A6: 4C 8B CB              - mov r9,rbx
+ES2-Win64-Shipping.exe+14E63A9: C6 44 24 30 0A        - mov byte ptr [rsp+30],0A
+ES2-Win64-Shipping.exe+14E63AE: 41 B0 0A              - mov r8b,0A
+ES2-Win64-Shipping.exe+14E63B1: E8 8A 62 2B 00        - call ES2-Win64-Shipping.exe+179C640
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"Min. amount"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_min_crafting_stock</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>644</ID>
+      <Description>"Get credits / level"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_BASE_DATA,ES2-Win64-Shipping.exe,39 8A 18 01 00 00 0F 9D C0 C3) // should be unique
+alloc(newmem,$1000,INJECT_GET_BASE_DATA)
+
+label(code)
+label(return)
+label(i_base_data_info_addr)
+
+newmem:
+  mov [i_base_data_info_addr], rdx
+
+code:
+  cmp [rdx+00000118],ecx
+  jmp return
+align 10 cc
+  i_base_data_info_addr:
+  dq 0
+
+
+INJECT_GET_BASE_DATA:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_BASE_DATA)
+registersymbol(i_base_data_info_addr)
+
+[DISABLE]
+
+INJECT_GET_BASE_DATA:
+  db 39 8A 18 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+14A4C38
+
+ES2-Win64-Shipping.exe+14A4C1C: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C1D: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C1E: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C1F: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C20: 48 8B 05 89 94 84 04  - mov rax,[ES2-Win64-Shipping.exe+5CEE0B0]
+ES2-Win64-Shipping.exe+14A4C27: 48 85 C0              - test rax,rax
+ES2-Win64-Shipping.exe+14A4C2A: 74 16                 - je ES2-Win64-Shipping.exe+14A4C42
+ES2-Win64-Shipping.exe+14A4C2C: 48 8B 90 A8 01 00 00  - mov rdx,[rax+000001A8]
+ES2-Win64-Shipping.exe+14A4C33: 48 85 D2              - test rdx,rdx
+ES2-Win64-Shipping.exe+14A4C36: 74 0A                 - je ES2-Win64-Shipping.exe+14A4C42
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+14A4C38: 39 8A 18 01 00 00     - cmp [rdx+00000118],ecx
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+14A4C3E: 0F 9D C0              - setge al
+ES2-Win64-Shipping.exe+14A4C41: C3                    - ret 
+ES2-Win64-Shipping.exe+14A4C42: 32 C0                 - xor al,al
+ES2-Win64-Shipping.exe+14A4C44: C3                    - ret 
+ES2-Win64-Shipping.exe+14A4C45: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C46: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C47: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C48: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C49: CC                    - int 3 
+ES2-Win64-Shipping.exe+14A4C4A: CC                    - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Usage: Open menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>645</ID>
+          <Description>"Credits"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_data_info_addr</Address>
+          <Offsets>
+            <Offset>118</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>646</ID>
+          <Description>"Level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_data_info_addr</Address>
+          <Offsets>
+            <Offset>11C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>647</ID>
+          <Description>"EXP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_data_info_addr</Address>
+          <Offsets>
+            <Offset>120</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>648</ID>
+      <Description>"inf. consumable usage in slots"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_ITEM_USE,ES2-Win64-Shipping.exe,FF 89 04 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_ITEM_USE)
+
+label(code)
+label(return)
+
+newmem:
+  push rax
+  mov eax, [rcx+00000104]
+  cmp eax, 7
+  jae endp
+  mov eax, 7
+  mov [rcx+00000104], eax
+
+endp:
+  pop rax
+
+code:
+  //dec [rcx+00000104]
+  jmp return
+
+INJECT_INF_ITEM_USE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_INF_ITEM_USE)
+
+[DISABLE]
+
+INJECT_INF_ITEM_USE:
+  db FF 89 04 01 00 00
+
+unregistersymbol(INJECT_INF_ITEM_USE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+12EA0FF
+
+ES2-Win64-Shipping.exe+12EA0CB: F3 0F 58 89 6C 01 00 00  - addss xmm1,[rcx+0000016C]
+ES2-Win64-Shipping.exe+12EA0D3: E8 18 19 50 00           - call ES2-Win64-Shipping.exe+17EB9F0
+ES2-Win64-Shipping.exe+12EA0D8: 48 8B 44 24 70           - mov rax,[rsp+70]
+ES2-Win64-Shipping.exe+12EA0DD: FF C5                    - inc ebp
+ES2-Win64-Shipping.exe+12EA0DF: 48 83 C6 18              - add rsi,18
+ES2-Win64-Shipping.exe+12EA0E3: 3B AF B8 00 00 00        - cmp ebp,[rdi+000000B8]
+ES2-Win64-Shipping.exe+12EA0E9: 0F 8C 71 FE FF FF        - jl ES2-Win64-Shipping.exe+12E9F60
+ES2-Win64-Shipping.exe+12EA0EF: 0F 28 74 24 40           - movaps xmm6,[rsp+40]
+ES2-Win64-Shipping.exe+12EA0F4: 48 8B 87 B0 00 00 00     - mov rax,[rdi+000000B0]
+ES2-Win64-Shipping.exe+12EA0FB: 4A 8B 0C F8              - mov rcx,[rax+r15*8]
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+12EA0FF: FF 89 04 01 00 00        - dec [rcx+00000104]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+12EA105: 48 8B 87 B0 00 00 00     - mov rax,[rdi+000000B0]
+ES2-Win64-Shipping.exe+12EA10C: 4A 8B 0C F8              - mov rcx,[rax+r15*8]
+ES2-Win64-Shipping.exe+12EA110: 83 B9 04 01 00 00 00     - cmp dword ptr [rcx+00000104],00
+ES2-Win64-Shipping.exe+12EA117: 7F 75                    - jg ES2-Win64-Shipping.exe+12EA18E
+ES2-Win64-Shipping.exe+12EA119: 48 8B 9F A0 00 00 00     - mov rbx,[rdi+000000A0]
+ES2-Win64-Shipping.exe+12EA120: 48 85 DB                 - test rbx,rbx
+ES2-Win64-Shipping.exe+12EA123: 74 3A                    - je ES2-Win64-Shipping.exe+12EA15F
+ES2-Win64-Shipping.exe+12EA125: E8 86 62 56 00           - call ES2-Win64-Shipping.exe+18503B0
+ES2-Win64-Shipping.exe+12EA12A: 48 8B 4B 10              - mov rcx,[rbx+10]
+ES2-Win64-Shipping.exe+12EA12E: 4C 8D 40 30              - lea r8,[rax+30]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>649</ID>
+      <Description>"inf. thruster"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-23
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_THRUSTER,ES2-Win64-Shipping.exe,F3 0F 5C C1 F3 0F 5F C6 F3) // should be unique
+alloc(newmem,$1000,INJECT_INF_THRUSTER)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  //subss xmm0,xmm1
+  maxss xmm0,xmm6
+  jmp return
+
+INJECT_INF_THRUSTER:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_INF_THRUSTER)
+
+[DISABLE]
+
+INJECT_INF_THRUSTER:
+  db F3 0F 5C C1 F3 0F 5F C6
+
+unregistersymbol(INJECT_INF_THRUSTER)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+134314E
+
+ES2-Win64-Shipping.exe+1343117: 75 11                    - jne ES2-Win64-Shipping.exe+134312A
+ES2-Win64-Shipping.exe+1343119: F3 0F 10 83 C8 00 00 00  - movss xmm0,[rbx+000000C8]
+ES2-Win64-Shipping.exe+1343121: 0F 2E 83 90 00 00 00     - ucomiss xmm0,[rbx+00000090]
+ES2-Win64-Shipping.exe+1343128: 74 0C                    - je ES2-Win64-Shipping.exe+1343136
+ES2-Win64-Shipping.exe+134312A: 48 8D 8B 90 00 00 00     - lea rcx,[rbx+00000090]
+ES2-Win64-Shipping.exe+1343131: E8 FA 5D 02 00           - call ES2-Win64-Shipping.exe+1368F30
+ES2-Win64-Shipping.exe+1343136: F3 0F 10 8B C0 00 00 00  - movss xmm1,[rbx+000000C0]
+ES2-Win64-Shipping.exe+134313E: F3 0F 10 87 E8 09 00 00  - movss xmm0,[rdi+000009E8]
+ES2-Win64-Shipping.exe+1343146: 48 8B CF                 - mov rcx,rdi
+ES2-Win64-Shipping.exe+1343149: F3 41 0F 59 CC           - mulss xmm1,xmm12
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+134314E: F3 0F 5C C1              - subss xmm0,xmm1
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+1343152: F3 0F 5F C6              - maxss xmm0,xmm6
+ES2-Win64-Shipping.exe+1343156: F3 0F 11 87 E8 09 00 00  - movss [rdi+000009E8],xmm0
+ES2-Win64-Shipping.exe+134315E: E8 8D 16 FC FF           - call ES2-Win64-Shipping.exe+13047F0
+ES2-Win64-Shipping.exe+1343163: 48 8D 8F 38 09 00 00     - lea rcx,[rdi+00000938]
+ES2-Win64-Shipping.exe+134316A: F3 0F 11 45 67           - movss [rbp+67],xmm0
+ES2-Win64-Shipping.exe+134316F: 48 8D 55 67              - lea rdx,[rbp+67]
+ES2-Win64-Shipping.exe+1343173: F3 44 0F 11 65 6B        - movss [rbp+6B],xmm12
+ES2-Win64-Shipping.exe+1343179: E8 A2 7B 68 FF           - call ES2-Win64-Shipping.exe+9CAD20
+ES2-Win64-Shipping.exe+134317E: 0F 2F B7 E8 09 00 00     - comiss xmm6,[rdi+000009E8]
+ES2-Win64-Shipping.exe+1343185: 0F 82 11 01 00 00        - jb ES2-Win64-Shipping.exe+134329C
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>650</ID>
+          <Description>"Not confirmed: may effect enemy"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>675</ID>
+      <Description>"Get renown"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_RENOWN,ES2-Win64-Shipping.exe,41 8B 9B 88 0E 00 00 48) // should be unique
+alloc(newmem,$1000,INJECT_GET_RENOWN)
+
+label(code)
+label(return)
+label(i_base_renown_addr)
+
+newmem:
+  mov [i_base_renown_addr], r11
+
+code:
+  mov ebx,[r11+00000E88]
+  jmp return
+align 10 cc
+  i_base_renown_addr:
+  dq 0
+
+INJECT_GET_RENOWN:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_RENOWN)
+registersymbol(i_base_renown_addr)
+
+[DISABLE]
+
+INJECT_GET_RENOWN:
+  db 41 8B 9B 88 0E 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+13CD1D1
+
+ES2-Win64-Shipping.exe+13CD1A0: 40 53                 - push rbx
+ES2-Win64-Shipping.exe+13CD1A2: 4C 8B 15 07 0F 92 04  - mov r10,[ES2-Win64-Shipping.exe+5CEE0B0]
+ES2-Win64-Shipping.exe+13CD1A9: 4D 85 D2              - test r10,r10
+ES2-Win64-Shipping.exe+13CD1AC: 0F 84 E6 00 00 00     - je ES2-Win64-Shipping.exe+13CD298
+ES2-Win64-Shipping.exe+13CD1B2: 4D 8B 9A A8 01 00 00  - mov r11,[r10+000001A8]
+ES2-Win64-Shipping.exe+13CD1B9: 4D 85 DB              - test r11,r11
+ES2-Win64-Shipping.exe+13CD1BC: 0F 84 D6 00 00 00     - je ES2-Win64-Shipping.exe+13CD298
+ES2-Win64-Shipping.exe+13CD1C2: 84 C9                 - test cl,cl
+ES2-Win64-Shipping.exe+13CD1C4: 0F 84 CE 00 00 00     - je ES2-Win64-Shipping.exe+13CD298
+ES2-Win64-Shipping.exe+13CD1CA: 41 8B 82 40 04 00 00  - mov eax,[r10+00000440]
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+13CD1D1: 41 8B 9B 88 0E 00 00  - mov ebx,[r11+00000E88]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+13CD1D8: 48 89 7C 24 10        - mov [rsp+10],rdi
+ES2-Win64-Shipping.exe+13CD1DD: 33 FF                 - xor edi,edi
+ES2-Win64-Shipping.exe+13CD1DF: 41 3B 82 6C 04 00 00  - cmp eax,[r10+0000046C]
+ES2-Win64-Shipping.exe+13CD1E6: 74 58                 - je ES2-Win64-Shipping.exe+13CD240
+ES2-Win64-Shipping.exe+13CD1E8: 4D 63 82 80 04 00 00  - movsxd  r8,dword ptr [r10+00000480]
+ES2-Win64-Shipping.exe+13CD1EF: 4D 8D 8A 70 04 00 00  - lea r9,[r10+00000470]
+ES2-Win64-Shipping.exe+13CD1F6: 49 8B 51 08           - mov rdx,[r9+08]
+ES2-Win64-Shipping.exe+13CD1FA: 49 FF C8              - dec r8
+ES2-Win64-Shipping.exe+13CD1FD: 0F B6 C1              - movzx eax,cl
+ES2-Win64-Shipping.exe+13CD200: 4C 23 C0              - and r8,rax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>677</ID>
+          <Description>"Usage: Menu-&gt;Data-&gt;Renown"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>676</ID>
+          <Description>"Renown"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_renown_addr</Address>
+          <Offsets>
+            <Offset>E88</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>651</ID>
+      <Description>"Set item level and equipability"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-24
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_ITEM_LEVEL,ES2-Win64-Shipping.exe,41 80 7D 70 05 4C) // should be unique
+alloc(newmem,$1000,INJECT_SET_ITEM_LEVEL)
+
+label(code)
+label(return)
+label(i_item_set_min_rarity)
+label(i_item_set_min_level)
+label(i_item_target_level)
+label(i_item_set_target_rarity)
+
+newmem:
+  push rax
+  mov al, [r13+70] // rarity ??
+  cmp al, [i_item_set_min_rarity]
+  jb endp
+  mov eax, [r13+68] // item level??
+  cmp eax, [i_item_set_min_level]
+  jb endp
+  cmp eax, [i_item_target_level]
+  jae set_next
+  mov eax, [i_item_target_level]
+set_next:
+  mov [r13+68], eax
+  mov al, 1
+  mov [r13+110], al // use in any level??
+  mov al, [r13+70]
+  cmp al, [i_item_set_target_rarity]
+  jae endp
+  mov al, [i_item_set_target_rarity]
+  mov [r13+70], al
+  mov al, 0
+  mov [r13+10F], al // item modified set to 0 ??
+
+endp:
+  pop rax
+
+code:
+  cmp byte ptr [r13+70],05
+  jmp return
+align 10 cc
+  i_item_set_min_level:
+  dd 2
+  i_item_target_level:
+  dd 32
+  i_item_set_min_rarity:
+  db 2
+  i_item_set_target_rarity:
+  db 3
+
+
+INJECT_SET_ITEM_LEVEL:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_ITEM_LEVEL)
+registersymbol(i_item_set_min_rarity)
+registersymbol(i_item_set_min_level)
+registersymbol(i_item_target_level)
+registersymbol(i_item_set_target_rarity)
+[DISABLE]
+
+INJECT_SET_ITEM_LEVEL:
+  db 41 80 7D 70 05
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+14D82FF
+
+ES2-Win64-Shipping.exe+14D82AB - EB 3C                 - jmp ES2-Win64-Shipping.exe+14D82E9
+ES2-Win64-Shipping.exe+14D82AD - 49 63 5F 08           - movsxd  rbx,dword ptr [r15+08]
+ES2-Win64-Shipping.exe+14D82B1 - 8D 43 01              - lea eax,[rbx+01]
+ES2-Win64-Shipping.exe+14D82B4 - 41 89 47 08           - mov [r15+08],eax
+ES2-Win64-Shipping.exe+14D82B8 - 41 3B 47 0C           - cmp eax,[r15+0C]
+ES2-Win64-Shipping.exe+14D82BC - 7E 0A                 - jle ES2-Win64-Shipping.exe+14D82C8
+ES2-Win64-Shipping.exe+14D82BE - 8B D3                 - mov edx,ebx
+ES2-Win64-Shipping.exe+14D82C0 - 49 8B CF              - mov rcx,r15
+ES2-Win64-Shipping.exe+14D82C3 - E8 187746FF           - call ES2-Win64-Shipping.exe+93F9E0
+ES2-Win64-Shipping.exe+14D82C8 - 49 8B 07              - mov rax,[r15]
+ES2-Win64-Shipping.exe+14D82CB - EB 1C                 - jmp ES2-Win64-Shipping.exe+14D82E9
+ES2-Win64-Shipping.exe+14D82CD - 48 63 5E 08           - movsxd  rbx,dword ptr [rsi+08]
+ES2-Win64-Shipping.exe+14D82D1 - 8D 43 01              - lea eax,[rbx+01]
+ES2-Win64-Shipping.exe+14D82D4 - 89 46 08              - mov [rsi+08],eax
+ES2-Win64-Shipping.exe+14D82D7 - 3B 46 0C              - cmp eax,[rsi+0C]
+ES2-Win64-Shipping.exe+14D82DA: 7E 0A                    - jle ES2-Win64-Shipping.exe+14D82E6
+ES2-Win64-Shipping.exe+14D82DC: 8B D3                    - mov edx,ebx
+ES2-Win64-Shipping.exe+14D82DE: 48 8B CE                 - mov rcx,rsi
+ES2-Win64-Shipping.exe+14D82E1: E8 FA 76 46 FF           - call ES2-Win64-Shipping.exe+93F9E0
+ES2-Win64-Shipping.exe+14D82E6: 48 8B 06                 - mov rax,[rsi]
+ES2-Win64-Shipping.exe+14D82E9: 48 83 C5 08              - add rbp,08
+ES2-Win64-Shipping.exe+14D82ED: 48 89 3C D8              - mov [rax+rbx*8],rdi
+ES2-Win64-Shipping.exe+14D82F1: 49 FF C4                 - inc r12
+ES2-Win64-Shipping.exe+14D82F4: 4C 3B 64 24 28           - cmp r12,[rsp+28]
+ES2-Win64-Shipping.exe+14D82F9: 0F 85 31 FF FF FF        - jne ES2-Win64-Shipping.exe+14D8230
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+14D82FF: 41 80 7D 70 05           - cmp byte ptr [r13+70],05  &lt;== read rarity
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+14D8304: 4C 8B A4 24 80 00 00 00  - mov r12,[rsp+00000080]
+ES2-Win64-Shipping.exe+14D830C: 48 8B AC 24 C0 00 00 00  - mov rbp,[rsp+000000C0]
+ES2-Win64-Shipping.exe+14D8314: 0F 85 EA 00 00 00        - jne ES2-Win64-Shipping.exe+14D8404
+ES2-Win64-Shipping.exe+14D831A: E8 A1 20 2C 00           - call ES2-Win64-Shipping.exe+179A3C0
+ES2-Win64-Shipping.exe+14D831F: 41 B0 01                 - mov r8b,01
+ES2-Win64-Shipping.exe+14D8322: 0F 28 CE                 - movaps xmm1,xmm6
+ES2-Win64-Shipping.exe+14D8325: 48 8B 88 E8 05 00 00     - mov rcx,[rax+000005E8]
+ES2-Win64-Shipping.exe+14D832C: E8 FF 18 01 00           - call ES2-Win64-Shipping.exe+14E9C30
+ES2-Win64-Shipping.exe+14D8331: 48 8D 4C 24 40           - lea rcx,[rsp+40]
+ES2-Win64-Shipping.exe+14D8336: 48 8B F0                 - mov rsi,rax
+ES2-Win64-Shipping.exe+14D8339 - 66 C7 80 F8000000 0101 - mov word ptr [rax+000000F8],0101
+ES2-Win64-Shipping.exe+14D8342 - 45 8B 45 68           - mov r8d,[r13+68]
+ES2-Win64-Shipping.exe+14D8346 - 49 8B 55 28           - mov rdx,[r13+28]
+ES2-Win64-Shipping.exe+14D834A - E8 91120000           - call ES2-Win64-Shipping.exe+14D95E0
+ES2-Win64-Shipping.exe+14D834F - 48 8D 4E 28           - lea rcx,[rsi+28]
+ES2-Win64-Shipping.exe+14D8353 - 48 8B D0              - mov rdx,rax
+ES2-Win64-Shipping.exe+14D8356 - E8 95ED48FF           - call ES2-Win64-Shipping.exe+9670F0
+ES2-Win64-Shipping.exe+14D835B - 48 8B 5C 24 48        - mov rbx,[rsp+48]
+ES2-Win64-Shipping.exe+14D8360 - BF FFFFFFFF           - mov edi,FFFFFFFF
+ES2-Win64-Shipping.exe+14D8365 - 48 85 DB              - test rbx,rbx
+
+}
+
+
+
+{
+INJECT_GET_EQUIPPED_ITEM_LEVEL
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+14E7831
+
+ES2-Win64-Shipping.exe+14E780C: 0F 1F 40 00           - nop dword ptr [rax+00]
+ES2-Win64-Shipping.exe+14E7810: 48 8B 37              - mov rsi,[rdi]
+ES2-Win64-Shipping.exe+14E7813: 48 85 F6              - test rsi,rsi
+ES2-Win64-Shipping.exe+14E7816: 74 1E                 - je ES2-Win64-Shipping.exe+14E7836
+ES2-Win64-Shipping.exe+14E7818: 48 8B 1D 99 1F 81 04  - mov rbx,[ES2-Win64-Shipping.exe+5CF97B8]
+ES2-Win64-Shipping.exe+14E781F: 48 8D 54 24 50        - lea rdx,[rsp+50]
+ES2-Win64-Shipping.exe+14E7824: 48 8B CE              - mov rcx,rsi
+ES2-Win64-Shipping.exe+14E7827: E8 C4 0F 2B 00        - call ES2-Win64-Shipping.exe+17987F0
+ES2-Win64-Shipping.exe+14E782C: 48 39 18              - cmp [rax],rbx
+ES2-Win64-Shipping.exe+14E782F: 74 05                 - je ES2-Win64-Shipping.exe+14E7836
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+14E7831: 39 6E 68              - cmp [rsi+68],ebp
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+14E7834: 7E 36                 - jle ES2-Win64-Shipping.exe+14E786C
+ES2-Win64-Shipping.exe+14E7836: 48 83 C7 08           - add rdi,08
+ES2-Win64-Shipping.exe+14E783A: 49 3B FE              - cmp rdi,r14
+ES2-Win64-Shipping.exe+14E783D: 75 D1                 - jne ES2-Win64-Shipping.exe+14E7810
+ES2-Win64-Shipping.exe+14E783F: 48 8B 7C 24 20        - mov rdi,[rsp+20]
+ES2-Win64-Shipping.exe+14E7844: 32 DB                 - xor bl,bl
+ES2-Win64-Shipping.exe+14E7846: 4C 8B 74 24 30        - mov r14,[rsp+30]
+ES2-Win64-Shipping.exe+14E784B: 48 8B 74 24 60        - mov rsi,[rsp+60]
+ES2-Win64-Shipping.exe+14E7850: 48 8B 6C 24 58        - mov rbp,[rsp+58]
+ES2-Win64-Shipping.exe+14E7855: 48 85 FF              - test rdi,rdi
+}
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>661</ID>
+          <Description>"Usage: browse item / not affect to all items / **only enable when needed **"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>667</ID>
+          <Description>"Save &amp; load game to take affect"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>652</ID>
+          <Description>"Check: rarity must be equal / higher than:"</Description>
+          <DropDownList DisplayValueAsItem="1">1:Common
+2:Uncommon
+3:Rare
+4:Superior
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_item_set_min_rarity</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>653</ID>
+          <Description>"Check: item level must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_item_set_min_level</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>654</ID>
+          <Description>"Target level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_item_target_level</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>655</ID>
+          <Description>"Target rarity"</Description>
+          <DropDownList DisplayValueAsItem="1">1:Common
+2:Uncommon
+3:Rare
+4:Superior
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_item_set_target_rarity</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>669</ID>
+      <Description>"_WIP"</Description>
+      <Options moHideChildren="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>658</ID>
+          <Description>"(not working maybe) Set some attributes (range, shield capacitry..)"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2023-04-24
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_SOME_ATTRS,ES2-Win64-Shipping.exe,0F 2E 81 90 00 00 00 74 05 E8 F1) // should be unique
+alloc(newmem,$1000,INJECT_SET_SOME_ATTRS)
+
+label(code)
+label(return)
+label(vf_min_range)
+label(vf_min_capacity)
+label(vf_repair_per_kill)
+label(vf_rehcarge_delay)
+label(vf_shutdown_duration)
+label(vf_min_armor)
+
+newmem:
+  push rax
+  // 0001596E: Range
+  // 00015751: Capacity (from shield)
+  // 000157C9: Armor (from plating)
+  // 000157D3: Repair per kill (from plating)
+  // 0001577F: recharge delay
+  // 00015799: Shutdown duration
+  // 00015CD0: repair ??% (nanobots)
+  // 00015CF0: over ? seconds (nanobots)
+
+  mov eax, [rcx+00000088]
+  cmp eax, 0001596E
+  jne chk_2
+  vmovss xmm15, [rcx+00000090]
+  vmovss xmm14, [vf_min_range]
+  vucomiss xmm15, xmm14
+  jae chk_2
+  vmovss [rcx+00000090], xmm14
+  vmovss [rcx+000000C0], xmm14
+  vmovss [rcx+000000C8], xmm14
+  vmovss [rcx+000000FC], xmm14
+  vmovss [rcx+00000100], xmm14
+  vmovaps xmm0, xmm14
+
+chk_2:
+  mov eax, [rcx+00000088]
+  cmp eax, 00015751
+  jne chk_3
+  vmovss xmm15, [rcx+00000090]
+  vmovss xmm14, [vf_min_capacity]
+  vucomiss xmm15, xmm14
+  jae chk_3
+  vmovss [rcx+00000090], xmm14
+  vmovss [rcx+000000C0], xmm14
+  vmovss [rcx+000000C8], xmm14
+  vmovss [rcx+000000FC], xmm14
+  vmovss [rcx+00000100], xmm14
+  vmovaps xmm0, xmm14
+
+chk_3:
+  mov eax, [rcx+00000088]
+  cmp eax, 000157C9
+  jne chk_4
+  vmovss xmm15, [rcx+00000090]
+  vmovss xmm14, [vf_min_armor]
+  vucomiss xmm15, xmm14
+  jae chk_4
+  vmovss [rcx+00000090], xmm14
+  vmovss [rcx+000000C0], xmm14
+  vmovss [rcx+000000C8], xmm14
+  vmovss [rcx+000000FC], xmm14
+  vmovss [rcx+00000100], xmm14
+  vmovaps xmm0, xmm14
+
+chk_4:
+  mov eax, [rcx+00000088]
+  cmp eax, 000157D3
+  jne chk_5
+  vmovss xmm15, [rcx+00000090]
+  vmovss xmm14, [vf_repair_per_kill]
+  vucomiss xmm15, xmm14
+  jae chk_5
+  vmovss [rcx+00000090], xmm14
+  vmovss [rcx+000000C0], xmm14
+  vmovss [rcx+000000C8], xmm14
+  vmovss [rcx+000000FC], xmm14
+  vmovss [rcx+00000100], xmm14
+  vmovaps xmm0, xmm14
+
+chk_5:
+  mov eax, [rcx+00000088]
+  cmp eax, 0001577F
+  jne chk_6
+  vmovss xmm15, [rcx+00000090]
+  vmovss xmm14, [vf_rehcarge_delay]
+  vucomiss xmm15, xmm14
+  je chk_6
+  vmovss [rcx+00000090], xmm14
+  vmovss [rcx+000000C0], xmm14
+  vmovss [rcx+000000C8], xmm14
+  vmovss [rcx+000000FC], xmm14
+  vmovss [rcx+00000100], xmm14
+  vmovaps xmm0, xmm14
+
+chk_6:
+  mov eax, [rcx+00000088]
+  cmp eax, 00015799
+  jne chk_7
+  vmovss xmm15, [rcx+00000090]
+  vmovss xmm14, [vf_shutdown_duration]
+  vucomiss xmm15, xmm14
+  je chk_7
+  vmovss [rcx+00000090], xmm14
+  vmovss [rcx+000000C0], xmm14
+  vmovss [rcx+000000C8], xmm14
+  vmovss [rcx+000000FC], xmm14
+  vmovss [rcx+00000100], xmm14
+  vmovaps xmm0, xmm14
+
+chk_7:
+
+
+endp:
+  pop rax
+
+code:
+  ucomiss xmm0,[rcx+00000090]
+  jmp return
+align 10 cc
+  vf_min_range:
+  dd (float)301000
+  vf_min_capacity:
+  dd (float)1998
+  vf_min_armor:
+  dd (float)3998
+  vf_repair_per_kill:
+  dd (float)0.5
+  vf_rehcarge_delay:
+  dd (float)0.5
+  vf_shutdown_duration:
+  dd (float)1
+
+
+INJECT_SET_SOME_ATTRS:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SET_SOME_ATTRS)
+registersymbol(vf_min_range)
+registersymbol(vf_min_capacity)
+registersymbol(vf_repair_per_kill)
+registersymbol(vf_rehcarge_delay)
+registersymbol(vf_shutdown_duration)
+registersymbol(vf_min_armor)
+[DISABLE]
+
+INJECT_SET_SOME_ATTRS:
+  db 0F 2E 81 90 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+17992D1
+
+ES2-Win64-Shipping.exe+17992AE: CC                       - int 3 
+ES2-Win64-Shipping.exe+17992AF: CC                       - int 3 
+ES2-Win64-Shipping.exe+17992B0: 48 89 5C 24 08           - mov [rsp+08],rbx
+ES2-Win64-Shipping.exe+17992B5: 57                       - push rdi
+ES2-Win64-Shipping.exe+17992B6: 48 83 EC 20              - sub rsp,20
+ES2-Win64-Shipping.exe+17992BA: 80 B9 C4 00 00 00 00     - cmp byte ptr [rcx+000000C4],00
+ES2-Win64-Shipping.exe+17992C1: 48 8B FA                 - mov rdi,rdx
+ES2-Win64-Shipping.exe+17992C4: 48 8B D9                 - mov rbx,rcx
+ES2-Win64-Shipping.exe+17992C7: 75 11                    - jne ES2-Win64-Shipping.exe+17992DA
+ES2-Win64-Shipping.exe+17992C9: F3 0F 10 81 C8 00 00 00  - movss xmm0,[rcx+000000C8]
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+17992D1: 0F 2E 81 90 00 00 00     - ucomiss xmm0,[rcx+00000090]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+17992D8: 74 05                    - je ES2-Win64-Shipping.exe+17992DF
+ES2-Win64-Shipping.exe+17992DA: E8 F1 A0 05 00           - call ES2-Win64-Shipping.exe+17F33D0
+ES2-Win64-Shipping.exe+17992DF: 48 8B 43 28              - mov rax,[rbx+28]
+ES2-Win64-Shipping.exe+17992E3: 48 89 07                 - mov [rdi],rax
+ES2-Win64-Shipping.exe+17992E6: 48 8B 43 30              - mov rax,[rbx+30]
+ES2-Win64-Shipping.exe+17992EA: 48 89 47 08              - mov [rdi+08],rax
+ES2-Win64-Shipping.exe+17992EE: 48 85 C0                 - test rax,rax
+ES2-Win64-Shipping.exe+17992F1: 74 04                    - je ES2-Win64-Shipping.exe+17992F7
+ES2-Win64-Shipping.exe+17992F3: F0 FF 40 08              - lock inc [rax+08]
+ES2-Win64-Shipping.exe+17992F7: 8B 43 38                 - mov eax,[rbx+38]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>660</ID>
+              <Description>"Usage: browse item"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>668</ID>
+              <Description>"***Seems not working***"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>659</ID>
+              <Description>"Weapon: min. range"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_range</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>662</ID>
+              <Description>"Shield: min. capacity"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_capacity</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>663</ID>
+              <Description>"Plating: repair per kill (1=100%)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_repair_per_kill</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>664</ID>
+              <Description>"Shield: max recharge delay"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_rehcarge_delay</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>665</ID>
+              <Description>"Shield: max shutdown duration"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_shutdown_duration</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>666</ID>
+              <Description>"Plating: min armor"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_armor</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>670</ID>
+      <Description>"EVERSPACE 2  1.033691  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Color>00B75B</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
   </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>browse inventory:39 83 04 01 00 00</Description>
+      <AddressString>ES2-Win64-Shipping.exe+17A23FE</AddressString>
+      <Before>
+        <Byte>E8</Byte>
+        <Byte>A2</Byte>
+        <Byte>A9</Byte>
+        <Byte>FF</Byte>
+        <Byte>FF</Byte>
+      </Before>
+      <Actual>
+        <Byte>39</Byte>
+        <Byte>83</Byte>
+        <Byte>04</Byte>
+        <Byte>01</Byte>
+        <Byte>00</Byte>
+        <Byte>00</Byte>
+      </Actual>
+      <After>
+        <Byte>0F</Byte>
+        <Byte>94</Byte>
+        <Byte>C0</Byte>
+        <Byte>48</Byte>
+        <Byte>83</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
   <UserdefinedSymbols/>
 </CheatTable>
