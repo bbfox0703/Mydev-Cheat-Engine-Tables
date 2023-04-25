@@ -99,6 +99,9 @@ zh-TW: 同級生Remake
 ## Endless Space 2    
 [Endless Space 2 (Steam)](https://store.steampowered.com/app/392110/ENDLESS_Space_2/)  
 
+## EVERSPACE 2
+[EVERSPACE™ 2 (Steam)](https://store.steampowered.com/app/1128920/EVERSPACE_2/)  
+
 ## Factory Town  
 [Factory Town (Steam)](https://store.steampowered.com/app/860890/Factory_Town/)  
 
