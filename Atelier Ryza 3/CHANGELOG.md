@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/04/27
+1. Revised for game ver 1.03
+
 ## 2023/04/14
 1. Revised item name / traits / effects for 日本語 / English / 正體中文
 1. Enhanced item editor: added Swordmaster symbol (劍聖符記)
