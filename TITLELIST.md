@@ -84,6 +84,7 @@ zh-TW: 超時空之鑰
 [Dorfromantik (Steam)](https://store.steampowered.com/app/1455840/Dorfromantik/)  
 
 ## DRAGONQUEST QUEST XI S
+[DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (Steam)](https://store.steampowered.com/app/1295510/XI_S___Definitive_Edition/)
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (XBox Games)](https://www.xbox.com/en-US/games/dragon-quest-xi-s-echoes-of-an-elusive-age)
 
 ## Distant Worlds 2  
