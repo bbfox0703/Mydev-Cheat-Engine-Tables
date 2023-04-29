@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/04/29
+1. Revised for 1.0.12.43 (899997)  
+
 ## 2023/02/18  
 1. Revised for 1.0.12.37 (871434)
 1. Added Gold does not decrease after purchase
