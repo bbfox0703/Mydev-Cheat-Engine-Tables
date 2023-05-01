@@ -149,6 +149,9 @@ ja-JP: けものフレンズ Cellien May Cry
 zh-TW:夢幻模擬戰 I & II  
 ja-JP:ラングリッサーI&II  
 
+## LIVE A LIVE
+[LIVE A LIVE (Steam)](https://store.steampowered.com/app/2014380/LIVE_A_LIVE/)  
+
 ## Mahjong Nagomi
 [Mahjong Nagomi (Steam)] (https://store.steampowered.com/app/1356180/Mahjong_Nagomi/)
 ja-JP:麻雀 和 -Nagomi-  
