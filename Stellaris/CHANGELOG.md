@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/05/11
+1. Revised for 3.8.2 (947b)
+
 ## 2023/03/20
 1. Revised for 3.7.2 (e793)
 
