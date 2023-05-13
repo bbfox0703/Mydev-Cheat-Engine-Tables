@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/05/14
+1. Update for 0.6.0.3-3a54
+
 ## 2023/05/10
 1. Update for 0.6.0.0-62a8
 
