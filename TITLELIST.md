@@ -19,6 +19,11 @@
 [Ara Fell: Enhanced Edition (Steam)](https://store.steampowered.com/app/440540/_/)  
 ja-JP: エアラフェル （拡張版）
 
+## Assassin's Creed Odyssey
+[ Assassin's Creed® Odyssey (Steam)](https://store.steampowered.com/app/812140/Assassins_Creed_Odyssey/)  
+zh-TW: 刺客教條：奧德賽  
+ja-JP: アサシン クリード オデッセイ  
+
 ## Assassin's Creed Valhalla  
 [Assassin's Creed Valhalla (UPlay)](https://www.ubisoft.com/en-us/game/assassins-creed/valhalla)  [zh](https://www.ubisoft.com/zh-tw/game/assassins-creed/valhalla)  
 zh-TW: 刺客教條：維京紀元  
