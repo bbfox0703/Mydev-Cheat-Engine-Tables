@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/06/01
+1. Revised for game ver 1.04
+
 ## 2023/04/27
 1. Revised for game ver 1.03
 
