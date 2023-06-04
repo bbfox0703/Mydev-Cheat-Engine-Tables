@@ -77,6 +77,9 @@ ja-JP: ブリガンダイン ルーナジア戦記
 ## Brotato
 [Brotato (Steam)](https://store.steampowered.com/app/1942280/Brotato/)  
 
+## Castlevania Anniversary Collection  
+[Castlevania Anniversary Collection (Steam)](https://store.steampowered.com/app/1018010/Castlevania_Anniversary_Collection/)  
+
 ## Chrono Trigger  
 [CHRONO TRIGGER (Steam)](https://store.steampowered.com/app/613830/CHRONO_TRIGGER/)  
 ja-JP: クロノ・トリガー  
