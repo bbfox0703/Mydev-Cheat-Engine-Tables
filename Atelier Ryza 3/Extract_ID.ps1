@@ -1,10 +1,25 @@
 ﻿# https://github.com/bbfox0703/Mydev-Cheat-Engine-Tables
 #
-# .\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_monster_name.xml
-# .\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_fm_landmark.xml
-# .\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_item_name.xml
-# .\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_item_potential.xml
-# .\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_item_effect.xml
+# JA
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_jp\str_monster_name.xml" .\str_monster_name_ja.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_jp\str_fm_landmark.xml" .\str_fm_landmark_ja.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_jp\str_item_name.xml" .\str_item_name_ja.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_jp\str_item_potential.xml" .\str_item_potential_ja.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_jp\str_item_effect.xml" .\str_item_effect_ja.csv
+#
+# TC
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_monster_name.xml" .\str_monster_name_tc.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_fm_landmark.xml" .\str_fm_landmark_tc.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_item_name.xml" .\str_item_name_tc.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_item_potential.xml" .\str_item_potential_tc.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_tc\str_item_effect.xml" .\str_item_effect_tc.csv
+#
+# EN
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_en\str_monster_name.xml" .\str_monster_name_en.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_en\str_fm_landmark.xml" .\str_fm_landmark_en.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_en\str_item_name.xml" .\str_item_name_en.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_en\str_item_potential.xml" .\str_item_potential_en.csv
+# ./Extract_ID.ps1 "E:\SteamLibrary\steamapps\common\Atelier Ryza 3\Data\saves\text_en\str_item_effect.xml" .\str_item_effect_en.csv
 
 
 [CmdletBinding()]
