@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/06/07
+1. Added script for DLC: Rosca island: Anicent Smithing count always 3
+
 ## 2023/06/01
 1. Revised for game ver 1.04
 
