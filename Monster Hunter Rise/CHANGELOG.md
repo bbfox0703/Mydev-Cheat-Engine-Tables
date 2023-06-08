@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/06/08
+1. Revised for ver. 16.0.0.0
+
 ## 2023/05/18
 1. Revised for ver. 15.0.1.0
 
