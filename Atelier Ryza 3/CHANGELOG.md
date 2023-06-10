@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/06/10
+1. Added: genetrate White Tower keys (白楼の鍵)
+
 ## 2023/06/07
 1. Added script for DLC: Rosca island: Anicent Smithing count always 3
 
