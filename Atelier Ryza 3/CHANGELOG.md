@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/06/22
+1. Revised for game ver 1.05
+
 ## 2023/06/10
 1. Added: genetrate White Tower keys (白楼の鍵)
 
