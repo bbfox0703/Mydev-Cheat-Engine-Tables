@@ -4,7 +4,6 @@
     <CheatEntry>
       <ID>18</ID>
       <Description>"Get Data"</Description>
-      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : grim dawn.exe
   Version: 
@@ -20,18 +19,49 @@ alloc(newmem,$1000,INJECT_GET_DATA)
 label(code)
 label(return)
 label(i_dbase_addr_2)
+label(sd_min_hp_val)
+label(is_fill_mp)
+label(is_min_hp)
 
 newmem:
   cmp qword ptr [i_dbase_addr_2], 0
-  jne code
+  jne do_check
   mov qword ptr [i_dbase_addr_2], rcx
 
+do_check:
+chk_mana:
+  cmp byte ptr [is_fill_mp], 1
+  jne chk_hp
+
+  vmovss xmm15, [rcx+00000E14] // max mana
+  vmovss xmm14, [rcx+00000E20] // upkeep mana
+  vsubss xmm13, xmm15, xmm14
+  vmovss [rcx+00000DA4], xmm13 // mana
+
+chk_hp:
+  cmp byte ptr [is_min_hp], 1
+  jne endp
+  vmovsd xmm15, [rcx+00000D88] // HP
+  vmovsd xmm14, [sd_min_hp_val]
+  vcomisd xmm15, xmm14
+  jge endp
+
+  vmovsd [rcx+00000D88], xmm14
+
+endp:
+
 code:
-  movss xmm0,[rcx+00000DA4]
+  vmovss xmm0,[rcx+00000DA4]
   jmp return
 align 10 cc
   i_dbase_addr_2:
   dq 0
+  sd_min_hp_val:
+  dq (double)500
+  is_fill_mp:
+  db 1
+  is_min_hp:
+  db 0
 
 INJECT_GET_DATA:
   jmp newmem
@@ -39,6 +69,11 @@ INJECT_GET_DATA:
 return:
 registersymbol(INJECT_GET_DATA)
 registersymbol(i_dbase_addr_2)
+registersymbol(sd_min_hp_val)
+registersymbol(is_fill_mp)
+registersymbol(is_min_hp)
+
+
 [DISABLE]
 
 INJECT_GET_DATA:
@@ -46,6 +81,10 @@ INJECT_GET_DATA:
 
 unregistersymbol(INJECT_GET_DATA)
 unregistersymbol(i_dbase_addr_2)
+unregistersymbol(sd_min_hp_val)
+unregistersymbol(is_fill_mp)
+unregistersymbol(is_min_hp)
+
 dealloc(newmem)
 
 {
@@ -78,9 +117,40 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>31</ID>
+          <Description>"Fill mana?"</Description>
+          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>is_fill_mp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"Keep min HP?"</Description>
+          <DropDownListLink>Fill mana?</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>is_min_hp</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>33</ID>
+              <Description>"min. HP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Double</VariableType>
+              <Address>sd_min_hp_val</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>19</ID>
           <Description>"HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>Double</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -88,9 +158,21 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>35</ID>
+          <Description>"Max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>12C4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>22</ID>
           <Description>"Mana"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -98,9 +180,21 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>36</ID>
+          <Description>"Allowed max mana"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>12C0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>21</ID>
           <Description>"Max Mana"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -111,6 +205,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <ID>20</ID>
           <Description>"Mana upkeep"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -119,8 +214,9 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>23</ID>
-          <Description>"Invisible"</Description>
+          <Description>"Invisible flag"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>Byte</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -129,8 +225,9 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>24</ID>
-          <Description>"God mode"</Description>
+          <Description>"God mode flag"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>Byte</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -139,8 +236,9 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>25</ID>
-          <Description>"Get attacked"</Description>
+          <Description>"Get attacked flag"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -151,6 +249,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <ID>26</ID>
           <Description>"Money"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -161,6 +260,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <ID>27</ID>
           <Description>"Attribute pt"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -171,6 +271,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <ID>29</ID>
           <Description>"Skill pt"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
@@ -181,11 +282,221 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <ID>28</ID>
           <Description>"Devotion pt"</Description>
           <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
             <Offset>13D8</Offset>
           </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>34</ID>
+      <Description>"Fast skill CD"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : grim dawn.exe
+  Version: 
+  Date   : 2023-06-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_COOLDOWN,Game.dll,00 0F 57 C9 F3 0F 5A C8) // should be unique
+alloc(newmem,$1000,INJECT_FAST_COOLDOWN)
+
+label(code)
+label(return)
+
+newmem:
+  vxorps xmm0,xmm0,xmm0
+
+code:
+  xorps xmm1,xmm1
+  cvtss2sd xmm1,xmm0
+
+  jmp return
+
+
+
+INJECT_FAST_COOLDOWN+01:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_COOLDOWN)
+
+[DISABLE]
+
+INJECT_FAST_COOLDOWN+01:
+  db 0F 57 C9 F3 0F 5A C8
+
+unregistersymbol(INJECT_FAST_COOLDOWN)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Game.GAME::Skill::StartCooldown+12
+
+Game.GAME::Skill::SubtractManaCost+3B: CC                             - int 3 
+Game.GAME::Skill::SubtractManaCost+3C: CC                             - int 3 
+Game.GAME::Skill::SubtractManaCost+3D: CC                             - int 3 
+Game.GAME::Skill::SubtractManaCost+3E: CC                             - int 3 
+Game.GAME::Skill::SubtractManaCost+3F: CC                             - int 3 
+Game.GAME::Skill::StartCooldown: 48 89 74 24 10                 - mov [rsp+10],rsi
+Game.GAME::Skill::StartCooldown+5: 57                             - push rdi
+Game.GAME::Skill::StartCooldown+6: 48 83 EC 20                    - sub rsp,20
+Game.GAME::Skill::StartCooldown+A: 48 8B F9                       - mov rdi,rcx
+Game.GAME::Skill::StartCooldown+D: E8 8E 00 00 00                 - call Game.GAME::Skill::GetCooldownTime
+// ---------- INJECTING HERE ----------
+Game.GAME::Skill::StartCooldown+12: 0F 57 C9                       - xorps xmm1,xmm1
+// ---------- DONE INJECTING  ----------
+Game.GAME::Skill::StartCooldown+15: F3 0F 5A C8                    - cvtss2sd xmm1,xmm0
+Game.GAME::Skill::StartCooldown+19: 66 0F 2F 0D FF ED 27 00        - comisd xmm1,[Game.GAME::WeaponArmor_Offhand::`vftable'+F58]
+Game.GAME::Skill::StartCooldown+21: 76 14                          - jna Game.GAME::Skill::StartCooldown+37
+Game.GAME::Skill::StartCooldown+23: 48 8B 07                       - mov rax,[rdi]
+Game.GAME::Skill::StartCooldown+26: 0F 57 D2                       - xorps xmm2,xmm2
+Game.GAME::Skill::StartCooldown+29: 0F 28 C8                       - movaps xmm1,xmm0
+Game.GAME::Skill::StartCooldown+2C: 48 8B CF                       - mov rcx,rdi
+Game.GAME::Skill::StartCooldown+2F: FF 90 50 02 00 00              - call qword ptr [rax+00000250]
+Game.GAME::Skill::StartCooldown+35: EB 0A                          - jmp Game.GAME::Skill::StartCooldown+41
+Game.GAME::Skill::StartCooldown+37: C7 87 B0 01 00 00 00 00 00 00  - mov [rdi+000001B0],00000000
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>39</ID>
+      <Description>"Free craft - Step 1"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : grim dawn.exe
+  Version: 
+  Date   : 2023-06-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FCRAFT2,grim dawn.exe,48 8B 5C 24 38 66 C7 87 21) // should be unique
+alloc(newmem,$1000,INJECT_FCRAFT2)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov rbx,[rsp+38]
+  jmp return
+
+INJECT_FCRAFT2:
+  jmp newmem
+return:
+registersymbol(INJECT_FCRAFT2)
+
+[DISABLE]
+
+INJECT_FCRAFT2:
+  db 48 8B 5C 24 38
+
+unregistersymbol(INJECT_FCRAFT2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: grim dawn.exe+172B17
+
+grim dawn.exe+172AF1: 84 C0                       - test al,al
+grim dawn.exe+172AF3: 74 22                       - je "grim dawn.exe"+172B17
+grim dawn.exe+172AF5: 80 BF 85 2B 00 00 00        - cmp byte ptr [rdi+00002B85],00
+grim dawn.exe+172AFC: 75 19                       - jne "grim dawn.exe"+172B17
+grim dawn.exe+172AFE: C6 87 21 21 00 00 00        - mov byte ptr [rdi+00002121],00
+grim dawn.exe+172B05: C6 87 24 21 00 00 00        - mov byte ptr [rdi+00002124],00
+grim dawn.exe+172B0C: 48 8B 5C 24 38              - mov rbx,[rsp+38]
+grim dawn.exe+172B11: 48 83 C4 20                 - add rsp,20
+grim dawn.exe+172B15: 5F                          - pop rdi
+grim dawn.exe+172B16: C3                          - ret 
+// ---------- INJECTING HERE ----------
+grim dawn.exe+172B17: 48 8B 5C 24 38              - mov rbx,[rsp+38]
+// ---------- DONE INJECTING  ----------
+grim dawn.exe+172B1C: 66 C7 87 21 21 00 00 01 00  - mov word ptr [rdi+00002121],0001
+grim dawn.exe+172B25: C6 87 24 21 00 00 01        - mov byte ptr [rdi+00002124],01
+grim dawn.exe+172B2C: 48 83 C4 20                 - add rsp,20
+grim dawn.exe+172B30: 5F                          - pop rdi
+grim dawn.exe+172B31: C3                          - ret 
+grim dawn.exe+172B32: CC                          - int 3 
+grim dawn.exe+172B33: CC                          - int 3 
+grim dawn.exe+172B34: CC                          - int 3 
+grim dawn.exe+172B35: CC                          - int 3 
+grim dawn.exe+172B36: CC                          - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>38</ID>
+          <Description>"Free craft - Step 2"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : grim dawn.exe
+  Version: 
+  Date   : 2023-06-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FREE_CRAFT,grim dawn.exe,0F 84 D8 00 00 00 48 8D) // should be unique
+alloc(newmem,$1000,INJECT_FREE_CRAFT)
+
+label(code)
+label(return)
+
+newmem:
+  jmp INJECT_FCRAFT2
+
+code:
+  je "grim dawn.exe"+172B17
+  jmp return
+
+INJECT_FREE_CRAFT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_FREE_CRAFT)
+
+[DISABLE]
+
+INJECT_FREE_CRAFT:
+  db 0F 84 D8 00 00 00
+
+unregistersymbol(INJECT_FREE_CRAFT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: grim dawn.exe+172A39
+
+grim dawn.exe+172A18: 74 11                 - je "grim dawn.exe"+172A2B
+grim dawn.exe+172A1A: 48 3B CE              - cmp rcx,rsi
+grim dawn.exe+172A1D: 74 0E                 - je "grim dawn.exe"+172A2D
+grim dawn.exe+172A1F: 48 8B D6              - mov rdx,rsi
+grim dawn.exe+172A22: E8 79 08 0F 00        - call "grim dawn.exe"+2632A0
+grim dawn.exe+172A27: 84 C0                 - test al,al
+grim dawn.exe+172A29: 75 02                 - jne "grim dawn.exe"+172A2D
+grim dawn.exe+172A2B: 33 DB                 - xor ebx,ebx
+grim dawn.exe+172A2D: 80 BF 81 2B 00 00 00  - cmp byte ptr [rdi+00002B81],00
+grim dawn.exe+172A34: 48 8B 74 24 30        - mov rsi,[rsp+30]
+// ---------- INJECTING HERE ----------
+grim dawn.exe+172A39: 0F 84 D8 00 00 00     - je "grim dawn.exe"+172B17
+// ---------- DONE INJECTING  ----------
+grim dawn.exe+172A3F: 48 8D 8F 18 07 00 00  - lea rcx,[rdi+00000718]
+grim dawn.exe+172A46: 48 8B 01              - mov rax,[rcx]
+grim dawn.exe+172A49: FF 90 A0 00 00 00     - call qword ptr [rax+000000A0]
+grim dawn.exe+172A4F: 84 C0                 - test al,al
+grim dawn.exe+172A51: 0F 84 C0 00 00 00     - je "grim dawn.exe"+172B17
+grim dawn.exe+172A57: 48 8D 8F 20 0A 00 00  - lea rcx,[rdi+00000A20]
+grim dawn.exe+172A5E: 48 8B 01              - mov rax,[rcx]
+grim dawn.exe+172A61: FF 90 A0 00 00 00     - call qword ptr [rax+000000A0]
+grim dawn.exe+172A67: 84 C0                 - test al,al
+grim dawn.exe+172A69: 0F 84 A8 00 00 00     - je "grim dawn.exe"+172B17
+}
+</AssemblerScript>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
