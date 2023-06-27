@@ -125,6 +125,10 @@ ja-JP: ファイナルファンタジーVI ピクセルリマスター
 ## Final Fantasy VII Remake Intergrade  
 [Final Fantasy VII Remake Intergrade(Steam)](https://store.steampowered.com/app/1462040/FINAL_FANTASY_VII_REMAKE_INTERGRADE/)  
 
+## FINAL FANTASY X HD Remaster    
+[FINAL FANTASY X HD Remaster (Steam)](https://store.steampowered.com/app/359870/FINAL_FANTASY_XX2_HD_Remaster/)  
+ja-JP: ファイナルファンタジーX HD リマスター  
+
 ## Frostpunk
 [Frostpunk (Steam)](https://store.steampowered.com/app/323190/Frostpunk/)
 
