@@ -1,0 +1,1858 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Enable (enable twice: first, wait for IL2CPP to complete, then enable again)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then
+    return
+end
+if process == nil then
+    ShowMessage("Process is not selected.")
+elseif readInteger(process) == 0 then
+    ShowMessage("Process cannot be opened.")
+else
+    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
+        monopipe.destroy()
+        monopipe = nil
+    end
+    if monopipe == nil then
+        LaunchMonoDataCollector()
+    end
+end
+
+
+{$asm}
+define(FfftBattleCCharacterParamAddHpProc,"Ffft.Battle.CCharacterParam.AddHp")
+define(FfftBattleCSkillIsAvaiableProc,"Ffft.Battle.CSkill.IsAvaiable")
+define(FfftBattleCAllyParamAddExpProc,"Ffft.Battle.CAllyParam.AddExp")
+define(FfftBattleCBtlUiUnitInfoApplyParamProc,"Ffft.Battle.CBtlUiUnitInfo.ApplyParam")
+define(FfftCommonsCUiFairyImageSetParamProc,"Ffft.Commons.CUiFairyImage.SetParam")
+define(FfftBattleCMainFairyAddFPProc,"Ffft.Battle.CMainFairy.AddFP")
+define(FfftGameCGamePlayDataGetItemCountProc,"Ffft.Game.CGamePlayData.GetItemCount")
+define(FfftBattleCExGaugeSingerIsLackContinueProc,"Ffft.Battle.CExGaugeSinger.IsLackContinue")
+define(FfftBattleCBondsGaugeAddProc,"Ffft.Battle.CBondsGauge.Add")
+
+
+registersymbol(FfftBattleCCharacterParamAddHpProc)
+registersymbol(FfftBattleCSkillIsAvaiableProc)
+registersymbol(FfftBattleCAllyParamAddExpProc)
+registersymbol(FfftBattleCBtlUiUnitInfoApplyParamProc)
+registersymbol(FfftCommonsCUiFairyImageSetParamProc)
+registersymbol(FfftBattleCMainFairyAddFPProc)
+registersymbol(FfftGameCGamePlayDataGetItemCountProc)
+registersymbol(FfftBattleCExGaugeSingerIsLackContinueProc)
+registersymbol(FfftBattleCBondsGaugeAddProc)
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
+
+{$asm}
+unregistersymbol(*)
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Battle: damage control"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_BATTLE_HP_CTRL,GameAssembly.dll,8B 79 1C 49 8B F0) // should be unique
+aobscanregion(INJECT_BATTLE_HP_CTRL,FfftBattleCCharacterParamAddHpProc+A,FfftBattleCCharacterParamAddHpProc+4A,8B 79 1C 49 8B F0) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_HP_CTRL)
+
+label(code)
+label(return)
+label(i_to_player_hp_ctrl)
+label(vf_to_player_damage_multi)
+label(i_to_enemy_hp_ctrl)
+label(vf_to_enemy_damage_multi)
+
+newmem:
+  pushfq
+  push rax
+  mov rax, [rcx+58] //&lt;m_ExGauge&gt;k__BackingField
+  test rax, rax
+  jz to_enemy
+
+to_player:
+  cmp dword ptr [i_to_player_hp_ctrl], 0
+  je endp
+  cmp dword ptr [i_to_player_hp_ctrl], 1
+  jne player_no_dmg
+
+player_damage_multi:
+  test edx, edx
+  jz endp
+
+  cmp edx, 0
+  jg player_damage_div // Positive value
+
+  vmovss xmm14, [vf_to_player_damage_multi]
+  cvtsi2ss xmm15, edx
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si edx, xmm13
+  jmp endp
+
+player_damage_div:
+  vmovss xmm14, [vf_to_player_damage_multi]
+  cvtsi2ss xmm15, edx
+  vdivss xmm13, xmm15, xmm14
+  vcvtss2si edx, xmm13
+  jmp endp
+
+player_no_dmg:
+  cmp edx, 0
+  jge endp
+  neg edx
+  mov eax, [rcx+20] //&lt;m_HpNow&gt;k__BackingField
+  mov [rcx+1C], eax //&lt;m_HpMax&gt;k__BackingField
+  jmp endp
+  db EB 3B 54
+  db 68 69 73 20 74 61 62 6C 65
+  db 20 63 6F 6D
+  db 65 73 20 66 72 6F 6D 20
+  db 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61
+  db 74 74 61 62 6C 65 73 2E
+  db 63 6F 6D 20 2F 20
+  db 43 45 20 37 2E 34 2B
+
+to_enemy:
+  cmp dword ptr [i_to_enemy_hp_ctrl], 0
+  je endp
+  cmp dword ptr [i_to_enemy_hp_ctrl], 1
+  jne enemy_no_dmg
+
+enemy_damage_multi:
+  //test rdx, rdx
+  //jz endp
+
+  cmp edx, 0
+  jg @F // Positive value
+
+  vmovss xmm14, [vf_to_enemy_damage_multi]
+  cvtsi2ss xmm15, edx
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si edx, xmm13
+  jmp endp
+
+enemy_damage_div:
+  vmovss xmm14, [vf_to_enemy_damage_multi]
+  cvtsi2ss xmm15, edx
+  vdivss xmm13, xmm15, xmm14
+  vcvtss2si edx, xmm13
+  jmp endp
+
+enemy_no_dmg:
+  cmp edx, 0
+  jge endp
+  neg edx
+  mov eax, [rcx+20] //&lt;m_HpNow&gt;k__BackingField
+  mov [rcx+1C], eax //&lt;m_HpMax&gt;k__BackingField
+  jmp endp
+
+
+endp:
+  pop rax
+  popfq
+code:
+  mov edi,[rcx+1C]
+  mov rsi,r8
+  jmp return
+align 10 cc
+  i_to_player_hp_ctrl: // 0: None, 1: multiplier, 2:No damage
+  dd 1
+  vf_to_player_damage_multi:
+  dd (float)0.666666667
+  i_to_enemy_hp_ctrl: // 0: None, 1: multiplier, 2:No damage
+  dd 1
+  vf_to_enemy_damage_multi:
+  dd (float)1.15
+
+INJECT_BATTLE_HP_CTRL:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_HP_CTRL)
+registersymbol(i_to_player_hp_ctrl)
+registersymbol(vf_to_player_damage_multi)
+registersymbol(i_to_enemy_hp_ctrl)
+registersymbol(vf_to_enemy_damage_multi)
+[DISABLE]
+
+INJECT_BATTLE_HP_CTRL:
+  db 8B 79 1C 49 8B F0
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+D2519F
+
+GameAssembly.dll+D2518A: CC                    - int 3 
+GameAssembly.dll+D2518B: CC                    - int 3 
+GameAssembly.dll+D2518C: CC                    - int 3 
+GameAssembly.dll+D2518D: CC                    - int 3 
+GameAssembly.dll+D2518E: CC                    - int 3 
+GameAssembly.dll+D2518F: CC                    - int 3 
+Ffft.Battle.CCharacterParam.AddHp: 48 89 5C 24 08        - mov [rsp+08],rbx
+GameAssembly.dll+D25195: 48 89 74 24 10        - mov [rsp+10],rsi
+GameAssembly.dll+D2519A: 57                    - push rdi
+GameAssembly.dll+D2519B: 48 83 EC 20           - sub rsp,20
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+D2519F: 8B 79 1C              - mov edi,[rcx+1C]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+D251A2: 49 8B F0              - mov rsi,r8
+GameAssembly.dll+D251A5: 48 8B D9              - mov rbx,rcx
+GameAssembly.dll+D251A8: 8D 04 17              - lea eax,[rdi+rdx]
+GameAssembly.dll+D251AB: BA 02 00 00 00        - mov edx,00000002
+GameAssembly.dll+D251B0: 89 41 1C              - mov [rcx+1C],eax
+GameAssembly.dll+D251B3: 48 8B 01              - mov rax,[rcx]
+GameAssembly.dll+D251B6: 4C 8B 80 80 01 00 00  - mov r8,[rax+00000180]
+GameAssembly.dll+D251BD: FF 90 78 01 00 00     - call qword ptr [rax+00000178]
+GameAssembly.dll+D251C3: 8B 53 1C              - mov edx,[rbx+1C]
+GameAssembly.dll+D251C6: 8B CA                 - mov ecx,edx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"To player damage control"</Description>
+              <DropDownList DisplayValueAsItem="1">0:None
+1:By multiplier below
+2:No damage
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_to_player_hp_ctrl</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5</ID>
+              <Description>"damage to player multiplier (if option = 1)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_to_player_damage_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"To enemy damage control"</Description>
+              <DropDownListLink>To player damage control</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_to_enemy_hp_ctrl</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>7</ID>
+              <Description>"damage to enemy multiplier (if option = 1)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_to_enemy_damage_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Battle: inf. SP"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_INF_SP,GameAssembly.dll,8B 8F 8C 00 00 00 39) // should be unique
+aobscanregion(INJECT_INF_SP,FfftBattleCSkillIsAvaiableProc+16C,FfftBattleCSkillIsAvaiableProc+1FC,8B 8F 8C 00 00 00 39) // should be unique
+alloc(newmem,$1000,INJECT_INF_SP)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  push rcx
+  mov rcx, [rax+58] //&lt;m_ExGauge&gt;k__BackingField
+  test rcx, rcx
+  pop rcx
+  jz endp // enemy
+  mov ecx, [rax+28] //&lt;m_SpMax&gt;k__BackingField
+  mov [rax+24], ecx //&lt;m_SpNow&gt;k__BackingField
+
+endp:
+  popfq
+
+code:
+  mov ecx,[rdi+0000008C]
+  jmp return
+
+INJECT_INF_SP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_INF_SP)
+
+[DISABLE]
+
+INJECT_INF_SP:
+  db 8B 8F 8C 00 00 00
+
+unregistersymbol(INJECT_INF_SP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+9881F6
+
+GameAssembly.dll+9881C9: E8 32 AA 0D 00        - call Ffft.Battle.CAllyUnit.UsableItemLimit
+GameAssembly.dll+9881CE: 3B D8                 - cmp ebx,eax
+GameAssembly.dll+9881D0: 0F 8D CC 04 00 00     - jnl GameAssembly.dll+9886A2
+GameAssembly.dll+9881D6: 48 8B 8F 98 00 00 00  - mov rcx,[rdi+00000098]
+GameAssembly.dll+9881DD: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+9881E0: 0F 84 FA 04 00 00     - je GameAssembly.dll+9886E0
+GameAssembly.dll+9881E6: 33 D2                 - xor edx,edx
+GameAssembly.dll+9881E8: E8 43 C5 8E FF        - call Live2D.Cubism.Framework.MouthMovement.CubismAudioMouthInput.get_Target
+GameAssembly.dll+9881ED: 48 85 C0              - test rax,rax
+GameAssembly.dll+9881F0: 0F 84 EA 04 00 00     - je GameAssembly.dll+9886E0
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+9881F6: 8B 8F 8C 00 00 00     - mov ecx,[rdi+0000008C]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+9881FC: 39 48 24              - cmp [rax+24],ecx
+GameAssembly.dll+9881FF: 0F 8C 9D 04 00 00     - jl GameAssembly.dll+9886A2
+GameAssembly.dll+988205: 48 8B 4F 40           - mov rcx,[rdi+40]
+GameAssembly.dll+988209: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+98820C: 0F 84 CE 04 00 00     - je GameAssembly.dll+9886E0
+GameAssembly.dll+988212: 48 8B 15 57 AB F0 00  - mov rdx,[GameAssembly.dll+1892D70]
+GameAssembly.dll+988219: 45 33 C0              - xor r8d,r8d
+GameAssembly.dll+98821C: E8 5F 78 51 00        - call Ffft.Battle.CBtlSkillEffect.SameID
+GameAssembly.dll+988221: 84 C0                 - test al,al
+GameAssembly.dll+988223: 75 24                 - jne GameAssembly.dll+988249
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>44</ID>
+          <Description>"Battle: FP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_BATTLE_FP_MULTI,GameAssembly.dll,01 78 1C 48 8B 43 28) // should be unique
+aobscanregion(INJECT_BATTLE_FP_MULTI,FfftBattleCMainFairyAddFPProc+28,FfftBattleCMainFairyAddFPProc+68,01 78 1C 48 8B 43 28) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_FP_MULTI)
+
+label(code)
+label(return)
+label(vf_fp_multi)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, edi
+  vmovss xmm14, [vf_fp_multi]
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si edi, xmm15
+
+code:
+  add [rax+1C],edi
+  mov rax,[rbx+28]
+  jmp return
+align 10 cc
+  vf_fp_multi:
+  dd (float)1.3333333
+
+INJECT_BATTLE_FP_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BATTLE_FP_MULTI)
+registersymbol(vf_fp_multi)
+
+[DISABLE]
+
+INJECT_BATTLE_FP_MULTI:
+  db 01 78 1C 48 8B 43 28
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+AC5938
+
+GameAssembly.dll+AC590A: 80 3D 3A 0F E9 00 00  - cmp byte ptr [GameAssembly.dll+195684B],00
+GameAssembly.dll+AC5911: 8B FA                 - mov edi,edx
+GameAssembly.dll+AC5913: 48 8B D9              - mov rbx,rcx
+GameAssembly.dll+AC5916: 75 13                 - jne GameAssembly.dll+AC592B
+GameAssembly.dll+AC5918: 48 8D 0D 29 D0 DC 00  - lea rcx,[GameAssembly.dll+1892948]
+GameAssembly.dll+AC591F: E8 AC 11 64 FF        - call GameAssembly.dll+106AD0
+GameAssembly.dll+AC5924: C6 05 20 0F E9 00 01  - mov byte ptr [GameAssembly.dll+195684B],01
+GameAssembly.dll+AC592B: 48 8B 43 28           - mov rax,[rbx+28]
+GameAssembly.dll+AC592F: 48 85 C0              - test rax,rax
+GameAssembly.dll+AC5932: 0F 84 D0 00 00 00     - je GameAssembly.dll+AC5A08
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+AC5938: 01 78 1C              - add [rax+1C],edi
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+AC593B: 48 8B 43 28           - mov rax,[rbx+28]
+GameAssembly.dll+AC593F: 48 85 C0              - test rax,rax
+GameAssembly.dll+AC5942: 0F 84 C0 00 00 00     - je GameAssembly.dll+AC5A08
+GameAssembly.dll+AC5948: 01 78 20              - add [rax+20],edi
+GameAssembly.dll+AC594B: 33 C9                 - xor ecx,ecx
+GameAssembly.dll+AC594D: E8 0E 91 C3 FF        - call Ffft.Battle.CFairyPoint.PoolMax
+GameAssembly.dll+AC5952: 48 8B 4B 28           - mov rcx,[rbx+28]
+GameAssembly.dll+AC5956: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+AC5959: 0F 84 A9 00 00 00     - je GameAssembly.dll+AC5A08
+GameAssembly.dll+AC595F: 39 41 1C              - cmp [rcx+1C],eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>45</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_fp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"EXP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_EXP_MULTI,GameAssembly.dll,44 01 BE 88 00 00 00) // should be unique
+aobscanregion(INJECT_EXP_MULTI,FfftBattleCAllyParamAddExpProc+BD,FfftBattleCAllyParamAddExpProc+11D,44 01 BE 88 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_EXP_MULTI)
+
+label(code)
+label(return)
+label(vf_exp_multi)
+label(i_last_exp_addr)
+
+newmem:
+  vmovss xmm14, [vf_exp_multi]
+  vcvtsi2ss xmm15, xmm15, r15d
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si r15d, xmm13
+  mov [i_last_exp_addr], rsi
+
+code:
+  add [rsi+00000088],r15d
+  jmp return
+align 10 cc
+  i_last_exp_addr:
+  dq 0
+  vf_exp_multi:
+  dd (float)1.1
+
+
+INJECT_EXP_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_EXP_MULTI)
+registersymbol(vf_exp_multi)
+registersymbol(i_last_exp_addr)
+[DISABLE]
+
+INJECT_EXP_MULTI:
+  db 44 01 BE 88 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+A5523F
+
+GameAssembly.dll+A55216: F6 81 33 01 00 00 04  - test byte ptr [rcx+00000133],04
+GameAssembly.dll+A5521D: 74 0E                 - je GameAssembly.dll+A5522D
+GameAssembly.dll+A5521F: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+A55226: 75 05                 - jne GameAssembly.dll+A5522D
+GameAssembly.dll+A55228: E8 D3 F3 63 FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+A5522D: 33 C9                 - xor ecx,ecx
+GameAssembly.dll+A5522F: E8 FC C9 E1 FF        - call Ffft.Battle.CUnitExp..cctor
+GameAssembly.dll+A55234: 8B E8                 - mov ebp,eax
+GameAssembly.dll+A55236: 39 46 18              - cmp [rsi+18],eax
+GameAssembly.dll+A55239: 0F 8D 01 03 00 00     - jnl GameAssembly.dll+A55540
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+A5523F: 44 01 BE 88 00 00 00  - add [rsi+00000088],r15d
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+A55246: 48 8B 0D C3 48 E4 00  - mov rcx,[GameAssembly.dll+1899B10]
+GameAssembly.dll+A5524D: F6 81 33 01 00 00 04  - test byte ptr [rcx+00000133],04
+GameAssembly.dll+A55254: 74 0E                 - je GameAssembly.dll+A55264
+GameAssembly.dll+A55256: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+A5525D: 75 05                 - jne GameAssembly.dll+A55264
+GameAssembly.dll+A5525F: E8 9C F3 63 FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+A55264: 33 C9                 - xor ecx,ecx
+GameAssembly.dll+A55266: E8 35 C9 E1 FF        - call Ffft.Battle.CUnitExp.GetExpMax
+GameAssembly.dll+A5526B: 8B 9E 88 00 00 00     - mov ebx,[rsi+00000088]
+GameAssembly.dll+A55271: 3B D8                 - cmp ebx,eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_exp_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"Last EXP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_last_exp_addr</Address>
+              <Offsets>
+                <Offset>88</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>87</ID>
+          <Description>"Battle: Avalanche multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_AVALANCHE_MULTI,GameAssembly.dll,03 7B 10 89 7B 10) // should be unique
+alloc(newmem,$1000,INJECT_AVALANCHE_MULTI)
+
+label(code)
+label(return)
+label(vf_avalanche_multi)
+label(i_base_avalanche_addr)
+
+newmem:
+  mov [i_base_avalanche_addr], rbx
+
+  vmovss xmm14, [vf_avalanche_multi]
+  vcvtsi2ss xmm15, xmm15, edi
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si edi, xmm13
+
+code:
+  add edi,[rbx+10]
+  mov [rbx+10],edi
+  jmp return
+align 10 cc
+  i_base_avalanche_addr:
+  dq 0
+  vf_avalanche_multi:
+  dd (float)1.5
+
+INJECT_AVALANCHE_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_AVALANCHE_MULTI)
+registersymbol(vf_avalanche_multi)
+registersymbol(i_base_avalanche_addr)
+
+[DISABLE]
+
+INJECT_AVALANCHE_MULTI:
+  db 03 7B 10 89 7B 10
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+7B802E
+
+GameAssembly.dll+7B8003: 83 B8 E0 00 00 00 00  - cmp dword ptr [rax+000000E0],00
+GameAssembly.dll+7B800A: 75 0F                 - jne GameAssembly.dll+7B801B
+GameAssembly.dll+7B800C: 48 8B C8              - mov rcx,rax
+GameAssembly.dll+7B800F: E8 EC C5 8D FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+7B8014: 48 8B 05 45 9A 0D 01  - mov rax,[GameAssembly.dll+1891A60]
+GameAssembly.dll+7B801B: 48 8B 80 B8 00 00 00  - mov rax,[rax+000000B8]
+GameAssembly.dll+7B8022: 3B 30                 - cmp esi,[rax]
+GameAssembly.dll+7B8024: 75 08                 - jne GameAssembly.dll+7B802E
+GameAssembly.dll+7B8026: 85 FF                 - test edi,edi
+GameAssembly.dll+7B8028: 0F 89 C3 01 00 00     - jns GameAssembly.dll+7B81F1
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+7B802E: 03 7B 10              - add edi,[rbx+10]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+7B8031: 89 7B 10              - mov [rbx+10],edi
+GameAssembly.dll+7B8034: 8B D7                 - mov edx,edi
+GameAssembly.dll+7B8036: 48 8B 0D 23 9A 0D 01  - mov rcx,[GameAssembly.dll+1891A60]
+GameAssembly.dll+7B803D: F6 81 33 01 00 00 04  - test byte ptr [rcx+00000133],04
+GameAssembly.dll+7B8044: 74 18                 - je GameAssembly.dll+7B805E
+GameAssembly.dll+7B8046: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+7B804D: 75 0F                 - jne GameAssembly.dll+7B805E
+GameAssembly.dll+7B804F: E8 AC C5 8D FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+7B8054: 8B 53 10              - mov edx,[rbx+10]
+GameAssembly.dll+7B8057: 48 8B 0D 02 9A 0D 01  - mov rcx,[GameAssembly.dll+1891A60]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>88</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_avalanche_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>89</ID>
+              <Description>"Avalanche"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_avalanche_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>82</ID>
+          <Description>"Battle: Get singers gauge"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_GET_SINGER_GAUGE,GameAssembly.dll,8B 5B 10 33 D2 E8 B7) // should be unique
+aobscanregion(INJECT_GET_SINGER_GAUGE,FfftBattleCExGaugeSingerIsLackContinueProc+10,FfftBattleCExGaugeSingerIsLackContinueProc+40,8B 5B 10 33 D2 E8 B7) // should be unique
+alloc(newmem,$1000,INJECT_GET_SINGER_GAUGE)
+
+label(code)
+label(return)
+label(i_base_singer_gauge_1)
+label(i_base_singer_gauge_2)
+label(is_reset_gauge)
+
+newmem:
+  cmp dword ptr [is_reset_gauge], 1
+  jne chk_next
+  mov qword ptr [i_base_singer_gauge_1], 0
+  mov qword ptr [i_base_singer_gauge_2], 0
+  mov dword ptr [is_reset_gauge], 0
+
+chk_next:
+  cmp qword ptr [i_base_singer_gauge_1], 0
+  je set_1
+  cmp qword ptr [i_base_singer_gauge_1], rbx
+  je code
+  cmp qword ptr [i_base_singer_gauge_2], 0
+  je set_2
+  cmp qword ptr [i_base_singer_gauge_2], rbx
+  je code
+  jmp code
+
+set_1:
+  mov [i_base_singer_gauge_1], rbx
+  jmp code
+
+set_2:
+  mov [i_base_singer_gauge_2], rbx
+  jmp code
+
+code:
+  mov ebx,[rbx+10]
+  xor edx,edx
+  jmp return
+align 10 cc
+  i_base_singer_gauge_1:
+  dq 0
+  i_base_singer_gauge_2:
+  dq 0
+  is_reset_gauge:
+  dd 0
+
+INJECT_GET_SINGER_GAUGE:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_SINGER_GAUGE)
+registersymbol(i_base_singer_gauge_1)
+registersymbol(i_base_singer_gauge_2)
+registersymbol(is_reset_gauge)
+
+[DISABLE]
+
+INJECT_GET_SINGER_GAUGE:
+  db 8B 5B 10 33 D2
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+BE515F
+
+FfftBattleCExGaugeSingerIsLackContinueProc: 40 53                 - push rbx
+GameAssembly.dll+BE5132: 48 83 EC 20           - sub rsp,20
+GameAssembly.dll+BE5136: 80 3D 5C 1D D7 00 00  - cmp byte ptr [GameAssembly.dll+1956E99],00
+GameAssembly.dll+BE513D: 48 8B D9              - mov rbx,rcx
+GameAssembly.dll+BE5140: 75 13                 - jne GameAssembly.dll+BE5155
+GameAssembly.dll+BE5142: 48 8D 0D 07 ED CA 00  - lea rcx,[GameAssembly.dll+1893E50]
+GameAssembly.dll+BE5149: E8 82 19 52 FF        - call GameAssembly.dll+106AD0
+GameAssembly.dll+BE514E: C6 05 44 1D D7 00 01  - mov byte ptr [GameAssembly.dll+1956E99],01
+GameAssembly.dll+BE5155: 48 8B 0D F4 EC CA 00  - mov rcx,[GameAssembly.dll+1893E50]
+GameAssembly.dll+BE515C: 45 33 C0              - xor r8d,r8d
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+BE515F: 8B 5B 10              - mov ebx,[rbx+10]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+BE5162: 33 D2                 - xor edx,edx
+GameAssembly.dll+BE5164: E8 B7 30 F0 FF        - call Ffft.MD.DConstDefine.GetInteger
+GameAssembly.dll+BE5169: 3B D8                 - cmp ebx,eax
+GameAssembly.dll+BE516B: 0F 9C C0              - setl al
+GameAssembly.dll+BE516E: 48 83 C4 20           - add rsp,20
+GameAssembly.dll+BE5172: 5B                    - pop rbx
+GameAssembly.dll+BE5173: C3                    - ret 
+GameAssembly.dll+BE5174: CC                    - int 3 
+GameAssembly.dll+BE5175: CC                    - int 3 
+GameAssembly.dll+BE5176: CC                    - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>85</ID>
+              <Description>"Reset gauge data?"</Description>
+              <DropDownListLink>Set min move?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_reset_gauge</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>83</ID>
+              <Description>"#1"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_singer_gauge_1</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>84</ID>
+              <Description>"#2"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_singer_gauge_2</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Battle: Curosr: Unit info"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_UNITINFO,GameAssembly.dll,48 8B 4F 18 8B 58 1C) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_UNITINFO)
+
+label(code)
+label(return)
+label(i_battle_char_base_addr)
+label(is_set_min_move)
+label(i_min_move)
+label(is_set_min_luck)
+label(i_min_luck)
+label(is_set_wait)
+label(is_set_enemy_wait)
+
+newmem:
+  mov [i_battle_char_base_addr], rax
+  pushfq
+
+  // rcx = safe to use
+
+  //push rcx
+  mov rcx, [rax+58] //&lt;m_ExGauge&gt;k__BackingField
+  test rcx, rcx
+  //pop rcx
+  jz chk_enemy
+
+  xor rcx, rcx
+
+  cmp dword ptr [is_set_min_move], 1
+  jne chk_luck
+
+  mov ecx, [rax+44] //&lt;m_Move&gt;k__BackingField
+  cmp ecx, [i_min_move]
+  jge endp
+  mov ecx, [i_min_move]
+  mov [rax+44], ecx
+
+chk_luck:
+  cmp dword ptr [is_set_min_luck], 1
+  jne chk_wait
+
+  mov ecx, [rax+40] //&lt;m_Luk&gt;k__BackingField
+  cmp ecx, [i_min_luck]
+  jge endp
+  mov ecx, [i_min_luck]
+  mov [rax+40], ecx
+
+chk_wait:
+  cmp dword ptr [is_set_wait], 1
+  jne chk_next
+
+  xor ecx, ecx
+  mov [rax+4C], ecx //&lt;m_Wait&gt;k__BackingField
+
+chk_next:
+
+  jmp endp
+chk_enemy:
+  cmp dword ptr [is_set_enemy_wait], 1
+  jne endp
+
+  mov ecx, [vf_enemy_wait]
+  mov [rax+4C], ecx //&lt;m_Wait&gt;k__BackingField
+
+  db EB 3B 54 68 69 73 20 74 61 62 6C 65
+  db 20 63 6F 6D 65 73 20 66 72 6F 6D 20
+  db 68 74 74 70 73 3A 2F 2F 6F 70 65 6E 63 68 65 61
+  db 74 74 61 62 6C 65 73 2E
+  db 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
+
+endp:
+  xor rcx, rcx
+  popfq
+code:
+  mov rcx,[rdi+18]
+  mov ebx,[rax+1C]
+  jmp return
+align 10 cc
+  i_battle_char_base_addr:
+  dq 0
+  is_set_min_move:
+  dd 0
+  is_set_min_luck:
+  dd 1
+  i_min_move:
+  dd 4
+  i_min_luck:
+  dd 32
+  is_set_wait:
+  dd 0
+  is_set_enemy_wait:
+  dd 0
+  vf_enemy_wait:
+  dd (float)101
+
+INJECT_BATTLE_UNITINFO:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BATTLE_UNITINFO)
+registersymbol(i_battle_char_base_addr)
+registersymbol(is_set_min_move)
+registersymbol(i_min_move)
+registersymbol(is_set_min_luck)
+registersymbol(i_min_luck)
+registersymbol(is_set_wait)
+registersymbol(is_set_wait)
+registersymbol(is_set_enemy_wait)
+
+[DISABLE]
+
+INJECT_BATTLE_UNITINFO:
+  db 48 8B 4F 18 8B 58 1C
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+B95304
+
+GameAssembly.dll+B952D6: 48 8B CB              - mov rcx,rbx
+GameAssembly.dll+B952D9: 4D 8B 81 60 05 00 00  - mov r8,[r9+00000560]
+GameAssembly.dll+B952E0: 41 FF 91 58 05 00 00  - call qword ptr [r9+00000558]
+GameAssembly.dll+B952E7: 48 8B 4F 18           - mov rcx,[rdi+18]
+GameAssembly.dll+B952EB: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+B952EE: 0F 84 57 01 00 00     - je GameAssembly.dll+B9544B
+GameAssembly.dll+B952F4: 33 D2                 - xor edx,edx
+GameAssembly.dll+B952F6: E8 35 F4 6D FF        - call Live2D.Cubism.Framework.MouthMovement.CubismAudioMouthInput.get_Target
+GameAssembly.dll+B952FB: 48 85 C0              - test rax,rax
+GameAssembly.dll+B952FE: 0F 84 47 01 00 00     - je GameAssembly.dll+B9544B
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+B95304: 48 8B 4F 18           - mov rcx,[rdi+18]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+B95308: 8B 58 1C              - mov ebx,[rax+1C]
+GameAssembly.dll+B9530B: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+B9530E: 0F 84 37 01 00 00     - je GameAssembly.dll+B9544B
+GameAssembly.dll+B95314: 33 D2                 - xor edx,edx
+GameAssembly.dll+B95316: E8 15 F4 6D FF        - call Live2D.Cubism.Framework.MouthMovement.CubismAudioMouthInput.get_Target
+GameAssembly.dll+B9531B: 48 85 C0              - test rax,rax
+GameAssembly.dll+B9531E: 0F 84 27 01 00 00     - je GameAssembly.dll+B9544B
+GameAssembly.dll+B95324: 4C 8B 08              - mov r9,[rax]
+GameAssembly.dll+B95327: 48 8B C8              - mov rcx,rax
+GameAssembly.dll+B9532A: 8B 54 24 30           - mov edx,[rsp+30]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>61</ID>
+              <Description>"Set min move?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_set_min_move</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>62</ID>
+              <Description>"min. move"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_move</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>76</ID>
+              <Description>"Set min luc?"</Description>
+              <DropDownListLink>Set min move?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_set_min_luck</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>77</ID>
+              <Description>"min. luc"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_luck</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>79</ID>
+              <Description>"Set player wait to zero?"</Description>
+              <DropDownListLink>Set min move?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_set_wait</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>80</ID>
+              <Description>"Set enemy long wait time?"</Description>
+              <DropDownListLink>Set min move?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_set_enemy_wait</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"CxxxxParam+"</Description>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>16</ID>
+                  <Description>"&lt;m_Lv&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17</ID>
+                  <Description>"&lt;m_HpNow&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>18</ID>
+                  <Description>"&lt;m_HpMax&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>19</ID>
+                  <Description>"&lt;m_SpNow&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>24</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>20</ID>
+                  <Description>"&lt;m_SpMax&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>21</ID>
+                  <Description>"&lt;m_Str&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>22</ID>
+                  <Description>"&lt;m_Vit&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>23</ID>
+                  <Description>"&lt;m_Int&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>34</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>24</ID>
+                  <Description>"&lt;m_Men&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>38</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>25</ID>
+                  <Description>"&lt;m_Tec&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>3C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>26</ID>
+                  <Description>"&lt;m_Luk&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>40</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>27</ID>
+                  <Description>"&lt;m_Move&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>44</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>28</ID>
+                  <Description>"&lt;m_Jump&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>48</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>29</ID>
+                  <Description>"&lt;m_Wait&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>4C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>30</ID>
+                  <Description>"&lt;m_bDead&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>50</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>31</ID>
+                  <Description>"&lt;m_bEscape&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>51</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>32</ID>
+                  <Description>"&lt;m_bSinger&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>52</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>33</ID>
+                  <Description>"&lt;m_Mode&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>6C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>34</ID>
+                  <Description>"&lt;m_CollisionHeight&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>68</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>35</ID>
+                  <Description>"&lt;m_TransformationAbility&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>78</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>36</ID>
+                  <Description>"&lt;m_Exp&gt;k__BackingField"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_battle_char_base_addr</Address>
+                  <Offsets>
+                    <Offset>88</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>64</ID>
+                  <Description>"&lt;m_ElementResist&gt;k__BackingField+"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>63</ID>
+                      <Description>"Fire_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>24</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>65</ID>
+                      <Description>"Water_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>28</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>66</ID>
+                      <Description>"Wind_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>2C</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>67</ID>
+                      <Description>"Earth_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>30</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>68</ID>
+                      <Description>"Ice_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>34</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>69</ID>
+                      <Description>"Thunder_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>38</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>70</ID>
+                      <Description>"Light_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>3C</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>71</ID>
+                      <Description>"Dark_raw"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>i_battle_char_base_addr</Address>
+                      <Offsets>
+                        <Offset>40</Offset>
+                        <Offset>60</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"Menu-&gt;Fairy: Get fairy FP"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_MENU_GET_FP,GameAssembly.dll,8B 40 1C 89 44 24 30) // should be unique
+aobscanregion(INJECT_MENU_GET_FP,FfftCommonsCUiFairyImageSetParamProc+100,FfftCommonsCUiFairyImageSetParamProc+1C0,8B 40 1C 89 44 24 30) // should be unique
+
+
+alloc(newmem,$1000,INJECT_MENU_GET_FP)
+
+label(code)
+label(return)
+label(i_base_menu_fp_data_addr)
+
+newmem:
+  mov [i_base_menu_fp_data_addr], rax
+
+code:
+  mov eax,[rax+1C]
+  mov [rsp+30],eax
+  jmp return
+align 10 cc
+  i_base_menu_fp_data_addr:
+  dq 0
+
+INJECT_MENU_GET_FP:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MENU_GET_FP)
+registersymbol(i_base_menu_fp_data_addr)
+
+[DISABLE]
+
+INJECT_MENU_GET_FP:
+  db 8B 40 1C 89 44 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+A0F5C0
+
+GameAssembly.dll+A0F58A: 48 8B 53 40                       - mov rdx,[rbx+40]
+GameAssembly.dll+A0F58E: E8 AD 10 E6 FF                    - call Ffft.Commons.CUiUtility.StopAnimateNumber
+GameAssembly.dll+A0F593: 48 C7 83 E0 00 00 00 00 00 00 00  - mov qword ptr [rbx+000000E0],00000000
+GameAssembly.dll+A0F59E: 33 D2                             - xor edx,edx
+GameAssembly.dll+A0F5A0: 48 8D 8B E0 00 00 00              - lea rcx,[rbx+000000E0]
+GameAssembly.dll+A0F5A7: E8 A4 70 6F FF                    - call GameAssembly.dll+106650
+GameAssembly.dll+A0F5AC: 48 8B 7B 40                       - mov rdi,[rbx+40]
+GameAssembly.dll+A0F5B0: 48 8B 83 B8 00 00 00              - mov rax,[rbx+000000B8]
+GameAssembly.dll+A0F5B7: 48 85 C0                          - test rax,rax
+GameAssembly.dll+A0F5BA: 0F 84 43 0C 00 00                 - je GameAssembly.dll+A10203
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+A0F5C0: 8B 40 1C                          - mov eax,[rax+1C]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+A0F5C3: 89 44 24 30                       - mov [rsp+30],eax
+GameAssembly.dll+A0F5C7: 48 8D 54 24 30                    - lea rdx,[rsp+30]
+GameAssembly.dll+A0F5CC: 48 8B 0D FD 68 E5 00              - mov rcx,[GameAssembly.dll+1865ED0]
+GameAssembly.dll+A0F5D3: E8 A8 57 68 FF                    - call GameAssembly.il2cpp_value_box
+GameAssembly.dll+A0F5D8: 45 33 C0                          - xor r8d,r8d
+GameAssembly.dll+A0F5DB: 48 8B D0                          - mov rdx,rax
+GameAssembly.dll+A0F5DE: 48 8B 0D 93 85 E4 00              - mov rcx,[GameAssembly.dll+1857B78]
+GameAssembly.dll+A0F5E5: E8 F6 9F 6D 00                    - call System.String.Format
+GameAssembly.dll+A0F5EA: 48 85 FF                          - test rdi,rdi
+GameAssembly.dll+A0F5ED: 0F 84 10 0C 00 00                 - je GameAssembly.dll+A10203
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>40</ID>
+              <Description>"m_BattleCount"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_menu_fp_data_addr</Address>
+              <Offsets>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>41</ID>
+              <Description>"m_FPoint"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_menu_fp_data_addr</Address>
+              <Offsets>
+                <Offset>1C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>42</ID>
+              <Description>"m_FPTotal"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_menu_fp_data_addr</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>43</ID>
+              <Description>"m_SavedInitFP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_menu_fp_data_addr</Address>
+              <Offsets>
+                <Offset>24</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>47</ID>
+          <Description>"Menu: get gold / some info."</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_GOLD,GameAssembly.dll,48 8B 49 78 48 85 C9 74 4D) // should be unique
+alloc(newmem,$1000,INJECT_GET_GOLD)
+
+label(code)
+label(return)
+label(i_base_gold_addr)
+label(i_base_player_data_addr)
+
+newmem:
+  push rax
+  mov [i_base_player_data_addr], rcx
+  mov rax, [rcx+78] //m_ValI
+  mov rax, [rax+18] //m_Buffer
+  //mov rax, [rax+20]
+  mov [i_base_gold_addr], rax
+
+  pop rax
+
+code:
+  mov rcx,[rcx+78]
+  test rcx,rcx
+  jmp return
+align 10 cc
+  i_base_player_data_addr:
+  dq 0
+  i_base_gold_addr:
+  dq 0
+
+INJECT_GET_GOLD:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_GOLD)
+registersymbol(i_base_gold_addr)
+registersymbol(i_base_player_data_addr)
+
+[DISABLE]
+
+INJECT_GET_GOLD:
+  db 48 8B 49 78 48 85 C9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+835174
+
+GameAssembly.dll+83514B: 74 18                 - je GameAssembly.dll+835165
+GameAssembly.dll+83514D: 83 B8 E0 00 00 00 00  - cmp dword ptr [rax+000000E0],00
+GameAssembly.dll+835154: 75 0F                 - jne GameAssembly.dll+835165
+GameAssembly.dll+835156: 48 8B C8              - mov rcx,rax
+GameAssembly.dll+835159: E8 A2 F4 85 FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+83515E: 48 8B 05 23 F9 05 01  - mov rax,[GameAssembly.dll+1894A88]
+GameAssembly.dll+835165: 48 8B 80 B8 00 00 00  - mov rax,[rax+000000B8]
+GameAssembly.dll+83516C: 48 8B 08              - mov rcx,[rax]
+GameAssembly.dll+83516F: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+835172: 74 56                 - je GameAssembly.dll+8351CA
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+835174: 48 8B 49 78           - mov rcx,[rcx+78]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+835178: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+83517B: 74 4D                 - je GameAssembly.dll+8351CA
+GameAssembly.dll+83517D: 45 33 C0              - xor r8d,r8d
+GameAssembly.dll+835180: 33 D2                 - xor edx,edx
+GameAssembly.dll+835182: E8 F9 AE 23 00        - call StUtility.CPrmValS64.Get
+GameAssembly.dll+835187: 48 8B 0D 42 0D 03 01  - mov rcx,[GameAssembly.dll+1865ED0]
+GameAssembly.dll+83518E: 48 8D 54 24 40        - lea rdx,[rsp+40]
+GameAssembly.dll+835193: 89 44 24 40           - mov [rsp+40],eax
+GameAssembly.dll+835197: E8 E4 FB 85 FF        - call GameAssembly.il2cpp_value_box
+GameAssembly.dll+83519C: 48 8B 0D D5 29 02 01  - mov rcx,[GameAssembly.dll+1857B78]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>48</ID>
+              <Description>"Gold"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_gold_addr</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>50</ID>
+              <Description>"m_Difficulty"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_player_data_addr</Address>
+              <Offsets>
+                <Offset>2C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>53</ID>
+              <Description>"m_Lv"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_player_data_addr</Address>
+              <Offsets>
+                <Offset>38</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>49</ID>
+              <Description>"m_PlayTime (seconds *60)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_player_data_addr</Address>
+              <Offsets>
+                <Offset>50</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>51</ID>
+              <Description>"m_ClearCount"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_player_data_addr</Address>
+              <Offsets>
+                <Offset>54</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>52</ID>
+              <Description>"m_SavePoint"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_player_data_addr</Address>
+              <Offsets>
+                <Offset>68</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>55</ID>
+              <Description>"m_QuestRank+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>54</ID>
+                  <Description>"m_RankIndex"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_data_addr</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                    <Offset>1A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>56</ID>
+                  <Description>"m_MissionClear"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_data_addr</Address>
+                  <Offsets>
+                    <Offset>14</Offset>
+                    <Offset>1A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>57</ID>
+                  <Description>"m_OrderQuest"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_data_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>1A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>58</ID>
+                  <Description>"m_FairyLevelUpBonus"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_data_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                    <Offset>1A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>59</ID>
+                  <Description>"m_LocateSearched"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_data_addr</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                    <Offset>1A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>60</ID>
+                  <Description>"m_OrderPoint"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_player_data_addr</Address>
+                  <Offsets>
+                    <Offset>24</Offset>
+                    <Offset>1A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>73</ID>
+          <Description>"Menu: browse item &amp; set min. count"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Fairy Fencer F Refrain Chord.exe
+  Version: 
+  Date   : 2023-07-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_MENU_GET_ITEM_CNT,GameAssembly.dll,00 8B 40 18 48 8B 5C 24 30 48 8B) // should be unique
+aobscanregion(INJECT_MENU_GET_ITEM_CNT,FfftGameCGamePlayDataGetItemCountProc+206,FfftGameCGamePlayDataGetItemCountProc+296,8B 40 18 48 8B 5C 24 30 48 8B) // should be unique
+alloc(newmem,$1000,INJECT_MENU_GET_ITEM_CNT)
+
+label(code)
+label(return)
+label(i_min_item_threshold)
+label(i_target_item_cnt)
+
+newmem:
+  pushfq
+  push rbx
+
+  mov ebx, [i_min_item_threshold]
+  cmp [rax+18], ebx
+  jb endp
+  mov ebx, [i_target_item_cnt]
+  cmp [rax+18], ebx
+  jae endp
+  mov [rax+18], ebx
+
+endp:
+  pop rbx
+  popfq
+
+code:
+  mov eax,[rax+18]
+  mov rbx,[rsp+30]
+  jmp return
+align 10 cc
+  i_min_item_threshold:
+  dd 2
+  i_target_item_cnt:
+  dd A
+
+INJECT_MENU_GET_ITEM_CNT:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_MENU_GET_ITEM_CNT)
+registersymbol(i_min_item_threshold)
+registersymbol(i_target_item_cnt)
+[DISABLE]
+
+INJECT_MENU_GET_ITEM_CNT:
+  db 8B 40 18 48 8B 5C 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+70F636
+
+GameAssembly.dll+70F609: 4C 8B 05 40 E3 13 01  - mov r8,[GameAssembly.dll+184D950]
+GameAssembly.dll+70F610: 48 8B C8              - mov rcx,rax
+GameAssembly.dll+70F613: 48 8B D8              - mov rbx,rax
+GameAssembly.dll+70F616: E8 85 02 BB FF        - call ScaleGetter..ctor
+GameAssembly.dll+70F61B: 4C 8B 05 1E 6D 16 01  - mov r8,[GameAssembly.dll+1876340]
+GameAssembly.dll+70F622: 48 8B D3              - mov rdx,rbx
+GameAssembly.dll+70F625: 48 8B CF              - mov rcx,rdi
+GameAssembly.dll+70F628: E8 53 4B 54 00        - call GameAssembly.dll+C54180
+GameAssembly.dll+70F62D: 48 85 C0              - test rax,rax
+GameAssembly.dll+70F630: 0F 84 D5 00 00 00     - je GameAssembly.dll+70F70B
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+70F636: 8B 40 18              - mov eax,[rax+18]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+70F639: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+GameAssembly.dll+70F63E: 48 8B 6C 24 38        - mov rbp,[rsp+38]
+GameAssembly.dll+70F643: 48 8B 74 24 40        - mov rsi,[rsp+40]
+GameAssembly.dll+70F648: 48 83 C4 20           - add rsp,20
+GameAssembly.dll+70F64C: 5F                    - pop rdi
+GameAssembly.dll+70F64D: C3                    - ret 
+GameAssembly.dll+70F64E: 48 8B 0D 4B A6 16 01  - mov rcx,[GameAssembly.dll+1879CA0]
+GameAssembly.dll+70F655: 48 8B BD 40 01 00 00  - mov rdi,[rbp+00000140]
+GameAssembly.dll+70F65C: E8 9F 75 9F FF        - call GameAssembly.dll+106C00
+GameAssembly.dll+70F661: 4C 8B 0D F0 5F 14 01  - mov r9,[GameAssembly.dll+1855658]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>74</ID>
+              <Description>"threshold"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_item_threshold</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>75</ID>
+              <Description>"Target count"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_target_item_cnt</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>90</ID>
+      <Description>"(2023/07/09) Fairy Fencer F Refrain Chord (Steam build 11028913)  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Color>00AC56</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :mov ebx,[rbx+10]</Description>
+      <AddressString>GameAssembly.dll+BE515F</AddressString>
+      <Before>
+        <Byte>CA</Byte>
+        <Byte>00</Byte>
+        <Byte>45</Byte>
+        <Byte>33</Byte>
+        <Byte>C0</Byte>
+      </Before>
+      <Actual>
+        <Byte>8B</Byte>
+        <Byte>5B</Byte>
+        <Byte>10</Byte>
+      </Actual>
+      <After>
+        <Byte>33</Byte>
+        <Byte>D2</Byte>
+        <Byte>E8</Byte>
+        <Byte>B7</Byte>
+        <Byte>30</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
+  <UserdefinedSymbols/>
+</CheatTable>
