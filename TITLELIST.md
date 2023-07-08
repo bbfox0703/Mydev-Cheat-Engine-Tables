@@ -114,6 +114,10 @@ zh-TW: 同級生Remake
 ## Factory Town  
 [Factory Town (Steam)](https://store.steampowered.com/app/860890/Factory_Town/)  
 
+## Fairy Fencer F Refrain Chord  
+[Fairy Fencer F Refrain Chord (Steam)](https://store.steampowered.com/app/2228390/Fairy_Fencer_F_Refrain_Chord/)  
+ja-JP: ja-JP: フェアリーフェンサー エフ Refrain Chord   
+
 ## Farthest Frontier  
 [Farthest Frontier (Steam)](https://store.steampowered.com/app/1044720/Farthest_Frontier/)  
 
