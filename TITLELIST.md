@@ -39,6 +39,11 @@ ja-JP: フィリスのアトリエ ～不思議な旅の錬金術士～ DX
 zh-TW: 莉迪＆蘇瑞的鍊金工房 ～不可思議繪畫的鍊金術士～ DX  
 ja-JP: リディー＆スールのアトリエ ～不思議な絵画の錬金術士～ DX  
 
+## Atelier Marie Remake  
+[Atelier Marie Remake: The Alchemist of Salburg (Steam)](https://store.steampowered.com/app/2138090/_Remake/)  
+zh-TW: 瑪莉的鍊金工房 Remake ～薩爾布魯克的鍊金術士～  
+ja-JP: マリーのアトリエ Remake ～ザールブルグの錬金術士～  
+
 ## Atelier Rorona DX (non-English)  
 [Atelier Rorona ~The Alchemist of Arland~ DX (non-English)(Steam)](https://store.steampowered.com/app/936160/__DX/)  
 zh-TW: 蘿樂娜的鍊金工房 ～亞蘭德之鍊金術士～ DX  
