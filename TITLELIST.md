@@ -144,6 +144,9 @@ ja-JP: ファイナルファンタジーX HD リマスター
 ## Gold Wiper / NSFW  
 [Gold Wiper (Steam)](https://store.steampowered.com/app/1926870/Gold_Wiper/)  
 
+## Grim Dawn  
+[Grim Dawn (Steam)](https://store.steampowered.com/app/219990/Grim_Dawn/)  
+
 ## Hatsune Miku Project DIVA Mega Mix+  
 [Hatsune Miku: Project DIVA Mega Mix+ (Steam)](https://store.steampowered.com/app/1761390/_Project_DIVA_MEGA39s/)  
 zh-TW: 初音未來 Project DIVA MEGA39’s＋  
