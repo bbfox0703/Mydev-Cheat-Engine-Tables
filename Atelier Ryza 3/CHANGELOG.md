@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/08/24
+1. Revised for game title ver 1.06 (Steam post v1.6.0.0)
+
 ## 2023/06/22
 1. Revised for game ver 1.05
 
