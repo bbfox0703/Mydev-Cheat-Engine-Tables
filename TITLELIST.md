@@ -249,6 +249,9 @@ zh-TW: 文明帝國V
 ## Star Traders Frontiers  
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)  
 
+## Starfield
+[Starfield (Steam)](https://store.steampowered.com/app/1716740/Starfield/)  
+
 ## Stellaris  
 [Stellaris (Steam)](https://store.steampowered.com/app/281990/Stellaris/)  
 
