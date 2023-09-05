@@ -193,7 +193,7 @@ Starfield.exe+19C2552: 74 29           - je Starfield.exe+19C257D
     </CheatEntry>
     <CheatEntry>
       <ID>1337110766</ID>
-      <Description>"inf. medic kit (recovery pack) from quick menu when use (min = 15)"</Description>
+      <Description>"inf. medic kit (recovery pack) from quick menu when use (min = 12)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Starfield.exe
@@ -216,9 +216,9 @@ newmem:
 
   push r15
   mov r15d, [rax+08]
-  cmp r15d, F
+  cmp r15d, C
   jae endp
-  mov r15d, F
+  mov r15d, C
   mov [rax+08], r15d
 endp:
   pop r15
@@ -521,10 +521,306 @@ Starfield.exe+1F4AF2D: C5 F8 2F 8A EC 00 00 00  - vcomiss xmm1,[rdx+000000EC]
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>1337160865</ID>
-      <Description>"Lock HP"</Description>
+      <ID>1337160889</ID>
+      <Description>"Enable O2 / HP / EN scripts"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Starfield.exe
+      <AssemblerScript>[ENABLE]
+{$asm}
+//registersymbol(imp_item_box)
+
+
+
+
+
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+
+getLuaEngine().MenuItem5.doClick()
+--aobscanmodule(INJECT_DIFFICULT_AOB,Atelier_Sophie_2.exe,8B 05 ?? ?? ?? ?? 89 45 A4 33 C0)
+--aobscanmodule(INJECT_TIME_AOB,Atelier_Sophie_2.exe,48 8B 05 ?? ?? ?? ?? 48 89 01 48 8B C1 C3 CC CC 8B 05 ?? ?? ?? ?? C3 CC) // should be unique
+--aobscanmodule(INJECT_RANK,Atelier_Sophie_2.exe,8B 15 ?? ?? ?? ?? 83 CB FF ) // should be unique
+
+local _dbg = true
+if (_dbg) then
+  AOBs = {
+    {["name"]="Player Ptr AOB1", ["aob"]="48 3B 1D ?? ?? ?? ?? 75 1C 48 8B", ["pos"]= 3,  ["aoblen"]= 7 , ["symbol"]="player_ptr1"},
+    --{["name"]="Player Ptr AOB2", ["aob"]="48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7 48 8B CB", ["pos"]= 3,  ["aoblen"]= 7 , ["symbol"]="player_ptr2"},
+  }
+
+  local a1 = 'n/a'
+  local a2 = 'n/a'
+  local a3 = 0
+  local a4 = 0
+  local a5 = 'n/a'
+
+  for k,v in pairs(AOBs) do
+    -- k = array seq.
+    for k1,v1 in pairs(v) do
+      if (k1 == 'name') then
+        a1 = v1
+      end
+      if (k1 == 'aob') then
+        a2 = v1
+      end
+      if (k1 == 'pos') then
+        a3 = v1
+      end
+      if (k1 == 'aoblen') then
+        a4 = v1
+      end
+      if (k1 == 'symbol') then
+        a5 = v1
+      end
+      --print(k1,v1)
+    end
+    local aob_addr_str = AOBScanModule('Starfield.exe', a2, '+X-C-W')
+    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local name_addr_val = readInteger(name_addr_str)
+    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local final_addr_val = name_addr_val + aob_addr_val + a4
+    --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
+    registerSymbol(a5, final_addr_val)
+    --print('-------')
+  end
+end
+
+getLuaEngine().Close()
+
+
+
+--[[ Player base ptr #1
+Starfield.exe+1A08FE5 - E8 FE03B3FF           - call Starfield.exe+15393E8
+Starfield.exe+1A08FEA - C5F828F0              - vmovaps xmm6,xmm0
+Starfield.exe+1A08FEE - 48 8D 4C 24 20        - lea rcx,[rsp+20]
+Starfield.exe+1A08FF3 - E8 7CCDAAFF           - call Starfield.exe+14B5D74
+Starfield.exe+1A08FF8 - 80 7B 36 4B           - cmp byte ptr [rbx+36],4B
+Starfield.exe+1A08FFC - 48 0F45 DE            - cmovne rbx,rsi
+Starfield.exe+1A09000 - 48 85 DB              - test rbx,rbx
+Starfield.exe+1A09003 - 74 7A                 - je Starfield.exe+1A0907F
+========================================================
+Starfield.exe+1A09005 - 48 3B 1D 9CE3EE03     - cmp rbx,[Starfield.exe+58F73A8]
+============================
+Starfield.exe+1A0900C - 75 1C                 - jne Starfield.exe+1A0902A
+Starfield.exe+1A0900E - 48 8B 05 13BDB803     - mov rax,[Starfield.exe+5594D28]
+Starfield.exe+1A09015 - 48 8B 88 C00F0000     - mov rcx,[rax+00000FC0]
+Starfield.exe+1A0901C - 48 85 C9              - test rcx,rcx
+Starfield.exe+1A0901F - 74 09                 - je Starfield.exe+1A0902A
+Starfield.exe+1A09021 - E8 4EFFFFFF           - call Starfield.exe+1A08F74
+Starfield.exe+1A09026 - C5CA58F0              - vaddss xmm6,xmm6,xmm0
+Starfield.exe+1A0902A - 40 84 FF              - test dil,dil
+Starfield.exe+1A0902D - 74 14                 - je Starfield.exe+1A09043
+Starfield.exe+1A0902F - C5F828D6              - vmovaps xmm2,xmm6
+Starfield.exe+1A09033 - C5FA100D 21 A9EE03    - vmovss xmm1,[Starfield.exe+58F395C]
+Starfield.exe+1A0903B - 48 8B CB              - mov rcx,rbx
+Starfield.exe+1A0903E - E8 2D7DAB00           - call Starfield.exe+24C0D70
+Starfield.exe+1A09043 - 48 3B 1D 5EE3EE03     - cmp rbx,[Starfield.exe+58F73A8]
+Starfield.exe+1A0904A - 74 33                 - je Starfield.exe+1A0907F
+--]]
+
+--[[ Player base pttr #2
+Starfield.exe+2488CE6 - EB 10                 - jmp Starfield.exe+2488CF8
+Starfield.exe+2488CE8 - 33 F6                 - xor esi,esi
+Starfield.exe+2488CEA - 45 33 C0              - xor r8d,r8d
+Starfield.exe+2488CED - 48 8B D3              - mov rdx,rbx
+Starfield.exe+2488CF0 - 48 8B CF              - mov rcx,rdi
+Starfield.exe+2488CF3 - E8 98A8FEFF           - call Starfield.exe+2473590
+Starfield.exe+2488CF8 - 44 8B E8              - mov r13d,eax
+Starfield.exe+2488CFB - 45 3A F4              - cmp r14b,r12b
+Starfield.exe+2488CFE - 41 0F94 C4            - sete r12b
+Starfield.exe+2488D02 - 41 80 FE FF           - cmp r14b,-01
+Starfield.exe+2488D06 - 75 59                 - jne Starfield.exe+2488D61
+===================================================
+Starfield.exe+2488D08 - 48 8B 05 99E64603     - mov rax,[Starfield.exe+58F73A8]
+====================================================
+Starfield.exe+2488D0F - 48 3B D8              - cmp rbx,rax
+Starfield.exe+2488D12 - 74 35                 - je Starfield.exe+2488D49
+Starfield.exe+2488D14 - 48 8B D7              - mov rdx,rdi
+Starfield.exe+2488D17 - 48 8B CB              - mov rcx,rbx
+Starfield.exe+2488D1A - E8 2DB20400           - call Starfield.exe+24D3F4C
+Starfield.exe+2488D1F - 84 C0                 - test al,al
+Starfield.exe+2488D21 - 74 14                 - je Starfield.exe+2488D37
+Starfield.exe+2488D23 - 48 8B CB              - mov rcx,rbx
+Starfield.exe+2488D26 - E8 51CB0000           - call Starfield.exe+249587C
+Starfield.exe+2488D2B - 84 C0                 - test al,al
+Starfield.exe+2488D2D - 75 08                 - jne Starfield.exe+2488D37
+Starfield.exe+2488D2F - 41 BC 01000000        - mov r12d,00000001
+Starfield.exe+2488D35 - EB 2A                 - jmp Starfield.exe+2488D61
+Starfield.exe+2488D37 - 41 80 FE FF           - cmp r14b,-01
+Starfield.exe+2488D3B - 75 24                 - jne Starfield.exe+2488D61
+Starfield.exe+2488D3D - 48 8B 05 64E64603     - mov rax,[Starfield.exe+58F73A8]
+
+--]]
+
+
+--[[Char base ptr +70
+Starfield.exe+2B393A0 - 48 83 EC 28           - sub rsp,28
+Starfield.exe+2B393A4 - 48 8B 15 6D9E9B02     - mov rdx,[Starfield.exe+54F3218]
+Starfield.exe+2B393AB - 4C 8B C9              - mov r9,rcx
+Starfield.exe+2B393AE - 48 8B CA              - mov rcx,rdx
+Starfield.exe+2B393B1 - E8 2AB971FE           - call Starfield.exe+1254CE0
+Starfield.exe+2B393B6 - 48 85 C0              - test rax,rax
+Starfield.exe+2B393B9 - 74 1E                 - je Starfield.exe+2B393D9
+===============================================
+Starfield.exe+2B393BB - 49 8B 41 70           - mov rax,[r9+70]
+==============================================
+Starfield.exe+2B393BF - 48 8B CA              - mov rcx,rdx
+Starfield.exe+2B393C2 - 4C 8B 40 08           - mov r8,[rax+08]
+Starfield.exe+2B393C6 - E8 15B971FE           - call Starfield.exe+1254CE0
+Starfield.exe+2B393CB - 48 8B D0              - mov rdx,rax
+Starfield.exe+2B393CE - 49 8D 49 70           - lea rcx,[r9+70]
+Starfield.exe+2B393D2 - 48 83 C4 28           - add rsp,28
+Starfield.exe+2B393D6 - 49 FF E0              - jmp r8
+Starfield.exe+2B393D9 - C5F857C0              - vxorps xmm0,xmm0,xmm0
+Starfield.exe+2B393DD - 48 83 C4 28           - add rsp,28
+Starfield.exe+2B393E1 - C3                    - ret
+
+--]]
+
+
+{$asm}
+
+
+[DISABLE]
+//code from here till the end of the code will be used to disable the cheat
+{$asm}
+//unregistersymbol(imp_item_box)
+
+{$lua}
+if syntaxcheck then return end
+local disable_array = {"player_ptr1", "player_ptr2"}
+local a_len = #(disable_array)
+local i = 0
+for i = 1, a_len do
+  --print(disable_array[i])
+  unregisterSymbol(disable_array[i])
+end
+
+getLuaEngine().Close()
+
+
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337160890</ID>
+          <Description>"Player_ptr (do not edit)"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>player_ptr1</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337110783</ID>
+          <Description>"Lock O2"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-09-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_O2,Starfield.exe,C5 FA 10 04 90 * * * * 90) // should be unique
+alloc(newmem,$1000,INJECT_INF_O2)
+
+label(code)
+label(return)
+
+newmem:
+  // max O2 = 80
+  // xmm1 = -??? value, used O2 (i.e. O2 = 50, xmm1 = -30)
+
+  pushfq
+  cmp r12, [player_ptr1]
+  jne code_pre
+
+  push rbx
+  vxorps xmm15, xmm15, xmm15
+  lea rbx, [rax+rdx*4+34]  // 8+34 = 3C
+  vmovss xmm14, [rax+rdx*4+34]
+  vucomiss xmm14, [vf_1]
+  je next1
+
+  vmovss xmm14, [rax+rdx*4+40]
+  vucomiss xmm14, [vf_1]
+  je next1
+
+  jmp endp
+
+next1:
+  vmovss xmm14, [rax+rdx*4]
+  vcomiss xmm14, xmm15
+  jae endp
+
+  vxorps xmm1, xmm1, xmm1
+  vmovss [rax+rdx*4], xmm1
+  vmovss [rax+rdx*4-C], xmm1
+
+endp:
+  pop rbx
+
+
+code_pre:
+  popfq
+
+code:
+  vmovss xmm0,[rax+rdx*4]
+  jmp return
+align 10 cc
+  vf_1:
+  dd (float)1
+
+INJECT_INF_O2:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_O2)
+
+[DISABLE]
+
+INJECT_INF_O2:
+  db C5 FA 10 04 90
+
+unregistersymbol(INJECT_INF_O2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+24BCED8
+
+Starfield.exe+24BCEB4: C5 78 28 C8           - vmovaps xmm9,xmm0
+Starfield.exe+24BCEB8: 48 8B 53 08           - mov rdx,[rbx+08]
+Starfield.exe+24BCEBC: 48 8B 0B              - mov rcx,[rbx]
+Starfield.exe+24BCEBF: E8 E0 35 00 00        - call Starfield.exe+24C04A4
+Starfield.exe+24BCEC4: 48 85 C0              - test rax,rax
+Starfield.exe+24BCEC7: 74 1F                 - je Starfield.exe+24BCEE8
+Starfield.exe+24BCEC9: 48 8B 4B 18           - mov rcx,[rbx+18]
+Starfield.exe+24BCECD: C5 FA 10 09           - vmovss xmm1,[rcx]
+Starfield.exe+24BCED1: 48 8B 4B 10           - mov rcx,[rbx+10]
+Starfield.exe+24BCED5: 48 63 11              - movsxd  rdx,dword ptr [rcx]
+// ---------- INJECTING HERE ----------
+Starfield.exe+24BCED8: C5 FA 10 04 90        - vmovss xmm0,[rax+rdx*4]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+24BCEDD: C5 FA 11 0C 90        - vmovss [rax+rdx*4],xmm1
+Starfield.exe+24BCEE2: C5 72 5C C0           - vsubss xmm8,xmm1,xmm0
+Starfield.exe+24BCEE6: EB 25                 - jmp Starfield.exe+24BCF0D
+Starfield.exe+24BCEE8: 48 8B 0B              - mov rcx,[rbx]
+Starfield.exe+24BCEEB: 48 81 C1 98 02 00 00  - add rcx,00000298
+Starfield.exe+24BCEF2: 48 8B 43 18           - mov rax,[rbx+18]
+Starfield.exe+24BCEF6: 48 8B 53 10           - mov rdx,[rbx+10]
+Starfield.exe+24BCEFA: C5 FA 10 18           - vmovss xmm3,[rax]
+Starfield.exe+24BCEFE: 4C 8B 43 08           - mov r8,[rbx+08]
+Starfield.exe+24BCF02: 8B 12                 - mov edx,[rdx]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160865</ID>
+          <Description>"Lock HP"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
   Version: 
   Date   : 2023-09-03
   Author : bbfox@https://opencheattables.com
@@ -539,6 +835,10 @@ label(code)
 label(return)
 
 newmem:
+  pushfq
+  cmp rbp, [player_ptr1]
+  jne code_pre
+
   push r15
   xor r15, r15
 
@@ -558,6 +858,9 @@ newmem:
 
 endp:
   pop r15
+
+code_pre:
+  popfq
 
 code:
   vmovss xmm0,[rax+rbx*4]
@@ -608,118 +911,218 @@ Starfield.exe+24C061B: 5F                    - pop rdi
 Starfield.exe+24C061C: C3                    - ret 
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1337160866</ID>
-          <Description>"Turn on when really needed!!"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337160866</ID>
+              <Description>"Turn on when really needed!!"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>1337110783</ID>
-      <Description>"Lock O2"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Starfield.exe
+        <CheatEntry>
+          <ID>1337160894</ID>
+          <Description>"EN / ship weapon"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
   Version: 
-  Date   : 2023-09-02
+  Date   : 2023-09-05
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_O2,Starfield.exe,C5 FA 10 04 90 * * * * 90) // should be unique
-alloc(newmem,$1000,INJECT_INF_O2)
+aobscanmodule(INJECT_SHIP_ADDR_CHK1,Starfield.exe,49 8B 45 00 49 8B CD FF 90 E0) // should be unique
+alloc(newmem,$1000,INJECT_SHIP_ADDR_CHK1)
 
 label(code)
 label(return)
+label(i_base_ship_addr_chk)
+label(i_base_ship_addr_chk1_cnt)
+label(i_base_ship_addr_top)
 
 newmem:
-  // max O2 = 80
-  // xmm1 = -??? value, used O2 (i.e. O2 = 50, xmm1 = -30)
-  push rbx
-  vxorps xmm15, xmm15, xmm15
-  lea rbx, [rax+rdx*4+34]  // 8+34 = 3C
-  vmovss xmm14, [rax+rdx*4+34]
-  vucomiss xmm14, [vf_1]
-  je next1
+  // rax, rcx = safe to use
 
-  vmovss xmm14, [rax+rdx*4+40]
-  vucomiss xmm14, [vf_1]
-  je next1
+  pushfq
 
-  jmp endp
+  // record ship address / calclate times appeared
+  push r15
+  push r14
+  push r12
 
-next1:
-  vmovss xmm14, [rax+rdx*4]
-  vcomiss xmm14, xmm15
+  xor rcx, rcx
+  xor r12, r12
+
+loops:
+  mov r15, i_base_ship_addr_chk
+  mov r14, i_base_ship_addr_chk1_cnt
+
+  lea rcx, [r15+r12d*8]
+
+  cmp [rcx], 0
+  je write_data
+
+  cmp [rcx], r13  // record found
+  je count_times
+
+  jmp loop_proc
+
+write_data:
+  mov [rcx], r13
+
+count_times:
+  lea rcx, [r14+r12d*8] // calc &amp; write count
+  inc qword ptr [rcx]
+  jmp endp  // write count and exit loop
+
+loop_proc:
+  inc r12d
+  cmp r12d, 15 // only record 20 ship addresses
   jae endp
-
-  vxorps xmm1, xmm1, xmm1
-  vmovss [rax+rdx*4], xmm1
-  vmovss [rax+rdx*4-C], xmm1
+  jmp loops
 
 endp:
-  pop rbx
+  pop r12
+  pop r14
+  pop r15
+
+  // get top ship address count
+  push r15
+  push r14
+  push r12
+
+  xor rcx, rcx
+  xor r12, r12
+  xor rax, rax
+
+loops2:
+  mov r15, i_base_ship_addr_chk
+  mov r14, i_base_ship_addr_chk1_cnt
+
+  lea rcx, [r14+r12d*8]
+
+  cmp rax, [rcx]
+  jbe loops2_proc
+
+  mov rax, [rcx]  // record number
+
+  lea rcx, [r15+r12d*8] // record address
+  mov r15, rcx
+
+loops2_proc:
+  inc r12d
+  cmp r12d, 15 // only process 20 ship addresses
+  jae endp2
+  jmp loops2
+
+endp2:
+  mov r15, [r15]
+  mov [i_base_ship_addr_top], r15
+
+  pop r12
+  pop r14
+  pop r15
 
 
 
+
+
+code_pre:
+  popfq
 code:
-  vmovss xmm0,[rax+rdx*4]
+  mov rax,[r13+00]
+  mov rcx,r13
   jmp return
 align 10 cc
-  vf_1:
-  dd (float)1
+  i_base_ship_addr_chk:
+  dq 0
+  align 100 0
+  db 0
+  align 10 cc
+  i_base_ship_addr_chk1_cnt:
+  dq 0
+  align 100 0
+  db 0
+  i_base_ship_addr_top:
+  dq 0
 
-INJECT_INF_O2:
+
+INJECT_SHIP_ADDR_CHK1:
   jmp newmem
+  nop 2
 return:
-registersymbol(INJECT_INF_O2)
-
+registersymbol(INJECT_SHIP_ADDR_CHK1)
+registersymbol(i_base_ship_addr_chk)
+registersymbol(i_base_ship_addr_chk1_cnt)
+registersymbol(i_base_ship_addr_top)
 [DISABLE]
 
-INJECT_INF_O2:
-  db C5 FA 10 04 90
 
-unregistersymbol(INJECT_INF_O2)
+INJECT_SHIP_ADDR_CHK1:
+  db 49 8B 45 00 49 8B CD
+
+unregistersymbol(INJECT_SHIP_ADDR_CHK1)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Starfield.exe+24BCED8
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+22DD255
 
-Starfield.exe+24BCEB4: C5 78 28 C8           - vmovaps xmm9,xmm0
-Starfield.exe+24BCEB8: 48 8B 53 08           - mov rdx,[rbx+08]
-Starfield.exe+24BCEBC: 48 8B 0B              - mov rcx,[rbx]
-Starfield.exe+24BCEBF: E8 E0 35 00 00        - call Starfield.exe+24C04A4
-Starfield.exe+24BCEC4: 48 85 C0              - test rax,rax
-Starfield.exe+24BCEC7: 74 1F                 - je Starfield.exe+24BCEE8
-Starfield.exe+24BCEC9: 48 8B 4B 18           - mov rcx,[rbx+18]
-Starfield.exe+24BCECD: C5 FA 10 09           - vmovss xmm1,[rcx]
-Starfield.exe+24BCED1: 48 8B 4B 10           - mov rcx,[rbx+10]
-Starfield.exe+24BCED5: 48 63 11              - movsxd  rdx,dword ptr [rcx]
+Starfield.exe+22DD22C: E8 73 9F D7 FF           - call Starfield.exe+20571A4
+Starfield.exe+22DD231: 48 8B 75 77              - mov rsi,[rbp+77]
+Starfield.exe+22DD235: C5 FA 11 06              - vmovss [rsi],xmm0
+Starfield.exe+22DD239: 45 33 C0                 - xor r8d,r8d
+Starfield.exe+22DD23C: 49 8B D7                 - mov rdx,r15
+Starfield.exe+22DD23F: 48 8D 4D BF              - lea rcx,[rbp-41]
+Starfield.exe+22DD243: E8 48 82 5E FF           - call Starfield.exe+18C5490
+Starfield.exe+22DD248: 90                       - nop 
+Starfield.exe+22DD249: C5 FA 10 3D 93 86 C4 01  - vmovss xmm7,[Starfield.exe+3F258E4]
+Starfield.exe+22DD251: C5 F8 28 F7              - vmovaps xmm6,xmm7
 // ---------- INJECTING HERE ----------
-Starfield.exe+24BCED8: C5 FA 10 04 90        - vmovss xmm0,[rax+rdx*4]
+Starfield.exe+22DD255: 49 8B 45 00              - mov rax,[r13+00]
 // ---------- DONE INJECTING  ----------
-Starfield.exe+24BCEDD: C5 FA 11 0C 90        - vmovss [rax+rdx*4],xmm1
-Starfield.exe+24BCEE2: C5 72 5C C0           - vsubss xmm8,xmm1,xmm0
-Starfield.exe+24BCEE6: EB 25                 - jmp Starfield.exe+24BCF0D
-Starfield.exe+24BCEE8: 48 8B 0B              - mov rcx,[rbx]
-Starfield.exe+24BCEEB: 48 81 C1 98 02 00 00  - add rcx,00000298
-Starfield.exe+24BCEF2: 48 8B 43 18           - mov rax,[rbx+18]
-Starfield.exe+24BCEF6: 48 8B 53 10           - mov rdx,[rbx+10]
-Starfield.exe+24BCEFA: C5 FA 10 18           - vmovss xmm3,[rax]
-Starfield.exe+24BCEFE: 4C 8B 43 08           - mov r8,[rbx+08]
-Starfield.exe+24BCF02: 8B 12                 - mov edx,[rdx]
+Starfield.exe+22DD259: 49 8B CD                 - mov rcx,r13
+Starfield.exe+22DD25C: FF 90 E0 04 00 00        - call qword ptr [rax+000004E0]
+Starfield.exe+22DD262: 33 C9                    - xor ecx,ecx
+Starfield.exe+22DD264: 48 85 C0                 - test rax,rax
+Starfield.exe+22DD267: 74 21                    - je Starfield.exe+22DD28A
+Starfield.exe+22DD269: 38 4D 7F                 - cmp [rbp+7F],cl
+Starfield.exe+22DD26C: 75 1C                    - jne Starfield.exe+22DD28A
+Starfield.exe+22DD26E: 48 8B 08                 - mov rcx,[rax]
+Starfield.exe+22DD271: 4C 8B 51 48              - mov r10,[rcx+48]
+Starfield.exe+22DD275: 45 33 C9                 - xor r9d,r9d
 }
 </AssemblerScript>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>1337110785</ID>
-      <Description>"inf. personal/ship EN weapon energy"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Starfield.exe
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337160896</ID>
+              <Description>"Re-enable when change ship / or not working"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337160897</ID>
+              <Description>"For ship's suggestion: Activate this in the status window when piloting a ship"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337160895</ID>
+              <Description>"Top ship address (do not edit)"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_ship_addr_top</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337110785</ID>
+              <Description>"inf. personal/ship EN weapon energy"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Starfield.exe
   Version: 
   Date   : 2023-09-02
   Author : bbfox@https://opencheattables.com
@@ -740,6 +1143,20 @@ label(i_1st_w_en_addr5)
 label(is_only_1st_fired_w_en)
 
 newmem:
+
+  pushfq
+  cmp r9, 0  // ship weapon check
+  je ship_pre
+
+  cmp r9, [player_ptr1]  // personal weapon player ptr check
+  jne code_pre
+  jmp loop_pre
+
+ship_pre:
+  cmp rsi, [i_base_ship_addr_top] // Ship address is not the #1 count
+  jne code_pre
+
+loop_pre:
   push r15
   push r14
   push r13
@@ -817,13 +1234,13 @@ write_5:
 
 next1:
   cmp dword ptr [is_only_1st_fired_w_en], 2
-  je code
+  je code_pre
   cmp dword ptr [is_only_1st_fired_w_en], 1
   jne next2
   cmp qword ptr [i_1st_w_en_addr], 0
-  je code
+  je code_pre
   cmp rdi, [i_1st_w_en_addr]
-  jne code
+  jne code_pre
   // match 1st weapon
   db EB 3B 54
   db 68 69 73 20 74
@@ -836,6 +1253,9 @@ next1:
 
 next2:
   mov [rdi+20], (float)1.0  // full EN
+
+code_pre:
+  popfq
 
 code:
   vmovss xmm0,[rdi+20]
@@ -907,256 +1327,304 @@ Starfield.exe+1F26D58: 48 8B 74 24 48           - mov rsi,[rsp+48]
 Starfield.exe+1F26D5D: 8A C3                    - mov al,bl
 }
 </AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1337110787</ID>
-          <Description>"Current lock mode"</Description>
-          <DropDownList DisplayValueAsItem="1">0:Lock all (player/enemy)
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>1337110787</ID>
+                  <Description>"Current lock mode"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:Lock all (player/enemy)
 1:Only lock 1st EN
 2:No auto lock
 </DropDownList>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>C08000</Color>
-          <VariableType>4 Bytes</VariableType>
-          <Address>is_only_1st_fired_w_en</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160870</ID>
-          <Description>"EN data include NPC and player (first come first record)"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160882</ID>
-          <Description>"#1 ~ #5: fast value response, others: slower"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337110786</ID>
-          <Description>"1st EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr</Address>
-          <Offsets>
-            <Offset>20</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337110788</ID>
-          <Description>"2nd EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr2</Address>
-          <Offsets>
-            <Offset>20</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337110789</ID>
-          <Description>"3rd EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr3</Address>
-          <Offsets>
-            <Offset>20</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160868</ID>
-          <Description>"4th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr4</Address>
-          <Offsets>
-            <Offset>20</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160869</ID>
-          <Description>"5th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr5</Address>
-          <Offsets>
-            <Offset>20</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160871</ID>
-          <Description>"6th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+28</Address>
-          <Offsets>
-            <Offset>20</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160872</ID>
-          <Description>"7th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+28</Address>
-          <Offsets>
-            <Offset>28</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160873</ID>
-          <Description>"8th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+28</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160874</ID>
-          <Description>"9th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+30</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160875</ID>
-          <Description>"10th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+38</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160876</ID>
-          <Description>"11th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+40</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160877</ID>
-          <Description>"12th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+48</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160878</ID>
-          <Description>"13th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+50</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160879</ID>
-          <Description>"14th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+58</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160880</ID>
-          <Description>"15th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+60</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160881</ID>
-          <Description>"16th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+68</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160884</ID>
-          <Description>"17th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+70</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160885</ID>
-          <Description>"18th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+78</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160886</ID>
-          <Description>"19th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+80</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160887</ID>
-          <Description>"20th EN data"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
-          <VariableType>Float</VariableType>
-          <Address>i_1st_w_en_addr+88</Address>
-          <Offsets>
-            <Offset>30</Offset>
-          </Offsets>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_only_1st_fired_w_en</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160870</ID>
+                  <Description>"EN data include NPC and player (first come first record)"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160882</ID>
+                  <Description>"#1 ~ #5: fast value response, others: slower"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337110786</ID>
+                  <Description>"1st EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337110788</ID>
+                  <Description>"2nd EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr2</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337110789</ID>
+                  <Description>"3rd EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr3</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160868</ID>
+                  <Description>"4th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr4</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160869</ID>
+                  <Description>"5th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr5</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160871</ID>
+                  <Description>"6th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+28</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160872</ID>
+                  <Description>"7th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+28</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160873</ID>
+                  <Description>"8th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+28</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160874</ID>
+                  <Description>"9th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+30</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160875</ID>
+                  <Description>"10th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+38</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160876</ID>
+                  <Description>"11th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+40</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160877</ID>
+                  <Description>"12th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+48</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160878</ID>
+                  <Description>"13th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+50</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160879</ID>
+                  <Description>"14th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+58</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160880</ID>
+                  <Description>"15th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+60</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160881</ID>
+                  <Description>"16th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+68</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160884</ID>
+                  <Description>"17th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+70</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160885</ID>
+                  <Description>"18th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+78</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160886</ID>
+                  <Description>"19th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+80</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160887</ID>
+                  <Description>"20th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+88</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160898</ID>
+                  <Description>"21th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+90</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160899</ID>
+                  <Description>"22th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+98</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160900</ID>
+                  <Description>"23th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+100</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160901</ID>
+                  <Description>"24th EN data"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_1st_w_en_addr+108</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>1337110805</ID>
-      <Description>"inf. ship repair kit via hotkey when use (min = 10)"</Description>
+      <Description>"inf. ship repair kit via hotkey when use (min = 14)"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Starfield.exe
   Version: 
@@ -1178,9 +1646,9 @@ newmem:
 
   push rbx
   mov ebx, [rax+08]
-  cmp ebx, A
+  cmp ebx, E
   jae endp
-  mov ebx, A
+  mov ebx, E
   mov [rax+08], ebx
 
 endp:
@@ -1243,27 +1711,74 @@ Starfield.exe+19CB00D: 8B 56 38        - mov edx,[rsi+38]
   </CheatEntries>
   <UserdefinedSymbols>
     <SymbolEntry>
-      <Name>PE_SEGMENTS</Name>
-      <Address>7FF698A502C0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>CCharacter_Code</Name>
-      <Address>7FF6D1900000</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>Health_Code</Name>
-      <Address>7FF78B110000</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>Health_bkp</Name>
-      <Address>Health_Code+100</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>TeleportToCoords</Name>
-      <Address>21C73390000</Address>
+      <Name>player_ptr1</Name>
+      <Address>7FF6C68C73A8</Address>
     </SymbolEntry>
   </UserdefinedSymbols>
-  <Comments>Player Character Ptr AOB: 48 3B 1D ?? ?? ?? ?? 75 1C 48 8B</Comments>
-  <LuaScript>
+  <Comments>Player Character Ptr AOB: 
+48 3B 1D ?? ?? ?? ?? 75 1C 48 8B
+48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7 48 8B CB
+</Comments>
+  <LuaScript>--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
+function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+
+--memory record IDs now allowed to be 'locked'
+IDs = {1337160890, 9999998,
+      }
+
+--determine event trigger sequence
+
+
+function contains(table, val)
+   local i = 0
+   for i=1, #table do
+      if table[i] == val then
+         return true
+      end
+   end
+   return false
+end
+
+
+function onMemRecPreExecute(memoryrecord, newstate)
+    if contains(IDs, memoryrecord.ID) and newstate then
+	    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+		    return false
+	    end
+    end
+end
+
+function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
+	--checkArgType(moduleName, 1, 'string')
+	if not signature or not moduleName then return end
+	index = index or 1
+	local modStartAddr = getAddress(moduleName)
+	local modEndAddr = modStartAddr + getModuleSize(moduleName)
+	local ms = createMemScan()
+	if type(signature) == 'table' then
+		local sig = ''
+		for i, byte in ipairs(signature) do
+			sig = sig..string.format('%02X', byte)
+		end
+		signature = sig
+	end
+	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
+				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
+	ms.waitTillDone()
+	local results = createFoundList(ms)
+	results.initialize()
+	ms.destroy()
+	return results
+end
+registerLuaFunctionHighlight('AOBScanModule')
+
+
+
+AddressList.Header.OnSectionClick = nil
+
 </LuaScript>
 </CheatTable>
