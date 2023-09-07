@@ -120,11 +120,46 @@ alloc(newmem,$1000,INJECT_GET_CREDIT)
 label(code)
 label(return)
 label(i_base_credit_addr)
+label(i_base_credit_addr2)
+label(i_base_credit_addr3)
+label(i_base_credit_addr4)
 
 newmem:
+  cmp qword ptr [i_base_credit_addr], rax
+  je code
   cmp qword ptr [i_base_credit_addr], 0
-  jne code
+  jne write2
+
   mov [i_base_credit_addr], rax
+  jmp code
+
+write2:
+  cmp qword ptr [i_base_credit_addr2], rax
+  je code
+  cmp qword ptr [i_base_credit_addr2], 0
+  jne write3
+
+  mov [i_base_credit_addr2], rax
+  jmp code
+
+write3:
+  cmp qword ptr [i_base_credit_addr3], rax
+  je code
+
+  cmp qword ptr [i_base_credit_addr3], 0
+  jne write4
+
+  mov [i_base_credit_addr3], rax
+  jmp code
+
+write4:
+  cmp qword ptr [i_base_credit_addr4], rax
+  je code
+  cmp qword ptr [i_base_credit_addr4], 0
+  jne code
+
+  mov [i_base_credit_addr4], rax
+  jmp code
 
 code:
   add ecx,[rax+08]
@@ -133,6 +168,12 @@ code:
 align 10 cc
   i_base_credit_addr:
   dq 0
+  i_base_credit_addr2:
+  dq 0
+  i_base_credit_addr3:
+  dq 0
+  i_base_credit_addr4:
+  dq 0
 
 INJECT_GET_CREDIT:
   jmp newmem
@@ -140,13 +181,16 @@ INJECT_GET_CREDIT:
 return:
 registersymbol(INJECT_GET_CREDIT)
 registersymbol(i_base_credit_addr)
+registersymbol(i_base_credit_addr2)
+registersymbol(i_base_credit_addr3)
+registersymbol(i_base_credit_addr4)
 [DISABLE]
 
 INJECT_GET_CREDIT:
   db 03 48 08 48 83 C0 10
 
 unregistersymbol(INJECT_GET_CREDIT)
-unregistersymbol(i_base_credit_addr)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -180,11 +224,44 @@ Starfield.exe+19C2552: 74 29           - je Starfield.exe+19C257D
       <CheatEntries>
         <CheatEntry>
           <ID>1337110763</ID>
-          <Description>"Player credit"</Description>
+          <Description>"Credit #1  (Player?)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_base_credit_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160902</ID>
+          <Description>"Credit #2 (Team member?)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_credit_addr2</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160903</ID>
+          <Description>"Credit #3"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_credit_addr3</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160904</ID>
+          <Description>"Credit #4"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_credit_addr4</Address>
           <Offsets>
             <Offset>8</Offset>
           </Offsets>
@@ -1097,7 +1174,7 @@ Starfield.exe+22DD275: 45 33 C9                 - xor r9d,r9d
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>1337160896</ID>
+              <ID>1337160907</ID>
               <Description>"Re-enable when change ship / or not working"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
@@ -1174,16 +1251,29 @@ loops:
 
 write_data:
   mov [r13], rdi
-  jmp endp1
+  jmp endp1_1
 
 loop_tail:
   inc r14d
   cmp r14, 21
-  jae endp1
+  jae endp1_1
   jmp loops
 
 
 endp1:
+  // check if value too low
+  //vxorps xmm15, xmm15, xmm15
+  //vmovss xmm14, [r13]
+  //vucomiss xmm15, xmm14
+  //je endp1_1
+
+  //vmovss xmm15, [vf_0001]
+  //vcomiss xmm14, xmm15
+  //a endp1_1 // ignore if value too low
+
+  //mov qword ptr [r13], 0  // delete record
+
+endp1_1:
   pop r13
   pop r14
   pop r15
@@ -1252,6 +1342,16 @@ next1:
   db 20 2F 20 43 45 20 37 2E 34 2B
 
 next2:
+  //vxorps xmm15, xmm15, xmm15
+  //vmovss xmm14, [rdi+20]
+  //vucomiss xmm15, xmm14
+  //je do_set_1
+  //vmovss xmm15, [vf_0001]
+  //vucomiss xmm14, xmm15
+  //jb code_pre // ignore if value too low
+  //jmp do_set_1
+
+do_set_1:
   mov [rdi+20], (float)1.0  // full EN
 
 code_pre:
@@ -1279,6 +1379,10 @@ align 10 cc
   db 0
   is_only_1st_fired_w_en:
   dd 2
+  vf_0001:
+  dd (float)0.000001
+  vf_0:
+  dd 0
 
 INJECT_INF_EN_WEAPON:
   jmp newmem
@@ -1703,6 +1807,106 @@ Starfield.exe+19CB00D: 8B 56 38        - mov edx,[rsi+38]
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
+      <ID>1337160905</ID>
+      <Description>"Carry item weight multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-09-07
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_WEIGHT_MULTI,Starfield.exe,08 C5 FA 58 47 08) // should be unique
+alloc(newmem,$1000,INJECT_WEIGHT_MULTI)
+
+label(code)
+label(return)
+label(vf_weight_multi)
+
+newmem:
+  //vmovss xmm15, [rdi+08]
+  vmovss xmm14, [vf_weight_multi]
+  vmulss xmm0, xmm14, xmm0
+  //vmovss [rdi+08], xmm15
+  //vaddss xmm0, xmm0, xmm15
+  //vxorps xmm0, xmm0, xmm0
+
+code:
+  vaddss xmm0,xmm0,[rdi+08]
+  jmp return
+align 10 cc
+  vf_weight_multi:
+  dd (float)0.25
+
+INJECT_WEIGHT_MULTI+01:
+  jmp newmem
+return:
+registersymbol(INJECT_WEIGHT_MULTI)
+registersymbol(vf_weight_multi)
+[DISABLE]
+
+INJECT_WEIGHT_MULTI+01:
+  db C5 FA 58 47 08
+
+unregistersymbol(INJECT_WEIGHT_MULTI)
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+1535E31
+
+Starfield.exe+1535E0A: E8 8D 70 31 FF  - call Starfield.exe+84CE9C
+Starfield.exe+1535E0F: 48 8D 54 24 40  - lea rdx,[rsp+40]
+Starfield.exe+1535E14: E8 DB 08 D9 FF  - call Starfield.exe+12C66F4
+Starfield.exe+1535E19: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Starfield.exe+1535E1E: 48 3B 5C 24 40  - cmp rbx,[rsp+40]
+Starfield.exe+1535E23: 74 1C           - je Starfield.exe+1535E41
+Starfield.exe+1535E25: 48 8B 07        - mov rax,[rdi]
+Starfield.exe+1535E28: 48 8B D3        - mov rdx,rbx
+Starfield.exe+1535E2B: 48 8B CF        - mov rcx,rdi
+Starfield.exe+1535E2E: FF 50 08        - call qword ptr [rax+08]
+// ---------- INJECTING HERE ----------
+Starfield.exe+1535E31: C5 FA 58 47 08  - vaddss xmm0,xmm0,[rdi+08]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+1535E36: C5 FA 11 47 08  - vmovss [rdi+08],xmm0
+Starfield.exe+1535E3B: 48 83 C3 28     - add rbx,28
+Starfield.exe+1535E3F: EB DD           - jmp Starfield.exe+1535E1E
+Starfield.exe+1535E41: 48 8B 5C 24 38  - mov rbx,[rsp+38]
+Starfield.exe+1535E46: B8 01 00 00 00  - mov eax,00000001
+Starfield.exe+1535E4B: 48 83 C4 20     - add rsp,20
+Starfield.exe+1535E4F: 5F              - pop rdi
+Starfield.exe+1535E50: C3              - ret 
+Starfield.exe+1535E51: CC              - int 3 
+Starfield.exe+1535E52: CC              - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337160896</ID>
+          <Description>"Usage: Pick up / drop item"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160908</ID>
+          <Description>"You may become overweight if this script doesn't work in future versions!!"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160906</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_weight_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>1337160867</ID>
       <Description>"Starfield (A411F509 V1.7.23.0)  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00A452</Color>
@@ -1712,12 +1916,15 @@ Starfield.exe+19CB00D: 8B 56 38        - mov edx,[rsi+38]
   <UserdefinedSymbols>
     <SymbolEntry>
       <Name>player_ptr1</Name>
-      <Address>7FF6C68C73A8</Address>
+      <Address>7FF74B6C73A8</Address>
     </SymbolEntry>
   </UserdefinedSymbols>
   <Comments>Player Character Ptr AOB: 
 48 3B 1D ?? ?? ?? ?? 75 1C 48 8B
 48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7 48 8B CB
+
+Weight total:
+C5 FA 10 47 08 C5 FA 11 43 3C
 </Comments>
   <LuaScript>--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
 function onMemRecPostExecute(memoryrecord, newState, succeeded )
