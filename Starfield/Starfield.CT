@@ -293,9 +293,9 @@ newmem:
 
   push r15
   mov r15d, [rax+08]
-  cmp r15d, C
+  cmp r15d, D
   jae endp
-  mov r15d, C
+  mov r15d, D
   mov [rax+08], r15d
 endp:
   pop r15
@@ -792,6 +792,7 @@ getLuaEngine().Close()
         <CheatEntry>
           <ID>1337110783</ID>
           <Description>"Lock O2"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Starfield.exe
   Version: 
@@ -806,13 +807,16 @@ alloc(newmem,$1000,INJECT_INF_O2)
 
 label(code)
 label(return)
+label(i_base_o2_addr)
+label(is_O2_enabled)
 
 newmem:
   // max O2 = 80
   // xmm1 = -??? value, used O2 (i.e. O2 = 50, xmm1 = -30)
 
+
   pushfq
-  cmp r12, [player_ptr1]
+  cmp rsi, [player_ptr1]
   jne code_pre
 
   push rbx
@@ -833,9 +837,16 @@ next1:
   vcomiss xmm14, xmm15
   jae endp
 
+  lea rbx, [rax+rdx*4-C]
+  mov [i_base_o2_addr], rbx
+
+  cmp dword ptr [is_O2_enabled], 1
+  jne endp
+
   vxorps xmm1, xmm1, xmm1
   vmovss [rax+rdx*4], xmm1
   vmovss [rax+rdx*4-C], xmm1
+
 
 endp:
   pop rbx
@@ -848,20 +859,27 @@ code:
   vmovss xmm0,[rax+rdx*4]
   jmp return
 align 10 cc
+  i_base_o2_addr:
+  dq 0
   vf_1:
   dd (float)1
+  is_O2_enabled:
+  dd 1
+
 
 INJECT_INF_O2:
   jmp newmem
 return:
 registersymbol(INJECT_INF_O2)
+registersymbol(i_base_o2_addr)
+registersymbol(is_O2_enabled)
 
 [DISABLE]
 
 INJECT_INF_O2:
   db C5 FA 10 04 90
 
-unregistersymbol(INJECT_INF_O2)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -892,6 +910,51 @@ Starfield.exe+24BCD3E: 4C 8B 43 08           - mov r8,[rbx+08]
 Starfield.exe+24BCD42: 8B 12                 - mov edx,[rdx]
 }
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337160912</ID>
+              <Description>"Enabled?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_O2_enabled</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337160909</ID>
+              <Description>"O2-1"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>Float</VariableType>
+              <Address>i_base_o2_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337160910</ID>
+              <Description>"O2-2"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>Float</VariableType>
+              <Address>i_base_o2_addr</Address>
+              <Offsets>
+                <Offset>C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337160911</ID>
+              <Description>"O2-3"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>Float</VariableType>
+              <Address>i_base_o2_addr</Address>
+              <Offsets>
+                <Offset>40</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>1337160865</ID>
@@ -1987,7 +2050,12 @@ Starfield.exe+1535E52: CC              - int 3
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols/>
+  <UserdefinedSymbols>
+    <SymbolEntry>
+      <Name>player_ptr1</Name>
+      <Address>7FF72B6D81E8</Address>
+    </SymbolEntry>
+  </UserdefinedSymbols>
   <Comments>Player Character Ptr AOB: 
 48 3B 1D ?? ?? ?? ?? 75 1C 48 8B
 48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7 48 8B CB
