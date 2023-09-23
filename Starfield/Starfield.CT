@@ -1083,7 +1083,7 @@ Starfield.exe+24C045C: C3                    - ret
         </CheatEntry>
         <CheatEntry>
           <ID>1337160894</ID>
-          <Description>"EN / ship weapon"</Description>
+          <Description>"EN / ship weapon / Shield"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Starfield.exe
@@ -1335,6 +1335,393 @@ Starfield.exe+22DD2BF - 90                    - nop
               <Color>808080</Color>
               <VariableType>8 Bytes</VariableType>
               <Address>i_base_ship_addr_top</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337160983</ID>
+              <Description>"Get shield data"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-09-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SHIP_INFO,Starfield.exe,8B 48 08 40 B7 01) // should be unique
+alloc(newmem,$1000,INJECT_GET_SHIP_INFO)
+
+label(code)
+label(return)
+label(i_base_dship_design_data_addr1)
+label(i_base_dship_design_data_addr2)
+label(i_base_dship_design_data_addr3)
+label(i_base_shd_bonus_addr)
+label(i_base_eng_bonus_addr)
+label(vf_def_bvalue)
+newmem:
+  pushfq
+  push r15
+  push r14
+
+  lea r15, [rdi-20]
+  cmp r15, [i_base_ship_addr_top]
+  jne endp
+
+
+  mov r15, [rax]
+  test r15, r15
+  jz endp
+
+  mov r14, [r15+150]
+  test r14, r14
+  jz endp
+
+  mov r14d, [r14+18] // SHD
+
+stage1: // get shield value
+  cmp r14d, 00444853
+  jne stage2
+
+  //mov ecx,[rax+08]
+
+  cmp qword ptr [i_base_dship_design_data_addr1], rax
+  je stage2
+
+  cmp qword ptr [i_base_dship_design_data_addr1], 0
+  jne write2
+  mov [i_base_dship_design_data_addr1], rax
+  jmp stage2
+
+write2:
+  cmp qword ptr [i_base_dship_design_data_addr2], rax
+  je stage2
+
+  cmp qword ptr [i_base_dship_design_data_addr2], 0
+  jne write3
+  mov [i_base_dship_design_data_addr2], rax
+  jmp stage2
+
+write3:
+  cmp qword ptr [i_base_dship_design_data_addr3], rax
+  je stage2
+
+  cmp qword ptr [i_base_dship_design_data_addr3], 0
+  jne stage2
+  mov [i_base_dship_design_data_addr3], rax
+  //jmp stage2
+
+stage2: // get bonus
+  cmp r14d, 42444853  // SHDB
+  jne test2_2
+  mov [i_base_shd_bonus_addr], rax
+  vmovss xmm15, [vf_def_bvalue]
+  vmovss [rax+8], xmm15
+  jmp endp
+
+test2_2:
+  cmp r14d, 42474E45  // ENGB
+  jne endp
+  mov [i_base_eng_bonus_addr], rax
+  vmovss xmm15, [vf_def_bvalue]
+  vmovss [rax+8], xmm15
+
+
+endp:
+  pop r14
+  pop r15
+  popfq
+
+code:
+  mov ecx,[rax+08]
+  mov dil,01
+  jmp return
+align 10 cc
+  i_base_dship_design_data_addr1:
+  dq 0
+  i_base_dship_design_data_addr2:
+  dq 0
+  i_base_dship_design_data_addr3:
+  dq 0
+  i_base_shd_bonus_addr:
+  dq 0
+  i_base_eng_bonus_addr:
+  dq 0
+  vf_def_bvalue:
+  dd (float)100000
+
+
+INJECT_GET_SHIP_INFO:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_SHIP_INFO)
+registersymbol(i_base_dship_design_data_addr1)
+registersymbol(i_base_dship_design_data_addr2)
+registersymbol(i_base_dship_design_data_addr3)
+registersymbol(i_base_shd_bonus_addr)
+registersymbol(i_base_eng_bonus_addr)
+registersymbol(vf_def_bvalue)
+
+[DISABLE]
+
+INJECT_GET_SHIP_INFO:
+  db 8B 48 08 40 B7 01
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+24EEB6C
+
+Starfield.exe+24EEB46: E8 51 E3 35 FE  - call Starfield.exe+84CE9C
+Starfield.exe+24EEB4B: 48 8D 54 24 68  - lea rdx,[rsp+68]
+Starfield.exe+24EEB50: E8 F7 F1 D8 FE  - call Starfield.exe+127DD4C
+Starfield.exe+24EEB55: 48 8B 44 24 50  - mov rax,[rsp+50]
+Starfield.exe+24EEB5A: 48 3B 44 24 68  - cmp rax,[rsp+68]
+Starfield.exe+24EEB5F: 74 13           - je Starfield.exe+24EEB74
+Starfield.exe+24EEB61: 48 39 28        - cmp [rax],rbp
+Starfield.exe+24EEB64: 74 06           - je Starfield.exe+24EEB6C
+Starfield.exe+24EEB66: 48 83 C0 10     - add rax,10
+Starfield.exe+24EEB6A: EB EE           - jmp Starfield.exe+24EEB5A
+// ---------- INJECTING HERE ----------
+Starfield.exe+24EEB6C: 8B 48 08        - mov ecx,[rax+08]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+24EEB6F: 40 B7 01        - mov dil,01
+Starfield.exe+24EEB72: 89 0E           - mov [rsi],ecx
+Starfield.exe+24EEB74: 48 8D 4C 24 20  - lea rcx,[rsp+20]
+Starfield.exe+24EEB79: E8 1A 26 36 FE  - call Starfield.exe+851198
+Starfield.exe+24EEB7E: 48 8B 5C 24 58  - mov rbx,[rsp+58]
+Starfield.exe+24EEB83: 40 8A C7        - mov al,dil
+Starfield.exe+24EEB86: 48 83 C4 30     - add rsp,30
+Starfield.exe+24EEB8A: 5F              - pop rdi
+Starfield.exe+24EEB8B: 5E              - pop rsi
+Starfield.exe+24EEB8C: 5D              - pop rbp
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>1337160985</ID>
+                  <Description>"Usage: modify ship -&gt; Ship builder"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160998</ID>
+                  <Description>"Disable / enable after change ship"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160989</ID>
+                  <Description>"Shield #1"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>1337160986</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>i_base_dship_design_data_addr1</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337160988</ID>
+                      <Description>"ID ?"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_base_dship_design_data_addr1</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>48</Offset>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337160987</ID>
+                      <Description>"Desc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_base_dship_design_data_addr1</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>40</Offset>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160990</ID>
+                  <Description>"Shield #2"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>1337160991</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>i_base_dship_design_data_addr2</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337160992</ID>
+                      <Description>"ID ?"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_base_dship_design_data_addr2</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>48</Offset>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337160993</ID>
+                      <Description>"Desc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_base_dship_design_data_addr2</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>40</Offset>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337160994</ID>
+                  <Description>"Shield #3"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>1337160995</ID>
+                      <Description>"Value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>i_base_dship_design_data_addr3</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337160996</ID>
+                      <Description>"ID ?"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_base_dship_design_data_addr3</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>48</Offset>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337160997</ID>
+                      <Description>"Desc"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>String</VariableType>
+                      <Length>64</Length>
+                      <Unicode>0</Unicode>
+                      <CodePage>0</CodePage>
+                      <ZeroTerminate>1</ZeroTerminate>
+                      <Address>i_base_dship_design_data_addr3</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                        <Offset>40</Offset>
+                        <Offset>0</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337161060</ID>
+                  <Description>"Engine / Shield bonus"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>1337161053</ID>
+                      <Description>"Get data: before &amp; leave / leave Cockpit seat"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337161054</ID>
+                      <Description>"Usage: when success, the engine / shield bar color will be green, not white"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337161055</ID>
+                      <Description>"Shield bonus"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>i_base_shd_bonus_addr</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337161056</ID>
+                      <Description>"Engine bonus"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>i_base_eng_bonus_addr</Address>
+                      <Offsets>
+                        <Offset>8</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1337161058</ID>
+                      <Description>"Bonus value"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>Float</VariableType>
+                      <Address>vf_def_bvalue</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>1337110785</ID>
@@ -1967,17 +2354,11 @@ Starfield.exe+1BB159D: 90                       - nop
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>1337160919</ID>
-          <Description>"Test / not work (work in progress)"</Description>
+          <ID>1337160915</ID>
+          <Description>"Enable stealth helper - step 1"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <GroupHeader>1</GroupHeader>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>1337160915</ID>
-              <Description>"Enable stealth helper - step 1"</Description>
-              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Starfield.exe
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
   Version: 
   Date   : 2023-09-17
   Author : bbfox@https://opencheattables.com
@@ -2041,12 +2422,12 @@ Starfield.exe+24833BB: 48 8B 48 08           - mov rcx,[rax+08]
 Starfield.exe+24833BF: 48 85 C9              - test rcx,rcx
 }
 </AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>1337160918</ID>
-                  <Description>"Enable stealth helper - step 2"</Description>
-                  <VariableType>Auto Assembler Script</VariableType>
-                  <AssemblerScript>{ Game   : Starfield.exe
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337160918</ID>
+              <Description>"Enable stealth helper - step 2"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Starfield.exe
   Version: 
   Date   : 2023-09-17
   Author : bbfox@https://opencheattables.com
@@ -2118,77 +2499,6 @@ Starfield.exe+1BB112B: C5 FA 10 4B 1C           - vmovss xmm1,[rbx+1C]
 Starfield.exe+1BB1130: C5 F2 5C 43 34           - vsubss xmm0,xmm1,[rbx+34]
 Starfield.exe+1BB1135: C5 FA 5E D1              - vdivss xmm2,xmm0,xmm1
 Starfield.exe+1BB1139: C5 EA 5F C6              - vmaxss xmm0,xmm2,xmm6
-}
-</AssemblerScript>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>1337160929</ID>
-              <Description>"(X) Lock ship shield"</Description>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Starfield.exe
-  Version: 
-  Date   : 2023-09-17
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_SHIELD_TST,Starfield.exe,48 8D 95 20 02 00 00 E8 AF) // should be unique
-alloc(newmem,$1000,INJECT_SHIELD_TST)
-
-label(code)
-label(return)
-
-newmem:
-  mov edx, (float)2000
-  mov [rbp+00000220], edx
-
-code:
-  lea rdx,[rbp+00000220]
-  jmp return
-
-INJECT_SHIELD_TST:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_SHIELD_TST)
-
-[DISABLE]
-
-INJECT_SHIELD_TST:
-  db 48 8D 95 20 02 00 00
-
-unregistersymbol(INJECT_SHIELD_TST)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Starfield.exe+20FE965
-
-Starfield.exe+20FE937: E8 38 C8 1D FF           - call Starfield.exe+12DB174
-Starfield.exe+20FE93C: 48 8B 0D 3D 3A 48 03     - mov rcx,[Starfield.exe+5582380]
-Starfield.exe+20FE943: E8 A4 F0 A3 00           - call Starfield.exe+2B3D9EC
-Starfield.exe+20FE948: 84 C0                    - test al,al
-Starfield.exe+20FE94A: 75 06                    - jne Starfield.exe+20FE952
-Starfield.exe+20FE94C: C5 F8 28 C6              - vmovaps xmm0,xmm6
-Starfield.exe+20FE950: EB 04                    - jmp Starfield.exe+20FE956
-Starfield.exe+20FE952: C5 F8 57 C0              - vxorps xmm0,xmm0,xmm0
-Starfield.exe+20FE956: C5 FA 11 85 20 02 00 00  - vmovss [rbp+00000220],xmm0
-Starfield.exe+20FE95E: 49 8D 8F 80 00 00 00     - lea rcx,[r15+00000080]
-// ---------- INJECTING HERE ----------
-Starfield.exe+20FE965: 48 8D 95 20 02 00 00     - lea rdx,[rbp+00000220]
-// ---------- DONE INJECTING  ----------
-Starfield.exe+20FE96C: E8 AF CA 78 FF           - call Starfield.exe+188B420
-Starfield.exe+20FE971: C4 C1 7A 2C C1           - vcvttss2si eax,xmm9
-Starfield.exe+20FE976: 89 85 20 02 00 00        - mov [rbp+00000220],eax
-Starfield.exe+20FE97C: 49 8D 8F A0 00 00 00     - lea rcx,[r15+000000A0]
-Starfield.exe+20FE983: 48 8D 95 20 02 00 00     - lea rdx,[rbp+00000220]
-Starfield.exe+20FE98A: E8 E5 C7 1D FF           - call Starfield.exe+12DB174
-Starfield.exe+20FE98F: C5 FA 10 05 01 37 48 03  - vmovss xmm0,[Starfield.exe+5582098]
-Starfield.exe+20FE997: C5 F8 2F C7              - vcomiss xmm0,xmm7
-Starfield.exe+20FE99B: 0F 93 85 20 02 00 00     - setae byte ptr [rbp+00000220]
-Starfield.exe+20FE9A2: 49 8D 8F 20 06 00 00     - lea rcx,[r15+00000620]
 }
 </AssemblerScript>
             </CheatEntry>
@@ -2462,27 +2772,37 @@ Starfield.exe+19C61FD: CC           - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>1337160867</ID>
-      <Description>"Starfield (A411F509 V1.7.29.0)  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Starfield (32E64ED5 V1.7.29.0)  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00A452</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
-    <CheatEntry>
-      <ID>1337160930</ID>
-      <Description>"No description"</Description>
-      <VariableType>4 Bytes</VariableType>
-      <Address>2A7DAE02D88</Address>
-    </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>player_ptr1</Name>
-      <Address>7FF77BB881E8</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>pickpocket_const</Name>
-      <Address>7FF77B7DD4F8</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Ship info Code :mov ecx,[rax+08]</Description>
+      <AddressString>Starfield.exe+24EEB6C</AddressString>
+      <Before>
+        <Byte>83</Byte>
+        <Byte>C0</Byte>
+        <Byte>10</Byte>
+        <Byte>EB</Byte>
+        <Byte>EE</Byte>
+      </Before>
+      <Actual>
+        <Byte>8B</Byte>
+        <Byte>48</Byte>
+        <Byte>08</Byte>
+      </Actual>
+      <After>
+        <Byte>40</Byte>
+        <Byte>B7</Byte>
+        <Byte>01</Byte>
+        <Byte>89</Byte>
+        <Byte>0E</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
+  <UserdefinedSymbols/>
   <Comments>Player Character Ptr AOB: 
 48 3B 1D ?? ?? ?? ?? 75 1C 48 8B
 48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7 48 8B CB
@@ -2492,8 +2812,7 @@ Weight total:
 C5 FA 10 47 08 C5 FA 11 43 3C
 
 Pickocket constant:
-C5 FA 10 55 57 C5 FA 10 05 ?? ?? ?? ?? C5
-</Comments>
+C5 FA 10 55 57 C5 FA 10 05 ?? ?? ?? ?? C5</Comments>
   <LuaScript>--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
 function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then

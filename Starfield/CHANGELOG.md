@@ -1,5 +1,9 @@
 # Changelog
 
+## 2023/09/23
+1. Added shield related scripts
+1. Revised for 32E64ED5  V1.7.29.0
+
 ## 2023/09/17
 1. Added scripts
 
