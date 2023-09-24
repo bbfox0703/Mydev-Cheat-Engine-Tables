@@ -1365,9 +1365,9 @@ newmem:
   push r15
   push r14
 
-  lea r15, [rdi-20]
+  mov r15, [rsp+50]
   cmp r15, [i_base_ship_addr_top]
-  jne endp
+  jne stage2
 
 
   mov r15, [rax]
@@ -1384,7 +1384,7 @@ stage1: // get shield value
   cmp r14d, 00444853
   jne stage2
 
-  //mov ecx,[rax+08]
+  mov ecx,[rax+08]
 
   cmp qword ptr [i_base_dship_design_data_addr1], rax
   je stage2
@@ -1413,20 +1413,50 @@ write3:
   //jmp stage2
 
 stage2: // get bonus
+  mov r15, [rax]
+  test r15, r15
+  jz endp
+
+  mov r14, [r15+150]
+  test r14, r14
+  jz endp
+
+  mov r14d, [r14+18]
+
+
+  cmp qword ptr [i_base_shd_bonus_addr], 0
+  jne write_bonus_1
   cmp r14d, 42444853  // SHDB
   jne test2_2
   mov [i_base_shd_bonus_addr], rax
+
+write_bonus_1:
+  cmp qword ptr [i_base_shd_bonus_addr], rax
+  jne endp
+
+  mov r15, [i_base_shd_bonus_addr]
   vmovss xmm15, [vf_def_bvalue]
-  vmovss [rax+8], xmm15
+  vmovss [r15+8], xmm15
+
+  //mov ecx,[rax+08]
+
   jmp endp
 
 test2_2:
+  cmp qword ptr [i_base_eng_bonus_addr], 0
+  jne write_bonus_2
+
   cmp r14d, 42474E45  // ENGB
   jne endp
   mov [i_base_eng_bonus_addr], rax
-  vmovss xmm15, [vf_def_bvalue]
-  vmovss [rax+8], xmm15
 
+write_bonus_2:
+  cmp qword ptr [i_base_eng_bonus_addr], rax
+  jne endp
+
+  mov r15, [i_base_eng_bonus_addr]
+  vmovss xmm15, [vf_def_bvalue]
+  vmovss [r15+8], xmm15
 
 endp:
   pop r14
@@ -2802,17 +2832,25 @@ Starfield.exe+19C61FD: CC           - int 3
       </After>
     </CodeEntry>
   </CheatCodes>
-  <UserdefinedSymbols/>
+  <UserdefinedSymbols>
+    <SymbolEntry>
+      <Name>player_ptr1</Name>
+      <Address>7FF6396381E8</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>pickpocket_const</Name>
+      <Address>7FF63928D4F8</Address>
+    </SymbolEntry>
+  </UserdefinedSymbols>
   <Comments>Player Character Ptr AOB: 
 48 3B 1D ?? ?? ?? ?? 75 1C 48 8B
 48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7 48 8B CB
 48 8B 05 ?? ?? ?? ?? 48 3B D8 74 ?? 48 8B D7
-
 Weight total:
 C5 FA 10 47 08 C5 FA 11 43 3C
-
 Pickocket constant:
-C5 FA 10 55 57 C5 FA 10 05 ?? ?? ?? ?? C5</Comments>
+C5 FA 10 55 57 C5 FA 10 05 ?? ?? ?? ?? C5
+</Comments>
   <LuaScript>--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
 function onMemRecPostExecute(memoryrecord, newState, succeeded )
     if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
