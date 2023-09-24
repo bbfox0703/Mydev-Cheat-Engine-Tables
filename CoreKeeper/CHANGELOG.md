@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/09/24
+1. Revised some scripts for 0.6.3.2-3228 EA
+
 ## 2023/05/14
 1. Update for 0.6.0.3-3a54
 

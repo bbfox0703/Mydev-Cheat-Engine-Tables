@@ -15,7 +15,7 @@ LuaCall(cycleFullCompact(nil,false))
     </CheatEntry>
     <CheatEntry>
       <ID>247</ID>
-      <Description>"Enable (enable twice: first, wait for IL2CPP to complete, then enable again)"</Description>
+      <Description>"Enable (enable twice)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -53,6 +53,8 @@ define(PlayerControllerReduceDurabilityOfEquipmentProc,"PlayerController.ReduceD
 define(SaveManagerAddSkillValueProc,"SaveManager.AddSkillValue")
 define(InventoryHandlerGetExistingAmountOfObjectProc,"InventoryHandler.GetExistingAmountOfObject")
 define(PlayerStatePlayerBaseStateUpdateMiniGameProc, "PlayerState.PlayerBaseState.UpdateMiniGame")
+define(PlayerControllerDealDamageToPlayerProc, "PlayerController:DealDamageToPlayer")
+
 
 
 registersymbol(PlayerControllerManagedUpdateProc)
@@ -69,6 +71,7 @@ registersymbol(PlayerControllerReduceDurabilityOfEquipmentProc)
 registersymbol(SaveManagerAddSkillValueProc)
 registersymbol(InventoryHandlerGetExistingAmountOfObjectProc)
 registersymbol(PlayerStatePlayerBaseStateUpdateMiniGameProc)
+registersymbol(PlayerControllerDealDamageToPlayerProc)
 
 [DISABLE]
 {$lua}
@@ -186,167 +189,83 @@ lib_burst_generated.dll+14B7E7D - 85 C9                 - test ecx,ecx
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>1013</ID>
-          <Description>"Set all item to # stock when pick up (turn on when needed, require stack # of 3 or more)"</Description>
-          <Options moHideChildren="1"/>
+          <ID>1022</ID>
+          <Description>"Set item count to 800 (item stock # must &gt;=2)"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
-  Date   : 2022-05-10
-  Author : bbfox @https://opencheattables.com/
+  Date   : 2023-09-24
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
-aobscanregion(INJECT_ITEM_SPLIT_DEST,lib_burst_generated.dll+184C9BE, lib_burst_generated.dll+18FC9BE,8B 74 B8 04 8B 4C B8 08) // should be unique
-alloc(newmem,$1000,INJECT_ITEM_SPLIT_DEST)
+
+aobscanregion(INJECT_SET_ITEM_CNT,lib_burst_generated.dll+18CA4BA, lib_burst_generated.dll+18CC4BA,42 8B 7C 06 04) // should be unique
+alloc(newmem,$1000,INJECT_SET_ITEM_CNT)
 
 label(code)
 label(return)
-label(i_dest_item_addr)
-label(i_min_value)
 
 newmem:
-  push rbx
-  lea rbx, [rax+rdi*4]
-  mov [i_dest_item_addr], rbx
-  pop rbx
-
-  mov esi,[rax+rdi*4+04]
-  cmp esi, [i_min_value]
-  jge code
-  cmp esi, 1
-  jle code
-  mov esi, [i_min_value]
-  mov [rax+rdi*4+04], esi
-
 
 code:
-  //mov [rbp+rdi+04],r8d
-  mov esi,[rax+rdi*4+04]
-  mov ecx,[rax+rdi*4+08]
+  // orig code
+  mov edi,[rsi+r8+04]
+  // orig code end
+
+  cmp edi, 1
+  jbe endp
+
+  cmp edi, #800
+  jae endp
+
+  mov edi, #800
+  mov [rsi+r8+04], edi
+
+endp:
   jmp return
 
-align 10 cc
-  i_dest_item_addr:
-  dq 0
-  i_min_value:
-  dd #995
-  i_min_safe_value:
-  dd 1
-
-
-INJECT_ITEM_SPLIT_DEST:
+INJECT_SET_ITEM_CNT:
   jmp newmem
-  nop 3
 return:
-
-registersymbol(i_dest_item_addr)
-registersymbol(i_min_value)
-registersymbol(INJECT_ITEM_SPLIT_DEST)
+registersymbol(INJECT_SET_ITEM_CNT)
 
 [DISABLE]
 
-INJECT_ITEM_SPLIT_DEST:
-  db 8B 74 B8 04 8B 4C B8 08
+INJECT_SET_ITEM_CNT:
+  db 42 8B 7C 06 04
 
-unregistersymbol(*)
+unregistersymbol(INJECT_SET_ITEM_CNT)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: lib_burst_generated.dll+189C9BE
+// ORIGINAL CODE - INJECTION POINT: lib_burst_generated.dll+18CB4E1
 
-lib_burst_generated.dll+189C992: E8 B9 66 BB FF           - call lib_burst_generated.dll+1453050
-lib_burst_generated.dll+189C997: 48 8B 84 24 58 01 00 00  - mov rax,[rsp+00000158]
-lib_burst_generated.dll+189C99F: 48 8B 08                 - mov rcx,[rax]
-lib_burst_generated.dll+189C9A2: 48 83 C0 10              - add rax,10
-lib_burst_generated.dll+189C9A6: 48 85 C9                 - test rcx,rcx
-lib_burst_generated.dll+189C9A9: 48 0F 45 C1              - cmovne rax,rcx
-lib_burst_generated.dll+189C9AD: 48 63 CF                 - movsxd  rcx,edi
-lib_burst_generated.dll+189C9B0: 48 8D 3C 89              - lea rdi,[rcx+rcx*4]
-lib_burst_generated.dll+189C9B4: 8B 0C B8                 - mov ecx,[rax+rdi*4]
-lib_burst_generated.dll+189C9B7: 89 8C 24 A0 00 00 00     - mov [rsp+000000A0],ecx
+lib_burst_generated.dll+18CB4BA: 44 8B 54 24 40           - mov r10d,[rsp+40]
+lib_burst_generated.dll+18CB4BF: 4C 8B 5C 24 38           - mov r11,[rsp+38]
+lib_burst_generated.dll+18CB4C4: 89 C0                    - mov eax,eax
+lib_burst_generated.dll+18CB4C6: 31 C9                    - xor ecx,ecx
+lib_burst_generated.dll+18CB4C8: 0F 1F 84 00 00 00 00 00  - nop dword ptr [rax+rax+00000000]
+lib_burst_generated.dll+18CB4D0: 48 8B 32                 - mov rsi,[rdx]
+lib_burst_generated.dll+18CB4D3: 4D 63 C0                 - movsxd  r8,r8d
+lib_burst_generated.dll+18CB4D6: 48 63 C9                 - movsxd  rcx,ecx
+lib_burst_generated.dll+18CB4D9: 42 8B 3C 06              - mov edi,[rsi+r8]
+lib_burst_generated.dll+18CB4DD: 41 89 3C 0B              - mov [r11+rcx],edi
 // ---------- INJECTING HERE ----------
-lib_burst_generated.dll+189C9BE: 8B 74 B8 04              - mov esi,[rax+rdi*4+04]
+lib_burst_generated.dll+18CB4E1: 42 8B 7C 06 04           - mov edi,[rsi+r8+04]
 // ---------- DONE INJECTING  ----------
-lib_burst_generated.dll+189C9C2: 8B 4C B8 08              - mov ecx,[rax+rdi*4+08]
-lib_burst_generated.dll+189C9C6: 89 8C 24 9C 00 00 00     - mov [rsp+0000009C],ecx
-lib_burst_generated.dll+189C9CD: 66 89 6C 24 6C           - mov [rsp+6C],bp
-lib_burst_generated.dll+189C9D2: 8B 6C B8 0C              - mov ebp,[rax+rdi*4+0C]
-lib_burst_generated.dll+189C9D6: 48 8D 8C 24 48 01 00 00  - lea rcx,[rsp+00000148]
-lib_burst_generated.dll+189C9DE: 48 8D 94 24 D0 00 00 00  - lea rdx,[rsp+000000D0]
-lib_burst_generated.dll+189C9E6: 44 8B 84 24 20 02 00 00  - mov r8d,[rsp+00000220]
-lib_burst_generated.dll+189C9EE: 41 89 D9                 - mov r9d,ebx
-lib_burst_generated.dll+189C9F1: E8 5A 66 BB FF           - call lib_burst_generated.dll+1453050
-lib_burst_generated.dll+189C9F6: 48 8B 9C 24 48 01 00 00  - mov rbx,[rsp+00000148]
+lib_burst_generated.dll+18CB4E6: 41 89 7C 0B 04           - mov [r11+rcx+04],edi
+lib_burst_generated.dll+18CB4EB: 42 8B 7C 06 08           - mov edi,[rsi+r8+08]
+lib_burst_generated.dll+18CB4F0: 41 89 7C 0B 08           - mov [r11+rcx+08],edi
+lib_burst_generated.dll+18CB4F5: 42 8B 7C 06 0C           - mov edi,[rsi+r8+0C]
+lib_burst_generated.dll+18CB4FA: 41 89 7C 0B 0C           - mov [r11+rcx+0C],edi
+lib_burst_generated.dll+18CB4FF: 42 8B 74 06 10           - mov esi,[rsi+r8+10]
+lib_burst_generated.dll+18CB504: 41 89 74 0B 10           - mov [r11+rcx+10],esi
+lib_burst_generated.dll+18CB509: 44 01 D1                 - add ecx,r10d
+lib_burst_generated.dll+18CB50C: 45 01 C8                 - add r8d,r9d
+lib_burst_generated.dll+18CB50F: 48 FF C8                 - dec rax
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>1021</ID>
-              <Description>"*** Warning *** not work as expected"</Description>
-              <Color>8000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>1014</ID>
-              <Description>"Min. value"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_min_value</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>1015</ID>
-              <Description>"Get item ID &amp; count"</Description>
-              <Options moDeactivateChildrenAsWell="1"/>
-              <GroupHeader>1</GroupHeader>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>1016</ID>
-                  <Description>"Usage: Open itembox"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>1017</ID>
-                      <Description>"1. Right click on single item (# of items must be 1) to pick item"</Description>
-                      <Color>8000FF</Color>
-                      <GroupHeader>1</GroupHeader>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>1018</ID>
-                      <Description>"2. Left click to put it down"</Description>
-                      <Color>8000FF</Color>
-                      <GroupHeader>1</GroupHeader>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>1019</ID>
-                  <Description>"Pick-up Item ID"</Description>
-                  <DropDownListLink>-Item ID-</DropDownListLink>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_dest_item_addr</Address>
-                  <Offsets>
-                    <Offset>0</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>1020</ID>
-                  <Description>"Pick-up Item Count (Only for stackable) / Durability (for non-stackable)"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_dest_item_addr</Address>
-                  <Offsets>
-                    <Offset>4</Offset>
-                  </Offsets>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>260</ID>
@@ -354,14 +273,14 @@ lib_burst_generated.dll+189C9F6: 48 8B 9C 24 48 01 00 00  - mov rbx,[rsp+0000014
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
-  Date   : 2022-04-02
+  Date   : 2023-09-24
   Author : bbfox @https://opencheattables.com/
 }
 
 [ENABLE]
 
 //aobscanmodule(INJECT_HELD_EQUIPMENT,GameAssembly.dll,22 EA FF CC CC CC CC CC 48 89 5C 24 10) // should be unique
-aobscanregion(INJECT_HELD_EQUIPMENT,PlayerControllerReduceDurabilityOfHeldEquipmentProc,PlayerControllerReduceDurabilityOfHeldEquipmentProc+10,48 89 5C 24 18) // should be unique
+aobscanregion(INJECT_HELD_EQUIPMENT,PlayerControllerReduceDurabilityOfHeldEquipmentProc,PlayerControllerReduceDurabilityOfHeldEquipmentProc+20,55 48 8B EC 48 81 EC D0 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_HELD_EQUIPMENT)
 
 label(code)
@@ -371,18 +290,21 @@ newmem:
   ret
 
 code:
-  //mov [rsp+10],rbx
+  //push rbp
+  //mov rbp,rsp
+  //sub rsp,000000D0
   jmp return
 
 INJECT_HELD_EQUIPMENT:
   jmp newmem
+  nop 6
 return:
 registersymbol(INJECT_HELD_EQUIPMENT)
 
 [DISABLE]
 
 INJECT_HELD_EQUIPMENT:
-  db 48 89 5C 24 18
+  db 55 48 8B EC 48 81 EC D0 00 00 00
 
 unregistersymbol(INJECT_HELD_EQUIPMENT)
 dealloc(newmem)
@@ -390,29 +312,29 @@ dealloc(newmem)
 {
 // ORIGINAL CODE - INJECTION POINT: PlayerControllerReduceDurabilityOfHeldEquipmentProc
 
-GameAssembly.dll+1A9F236: CC                    - int 3
-GameAssembly.dll+1A9F237: CC                    - int 3
-GameAssembly.dll+1A9F238: CC                    - int 3
-GameAssembly.dll+1A9F239: CC                    - int 3
-GameAssembly.dll+1A9F23A: CC                    - int 3
-GameAssembly.dll+1A9F23B: CC                    - int 3
-GameAssembly.dll+1A9F23C: CC                    - int 3
-GameAssembly.dll+1A9F23D: CC                    - int 3
-GameAssembly.dll+1A9F23E: CC                    - int 3
-GameAssembly.dll+1A9F23F: CC                    - int 3
+2847487784E: D3 08                 - ror [rax],cl
+28474877850: E0 59                 - loopne PlayerController:ReduceDurabilityOfHeldEquipment+4b
+28474877852: 95                    - xchg eax,ebp
+28474877853: AF                    - scasd
+28474877854: 83 02 00              - add dword ptr [rdx],00
+28474877857: 00 00                 - add [rax],al
+28474877859: 00 00                 - add [rax],al
+2847487785B: 00 00                 - add [rax],al
+2847487785D: 00 00                 - add [rax],al
+2847487785F: 00                    - db 00
 // ---------- INJECTING HERE ----------
-PlayerControllerReduceDurabilityOfHeldEquipmentProc: 48 89 5C 24 18        - mov [rsp+18],rbx
+PlayerControllerReduceDurabilityOfHeldEquipmentProc: 55                    - push rbp
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+1A9F245: 48 89 74 24 20        - mov [rsp+20],rsi
-GameAssembly.dll+1A9F24A: 57                    - push rdi
-GameAssembly.dll+1A9F24B: 48 83 EC 40           - sub rsp,40
-GameAssembly.dll+1A9F24F: 80 3D 02 21 A9 02 00  - cmp byte ptr [GameAssembly.dll+4531358],00
-GameAssembly.dll+1A9F256: 48 8B F1              - mov rsi,rcx
-GameAssembly.dll+1A9F259: 75 2B                 - jne GameAssembly.dll+1A9F286
-GameAssembly.dll+1A9F25B: 48 8D 0D 5E 15 89 02  - lea rcx,[GameAssembly.dll+43307C0]
-GameAssembly.dll+1A9F262: E8 A9 98 77 FE        - call GameAssembly.dll+218B10
-GameAssembly.dll+1A9F267: 48 8D 0D 82 3F 84 02  - lea rcx,[GameAssembly.dll+42E31F0]
-GameAssembly.dll+1A9F26E: E8 9D 98 77 FE        - call GameAssembly.dll+218B10
+PlayerController:ReduceDurabilityOfHeldEquipment+1: 48 8B EC              - mov rbp,rsp
+PlayerController:ReduceDurabilityOfHeldEquipment+4: 48 81 EC D0 00 00 00  - sub rsp,000000D0
+PlayerController:ReduceDurabilityOfHeldEquipment+b: 48 89 75 E0           - mov [rbp-20],rsi
+PlayerController:ReduceDurabilityOfHeldEquipment+f: 48 89 7D E8           - mov [rbp-18],rdi
+PlayerController:ReduceDurabilityOfHeldEquipment+13: 4C 89 75 F0           - mov [rbp-10],r14
+PlayerController:ReduceDurabilityOfHeldEquipment+17: 4C 89 7D F8           - mov [rbp-08],r15
+PlayerController:ReduceDurabilityOfHeldEquipment+1b: 48 8B F1              - mov rsi,rcx
+PlayerController:ReduceDurabilityOfHeldEquipment+1e: 48 8D 86 B8 00 00 00  - lea rax,[rsi+000000B8]
+PlayerController:ReduceDurabilityOfHeldEquipment+25: 48 63 08              - movsxd  rcx,dword ptr [rax]
+PlayerController:ReduceDurabilityOfHeldEquipment+28: 89 4D B8              - mov [rbp-48],ecx
 }
 </AssemblerScript>
         </CheatEntry>
@@ -422,12 +344,13 @@ GameAssembly.dll+1A9F26E: E8 9D 98 77 FE        - call GameAssembly.dll+218B10
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
-  Date   : 2022-04-02
+  Date   : 2023-09-24
   Author : bbfox @https://opencheattables.com/
 }
 
 [ENABLE]
-aobscanregion(INJECT_REDUCE_DUR_EQUIPMENT,PlayerControllerReduceDurabilityOfEquipmentProc,PlayerControllerReduceDurabilityOfEquipmentProc+A,48 89 5C 24 10) // should be unique
+//aobscanregion(INJECT_REDUCE_DUR_EQUIPMENT,PlayerControllerReduceDurabilityOfEquipmentProc,PlayerControllerReduceDurabilityOfEquipmentProc+A,48 89 5C 24 10) // should be unique
+aobscanregion(INJECT_REDUCE_DUR_EQUIPMENT,PlayerControllerReduceDurabilityOfEquipmentProc,PlayerControllerReduceDurabilityOfEquipmentProc+A,55 48 8B EC 48 83 EC 60) // should be unique
 
 
 alloc(newmem,$1000,INJECT_REDUCE_DUR_EQUIPMENT)
@@ -438,48 +361,50 @@ label(return)
 newmem:
   ret
 code:
-  //mov [rsp+10],rbx
+  //push rbp
+  //mov rbp,rsp
+  //sub rsp,60
   jmp return
 
 INJECT_REDUCE_DUR_EQUIPMENT:
   jmp newmem
+  nop
+  nop
+  nop
 return:
 registersymbol(INJECT_REDUCE_DUR_EQUIPMENT)
 
 [DISABLE]
 
 INJECT_REDUCE_DUR_EQUIPMENT:
-  db 48 89 5C 24 10
+  db 55 48 8B EC 48 83 EC 60
 
 unregistersymbol(INJECT_REDUCE_DUR_EQUIPMENT)
 dealloc(newmem)
 
 {
 // ORIGINAL CODE - INJECTION POINT: PlayerControllerReduceDurabilityOfEquipmentProc
+PlayerControllerReduceDurabilityOfEquipmentProc - 55                    - push rbp
+PlayerController:ReduceDurabilityOfEquipment+1  - 48 8B EC              - mov rbp,rsp
+PlayerController:ReduceDurabilityOfEquipment+4  - 48 83 EC 60           - sub rsp,60
+PlayerController:ReduceDurabilityOfEquipment+8  - 48 89 7D F0           - mov [rbp-10],rdi
+PlayerController:ReduceDurabilityOfEquipment+c  - 4C 89 7D F8           - mov [rbp-08],r15
+PlayerController:ReduceDurabilityOfEquipment+10 - 4C 8B F9              - mov r15,rcx
+PlayerController:ReduceDurabilityOfEquipment+13 - 48 8B FA              - mov rdi,rdx
+PlayerController:ReduceDurabilityOfEquipment+16 - 4C 89 45 C8           - mov [rbp-38],r8
+PlayerController:ReduceDurabilityOfEquipment+1a - C7 45 D8 00000000     - mov [rbp-28],00000000
+PlayerController:ReduceDurabilityOfEquipment+21 - C7 45 DC 00000000     - mov [rbp-24],00000000
+PlayerController:ReduceDurabilityOfEquipment+28 - C7 45 E0 00000000     - mov [rbp-20],00000000
+PlayerController:ReduceDurabilityOfEquipment+2f - C7 45 E4 00000000     - mov [rbp-1C],00000000
+PlayerController:ReduceDurabilityOfEquipment+36 - 48 8B D5              - mov rdx,rbp
+PlayerController:ReduceDurabilityOfEquipment+39 - 48 83 C2 D8           - add rdx,-28
+PlayerController:ReduceDurabilityOfEquipment+3d - 48 8B CF              - mov rcx,rdi
+PlayerController:ReduceDurabilityOfEquipment+40 - 45 33 C0              - xor r8d,r8d
+PlayerController:ReduceDurabilityOfEquipment+43 - 83 3F 00              - cmp dword ptr [rdi],00
+PlayerController:ReduceDurabilityOfEquipment+46 - 49 BB C5717A7484020000 - mov r11,00000284747A71C5
+PlayerController:ReduceDurabilityOfEquipment+50 - 41 FF D3              - call r11
+PlayerController:ReduceDurabilityOfEquipment+53 - 48 63 45 D8           - movsxd  rax,dword ptr [rbp-28]
 
-GameAssembly.dll+28620AB: 48 8B 6C 24 50        - mov rbp,[rsp+50]
-GameAssembly.dll+28620B0: 48 83 C4 30           - add rsp,30
-GameAssembly.dll+28620B4: 5F                    - pop rdi
-GameAssembly.dll+28620B5: C3                    - ret
-GameAssembly.dll+28620B6: E8 15 72 CD FD        - call GameAssembly.mono_method_get_class+A0
-GameAssembly.dll+28620BB: CC                    - int 3
-GameAssembly.dll+28620BC: CC                    - int 3
-GameAssembly.dll+28620BD: CC                    - int 3
-GameAssembly.dll+28620BE: CC                    - int 3
-GameAssembly.dll+28620BF: CC                    - int 3
-// ---------- INJECTING HERE ----------
-PlayerControllerReduceDurabilityOfEquipmentProc: 48 89 5C 24 10        - mov [rsp+10],rbx
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+28620C5: 48 89 6C 24 18        - mov [rsp+18],rbp
-GameAssembly.dll+28620CA: 57                    - push rdi
-GameAssembly.dll+28620CB: 48 83 EC 40           - sub rsp,40
-GameAssembly.dll+28620CF: 80 3D 9D 2D 01 02 00  - cmp byte ptr [GameAssembly.dll+4874E73],00
-GameAssembly.dll+28620D6: 41 8B E8              - mov ebp,r8d
-GameAssembly.dll+28620D9: 48 8B FA              - mov rdi,rdx
-GameAssembly.dll+28620DC: 48 8B D9              - mov rbx,rcx
-GameAssembly.dll+28620DF: 75 13                 - jne GameAssembly.dll+28620F4
-GameAssembly.dll+28620E1: 48 8D 0D 18 2C DF 01  - lea rcx,[GameAssembly.dll+4654D00]
-GameAssembly.dll+28620E8: E8 43 70 CD FD        - call GameAssembly.il2cpp_get_exception_argument_null+2B0
 }
 </AssemblerScript>
         </CheatEntry>
@@ -490,14 +415,14 @@ GameAssembly.dll+28620E8: E8 43 70 CD FD        - call GameAssembly.il2cpp_get_e
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
-  Date   : 2022-05-10
+  Date   : 2023-09-24
   Author : bbfox @https://opencheattables.com/
 }
 
 [ENABLE]
 
 
-aobscanregion(INJECT_PLAYER_DATA,PlayerControllerManagedUpdateProc+400,PlayerControllerManagedUpdateProc+680,44 39 A6 ?? ?? ?? 00 7F 61 48 8B 8E ?? ?? ?? 00 48 85 C9 0F 84) // should be unique
+aobscanregion(INJECT_PLAYER_DATA,PlayerControllerManagedUpdateProc+1000,PlayerControllerManagedUpdateProc+11F0,48 8B 86 ?? ?? ?? ?? 48 8B C8 83 38 00 49 BB ?? ?? ?? ?? ?? ?? ?? ?? 41 FF D3 85 C0) // should be unique
 alloc(newmem,$1000,INJECT_PLAYER_DATA)
 
 alloc(INJECT_PLAYER_DATAo, 7)
@@ -511,23 +436,11 @@ INJECT_PLAYER_DATAo:
   readmem(INJECT_PLAYER_DATA, 7)
 
 newmem:
-  push r13
-  push rax
-
-  lea rax, [INJECT_PLAYER_DATAo+3]
-  mov eax, [rax]
-  lea r13, [rsi+eax]
-  mov [i_char_localHealth_addr], r13
-
-  pop rax
-  pop r13
-
-  //mov [i_char_base_addr], rdi
+  mov [i_char_localHealth_addr], rsi
 
 code:
-  //xxxxxxcmp [rdi+00000A20],esi
-  //cmp [rsi+00000AE0],r12d
-  reassemble(INJECT_PLAYER_DATA)
+  mov rax,[rsi+00000290]
+  //reassemble(INJECT_PLAYER_DATA)
   jmp return
 
 align 10 cc
@@ -549,7 +462,7 @@ registersymbol(i_char_localHealth_addr)
 [DISABLE]
 
 INJECT_PLAYER_DATA:
-  //db 44 39 B7 20 0A 00 00
+  //db 48 8B 86 90 02 00 00
   readmem(INJECT_PLAYER_DATAo, 7)
 
 unregistersymbol(*)
@@ -558,31 +471,31 @@ dealloc(newmem)
 dealloc(INJECT_PLAYER_DATAo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2AB4934
+// ORIGINAL CODE - INJECTION POINT: PlayerController:ManagedUpdate+10f1
 
-GameAssembly.dll+2AB4901: E8 5A 1B AD FD           - call GameAssembly.il2cpp_runtime_class_init
-GameAssembly.dll+2AB4906: 4C 8B 0D 23 13 F2 01     - mov r9,[GameAssembly.dll+49D5C30]
-GameAssembly.dll+2AB490D: 4C 8B C7                 - mov r8,rdi
-GameAssembly.dll+2AB4910: 49 8B D7                 - mov rdx,r15
-GameAssembly.dll+2AB4913: 48 8B CB                 - mov rcx,rbx
-GameAssembly.dll+2AB4916: E8 A5 DD 14 FE           - call GameAssembly.dll+C026C0
-GameAssembly.dll+2AB491B: 4C 8B BC 24 60 01 00 00  - mov r15,[rsp+00000160]
-GameAssembly.dll+2AB4923: 33 C0                    - xor eax,eax
-GameAssembly.dll+2AB4925: 48 89 86 60 04 00 00     - mov [rsi+00000460],rax
-GameAssembly.dll+2AB492C: 4C 8B B4 24 68 01 00 00  - mov r14,[rsp+00000168]
+PlayerController:ManagedUpdate+10b7: 48 05 C8 FD FF FF              - add rax,FFFFFFFFFFFFFDC8
+PlayerController:ManagedUpdate+10bd: 48 8B 8D B8 FD FF FF           - mov rcx,[rbp-00000248]
+PlayerController:ManagedUpdate+10c4: 48 89 8D C8 FD FF FF           - mov [rbp-00000238],rcx
+PlayerController:ManagedUpdate+10cb: 48 63 8D C0 FD FF FF           - movsxd  rcx,dword ptr [rbp-00000240]
+PlayerController:ManagedUpdate+10d2: 89 8D D0 FD FF FF              - mov [rbp-00000230],ecx
+PlayerController:ManagedUpdate+10d8: 48 8D 08                       - lea rcx,[rax]
+PlayerController:ManagedUpdate+10db: 66 66 90                       - nop 3
+PlayerController:ManagedUpdate+10de: 49 BB A0 38 85 74 84 02 00 00  - mov r11,Direction:FromVector
+PlayerController:ManagedUpdate+10e8: 41 FF D3                       - call r11
+PlayerController:ManagedUpdate+10eb: 89 85 40 FA FF FF              - mov [rbp-000005C0],eax
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+2AB4934: 44 39 A6 E0 0A 00 00     - cmp [rsi+00000AE0],r12d
+PlayerController:ManagedUpdate+10f1: 48 8B 86 90 02 00 00           - mov rax,[rsi+00000290]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+2AB493B: 7F 61                    - jg GameAssembly.dll+2AB499E
-GameAssembly.dll+2AB493D: 48 8B 8E 18 03 00 00     - mov rcx,[rsi+00000318]
-GameAssembly.dll+2AB4944: 48 85 C9                 - test rcx,rcx
-GameAssembly.dll+2AB4947: 0F 84 AC 15 00 00        - je GameAssembly.dll+2AB5EF9
-GameAssembly.dll+2AB494D: 33 D2                    - xor edx,edx
-GameAssembly.dll+2AB494F: E8 1C 15 FA FF           - call PlayerState.State.get_isActive
-GameAssembly.dll+2AB4954: 84 C0                    - test al,al
-GameAssembly.dll+2AB4956: 75 46                    - jne GameAssembly.dll+2AB499E
-GameAssembly.dll+2AB4958: 48 8B 8E E8 02 00 00     - mov rcx,[rsi+000002E8]
-GameAssembly.dll+2AB495F: 48 85 C9                 - test rcx,rcx
+PlayerController:ManagedUpdate+10f8: 48 8B C8                       - mov rcx,rax
+PlayerController:ManagedUpdate+10fb: 83 38 00                       - cmp dword ptr [rax],00
+PlayerController:ManagedUpdate+10fe: 49 BB 10 46 7B 74 84 02 00 00  - mov r11,PlayerState.State:get_isActive
+PlayerController:ManagedUpdate+1108: 41 FF D3                       - call r11
+PlayerController:ManagedUpdate+110b: 85 C0                          - test eax,eax
+PlayerController:ManagedUpdate+110d: 0F 84 25 00 00 00              - je PlayerController:ManagedUpdate+1138
+PlayerController:ManagedUpdate+1113: 48 8B 86 90 02 00 00           - mov rax,[rsi+00000290]
+PlayerController:ManagedUpdate+111a: 48 8B C8                       - mov rcx,rax
+PlayerController:ManagedUpdate+111d: 83 38 00                       - cmp dword ptr [rax],00
+PlayerController:ManagedUpdate+1120: 48 8D 64 24 00                 - lea rsp,[rsp+00]
 }
 </AssemblerScript>
           <CheatEntries>
@@ -594,7 +507,7 @@ GameAssembly.dll+2AB495F: 48 85 C9                 - test rcx,rcx
               <VariableType>4 Bytes</VariableType>
               <Address>i_char_localHealth_addr</Address>
               <Offsets>
-                <Offset>0</Offset>
+                <Offset>AA0</Offset>
               </Offsets>
             </CheatEntry>
             <CheatEntry>
@@ -605,7 +518,7 @@ GameAssembly.dll+2AB495F: 48 85 C9                 - test rcx,rcx
               <VariableType>Float</VariableType>
               <Address>i_char_localHealth_addr</Address>
               <Offsets>
-                <Offset>-680</Offset>
+                <Offset>7A0</Offset>
               </Offsets>
             </CheatEntry>
           </CheatEntries>
@@ -803,12 +716,12 @@ GameAssembly.dll+2857FEA - 0F5B C9               - cvtdq2ps xmm1,xmm1
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
-  Date   : 2022-03-30
+  Date   : 2023-09-24
   Author : bbfox @https://opencheattables.com/
 }
 
 [ENABLE]
-aobscanregion(INJECT_FASTER_HP_ADD,PlayerControllerHealPlayerProc+100,PlayerControllerHealPlayerProc+600,48 8B 17 03 DE) // should be unique
+aobscanregion(INJECT_FASTER_HP_ADD,PlayerControllerHealPlayerProc+200,PlayerControllerHealPlayerProc+600,48 63 87 A0 0A 00 00 03) // should be unique
 
 alloc(newmem,$1000,INJECT_FASTER_HP_ADD)
 
@@ -823,8 +736,7 @@ newmem:
   cvtss2si esi, xmm15
 
 code:
-  mov rdx,[rdi]
-  add ebx,esi
+  movsxd  rax,dword ptr [rdi+00000AA0]
   jmp return
 
 align 10 cc
@@ -834,6 +746,8 @@ align 10 cc
 
 INJECT_FASTER_HP_ADD:
   jmp newmem
+  nop 2
+
 return:
 registersymbol(vf_addhp_multi)
 registersymbol(INJECT_FASTER_HP_ADD)
@@ -841,62 +755,37 @@ registersymbol(INJECT_FASTER_HP_ADD)
 [DISABLE]
 
 INJECT_FASTER_HP_ADD:
-  db 48 8B 17 03 DE
+  db 48 63 87 A0 0A 00 00 03
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+285A68C
+// ORIGINAL CODE - INJECTION POINT: PlayerController:HealPlayer+22a
 
-GameAssembly.dll+285A626 - E8 2597DAFF           - call PlacementHandler.get_world
-GameAssembly.dll+285A62B - 48 8B 0D 264DD801     - mov rcx,[GameAssembly.dll+45DF358]
-GameAssembly.dll+285A632 - 48 8B E8              - mov rbp,rax
-GameAssembly.dll+285A635 - 83 B9 E0000000 00     - cmp dword ptr [rcx+000000E0],00
-GameAssembly.dll+285A63C - 75 05                 - jne GameAssembly.dll+285A643
-GameAssembly.dll+285A63E - E8 2DEDCDFD           - call GameAssembly.il2cpp_runtime_class_init
-GameAssembly.dll+285A643 - 45 33 C9              - xor r9d,r9d
-GameAssembly.dll+285A646 - 4C 8B C5              - mov r8,rbp
-GameAssembly.dll+285A649 - 48 8B D3              - mov rdx,rbx
-GameAssembly.dll+285A64C - 41 8D 49 1E           - lea ecx,[r9+1E]
-GameAssembly.dll+285A650 - E8 6BAEDCFF           - call EntityUtility.GetConditionEffectValue
-GameAssembly.dll+285A655 - 85 C0                 - test eax,eax
-GameAssembly.dll+285A657 - 75 2A                 - jne GameAssembly.dll+285A683
-GameAssembly.dll+285A659 - 66 0F6E C6            - movd xmm0,esi
-GameAssembly.dll+285A65D: 33 D2                    - xor edx,edx
-GameAssembly.dll+285A65F: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
-GameAssembly.dll+285A662: F3 0F 59 05 4E E5 F1 00  - mulss xmm0,[GameAssembly.dll+3778BB8]
-GameAssembly.dll+285A66A: E8 61 14 B7 FF           - call GameAssembly.dll+23CBAD0
-GameAssembly.dll+285A66F: F3 0F 10 0D 6D E5 F1 00  - movss xmm1,[GameAssembly.dll+3778BE4]
-GameAssembly.dll+285A677: 45 33 C0                 - xor r8d,r8d
-GameAssembly.dll+285A67A: E8 E1 52 14 FE           - call Unity.Mathematics.math.max
-GameAssembly.dll+285A67F: F3 0F 2C F0              - cvttss2si esi,xmm0
-GameAssembly.dll+285A683: 8B 9F C8 09 00 00        - mov ebx,[rdi+000009C8]
-GameAssembly.dll+285A689: 48 8B CF                 - mov rcx,rdi
+PlayerController:HealPlayer+200: F2 0F 5A E8           - cvtsd2ss xmm5,xmm0
+PlayerController:HealPlayer+204: F3 0F 11 6D 84        - movss [rbp-7C],xmm5
+PlayerController:HealPlayer+209: EB 12                 - jmp PlayerController:HealPlayer+21d
+PlayerController:HealPlayer+20b: F3 0F 10 45 8C        - movss xmm0,[rbp-74]
+PlayerController:HealPlayer+210: F3 0F 5A C0           - cvtss2sd xmm0,xmm0
+PlayerController:HealPlayer+214: F2 0F 5A E8           - cvtsd2ss xmm5,xmm0
+PlayerController:HealPlayer+218: F3 0F 11 6D 84        - movss [rbp-7C],xmm5
+PlayerController:HealPlayer+21d: F3 0F 10 45 84        - movss xmm0,[rbp-7C]
+PlayerController:HealPlayer+222: F3 0F 5A C0           - cvtss2sd xmm0,xmm0
+PlayerController:HealPlayer+226: F2 0F 2C F0           - cvttsd2si esi,xmm0
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+285A68C: 48 8B 17                 - mov rdx,[rdi]
+PlayerController:HealPlayer+22a: 48 63 87 A0 0A 00 00  - movsxd  rax,dword ptr [rdi+00000AA0]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+285A68F: 03 DE                    - add ebx,esi
-GameAssembly.dll+285A691: 89 9F C8 09 00 00        - mov [rdi+000009C8],ebx
-GameAssembly.dll+285A697: 48 8B 82 88 02 00 00     - mov rax,[rdx+00000288]
-GameAssembly.dll+285A69E: 48 8B 92 90 02 00 00     - mov rdx,[rdx+00000290]
-GameAssembly.dll+285A6A5: FF D0                    - call rax
-GameAssembly.dll+285A6A7: F2 0F 10 87 38 01 00 00  - movsd xmm0,[rdi+00000138]
-GameAssembly.dll+285A6AF: 48 8D 54 24 30           - lea rdx,[rsp+30]
-GameAssembly.dll+285A6B4: 48 8B AF 70 03 00 00     - mov rbp,[rdi+00000370]
-GameAssembly.dll+285A6BB: 48 8D 4C 24 40           - lea rcx,[rsp+40]
-GameAssembly.dll+285A6C0: 3B D8                    - cmp ebx,eax
-GameAssembly.dll+285A6C2 - F2 0F11 44 24 30      - movsd [rsp+30],xmm0
-GameAssembly.dll+285A6C8 - 8B F0                 - mov esi,eax
-GameAssembly.dll+285A6CA - 8B 87 40010000        - mov eax,[rdi+00000140]
-GameAssembly.dll+285A6D0 - 0F4C F3               - cmovl esi,ebx
-GameAssembly.dll+285A6D3 - 89 44 24 38           - mov [rsp+38],eax
-GameAssembly.dll+285A6D7 - 48 8B 9F A0000000     - mov rbx,[rdi+000000A0]
-GameAssembly.dll+285A6DE - 45 33 C0              - xor r8d,r8d
-GameAssembly.dll+285A6E1 - 89 B7 C8090000        - mov [rdi+000009C8],esi
-GameAssembly.dll+285A6E7 - E8 642E9700           - call Unity.Mathematics.float3.get_xyz
-GameAssembly.dll+285A6EC - 48 85 ED              - test rbp,rbp
-
+PlayerController:HealPlayer+231: 03 C6                 - add eax,esi
+PlayerController:HealPlayer+233: 89 87 A0 0A 00 00     - mov [rdi+00000AA0],eax
+PlayerController:HealPlayer+239: 48 63 87 A0 0A 00 00  - movsxd  rax,dword ptr [rdi+00000AA0]
+PlayerController:HealPlayer+240: 48 89 85 68 FF FF FF  - mov [rbp-00000098],rax
+PlayerController:HealPlayer+247: 48 8B CF              - mov rcx,rdi
+PlayerController:HealPlayer+24a: 48 8B 07              - mov rax,[rdi]
+PlayerController:HealPlayer+24d: FF 90 C8 01 00 00     - call qword ptr [rax+000001C8]
+PlayerController:HealPlayer+253: 48 8B 8D 68 FF FF FF  - mov rcx,[rbp-00000098]
+PlayerController:HealPlayer+25a: 3B C8                 - cmp ecx,eax
+PlayerController:HealPlayer+25c: 48 0F 4C C1           - cmovl rax,rcx
 }
 </AssemblerScript>
           <CheatEntries>
@@ -912,7 +801,7 @@ GameAssembly.dll+285A6EC - 48 85 ED              - test rbp,rbp
         </CheatEntry>
         <CheatEntry>
           <ID>156</ID>
-          <Description>"Spend skill point everywhere+"</Description>
+          <Description>"(not working) Spend skill point everywhere+"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
@@ -999,12 +888,12 @@ GameAssembly.dll+26E240B: 45 33 C0              - xor r8d,r8d
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
-  Date   : 2022-03-13
+  Date   : 2023-09-24
   Author : bbfox @https://opencheattables.com/
 }
 
 [ENABLE]
-aobscanregion(INJECT_SKILL_XP_MULTI,PlayerControllerAddSkillProc+120,PlayerControllerAddSkillProc+360,45 8B C7 8B D7 48 8B C8) // should be unique
+aobscanregion(INJECT_SKILL_XP_MULTI,PlayerControllerAddSkillProc+110,PlayerControllerAddSkillProc+230,48 8B C8 48 8B D7) // should be unique
 alloc(newmem,$1000,INJECT_SKILL_XP_MULTI)
 
 label(code)
@@ -1012,17 +901,20 @@ label(return)
 label(vf_skill_xp_multi)
 
 newmem:
-  // rdx = skill
-  // r14d = xp
+  mov rcx, dword ptr [rbp-00000250]
+
   vmovss xmm14, [vf_skill_xp_multi]
-  cvtsi2ss xmm15, r15d
+  cvtsi2ss xmm15, rcx
   vmulss xmm15, xmm15, xmm14
-  cvtss2si r15d, xmm15
+  cvtss2si rcx, xmm15
+
+  mov dword ptr [rbp-00000250], rcx
+
 
 
 code:
-  mov r8d,r15d
-  mov edx,edi
+  mov rcx,rax
+  mov rdx,rdi
   jmp return
 
 align 10 cc
@@ -1033,6 +925,7 @@ align 10 cc
 
 INJECT_SKILL_XP_MULTI:
   jmp newmem
+  nop
 return:
 
 registersymbol(vf_skill_xp_multi)
@@ -1041,37 +934,37 @@ registersymbol(INJECT_SKILL_XP_MULTI)
 [DISABLE]
 
 INJECT_SKILL_XP_MULTI:
-  db 45 8B C7 8B D7
+  db 48 8B C8 48 8B D7
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2849446
+// ORIGINAL CODE - INJECTION POINT: PlayerController:AddSkill+12c
 
-GameAssembly.dll+2849422: 45 8B C6           - mov r8d,r14d
-GameAssembly.dll+2849425: 8B D7              - mov edx,edi
-GameAssembly.dll+2849427: E8 24 C0 BF FF     - call SkillData.GetConditionDataForSkill
-GameAssembly.dll+284942C: 33 C9              - xor ecx,ecx
-GameAssembly.dll+284942E: 0F 10 00           - movups xmm0,[rax]
-GameAssembly.dll+2849431: 0F 11 45 E7        - movups [rbp-19],xmm0
-GameAssembly.dll+2849435: E8 46 6A F8 FF     - call Manager.get_saves
-GameAssembly.dll+284943A: 48 85 C0           - test rax,rax
-GameAssembly.dll+284943D: 0F 84 85 05 00 00  - je GameAssembly.dll+28499C8
-GameAssembly.dll+2849443: 45 33 C9           - xor r9d,r9d
+PlayerController:AddSkill+fd: 48 8B CD                       - mov rcx,rbp
+PlayerController:AddSkill+100: 48 81 C1 D0 FD FF FF           - add rcx,FFFFFFFFFFFFFDD0
+PlayerController:AddSkill+107: 48 8B D7                       - mov rdx,rdi
+PlayerController:AddSkill+10a: 4D 8B C5                       - mov r8,r13
+PlayerController:AddSkill+10d: 90                             - nop
+PlayerController:AddSkill+10e: 49 BB 70 19 78 74 84 02 00 00  - mov r11,SkillExtensions:GetConditionDataForSkill
+PlayerController:AddSkill+118: 41 FF D3                       - call r11
+PlayerController:AddSkill+11b: 48 B8 C0 8B D0 25 83 02 00 00  - mov rax,0000028325D08BC0
+PlayerController:AddSkill+125: 48 8B 00                       - mov rax,[rax]
+PlayerController:AddSkill+128: 48 8B 40 48                    - mov rax,[rax+48]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+2849446: 45 8B C7           - mov r8d,r15d
+PlayerController:AddSkill+12c: 48 8B C8                       - mov rcx,rax
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+2849449: 8B D7              - mov edx,edi
-GameAssembly.dll+284944B: 48 8B C8           - mov rcx,rax
-GameAssembly.dll+284944E: E8 3D 9D 04 00     - call SaveManagerAddSkillValueProc
-GameAssembly.dll+2849453: 33 C9              - xor ecx,ecx
-GameAssembly.dll+2849455: E8 26 6A F8 FF     - call Manager.get_saves
-GameAssembly.dll+284945A: 48 85 C0           - test rax,rax
-GameAssembly.dll+284945D: 0F 84 65 05 00 00  - je GameAssembly.dll+28499C8
-GameAssembly.dll+2849463: 45 33 C0           - xor r8d,r8d
-GameAssembly.dll+2849466: 8B D7              - mov edx,edi
-GameAssembly.dll+2849468: 48 8B C8           - mov rcx,rax
+PlayerController:AddSkill+12f: 48 8B D7                       - mov rdx,rdi
+PlayerController:AddSkill+132: 4C 63 85 B0 FD FF FF           - movsxd  r8,dword ptr [rbp-00000250]
+PlayerController:AddSkill+139: 83 38 00                       - cmp dword ptr [rax],00
+PlayerController:AddSkill+13c: 66 90                          - nop 2
+PlayerController:AddSkill+13e: 49 BB C0 7D 87 74 84 02 00 00  - mov r11,SaveManagerAddSkillValueProc
+PlayerController:AddSkill+148: 41 FF D3                       - call r11
+PlayerController:AddSkill+14b: 48 B8 C0 8B D0 25 83 02 00 00  - mov rax,0000028325D08BC0
+PlayerController:AddSkill+155: 48 8B 00                       - mov rax,[rax]
+PlayerController:AddSkill+158: 48 8B 40 48                    - mov rax,[rax+48]
+PlayerController:AddSkill+15c: 48 8B C8                       - mov rcx,rax
 }
 </AssemblerScript>
           <CheatEntries>
@@ -1097,7 +990,7 @@ GameAssembly.dll+2849468: 48 8B C8           - mov rcx,rax
 }
 
 [ENABLE]
-aobscanregion(INJECT_DAMAGE_MULTI,EntityUtilityGetDamageInfoProc+380,EntityUtilityGetDamageInfoProc+1380,44 8B 4D 60 48 8D 4D B0) // should be unique
+aobscanregion(INJECT_DAMAGE_MULTI,EntityUtilityGetDamageInfoProc+550,EntityUtilityGetDamageInfoProc+650,48 89 4D C8 48 8D 08) // should be unique
 
 alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
 
@@ -1106,19 +999,16 @@ label(return)
 label(vf_damage_multi)
 
 newmem:
-  push r13
-  movd xmm15, [vf_damage_multi]
-  //movd xmm14, r9d
-  mov r13d,[rbp+60]
-  cvtsi2ss xmm14, r13d
-  mulss xmm15, xmm14
-  cvtss2si r13d, xmm15
-  mov [rbp+60], r13d
-  pop r13
+
+  vmovss xmm15, [vf_damage_multi]
+  cvtsi2ss xmm14, r9
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si r9, xmm15
+
 
 code:
-  mov r9d,[rbp+60]
-  lea rcx,[rbp-50]
+  mov [rbp-38],rcx
+  lea rcx,[rax]
   jmp return
 
 
@@ -1129,7 +1019,7 @@ align 10 cc
   db 2F 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
 INJECT_DAMAGE_MULTI:
   jmp newmem
-  nop 3
+  nop 2
 return:
 registersymbol(vf_damage_multi)
 registersymbol(INJECT_DAMAGE_MULTI)
@@ -1137,38 +1027,38 @@ registersymbol(INJECT_DAMAGE_MULTI)
 [DISABLE]
 
 INJECT_DAMAGE_MULTI:
-  db 44 8B 4D 60 48 8D 4D B0
+  db 48 89 4D C8 48 8D 08
 
 unregistersymbol(*)
 dealloc(newmem)
 
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2875904
+// ORIGINAL CODE - INJECTION POINT: EntityUtility:GetDamageInfo+56b
 
-GameAssembly.dll+28758D2: 48 89 44 24 60        - mov [rsp+60],rax
-GameAssembly.dll+28758D7: 0F B6 85 08 01 00 00  - movzx eax,byte ptr [rbp+00000108]
-GameAssembly.dll+28758DE: 4C 89 74 24 58        - mov [rsp+58],r14
-GameAssembly.dll+28758E3: 48 89 7C 24 50        - mov [rsp+50],rdi
-GameAssembly.dll+28758E8: 88 44 24 48           - mov [rsp+48],al
-GameAssembly.dll+28758EC: 44 88 7C 24 40        - mov [rsp+40],r15b
-GameAssembly.dll+28758F1: 0F 29 4D E0           - movaps [rbp-20],xmm1
-GameAssembly.dll+28758F5: 0F 29 45 B0           - movaps [rbp-50],xmm0
-GameAssembly.dll+28758F9: 0F B6 45 68           - movzx eax,byte ptr [rbp+68]
-GameAssembly.dll+28758FD: 4C 8D 85 18 01 00 00  - lea r8,[rbp+00000118]
+EntityUtility:GetDamageInfo+543: 48 89 4D B0                    - mov [rbp-50],rcx
+EntityUtility:GetDamageInfo+547: 48 8B 8D 58 FF FF FF           - mov rcx,[rbp-000000A8]
+EntityUtility:GetDamageInfo+54e: 48 89 4D B8                    - mov [rbp-48],rcx
+EntityUtility:GetDamageInfo+552: 48 8D 10                       - lea rdx,[rax]
+EntityUtility:GetDamageInfo+555: 48 8B 4D 30                    - mov rcx,[rbp+30]
+EntityUtility:GetDamageInfo+559: 48 8B C5                       - mov rax,rbp
+EntityUtility:GetDamageInfo+55c: 48 83 C0 C0                    - add rax,-40
+EntityUtility:GetDamageInfo+560: 4C 8B 11                       - mov r10,[rcx]
+EntityUtility:GetDamageInfo+563: 4C 89 55 C0                    - mov [rbp-40],r10
+EntityUtility:GetDamageInfo+567: 48 8B 49 08                    - mov rcx,[rcx+08]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+2875904: 44 8B 4D 60           - mov r9d,[rbp+60]
+EntityUtility:GetDamageInfo+56b: 48 89 4D C8                    - mov [rbp-38],rcx
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+2875908: 48 8D 4D B0           - lea rcx,[rbp-50]
-GameAssembly.dll+287590C: 88 54 24 38           - mov [rsp+38],dl
-GameAssembly.dll+2875910: 48 8D 55 F0           - lea rdx,[rbp-10]
-GameAssembly.dll+2875914: 88 5C 24 30           - mov [rsp+30],bl
-GameAssembly.dll+2875918: 44 88 6C 24 28        - mov [rsp+28],r13b
-GameAssembly.dll+287591D: 88 44 24 20           - mov [rsp+20],al
-GameAssembly.dll+2875921: E8 FA B9 FF FF        - call EntityUtility.CalculateDamage
-GameAssembly.dll+2875926: 48 8B 8D 88 00 00 00  - mov rcx,[rbp+00000088]
-GameAssembly.dll+287592D: 89 01                 - mov [rcx],eax
-GameAssembly.dll+287592F: 2B 45 90              - sub eax,[rbp-70]
+EntityUtility:GetDamageInfo+56f: 48 8D 08                       - lea rcx,[rax]
+EntityUtility:GetDamageInfo+572: 48 8D 6D 00                    - lea rbp,[rbp+00]
+EntityUtility:GetDamageInfo+576: 49 BB 80 69 F0 74 84 02 00 00  - mov r11,EntityUtility:CalculateDamage
+EntityUtility:GetDamageInfo+580: 41 FF D3                       - call r11
+EntityUtility:GetDamageInfo+583: 4C 8B E8                       - mov r13,rax
+EntityUtility:GetDamageInfo+586: 44 89 2F                       - mov [rdi],r13d
+EntityUtility:GetDamageInfo+589: 48 63 85 E8 FE FF FF           - movsxd  rax,dword ptr [rbp-00000118]
+EntityUtility:GetDamageInfo+590: 49 8B CD                       - mov rcx,r13
+EntityUtility:GetDamageInfo+593: 2B C8                          - sub ecx,eax
+EntityUtility:GetDamageInfo+595: 33 C0                          - xor eax,eax
 }
 </AssemblerScript>
           <CheatEntries>
@@ -1189,7 +1079,7 @@ GameAssembly.dll+287592F: 2B 45 90              - sub eax,[rbp-70]
         </CheatEntry>
         <CheatEntry>
           <ID>166</ID>
-          <Description>"Monster damage to player"</Description>
+          <Description>"(not working) Monster damage to player"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
@@ -1328,7 +1218,7 @@ GameAssembly.dll+26DA35E: E8 3D F8 3E 00              - call PlayerController.ge
         </CheatEntry>
         <CheatEntry>
           <ID>259</ID>
-          <Description>"Fast fishing - fish bite"</Description>
+          <Description>"(not working) Fast fishing - fish bite"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version:
@@ -1406,7 +1296,7 @@ GameAssembly.dll+21EFA7A: EB 07                 - jmp GameAssembly.dll+21EFA83
         </CheatEntry>
         <CheatEntry>
           <ID>257</ID>
-          <Description>"Fast fishing - can ignore red fishing line"</Description>
+          <Description>"(not working) Fast fishing - can ignore red fishing line"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version:
@@ -1506,7 +1396,7 @@ GameAssembly.dll+2A382DA: 33 C9                    - xor ecx,ecx
         </CheatEntry>
         <CheatEntry>
           <ID>258</ID>
-          <Description>"Fast fish struggle success"</Description>
+          <Description>"(not working) Fast fish struggle success"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version:
@@ -1576,17 +1466,11 @@ GameAssembly.dll+2A37D6A: 0F 84 22 09 00 00        - je GameAssembly.dll+2A38692
 }
 </AssemblerScript>
         </CheatEntry>
-        <CheatEntry>
-          <ID>640</ID>
-          <Description>"_not working"</Description>
-          <Options moHideChildren="1"/>
-          <GroupHeader>1</GroupHeader>
-        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>501</ID>
-      <Description>"*** Core Keeper 0.6.0.3-3a54 EA  /  https://opencheattables.com  /  CE 7.5+ ***"</Description>
+      <Description>"*** Core Keeper 0.6.3.2-3228 EA  /  https://opencheattables.com  /  CE 7.5+ ***"</Description>
       <Options moHideChildren="1"/>
       <Color>800080</Color>
       <GroupHeader>1</GroupHeader>
