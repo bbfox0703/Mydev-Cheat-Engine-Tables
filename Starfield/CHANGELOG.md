@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/09/27
+1. Revise scripts
+
 ## 2023/09/24
 1. fixed shield script
 
