@@ -1363,6 +1363,9 @@ label(i_base_dship_design_data_addr3)
 label(i_base_shd_bonus_addr)
 label(i_base_eng_bonus_addr)
 label(vf_def_bvalue)
+label(i_shield_now)
+label(is_auto_lock_shield)
+
 newmem:
   pushfq
   push r15
@@ -1390,30 +1393,58 @@ stage1: // get shield value
   mov ecx,[rax+08]
 
   cmp qword ptr [i_base_dship_design_data_addr1], rax
-  je stage2
+  //je stage2
+  je chk_is_shield
 
   cmp qword ptr [i_base_dship_design_data_addr1], 0
+  //jne write2
   jne write2
   mov [i_base_dship_design_data_addr1], rax
   jmp stage2
 
 write2:
   cmp qword ptr [i_base_dship_design_data_addr2], rax
-  je stage2
+  //je stage2
+  je chk_is_shield
 
   cmp qword ptr [i_base_dship_design_data_addr2], 0
+  //jne write3
   jne write3
   mov [i_base_dship_design_data_addr2], rax
   jmp stage2
 
 write3:
   cmp qword ptr [i_base_dship_design_data_addr3], rax
-  je stage2
+  //je stage2
+  je chk_is_shield
 
   cmp qword ptr [i_base_dship_design_data_addr3], 0
+  //jne stage2
   jne stage2
   mov [i_base_dship_design_data_addr3], rax
-  //jmp stage2
+  jmp stage2
+
+chk_is_shield:
+  cmp dword ptr [is_auto_lock_shield], 1
+  jne stage2
+  mov r14, [r15+48]
+  test r14, r14
+  jz stage2
+
+  mov r14d, [r14+1C]
+  cmp r14d, 6548646C //ShieldHealth
+  jne stage2
+
+  vmovss xmm15, [rax+8]
+  vucomiss xmm15, [i_shield_now]
+  jae update_shield_value_record
+  vmovss xmm15, [i_shield_now]
+  vmovss [rax+8], xmm15
+  jmp endp
+
+update_shield_value_record:
+  vmovss [i_shield_now], xmm15
+  jmp endp
 
 stage2: // get bonus
   mov r15, [rax]
@@ -1482,7 +1513,11 @@ align 10 cc
   i_base_eng_bonus_addr:
   dq 0
   vf_def_bvalue:
-  dd (float)300000
+  dd (float)30000
+  i_shield_now:
+  dd 0
+  is_auto_lock_shield:
+  dd 1
 
 
 INJECT_GET_SHIP_INFO:
@@ -1496,6 +1531,8 @@ registersymbol(i_base_dship_design_data_addr3)
 registersymbol(i_base_shd_bonus_addr)
 registersymbol(i_base_eng_bonus_addr)
 registersymbol(vf_def_bvalue)
+registersymbol(i_shield_now)
+registersymbol(is_auto_lock_shield)
 
 [DISABLE]
 
@@ -1535,6 +1572,14 @@ Starfield.exe+24EEB8C: 5D              - pop rbp
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
+                  <ID>1337161061</ID>
+                  <Description>"Watermark"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_shield_now</Address>
+                </CheatEntry>
+                <CheatEntry>
                   <ID>1337160985</ID>
                   <Description>"Usage: modify ship -&gt; Ship builder"</Description>
                   <Color>8000FF</Color>
@@ -1545,6 +1590,17 @@ Starfield.exe+24EEB8C: 5D              - pop rbp
                   <Description>"Disable / enable after change ship"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337161062</ID>
+                  <Description>"Try to auto lock shield?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_auto_lock_shield</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>1337160989</ID>
@@ -2810,39 +2866,14 @@ Starfield.exe+19C61FD: CC           - int 3
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <CheatCodes>
-    <CodeEntry>
-      <Description>Ship info Code :mov ecx,[rax+08]</Description>
-      <AddressString>Starfield.exe+24EEB6C</AddressString>
-      <Before>
-        <Byte>83</Byte>
-        <Byte>C0</Byte>
-        <Byte>10</Byte>
-        <Byte>EB</Byte>
-        <Byte>EE</Byte>
-      </Before>
-      <Actual>
-        <Byte>8B</Byte>
-        <Byte>48</Byte>
-        <Byte>08</Byte>
-      </Actual>
-      <After>
-        <Byte>40</Byte>
-        <Byte>B7</Byte>
-        <Byte>01</Byte>
-        <Byte>89</Byte>
-        <Byte>0E</Byte>
-      </After>
-    </CodeEntry>
-  </CheatCodes>
   <UserdefinedSymbols>
     <SymbolEntry>
       <Name>player_ptr1</Name>
-      <Address>7FF61BA2B3F0</Address>
+      <Address>7FF668BAB3F0</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>pickpocket_const</Name>
-      <Address>7FF61B6803F8</Address>
+      <Address>7FF6688003F8</Address>
     </SymbolEntry>
   </UserdefinedSymbols>
   <Comments>Player Character Ptr AOB: 
