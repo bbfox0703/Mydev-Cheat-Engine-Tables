@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/07
+1. Revise shield script
+
 ## 2023/09/27
 1. Revise scripts
 
