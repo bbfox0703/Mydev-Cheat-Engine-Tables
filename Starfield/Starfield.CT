@@ -1376,6 +1376,9 @@ newmem:
   //cmp r15, [i_base_ship_addr_top]
   //jne stage2
 
+  mov ecx,[rax+08]  // shield value should not be zero
+  test ecx, ecx
+  jz stage2
 
   mov r15, [rax]
   test r15, r15
@@ -1479,6 +1482,8 @@ stage2: // get bonus
   jne write_bonus_1
   cmp r14d, 42444853  // SHDB
   jne test2_2
+  cmp qword ptr [i_base_shd_bonus_addr], 0
+  jne write_bonus_1
   mov [i_base_shd_bonus_addr], rax
 
 write_bonus_1:
@@ -1499,6 +1504,8 @@ test2_2:
 
   cmp r14d, 42474E45  // ENGB
   jne endp
+  cmp qword ptr [i_base_eng_bonus_addr], 0
+  jne write_bonus_2
   mov [i_base_eng_bonus_addr], rax
 
 write_bonus_2:
@@ -1536,7 +1543,7 @@ align 10 cc
   is_auto_lock_shield:
   dd 1
   is_shd_adv_chk:
-  dd 1
+  dd 0
 
 
 INJECT_GET_SHIP_INFO:
@@ -1624,7 +1631,7 @@ Starfield.exe+24EEB8C: 5D              - pop rbp
                 </CheatEntry>
                 <CheatEntry>
                   <ID>1337161063</ID>
-                  <Description>"Advanced condition check?"</Description>
+                  <Description>"More restrict check?"</Description>
                   <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
 </DropDownList>
@@ -2627,10 +2634,300 @@ Starfield.exe+1BB1139: C5 EA 5F C6              - vmaxss xmm0,xmm2,xmm6
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>1337110805</ID>
-      <Description>"inf. ship repair kit via hotkey when use (min = 14)"</Description>
+      <ID>1337160905</ID>
+      <Description>"Carry item weight multiplier"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-09-07
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_WEIGHT_MULTI,Starfield.exe,08 C5 FA 58 47 08) // should be unique
+alloc(newmem,$1000,INJECT_WEIGHT_MULTI)
+
+label(code)
+label(return)
+label(vf_weight_multi)
+
+newmem:
+  //vmovss xmm15, [rdi+08]
+  vmovss xmm14, [vf_weight_multi]
+  vmulss xmm0, xmm14, xmm0
+  //vmovss [rdi+08], xmm15
+  //vaddss xmm0, xmm0, xmm15
+  //vxorps xmm0, xmm0, xmm0
+
+code:
+  vaddss xmm0,xmm0,[rdi+08]
+  jmp return
+align 10 cc
+  vf_weight_multi:
+  dd (float)0.1
+
+INJECT_WEIGHT_MULTI+01:
+  jmp newmem
+return:
+registersymbol(INJECT_WEIGHT_MULTI)
+registersymbol(vf_weight_multi)
+[DISABLE]
+
+INJECT_WEIGHT_MULTI+01:
+  db C5 FA 58 47 08
+
+unregistersymbol(INJECT_WEIGHT_MULTI)
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+1535E31
+
+Starfield.exe+1535E0A: E8 8D 70 31 FF  - call Starfield.exe+84CE9C
+Starfield.exe+1535E0F: 48 8D 54 24 40  - lea rdx,[rsp+40]
+Starfield.exe+1535E14: E8 DB 08 D9 FF  - call Starfield.exe+12C66F4
+Starfield.exe+1535E19: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Starfield.exe+1535E1E: 48 3B 5C 24 40  - cmp rbx,[rsp+40]
+Starfield.exe+1535E23: 74 1C           - je Starfield.exe+1535E41
+Starfield.exe+1535E25: 48 8B 07        - mov rax,[rdi]
+Starfield.exe+1535E28: 48 8B D3        - mov rdx,rbx
+Starfield.exe+1535E2B: 48 8B CF        - mov rcx,rdi
+Starfield.exe+1535E2E: FF 50 08        - call qword ptr [rax+08]
+// ---------- INJECTING HERE ----------
+Starfield.exe+1535E31: C5 FA 58 47 08  - vaddss xmm0,xmm0,[rdi+08]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+1535E36: C5 FA 11 47 08  - vmovss [rdi+08],xmm0
+Starfield.exe+1535E3B: 48 83 C3 28     - add rbx,28
+Starfield.exe+1535E3F: EB DD           - jmp Starfield.exe+1535E1E
+Starfield.exe+1535E41: 48 8B 5C 24 38  - mov rbx,[rsp+38]
+Starfield.exe+1535E46: B8 01 00 00 00  - mov eax,00000001
+Starfield.exe+1535E4B: 48 83 C4 20     - add rsp,20
+Starfield.exe+1535E4F: 5F              - pop rdi
+Starfield.exe+1535E50: C3              - ret 
+Starfield.exe+1535E51: CC              - int 3 
+Starfield.exe+1535E52: CC              - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337160896</ID>
+          <Description>"Usage: Pick up / drop item"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160908</ID>
+          <Description>"You may become overweight if this script doesn't work in future versions!!"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337160906</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_weight_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337160913</ID>
+      <Description>"Manufacturing/ Research Lab: submit one item to fill stock# to nn"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-09-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_LAB_SUMBIT_ITEM,Starfield.exe,03 48 08 48 83 C0 10 EB F2 44 03 C9 49 83 C0 28 EB 9E) // should be unique
+alloc(newmem,$1000,INJECT_LAB_SUMBIT_ITEM)
+
+label(code)
+label(return)
+label(vf_m_fill_to_number)
+label(vf_m_ignore_number)
+
+newmem:
+  mov ecx, [rax+08]
+  cmp ecx, [vf_m_ignore_number]
+  jae code
+  cmp ecx, [vf_m_fill_to_number]
+  jae code
+  mov ecx, [vf_m_fill_to_number]
+  mov [rax+08], ecx
+
+code:
+  add ecx,[rax+08]
+  //mov ecx, 14
+  add rax,10
+  jmp return
+align 10 cc
+  vf_m_fill_to_number:
+  dd #15
+  vf_m_ignore_number:
+  dd #101
+
+INJECT_LAB_SUMBIT_ITEM:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_LAB_SUMBIT_ITEM)
+registersymbol(vf_m_fill_to_number)
+registersymbol(vf_m_ignore_number)
+
+[DISABLE]
+
+INJECT_LAB_SUMBIT_ITEM:
+  db 03 48 08 48 83 C0 10
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+19C61E5
+
+Starfield.exe+19C61CB: 75 06        - jne Starfield.exe+19C61D3
+Starfield.exe+19C61CD: 33 C0        - xor eax,eax
+Starfield.exe+19C61CF: 33 D2        - xor edx,edx
+Starfield.exe+19C61D1: EB 0D        - jmp Starfield.exe+19C61E0
+Starfield.exe+19C61D3: 49 8B 00     - mov rax,[r8]
+Starfield.exe+19C61D6: 48 C1 E2 04  - shl rdx,04
+Starfield.exe+19C61DA: 48 03 D0     - add rdx,rax
+Starfield.exe+19C61DD: 0F 1F 00     - nop dword ptr [rax]
+Starfield.exe+19C61E0: 48 3B C2     - cmp rax,rdx
+Starfield.exe+19C61E3: 74 09        - je Starfield.exe+19C61EE
+// ---------- INJECTING HERE ----------
+Starfield.exe+19C61E5: 03 48 08     - add ecx,[rax+08]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+19C61E8: 48 83 C0 10  - add rax,10
+Starfield.exe+19C61EC: EB F2        - jmp Starfield.exe+19C61E0
+Starfield.exe+19C61EE: 44 03 C9     - add r9d,ecx
+Starfield.exe+19C61F1: 49 83 C0 28  - add r8,28
+Starfield.exe+19C61F5: EB 9E        - jmp Starfield.exe+19C6195
+Starfield.exe+19C61F7: 41 8B C1     - mov eax,r9d
+Starfield.exe+19C61FA: C3           - ret 
+Starfield.exe+19C61FB: CC           - int 3 
+Starfield.exe+19C61FC: CC           - int 3 
+Starfield.exe+19C61FD: CC           - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337160914</ID>
+          <Description>"Only activate when absolutely necessary!"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337161066</ID>
+          <Description>"Fill # to:"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>vf_m_fill_to_number</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337161067</ID>
+          <Description>"do not set when stock# &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>vf_m_ignore_number</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337161065</ID>
+      <Description>"_work in progress"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337161064</ID>
+          <Description>"Zero material during crafting"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-10-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_IGNORE_CRAFT_MAT,Starfield.exe,8B 72 10 C5 D0 57 ED) // should be unique
+alloc(newmem,$1000,INJECT_IGNORE_CRAFT_MAT)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov esi,[rdx+10]
+
+  // code
+  xor esi, esi
+
+  // code end
+
+  vxorps xmm5,xmm5,xmm5
+  jmp return
+
+INJECT_IGNORE_CRAFT_MAT:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_IGNORE_CRAFT_MAT)
+
+[DISABLE]
+
+INJECT_IGNORE_CRAFT_MAT:
+  db 8B 72 10 C5 D0 57 ED
+
+unregistersymbol(INJECT_IGNORE_CRAFT_MAT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+18B4524
+
+Starfield.exe+18B44F6: 48 81 EC C0 00 00 00  - sub rsp,000000C0
+Starfield.exe+18B44FD: C5 F8 29 70 B8        - vmovaps [rax-48],xmm6
+Starfield.exe+18B4502: C5 F8 29 78 A8        - vmovaps [rax-58],xmm7
+Starfield.exe+18B4507: C5 78 29 40 98        - vmovaps [rax-68],xmm8
+Starfield.exe+18B450C: C5 78 29 48 88        - vmovaps [rax-78],xmm9
+Starfield.exe+18B4511: 4C 8B E1              - mov r12,rcx
+Starfield.exe+18B4514: 4C 8B 32              - mov r14,[rdx]
+Starfield.exe+18B4517: 4C 89 75 7F           - mov [rbp+7F],r14
+Starfield.exe+18B451B: 4D 85 F6              - test r14,r14
+Starfield.exe+18B451E: 0F 84 28 06 00 00     - je Starfield.exe+18B4B4C
+// ---------- INJECTING HERE ----------
+Starfield.exe+18B4524: 8B 72 10              - mov esi,[rdx+10]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+18B4527: C5 D0 57 ED           - vxorps xmm5,xmm5,xmm5
+Starfield.exe+18B452B: C4 E1 D2 2A EE        - vcvtsi2ss xmm5,rbp,rsi
+Starfield.exe+18B4530: 48 8B 5A 08           - mov rbx,[rdx+08]
+Starfield.exe+18B4534: 48 85 DB              - test rbx,rbx
+Starfield.exe+18B4537: 0F 84 46 01 00 00     - je Starfield.exe+18B4683
+Starfield.exe+18B453D: 0F B6 4B 71           - movzx ecx,byte ptr [rbx+71]
+Starfield.exe+18B4541: 85 C9                 - test ecx,ecx
+Starfield.exe+18B4543: 0F 84 AC 00 00 00     - je Starfield.exe+18B45F5
+Starfield.exe+18B4549: 83 E9 01              - sub ecx,01
+Starfield.exe+18B454C: 74 2F                 - je Starfield.exe+18B457D
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337110805</ID>
+          <Description>"inf. ship repair kit via hotkey when use (min = 14)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
   Version: 
   Date   : 2023-09-15
   Author : bbfox@https://opencheattables.com
@@ -2705,188 +3002,6 @@ Starfield.exe+19CB009: 41 88 4E 05     - mov [r14+05],cl
 Starfield.exe+19CB00D: 8B 56 38        - mov edx,[rsi+38]
 }
 </AssemblerScript>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>1337160905</ID>
-      <Description>"Carry item weight multiplier"</Description>
-      <Options moHideChildren="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Starfield.exe
-  Version: 
-  Date   : 2023-09-07
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_WEIGHT_MULTI,Starfield.exe,08 C5 FA 58 47 08) // should be unique
-alloc(newmem,$1000,INJECT_WEIGHT_MULTI)
-
-label(code)
-label(return)
-label(vf_weight_multi)
-
-newmem:
-  //vmovss xmm15, [rdi+08]
-  vmovss xmm14, [vf_weight_multi]
-  vmulss xmm0, xmm14, xmm0
-  //vmovss [rdi+08], xmm15
-  //vaddss xmm0, xmm0, xmm15
-  //vxorps xmm0, xmm0, xmm0
-
-code:
-  vaddss xmm0,xmm0,[rdi+08]
-  jmp return
-align 10 cc
-  vf_weight_multi:
-  dd (float)0.25
-
-INJECT_WEIGHT_MULTI+01:
-  jmp newmem
-return:
-registersymbol(INJECT_WEIGHT_MULTI)
-registersymbol(vf_weight_multi)
-[DISABLE]
-
-INJECT_WEIGHT_MULTI+01:
-  db C5 FA 58 47 08
-
-unregistersymbol(INJECT_WEIGHT_MULTI)
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Starfield.exe+1535E31
-
-Starfield.exe+1535E0A: E8 8D 70 31 FF  - call Starfield.exe+84CE9C
-Starfield.exe+1535E0F: 48 8D 54 24 40  - lea rdx,[rsp+40]
-Starfield.exe+1535E14: E8 DB 08 D9 FF  - call Starfield.exe+12C66F4
-Starfield.exe+1535E19: 48 8B 5C 24 30  - mov rbx,[rsp+30]
-Starfield.exe+1535E1E: 48 3B 5C 24 40  - cmp rbx,[rsp+40]
-Starfield.exe+1535E23: 74 1C           - je Starfield.exe+1535E41
-Starfield.exe+1535E25: 48 8B 07        - mov rax,[rdi]
-Starfield.exe+1535E28: 48 8B D3        - mov rdx,rbx
-Starfield.exe+1535E2B: 48 8B CF        - mov rcx,rdi
-Starfield.exe+1535E2E: FF 50 08        - call qword ptr [rax+08]
-// ---------- INJECTING HERE ----------
-Starfield.exe+1535E31: C5 FA 58 47 08  - vaddss xmm0,xmm0,[rdi+08]
-// ---------- DONE INJECTING  ----------
-Starfield.exe+1535E36: C5 FA 11 47 08  - vmovss [rdi+08],xmm0
-Starfield.exe+1535E3B: 48 83 C3 28     - add rbx,28
-Starfield.exe+1535E3F: EB DD           - jmp Starfield.exe+1535E1E
-Starfield.exe+1535E41: 48 8B 5C 24 38  - mov rbx,[rsp+38]
-Starfield.exe+1535E46: B8 01 00 00 00  - mov eax,00000001
-Starfield.exe+1535E4B: 48 83 C4 20     - add rsp,20
-Starfield.exe+1535E4F: 5F              - pop rdi
-Starfield.exe+1535E50: C3              - ret 
-Starfield.exe+1535E51: CC              - int 3 
-Starfield.exe+1535E52: CC              - int 3 
-}
-</AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1337160896</ID>
-          <Description>"Usage: Pick up / drop item"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160908</ID>
-          <Description>"You may become overweight if this script doesn't work in future versions!!"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>1337160906</ID>
-          <Description>"multiplier"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>C08000</Color>
-          <VariableType>Float</VariableType>
-          <Address>vf_weight_multi</Address>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>1337160913</ID>
-      <Description>"Manufacturing/ Research Lab: submit one item to fill stock# to 10"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : Starfield.exe
-  Version: 
-  Date   : 2023-09-16
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_LAB_SUMBIT_ITEM,Starfield.exe,03 48 08 48 83 C0 10 EB F2 44 03 C9 49 83 C0 28 EB 9E) // should be unique
-alloc(newmem,$1000,INJECT_LAB_SUMBIT_ITEM)
-
-label(code)
-label(return)
-
-newmem:
-  mov ecx, [rax+08]
-  cmp ecx, 64
-  jae code
-  cmp ecx, B
-  jae code
-  mov ecx, B
-  mov [rax+08], ecx
-
-code:
-  add ecx,[rax+08]
-  //mov ecx, 14
-  add rax,10
-  jmp return
-
-INJECT_LAB_SUMBIT_ITEM:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_LAB_SUMBIT_ITEM)
-
-[DISABLE]
-
-INJECT_LAB_SUMBIT_ITEM:
-  db 03 48 08 48 83 C0 10
-
-unregistersymbol(INJECT_LAB_SUMBIT_ITEM)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Starfield.exe+19C61E5
-
-Starfield.exe+19C61CB: 75 06        - jne Starfield.exe+19C61D3
-Starfield.exe+19C61CD: 33 C0        - xor eax,eax
-Starfield.exe+19C61CF: 33 D2        - xor edx,edx
-Starfield.exe+19C61D1: EB 0D        - jmp Starfield.exe+19C61E0
-Starfield.exe+19C61D3: 49 8B 00     - mov rax,[r8]
-Starfield.exe+19C61D6: 48 C1 E2 04  - shl rdx,04
-Starfield.exe+19C61DA: 48 03 D0     - add rdx,rax
-Starfield.exe+19C61DD: 0F 1F 00     - nop dword ptr [rax]
-Starfield.exe+19C61E0: 48 3B C2     - cmp rax,rdx
-Starfield.exe+19C61E3: 74 09        - je Starfield.exe+19C61EE
-// ---------- INJECTING HERE ----------
-Starfield.exe+19C61E5: 03 48 08     - add ecx,[rax+08]
-// ---------- DONE INJECTING  ----------
-Starfield.exe+19C61E8: 48 83 C0 10  - add rax,10
-Starfield.exe+19C61EC: EB F2        - jmp Starfield.exe+19C61E0
-Starfield.exe+19C61EE: 44 03 C9     - add r9d,ecx
-Starfield.exe+19C61F1: 49 83 C0 28  - add r8,28
-Starfield.exe+19C61F5: EB 9E        - jmp Starfield.exe+19C6195
-Starfield.exe+19C61F7: 41 8B C1     - mov eax,r9d
-Starfield.exe+19C61FA: C3           - ret 
-Starfield.exe+19C61FB: CC           - int 3 
-Starfield.exe+19C61FC: CC           - int 3 
-Starfield.exe+19C61FD: CC           - int 3 
-}
-</AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1337160914</ID>
-          <Description>"Only activate when absolutely necessary!"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
