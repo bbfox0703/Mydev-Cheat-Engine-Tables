@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/10
+1. Revise for 32E64ED5 V1.7.36.0
+
 ## 2023/10/07
 1. Revise shield script
 
@@ -11,13 +14,13 @@
 
 ## 2023/09/23
 1. Added shield related scripts
-1. Revised for 32E64ED5  V1.7.29.0
+1. Revise for 32E64ED5  V1.7.29.0
 
 ## 2023/09/17
 1. Added scripts
 
 ## 2023/09/16
-1. Revised for A411F509 V1.7.29.0
+1. Revise for A411F509 V1.7.29.0
 
 ## 2023/09/07
 1. Added Carry item weight multiplier
