@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/12
+1. Minor update for "Frostpunk Newsfeed Update"
+
 ## 2022/11/07
 1. Revised scripts
 1. Added Set max discontent per object
