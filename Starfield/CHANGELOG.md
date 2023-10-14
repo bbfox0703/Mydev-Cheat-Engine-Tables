@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/14
+1. added "Get game statistics"
+
 ## 2023/10/10
 1. Revise for 32E64ED5 V1.7.36.0
 
