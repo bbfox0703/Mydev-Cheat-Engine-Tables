@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/15
+1. added "inf. Boostpack / Star Power / ship booster"
+
 ## 2023/10/14
 1. added "Get game statistics"
 

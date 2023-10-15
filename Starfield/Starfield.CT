@@ -709,7 +709,7 @@ Starfield.exe+1F4AA0A - CC                    - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>1337160889</ID>
-      <Description>"Enable O2 / HP / EN / Pickpocket scripts"</Description>
+      <Description>"Enable O2 / HP / EN / Pickpocket / booster scripts"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -927,6 +927,155 @@ getLuaEngine().Close()
           <Color>808080</Color>
           <VariableType>8 Bytes</VariableType>
           <Address>player_ptr1</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337161347</ID>
+          <Description>"inf. Boostpack / Star Power / ship booster"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Starfield.exe
+  Version: 
+  Date   : 2023-10-15
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_STARPOWER,Starfield.exe,C5 F2 58 73 10) // should be unique
+alloc(newmem,$1000,INJECT_INF_STARPOWER)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  push r14
+  push r15
+  mov r15, [rsp+50]
+  cmp r15, [player_ptr1]
+  jne chk_booster_pre
+
+  mov r15, [rbx]
+  test r15, r15
+  jz endp
+  mov r15, [r15+48]
+  test r15, r15
+  jz endp
+
+  mov r14d, [r15+18] //StarPower
+  cmp r14d, 72617453
+  jne chk_boostpack
+  mov r14d, [r15+1C]
+  cmp r14d, 65776F50
+  jne endp
+
+  // StarPower
+  vmovss xmm15, [vf_60]
+  vmovss [rbx+10], xmm15
+  jmp endp
+
+chk_boostpack:
+  cmp r14d, 736F6F42 //BoostpackFuel
+  jne chk_booster
+  mov r14d, [r15+1C]
+  cmp r14d, 63617074
+  jne endp
+  mov r14d, [r15+20]
+  cmp r14d, 6575466B
+  jne endp
+
+  vmovss xmm15, [vf_100]
+  vmovss [rbx+10], xmm15
+  jmp endp
+
+chk_booster_pre:
+  mov r15, [rbx]
+  test r15, r15
+  jz endp
+  mov r15, [r15+48]
+  test r15, r15
+  jz endp
+
+  mov r14d, [r15+18]
+
+chk_booster:
+  cmp r14d, 63617053 //SpaceshipBoostFuel
+  jne endp
+  mov r14d, [r15+1C]
+  cmp r14d, 69687365
+  jne endp
+  mov r14d, [r15+20]
+  cmp r14d, 6F6F4270
+  jne endp
+
+  vmovss xmm1, [vf_1]
+  //vmovss [rbx+10], xmm15
+  jmp endp
+
+endp:
+  pop r15
+  pop r14
+  popfq
+
+code:
+  vaddss xmm6,xmm1,[rbx+10]
+  jmp return
+align 10 cc
+  vf_1:
+  dd (float)20
+  vf_60:
+  dd (float)60
+  vf_100:
+  dd (float)60
+
+INJECT_INF_STARPOWER:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_STARPOWER)
+
+[DISABLE]
+
+INJECT_INF_STARPOWER:
+  db C5 F2 58 73 10
+
+unregistersymbol(INJECT_INF_STARPOWER)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+24F248B
+
+Starfield.exe+24F2468: 48 8D 04 CB     - lea rax,[rbx+rcx*8]
+Starfield.exe+24F246C: 4C 8B 7C 24 30  - mov r15,[rsp+30]
+Starfield.exe+24F2471: 48 3B D8        - cmp rbx,rax
+Starfield.exe+24F2474: 74 1A           - je Starfield.exe+24F2490
+Starfield.exe+24F2476: 48 39 2B        - cmp [rbx],rbp
+Starfield.exe+24F2479: 74 06           - je Starfield.exe+24F2481
+Starfield.exe+24F247B: 48 83 C3 18     - add rbx,18
+Starfield.exe+24F247F: EB F0           - jmp Starfield.exe+24F2471
+Starfield.exe+24F2481: C5 FA 10 43 0C  - vmovss xmm0,[rbx+0C]
+Starfield.exe+24F2486: C5 FA 58 4B 08  - vaddss xmm1,xmm0,[rbx+08]
+// ---------- INJECTING HERE ----------
+Starfield.exe+24F248B: C5 F2 58 73 10  - vaddss xmm6,xmm1,[rbx+10]
+// ---------- DONE INJECTING  ----------
+Starfield.exe+24F2490: 48 8B 6C 24 60  - mov rbp,[rsp+60]
+Starfield.exe+24F2495: 48 85 FF        - test rdi,rdi
+Starfield.exe+24F2498: 48 8B 7C 24 38  - mov rdi,[rsp+38]
+Starfield.exe+24F249D: 48 8B 5C 24 58  - mov rbx,[rsp+58]
+Starfield.exe+24F24A2: 74 27           - je Starfield.exe+24F24CB
+Starfield.exe+24F24A4: B9 FF FF FF FF  - mov ecx,FFFFFFFF
+Starfield.exe+24F24A9: F0 41 0F C1 0E  - lock xadd [r14],ecx
+Starfield.exe+24F24AE: 8B C1           - mov eax,ecx
+Starfield.exe+24F24B0: 25 FF 0F C0 FF  - and eax,FFC00FFF
+Starfield.exe+24F24B5: 83 F8 01        - cmp eax,01
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337161348</ID>
+              <Description>"Ship booster: may affect all ships"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>1337110783</ID>
