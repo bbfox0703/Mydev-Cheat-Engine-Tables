@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/16
+1. Revise scripts
+
 ## 2023/10/15
 1. added "inf. Boostpack / Star Power / ship booster"
 

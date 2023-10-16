@@ -945,6 +945,7 @@ alloc(newmem,$1000,INJECT_INF_STARPOWER)
 
 label(code)
 label(return)
+label(is_ship_booster_on)
 
 newmem:
   pushfq
@@ -998,6 +999,8 @@ chk_booster_pre:
   mov r14d, [r15+18]
 
 chk_booster:
+  cmp dword ptr [is_ship_booster_on], 1
+  jne endp
   cmp r14d, 63617053 //SpaceshipBoostFuel
   jne endp
   mov r14d, [r15+1C]
@@ -1007,8 +1010,9 @@ chk_booster:
   cmp r14d, 6F6F4270
   jne endp
 
-  vmovss xmm1, [vf_1]
-  //vmovss [rbx+10], xmm15
+  vxorps xmm15, xmm15, xmm15
+  vmovss [rbx+10], xmm15
+  vmovss xmm1, [vf_15]
   jmp endp
 
 endp:
@@ -1020,24 +1024,29 @@ code:
   vaddss xmm6,xmm1,[rbx+10]
   jmp return
 align 10 cc
-  vf_1:
-  dd (float)20
+  vf_01:
+  dd (float)0
+  vf_15:
+  dd (float)15
   vf_60:
   dd (float)60
   vf_100:
   dd (float)60
+  is_ship_booster_on:
+  dd 1
 
 INJECT_INF_STARPOWER:
   jmp newmem
 return:
 registersymbol(INJECT_INF_STARPOWER)
+registersymbol(is_ship_booster_on)
 
 [DISABLE]
 
 INJECT_INF_STARPOWER:
   db C5 F2 58 73 10
 
-unregistersymbol(INJECT_INF_STARPOWER)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -1074,6 +1083,17 @@ Starfield.exe+24F24B5: 83 F8 01        - cmp eax,01
               <Description>"Ship booster: may affect all ships"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337161349</ID>
+              <Description>"Ship booster enabled?"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_ship_booster_on</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -6447,94 +6467,6 @@ Starfield.exe+155B7F8: 40 53                 - push rbx
               </Offsets>
             </CheatEntry>
           </CheatEntries>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>1337161065</ID>
-      <Description>"_work in progress"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>1337110805</ID>
-          <Description>"(not working) inf. ship repair kit via hotkey when use (min = 14)"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Starfield.exe
-  Version: 
-  Date   : 2023-09-15
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_MIN_SHIP_REPAIR_KIT,Starfield.exe,03 58 08 48 83 C0 10 EB ?? 49 8B CC E8 ?? ?? ?? ?? 44 8B E0 89 45 48 3B 7E 28 0F 97 C1 41 88 4E 05 8B 56 38 3B 15 ?? ?? ?? ?? 75 ?? C5 FA 10 56 3C C5 EA C2 0D 4E ?? ?? ?? ?? C5 FA 10 05 82 97 F2 03 C4 E3 79 4A CA 10 ?? ?? ?? ?? 74 ?? ?? ?? C7 46 3C 00 00 80 BF 41 80 7E 05 00) // should be unique
-alloc(newmem,$1000,INJECT_MIN_SHIP_REPAIR_KIT)
-
-label(code)
-label(return)
-
-newmem:
-  cmp rdi, CE
-  jne code
-
-  push rbx
-  mov ebx, [rax+08]
-  cmp ebx, F
-  jae endp
-  mov ebx, F
-  mov [rax+08], ebx
-
-endp:
-  pop rbx
-
-code:
-  add ebx,[rax+08]
-  add rax,10
-  jmp return
-
-INJECT_MIN_SHIP_REPAIR_KIT:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_MIN_SHIP_REPAIR_KIT)
-
-[DISABLE]
-
-INJECT_MIN_SHIP_REPAIR_KIT:
-  db 03 58 08 48 83 C0 10
-
-unregistersymbol(INJECT_MIN_SHIP_REPAIR_KIT)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Starfield.exe+19CAFEC
-
-Starfield.exe+19CAFD0: 85 C9           - test ecx,ecx
-Starfield.exe+19CAFD2: 75 08           - jne Starfield.exe+19CAFDC
-Starfield.exe+19CAFD4: 41 8B C0        - mov eax,r8d
-Starfield.exe+19CAFD7: 41 8B C8        - mov ecx,r8d
-Starfield.exe+19CAFDA: EB 0B           - jmp Starfield.exe+19CAFE7
-Starfield.exe+19CAFDC: 48 8B 42 18     - mov rax,[rdx+18]
-Starfield.exe+19CAFE0: 48 C1 E1 04     - shl rcx,04
-Starfield.exe+19CAFE4: 48 03 C8        - add rcx,rax
-Starfield.exe+19CAFE7: 48 3B C1        - cmp rax,rcx
-Starfield.exe+19CAFEA: 74 09           - je Starfield.exe+19CAFF5
-// ---------- INJECTING HERE ----------
-Starfield.exe+19CAFEC: 03 58 08        - add ebx,[rax+08]
-// ---------- DONE INJECTING  ----------
-Starfield.exe+19CAFEF: 48 83 C0 10     - add rax,10
-Starfield.exe+19CAFF3: EB F2           - jmp Starfield.exe+19CAFE7
-Starfield.exe+19CAFF5: 49 8B CC        - mov rcx,r12
-Starfield.exe+19CAFF8: E8 A3 82 01 00  - call Starfield.exe+19E32A0
-Starfield.exe+19CAFFD: 44 8B E0        - mov r12d,eax
-Starfield.exe+19CB000: 89 45 48        - mov [rbp+48],eax
-Starfield.exe+19CB003: 3B 7E 28        - cmp edi,[rsi+28]
-Starfield.exe+19CB006: 0F 97 C1        - seta cl
-Starfield.exe+19CB009: 41 88 4E 05     - mov [r14+05],cl
-Starfield.exe+19CB00D: 8B 56 38        - mov edx,[rsi+38]
-}
-</AssemblerScript>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
