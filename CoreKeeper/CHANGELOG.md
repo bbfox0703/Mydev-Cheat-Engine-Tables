@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/10/29
+1. Revised some scripts for 0.7.1.0-4ab5 EA 
+
 ## 2023/10/05
 1. Revised some scripts for 0.7.0.1-aa71 EA 
 
