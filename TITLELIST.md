@@ -265,6 +265,11 @@ zh-TW: 刀劍神域 彼岸遊境
 zh-TW: 刀劍神域 虛空幻界  
 ja-JP: ソードアート・オンライン -ホロウ・リアリゼーション-  
 
+## Tales of Arise - Beyond the Dawn Expansion
+[Cheat Table for Tales of Arise - Beyond the Dawn Expansion ((Steam)](https://store.steampowered.com/app/2391960/_/)  
+zh-TW: 破曉傳奇 黎明新程 擴充套組 (修改器)  
+ja-JP: Tales of ARISE - Beyond the Dawn エキスパンション (チートエンジン)  
+
 ## The DioField Chronicle
 [Cheat Table for The DioField Chronicle ((Steam)](https://store.steampowered.com/app/1399080/_The_DioField_Chronicle/)  
 zh-TW: 神領編年史 The DioField Chronicle (修改器)  
