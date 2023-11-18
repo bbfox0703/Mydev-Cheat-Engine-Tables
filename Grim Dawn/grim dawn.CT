@@ -4,17 +4,17 @@
     <CheatEntry>
       <ID>18</ID>
       <Description>"Get Data"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : grim dawn.exe
   Version: 
-  Date   : 2023-06-24
+  Date   : 2023-11/18
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_DATA,Game.dll,F3 0F 10 81 A4 0D 00 00 0F) // should be unique
+aobscanmodule(INJECT_GET_DATA,Game.dll,F3 0F 10 81 EC 0D 00 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_DATA)
 
 label(code)
@@ -34,25 +34,25 @@ chk_mana:
   cmp byte ptr [is_fill_mp], 1
   jne chk_hp
 
-  vmovss xmm15, [rcx+00000E14] // max mana
-  vmovss xmm14, [rcx+00000E20] // upkeep mana
+  vmovss xmm15, [rcx+00000E5C] // max mana   (E14+48)
+  vmovss xmm14, [rcx+00000E68] // upkeep mana  (E20+48)
   vsubss xmm13, xmm15, xmm14
-  vmovss [rcx+00000DA4], xmm13 // mana
+  vmovss [rcx+00000DEC], xmm13 // mana
 
 chk_hp:
   cmp byte ptr [is_min_hp], 1
   jne endp
-  vmovsd xmm15, [rcx+00000D88] // HP
+  vmovsd xmm15, [rcx+00000DD0] // HP  (D88+48)
   vmovsd xmm14, [sd_min_hp_val]
   vcomisd xmm15, xmm14
   jge endp
 
-  vmovsd [rcx+00000D88], xmm14
+  vmovsd [rcx+00000DD0], xmm14
 
 endp:
 
 code:
-  vmovss xmm0,[rcx+00000DA4]
+  vmovss xmm0,[rcx+00000DEC]
   jmp return
 align 10 cc
   i_dbase_addr_2:
@@ -78,7 +78,7 @@ registersymbol(is_min_hp)
 [DISABLE]
 
 INJECT_GET_DATA:
-  db F3 0F 10 81 A4 0D 00 00
+  db F3 0F 10 81 EC 0D 00 00
 
 unregistersymbol(INJECT_GET_DATA)
 unregistersymbol(i_dbase_addr_2)
@@ -91,29 +91,29 @@ dealloc(newmem)
 {
 // ORIGINAL CODE - INJECTION POINT: Game.GAME::Character::GetCurrentMana
 
-Game.GAME::Character::ContributeMiscConversionAttributes+E6: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+E7: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+E8: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+E9: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+EA: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+EB: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+EC: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+ED: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+EE: CC                       - int 3 
-Game.GAME::Character::ContributeMiscConversionAttributes+EF: CC                       - int 3 
+Game.GAME::Character::ContributeMiscConversionAttributes+E6: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+E7: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+E8: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+E9: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+EA: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+EB: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+EC: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+ED: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+EE: CC                       - int 3
+Game.GAME::Character::ContributeMiscConversionAttributes+EF: CC                       - int 3
 // ---------- INJECTING HERE ----------
-Game.GAME::Character::GetCurrentMana: F3 0F 10 81 A4 0D 00 00  - movss xmm0,[rcx+00000DA4]
+Game.GAME::Character::GetCurrentMana: F3 0F 10 81 EC 0D 00 00  - movss xmm0,[rcx+00000DEC]
 // ---------- DONE INJECTING  ----------
 Game.GAME::Character::GetCurrentMana+8: 0F 57 C9                 - xorps xmm1,xmm1
 Game.GAME::Character::GetCurrentMana+B: F3 0F 5F C1              - maxss xmm0,xmm1
-Game.GAME::Character::GetCurrentMana+F: C3                       - ret 
-Game.GAME::Character::SetCurrentMana: F3 0F 10 91 A4 0D 00 00  - movss xmm2,[rcx+00000DA4]
-Game.GAME::Character::SetCurrentMana+8: 0F 57 C0                 - xorps xmm0,xmm0
-Game.GAME::Character::SetCurrentMana+B: F3 0F 5F D0              - maxss xmm2,xmm0
-Game.GAME::Character::SetCurrentMana+F: 48 81 C1 68 0D 00 00     - add rcx,00000D68
-Game.GAME::Character::SetCurrentMana+16: F3 0F 5C CA              - subss xmm1,xmm2
-Game.GAME::Character::SetCurrentMana+1A: E9 11 D6 01 00           - jmp Game.GAME::CharacterBio::AddManaFast
-Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3 
+Game.GAME::Character::GetCurrentMana+F: C3                       - ret
+Game.GAME::Character::SetCurrentMana: 40 53                    - push rbx
+Game.GAME::Character::SetCurrentMana+2: 48 83 EC 30              - sub rsp,30
+Game.GAME::Character::SetCurrentMana+6: 48 8B D9                 - mov rbx,rcx
+Game.GAME::Character::SetCurrentMana+9: 0F 29 74 24 20           - movaps [rsp+20],xmm6
+Game.GAME::Character::SetCurrentMana+E: 48 81 C1 48 0E 00 00     - add rcx,00000E48
+Game.GAME::Character::SetCurrentMana+15: BA 05 00 00 00           - mov edx,00000005
+Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,xmm1
 }
 </AssemblerScript>
       <CheatEntries>
@@ -155,7 +155,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Double</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>D88</Offset>
+            <Offset>DD0</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -166,7 +166,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>12C4</Offset>
+            <Offset>151C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -177,7 +177,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>DA4</Offset>
+            <Offset>DEC</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -199,7 +199,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>E14</Offset>
+            <Offset>E5C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -210,40 +210,40 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>E20</Offset>
+            <Offset>E68</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>23</ID>
-          <Description>"Invisible flag"</Description>
+          <Description>"(X) Invisible flag"</Description>
           <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
+          <Color>C0C0C0</Color>
           <VariableType>Byte</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1A2C</Offset>
+            <Offset>1C84</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>24</ID>
-          <Description>"God mode flag"</Description>
+          <Description>"(X) God mode flag"</Description>
           <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
+          <Color>C0C0C0</Color>
           <VariableType>Byte</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1A2E</Offset>
+            <Offset>1C86</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>25</ID>
-          <Description>"Get attacked flag"</Description>
+          <Description>"(X) Get attacked flag"</Description>
           <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
+          <Color>C0C0C0</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>5E4</Offset>
+            <Offset>62C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -254,7 +254,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>132C</Offset>
+            <Offset>1584</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -265,7 +265,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>13CC</Offset>
+            <Offset>1624</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -276,7 +276,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>13D0</Offset>
+            <Offset>1628</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -287,7 +287,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>13D0</Offset>
+            <Offset>1628</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -298,7 +298,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>13D4</Offset>
+            <Offset>162C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -309,7 +309,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>13D8</Offset>
+            <Offset>1630</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -320,7 +320,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>13E4</Offset>
+            <Offset>1634</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -331,7 +331,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4708</Offset>
+            <Offset>4B60</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -342,7 +342,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>470C</Offset>
+            <Offset>4B64</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -353,7 +353,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4710</Offset>
+            <Offset>4B68</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -364,7 +364,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4714</Offset>
+            <Offset>4B6C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -375,7 +375,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4718</Offset>
+            <Offset>4B70</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -386,7 +386,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>471C</Offset>
+            <Offset>4B74</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -403,7 +403,7 @@ Game.GAME::Character::SetCurrentMana+1F: CC                       - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_FAST_COOLDOWN,Game.dll,00 0F 57 C9 F3 0F 5A C8) // should be unique
+aobscanmodule(INJECT_FAST_COOLDOWN,Game.dll,48 8B CF 0F 28 F0 E8 B8) // should be unique
 alloc(newmem,$1000,INJECT_FAST_COOLDOWN)
 
 label(code)
@@ -413,53 +413,52 @@ newmem:
   vxorps xmm0,xmm0,xmm0
 
 code:
-  xorps xmm1,xmm1
-  cvtss2sd xmm1,xmm0
-
+  mov rcx,rdi
+  movaps xmm6,xmm0
   jmp return
 
 
 
-INJECT_FAST_COOLDOWN+01:
+INJECT_FAST_COOLDOWN:
   jmp newmem
-  nop 2
+  nop
 return:
 registersymbol(INJECT_FAST_COOLDOWN)
 
 [DISABLE]
 
-INJECT_FAST_COOLDOWN+01:
-  db 0F 57 C9 F3 0F 5A C8
+INJECT_FAST_COOLDOWN:
+  db 48 8B CF 0F 28 F0
 
 unregistersymbol(INJECT_FAST_COOLDOWN)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Game.GAME::Skill::StartCooldown+12
+// ORIGINAL CODE - INJECTION POINT: Game.GAME::Skill::StartCooldown+6D
 
-Game.GAME::Skill::SubtractManaCost+3B: CC                             - int 3 
-Game.GAME::Skill::SubtractManaCost+3C: CC                             - int 3 
-Game.GAME::Skill::SubtractManaCost+3D: CC                             - int 3 
-Game.GAME::Skill::SubtractManaCost+3E: CC                             - int 3 
-Game.GAME::Skill::SubtractManaCost+3F: CC                             - int 3 
-Game.GAME::Skill::StartCooldown: 48 89 74 24 10                 - mov [rsp+10],rsi
-Game.GAME::Skill::StartCooldown+5: 57                             - push rdi
-Game.GAME::Skill::StartCooldown+6: 48 83 EC 20                    - sub rsp,20
-Game.GAME::Skill::StartCooldown+A: 48 8B F9                       - mov rdi,rcx
-Game.GAME::Skill::StartCooldown+D: E8 8E 00 00 00                 - call Game.GAME::Skill::GetCooldownTime
+Game.GAME::Skill::StartCooldown+45: 48 8B CF              - mov rcx,rdi
+Game.GAME::Skill::StartCooldown+48: 48 8B 18              - mov rbx,[rax]
+Game.GAME::Skill::StartCooldown+4B: FF 15 67 2C 14 00     - call qword ptr [Game.dll+4EE128]
+Game.GAME::Skill::StartCooldown+51: 8B D0                 - mov edx,eax
+Game.GAME::Skill::StartCooldown+53: 48 8B CE              - mov rcx,rsi
+Game.GAME::Skill::StartCooldown+56: FF 93 A8 00 00 00     - call qword ptr [rbx+000000A8]
+Game.GAME::Skill::StartCooldown+5C: 48 8B 5C 24 40        - mov rbx,[rsp+40]
+Game.GAME::Skill::StartCooldown+61: 40 0F B6 D5           - movzx edx,bpl
+Game.GAME::Skill::StartCooldown+65: 48 8B CF              - mov rcx,rdi
+Game.GAME::Skill::StartCooldown+68: E8 73 00 00 00        - call Game.GAME::Skill::GetCooldownTime
 // ---------- INJECTING HERE ----------
-Game.GAME::Skill::StartCooldown+12: 0F 57 C9                       - xorps xmm1,xmm1
+Game.GAME::Skill::StartCooldown+6D: 48 8B CF              - mov rcx,rdi
 // ---------- DONE INJECTING  ----------
-Game.GAME::Skill::StartCooldown+15: F3 0F 5A C8                    - cvtss2sd xmm1,xmm0
-Game.GAME::Skill::StartCooldown+19: 66 0F 2F 0D FF ED 27 00        - comisd xmm1,[Game.GAME::WeaponArmor_Offhand::`vftable'+F58]
-Game.GAME::Skill::StartCooldown+21: 76 14                          - jna Game.GAME::Skill::StartCooldown+37
-Game.GAME::Skill::StartCooldown+23: 48 8B 07                       - mov rax,[rdi]
-Game.GAME::Skill::StartCooldown+26: 0F 57 D2                       - xorps xmm2,xmm2
-Game.GAME::Skill::StartCooldown+29: 0F 28 C8                       - movaps xmm1,xmm0
-Game.GAME::Skill::StartCooldown+2C: 48 8B CF                       - mov rcx,rdi
-Game.GAME::Skill::StartCooldown+2F: FF 90 50 02 00 00              - call qword ptr [rax+00000250]
-Game.GAME::Skill::StartCooldown+35: EB 0A                          - jmp Game.GAME::Skill::StartCooldown+41
-Game.GAME::Skill::StartCooldown+37: C7 87 B0 01 00 00 00 00 00 00  - mov [rdi+000001B0],00000000
+Game.GAME::Skill::StartCooldown+70: 0F 28 F0              - movaps xmm6,xmm0
+Game.GAME::Skill::StartCooldown+73: E8 B8 03 00 00        - call Game.GAME::Skill::GetMaxCooldownCharges
+Game.GAME::Skill::StartCooldown+78: 48 8B 74 24 50        - mov rsi,[rsp+50]
+Game.GAME::Skill::StartCooldown+7D: 48 8B 6C 24 48        - mov rbp,[rsp+48]
+Game.GAME::Skill::StartCooldown+82: 83 F8 01              - cmp eax,01
+Game.GAME::Skill::StartCooldown+85: 7E 09                 - jle Game.GAME::Skill::StartCooldown+90
+Game.GAME::Skill::StartCooldown+87: 83 BF B0 01 00 00 00  - cmp dword ptr [rdi+000001B0],00
+Game.GAME::Skill::StartCooldown+8E: 7F 38                 - jg Game.GAME::Skill::StartCooldown+C8
+Game.GAME::Skill::StartCooldown+90: 0F 57 C9              - xorps xmm1,xmm1
+Game.GAME::Skill::StartCooldown+93: F3 0F 5A CE           - cvtss2sd xmm1,xmm6
 }
 </AssemblerScript>
     </CheatEntry>
@@ -821,7 +820,7 @@ Game.GAME::Item::SetSoulbound+413: C3                       - ret
     </CheatEntry>
     <CheatEntry>
       <ID>62</ID>
-      <Description>"Grim Dawn v1.1.9.8 (x64)  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Grim Dawn v1.2.0.0 (x64)  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00A452</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
