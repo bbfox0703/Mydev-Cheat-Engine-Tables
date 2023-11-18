@@ -1,5 +1,10 @@
 # Changelog
 
+## 2023/11/18
+1. Fixed "Hover mouse over the leader XP bar in Leaders / ship pilot window"
+1. Fixed "Get colonization progress"
+1. Fixed "Construction ship build multiplier"
+
 ## 2023/11/17
 1. Revised for 3.10.0 (462c)
 
