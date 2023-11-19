@@ -1,5 +1,8 @@
 # Change log
 
+## 2023/11/19
+1. Revised for v0.9.1a
+
 ## 2023/02/24
 1. Added Prevent item corruption in storage & set max count for some items
 
