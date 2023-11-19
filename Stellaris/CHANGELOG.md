@@ -1,5 +1,10 @@
 # Changelog
 
+## 2023/11/19
+1. Fixed "Get Federation data"
+1. Fixed "Get terraforming info"
+1. Revised "Spy action roll info."
+
 ## 2023/11/18
 1. Fixed "Hover mouse over the leader XP bar in Leaders / ship pilot window"
 1. Fixed "Get colonization progress"
