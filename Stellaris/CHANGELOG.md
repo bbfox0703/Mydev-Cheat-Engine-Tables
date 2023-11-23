@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/11/17
+1. Revised for 3.10.1 (9758)
+
 ## 2023/11/19
 1. Fixed "Get Federation data"
 1. Fixed "Get terraforming info"
