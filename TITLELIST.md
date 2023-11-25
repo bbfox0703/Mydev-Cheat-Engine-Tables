@@ -74,6 +74,11 @@ ja-JP: ソフィーのアトリエ２ ～不思議な夢の錬金術士～
 zh-TW: 蘇菲的鍊金工房 ～不可思議書的鍊金術士～ DX  
 ja-JP: ソフィーのアトリエ ～不思議な本の錬金術士～ DX  
 
+## Atelier Totori DX  
+[Atelier Totori ~The Adventurer of Arland~ DX (Steam)](https://store.steampowered.com/app/936180/Atelier_Totori_The_Adventurer_of_Arland_DX/)  
+zh-TW: 托托莉的鍊金工房 ～亞蘭德之鍊金術士2～ DX  
+ja-JP: トトリのアトリエ ～アーランドの錬金術士２～ DX  
+
 ## Brigandine The Legend of Runersia  
 [Brigandine The Legend of Runersia (Steam)](https://store.steampowered.com/app/1843940/Brigandine_The_Legend_of_Runersia/)  
 zh-TW: 幻想大陸戰記：盧納基亞傳說  
