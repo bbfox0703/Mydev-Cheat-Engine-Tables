@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/12/31
+1. Revised for 0.7.2.2-d595 EA
+
 ## 2023/10/29
 1. Revised some scripts for 0.7.1.0-4ab5 EA 
 
