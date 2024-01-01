@@ -44,6 +44,11 @@ ja-JP: リディー＆スールのアトリエ ～不思議な絵画の錬金術
 zh-TW: 瑪莉的鍊金工房 Remake ～薩爾布魯克的鍊金術士～  
 ja-JP: マリーのアトリエ Remake ～ザールブルグの錬金術士～  
 
+## Atelier Meruru DX  
+[Atelier Meruru - The Apprentice of Arland~ DX (Steam)](https://store.steampowered.com/app/936190/__DX/)  
+zh-TW: 梅露露的鍊金工房 ～亞蘭德之鍊金術士3～ DX  
+ja-JP: メルルのアトリエ ～アーランドの錬金術士３～ DX  
+
 ## Atelier Rorona DX (non-English)  
 [Atelier Rorona ~The Alchemist of Arland~ DX (non-English)(Steam)](https://store.steampowered.com/app/936160/__DX/)  
 zh-TW: 蘿樂娜的鍊金工房 ～亞蘭德之鍊金術士～ DX  
