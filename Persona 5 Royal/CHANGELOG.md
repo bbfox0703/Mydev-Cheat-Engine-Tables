@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/01/05  
+1. Revised for v1.03B  
+
 ## 2022/10/30
 1. Removed XboxGames description. Table only works in Steam platform.
 1. Added Get old clothes pt / 古着屋pt
