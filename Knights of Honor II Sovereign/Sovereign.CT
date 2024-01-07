@@ -360,7 +360,7 @@ Logic.Castle:GetVar+1b57: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
                   <CheatEntries>
                     <CheatEntry>
                       <ID>61</ID>
-                      <Description>"Selected owned city: Set unit min level and morale modifier"</Description>
+                      <Description>"Selected owned city: Set units in city: min level and morale modifier"</Description>
                       <Options moHideChildren="1"/>
                       <VariableType>Auto Assembler Script</VariableType>
                       <AssemblerScript>{ Game   : Sovereign.exe
@@ -378,9 +378,11 @@ label(code)
 label(return)
 label(i_kingdom_id2)
 newmem:
-  mov eax, [i_kingdom_id2]
-  test eax, eax
-  jz endp
+  cmp dword ptr [i_kingdom_id2], #99999
+  je code
+  //mov eax, [i_kingdom_id2]
+  //test eax, eax
+  //jz endp
 
   mov al, [rdi+F4] //m_ShowDisband
   test al, al // no disband icon
@@ -445,7 +447,7 @@ align 10 cc
   vf_32:
   dd (float)32
   i_kingdom_id2:
-  dd 0
+  dd #99999
 
 INJECT_SET_UNIT_DATA+01:
   jmp newmem
@@ -517,6 +519,142 @@ if syntaxcheck then return end
                           <Color>C08000</Color>
                           <VariableType>4 Bytes</VariableType>
                           <Address>i_kingdom_id2</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>73</ID>
+                      <Description>"Selected unit: set food supply"</Description>
+                      <VariableType>Auto Assembler Script</VariableType>
+                      <AssemblerScript>{ Game   : Sovereign.exe
+  Version: 
+  Date   : 2024-01-07
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_UPDATE_ARMY_SUPPLY,UIArmyFood:UpdateSupplies+b1,UIArmyFood:UpdateSupplies+1b1,48 8B 87 38 01 00 00 48 8B C8 83 38) // should be unique
+alloc(newmem,$1000,INJECT_UPDATE_ARMY_SUPPLY)
+
+label(code)
+label(return)
+label(i_kingdom_id3)
+
+newmem:
+  cmp dword ptr [i_kingdom_id3], #99999
+  je code
+
+  push r15
+  push r14
+  mov r14d, [rdi+90]
+  cmp r14d, [i_kingdom_id3]
+  jne endp
+
+  mov r15, [rdi+138] //supplies
+  test r15, r15
+  jz endp
+
+  mov r14d, [r15+24] //maxVal
+  mov [r15+20], r14d //curVal
+  mov r14d, [vf_001]
+  mov [r15+2C], r14d //rate
+
+  mov r15, [rdi+130] // morale
+  test r15, r15
+  jz endp
+
+  vmovss xmm14, [vf_48]
+  vmovss [r15+5C], xmm14 //morale_in_own_realm
+  vmovss [r15+60], xmm14 //morale_in_allied_realm
+  vmovss [r15+64], xmm14 //morale_in_neutral_realm
+  vmovss [r15+58], xmm14 //morale_in_enemy_realm
+
+endp:
+  pop r14
+  pop r15
+
+code:
+  mov rax,[rdi+00000138]
+  jmp return
+align 10 cc
+  i_kingdom_id3:
+  dd #99999
+  vf_001:
+  dd (float)-0.01
+  vf_48:
+  dd (float)48
+
+INJECT_UPDATE_ARMY_SUPPLY:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_UPDATE_ARMY_SUPPLY)
+registersymbol(i_kingdom_id3)
+
+[DISABLE]
+
+INJECT_UPDATE_ARMY_SUPPLY:
+  db 48 8B 87 38 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: UIArmyFood:UpdateSupplies+b6
+
+UIArmyFood:UpdateSupplies+85: 48 8B B8 E8 00 00 00           - mov rdi,[rax+000000E8]
+UIArmyFood:UpdateSupplies+8c: 48 8B C7                       - mov rax,rdi
+UIArmyFood:UpdateSupplies+8f: 48 85 C0                       - test rax,rax
+UIArmyFood:UpdateSupplies+92: 0F 84 ED 00 00 00              - je UIArmyFood:UpdateSupplies+185
+UIArmyFood:UpdateSupplies+98: 48 8B 87 38 01 00 00           - mov rax,[rdi+00000138]
+UIArmyFood:UpdateSupplies+9f: 48 85 C0                       - test rax,rax
+UIArmyFood:UpdateSupplies+a2: 0F 84 DD 00 00 00              - je UIArmyFood:UpdateSupplies+185
+UIArmyFood:UpdateSupplies+a8: F3 0F 10 46 4C                 - movss xmm0,[rsi+4C]
+UIArmyFood:UpdateSupplies+ad: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+UIArmyFood:UpdateSupplies+b1: F2 0F 11 45 B8                 - movsd [rbp-48],xmm0
+// ---------- INJECTING HERE ----------
+UIArmyFood:UpdateSupplies+b6: 48 8B 87 38 01 00 00           - mov rax,[rdi+00000138]
+// ---------- DONE INJECTING  ----------
+UIArmyFood:UpdateSupplies+bd: 48 8B C8                       - mov rcx,rax
+UIArmyFood:UpdateSupplies+c0: 83 38 00                       - cmp dword ptr [rax],00
+UIArmyFood:UpdateSupplies+c3: 66 66 90                       - nop 3
+UIArmyFood:UpdateSupplies+c6: 49 BB 60 24 36 FA E0 01 00 00  - mov r11,Logic.ComputableValue:Get
+UIArmyFood:UpdateSupplies+d0: 41 FF D3                       - call r11
+UIArmyFood:UpdateSupplies+d3: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+UIArmyFood:UpdateSupplies+d7: 48 8D AD 00 00 00 00           - lea rbp,[rbp+00000000]
+UIArmyFood:UpdateSupplies+de: 49 BB 20 1A 24 82 DE 01 00 00  - mov r11,System.Math:Ceiling
+UIArmyFood:UpdateSupplies+e8: 41 FF D3                       - call r11
+UIArmyFood:UpdateSupplies+eb: F2 0F 10 C8                    - movsd xmm1,xmm0
+}
+</AssemblerScript>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>70</ID>
+                          <Description>"Read kingdom ID from "Selected owned city""</Description>
+                          <VariableType>Auto Assembler Script</VariableType>
+                          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+local kid = 0
+kid = readInteger('i_kingdom_id')
+writeInteger('i_kingdom_id3', kid)
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+
+</AssemblerScript>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>69</ID>
+                          <Description>"Set kingdom ID (must)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>C08000</Color>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_kingdom_id3</Address>
                         </CheatEntry>
                       </CheatEntries>
                     </CheatEntry>
