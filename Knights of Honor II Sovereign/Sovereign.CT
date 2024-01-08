@@ -50,7 +50,7 @@ unregistersymbol(*)
             <CheatEntry>
               <ID>5</ID>
               <Description>"&lt;=== Press "P" to pause game, enable me"</Description>
-              <Options moHideChildren="1"/>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Sovereign.exe
   Version: 
@@ -412,9 +412,9 @@ newmem:
 
 next2: // set level to 2, if lower
   mov eax, [r15+54] //level
-  cmp eax, 2
+  cmp eax, 5
   jae next3
-  mov eax, 2
+  mov eax, 5
   mov [r15+54], eax
 
 next3:
@@ -524,7 +524,8 @@ if syntaxcheck then return end
                     </CheatEntry>
                     <CheatEntry>
                       <ID>73</ID>
-                      <Description>"Selected unit: set food supply"</Description>
+                      <Description>"Selected unit: set food supply, morale"</Description>
+                      <Options moHideChildren="1"/>
                       <VariableType>Auto Assembler Script</VariableType>
                       <AssemblerScript>{ Game   : Sovereign.exe
   Version: 
@@ -547,30 +548,87 @@ newmem:
 
   push r15
   push r14
+  push r13
+
   mov r14d, [rdi+90]
   cmp r14d, [i_kingdom_id3]
   jne endp
 
   mov r15, [rdi+138] //supplies
   test r15, r15
-  jz endp
+  jz set_morale
 
   mov r14d, [r15+24] //maxVal
   mov [r15+20], r14d //curVal
   mov r14d, [vf_001]
   mov [r15+2C], r14d //rate
 
+set_morale:
   mov r15, [rdi+130] // morale
   test r15, r15
-  jz endp
+  jz set_hp
 
   vmovss xmm14, [vf_48]
   vmovss [r15+5C], xmm14 //morale_in_own_realm
   vmovss [r15+60], xmm14 //morale_in_allied_realm
   vmovss [r15+64], xmm14 //morale_in_neutral_realm
-  vmovss [r15+58], xmm14 //morale_in_enemy_realm
+  vmovss [r15+68], xmm14 //morale_in_enemy_realm
+
+set_hp:
+  mov r15, [rdi+D8] // units
+  test r15, r15
+  jz endp
+
+  mov r14d, [r15+18] // units -&gt; _size
+  test r14d, r14d
+  jz endp
+
+  mov r15, [r15+10] // units -&gt; _items
+  test r15, r15
+  jz endp
+
+  cmp r14d, 20 // &gt; 32 troops?
+  ja endp
+
+  vxorps xmm15, xmm15, xmm15
+
+  vmovss xmm13, [vf_0_09]
+
+set_hp_loop:
+  dec r14d
+  cmp r14d, 0
+  je endp
+
+  lea r13, [r15+r14d*8+20] // get address of units -&gt; _items -&gt; Item[?]
+  test r13, r13 // move into address of units -&gt; _items -&gt; Item[?]
+  jz set_hp_loop_in_1
+  mov r13, [r13]
+  test r13, r13
+  jz set_hp_loop_in_1
+
+set_hp_loop_in_0:
+
+  vmovss xmm14, [r13+48]
+  vcomiss xmm14, xmm13
+  jle set_hp_loop_in_1
+
+  vmovss [r13+48], xmm15 // units -&gt; _items -&gt; Item[?] -&gt; damage
+  vmovss xmm13, [r13+4C] // units -&gt; _items -&gt; Item[?] -&gt; speed_mod
+  vmovss xmm14, [vf_3_33]
+  vcomiss xmm13, xmm14
+  jge set_hp_loop_in_1
+  vmovss [r13+4C], xmm14
+
+set_hp_loop_in_1:
+  //mov r13d, [r13+54] // Debug: get unit level
+
+  cmp r14d, 0
+  je endp
+  jmp set_hp_loop
+
 
 endp:
+  pop r13
   pop r14
   pop r15
 
@@ -584,6 +642,12 @@ align 10 cc
   dd (float)-0.01
   vf_48:
   dd (float)48
+  vf_3_33:
+  dd (float)3.33333
+  vf_0_09:
+  dd (float)0.09
+
+
 
 INJECT_UPDATE_ARMY_SUPPLY:
   jmp newmem
@@ -655,6 +719,141 @@ if syntaxcheck then return end
                           <Color>C08000</Color>
                           <VariableType>4 Bytes</VariableType>
                           <Address>i_kingdom_id3</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>75</ID>
+                      <Description>"Set min army HP (may not working)"</Description>
+                      <Options moHideChildren="1"/>
+                      <VariableType>Auto Assembler Script</VariableType>
+                      <AssemblerScript>{ Game   : Sovereign.exe
+  Version: 
+  Date   : 2024-01-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SET_ARMY_HP,Logic.Kingdom:CalcASTroopStrength+1af, Logic.Kingdom:CalcASTroopStrength+3af, 05 00 00 F3 0F 5A C0 F3 41 0F 10 4C 24 48) // should be unique
+alloc(newmem,$1000,INJECT_SET_ARMY_HP)
+
+label(code)
+label(return)
+label(i_kingdom_id4)
+label(vf_min_hp)
+
+newmem:
+  cmp dword ptr [i_kingdom_id4], #99999
+  je code
+
+  push r15
+  mov r15, [r12+20] // army
+  test r15, r15
+  jz endp
+
+  mov r15d, [r15+90] // kingdom_id
+  cmp r15d, [i_kingdom_id4]
+  jne endp
+
+  vmovss xmm15, [r12+48] // damage
+  vmovss xmm14, [vf_min_hp]
+  vcomiss xmm15, xmm14
+  jle endp
+  vxorps xmm14, xmm14, xmm14
+  vmovss [r12+48], xmm14  // damage
+
+endp:
+  pop r15
+
+code:
+  movss xmm1,[r12+48]
+  jmp return
+align 10 cc
+  vf_min_hp:
+  dd (float)0.01
+  i_kingdom_id4:
+  dd #99999
+
+INJECT_SET_ARMY_HP+07:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SET_ARMY_HP)
+registersymbol(i_kingdom_id4)
+registersymbol(vf_min_hp)
+
+[DISABLE]
+
+INJECT_SET_ARMY_HP+07:
+  db F3 41 0F 10 4C 24 48
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Logic.Kingdom:CalcASTroopStrength+1c9
+
+Logic.Kingdom:CalcASTroopStrength+18e: 49 BB 30 23 88 8D E6 02 00 00  - mov r11,Logic.Resource:Get
+Logic.Kingdom:CalcASTroopStrength+198: 41 FF D3                       - call r11
+Logic.Kingdom:CalcASTroopStrength+19b: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+Logic.Kingdom:CalcASTroopStrength+19f: F2 0F 11 85 50 FF FF FF        - movsd [rbp-000000B0],xmm0
+Logic.Kingdom:CalcASTroopStrength+1a7: F2 0F 10 85 50 FF FF FF        - movsd xmm0,[rbp-000000B0]
+Logic.Kingdom:CalcASTroopStrength+1af: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+Logic.Kingdom:CalcASTroopStrength+1b3: F3 0F 11 6D B8                 - movss [rbp-48],xmm5
+Logic.Kingdom:CalcASTroopStrength+1b8: 41 83 3C 24 00                 - cmp dword ptr [r12],00
+Logic.Kingdom:CalcASTroopStrength+1bd: F3 0F 10 05 4B 05 00 00        - movss xmm0,[Logic.Kingdom:CalcASTroopStrength+710]
+Logic.Kingdom:CalcASTroopStrength+1c5: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+// ---------- INJECTING HERE ----------
+Logic.Kingdom:CalcASTroopStrength+1c9: F3 41 0F 10 4C 24 48           - movss xmm1,[r12+48]
+// ---------- DONE INJECTING  ----------
+Logic.Kingdom:CalcASTroopStrength+1d0: F3 0F 5A C9                    - cvtss2sd xmm1,xmm1
+Logic.Kingdom:CalcASTroopStrength+1d4: F2 0F 5C C1                    - subsd xmm0,xmm1
+Logic.Kingdom:CalcASTroopStrength+1d8: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+Logic.Kingdom:CalcASTroopStrength+1dc: F3 0F 11 AD 4C FF FF FF        - movss [rbp-000000B4],xmm5
+Logic.Kingdom:CalcASTroopStrength+1e4: F3 0F 10 85 4C FF FF FF        - movss xmm0,[rbp-000000B4]
+Logic.Kingdom:CalcASTroopStrength+1ec: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+Logic.Kingdom:CalcASTroopStrength+1f0: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+Logic.Kingdom:CalcASTroopStrength+1f4: F3 0F 11 6D B4                 - movss [rbp-4C],xmm5
+Logic.Kingdom:CalcASTroopStrength+1f9: 49 8B 44 24 10                 - mov rax,[r12+10]
+Logic.Kingdom:CalcASTroopStrength+1fe: 48 8B C8                       - mov rcx,rax
+}
+</AssemblerScript>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>77</ID>
+                          <Description>"Read kingdom ID from "Selected owned city""</Description>
+                          <VariableType>Auto Assembler Script</VariableType>
+                          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+local kid = 0
+kid = readInteger('i_kingdom_id')
+writeInteger('i_kingdom_id4', kid)
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+
+</AssemblerScript>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>76</ID>
+                          <Description>"Set kingdom ID (must):"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>C08000</Color>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_kingdom_id4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>78</ID>
+                          <Description>"min. HP damage ratio (0.01-0.9)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>C08000</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>vf_min_hp</Address>
                         </CheatEntry>
                       </CheatEntries>
                     </CheatEntry>
@@ -1037,7 +1236,7 @@ if syntaxcheck then return end
     </CheatEntry>
     <CheatEntry>
       <ID>54</ID>
-      <Description>"(2024/01/07) Knights of Honor II: Sovereign 1.6.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"(2024/01/08) Knights of Honor II: Sovereign 1.6.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00AE57</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
