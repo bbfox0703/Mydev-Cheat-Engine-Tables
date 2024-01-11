@@ -2,6 +2,19 @@
 <CheatTable CheatEngineTableVersion="45">
   <CheatEntries>
     <CheatEntry>
+      <ID>104</ID>
+      <Description>"Compact mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
       <ID>3</ID>
       <Description>"Enable (enable twice)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -1087,6 +1100,123 @@ if syntaxcheck then return end
                         </CheatEntry>
                       </CheatEntries>
                     </CheatEntry>
+                    <CheatEntry>
+                      <ID>105</ID>
+                      <Description>"Fast structure building"</Description>
+                      <Options moHideChildren="1"/>
+                      <VariableType>Auto Assembler Script</VariableType>
+                      <AssemblerScript Async="1">{ Game   : Sovereign.exe
+  Version: 
+  Date   : 2024-01-11
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_FAST_BUILD,Logic.Castle+Build:Update+220,Logic.Castle+Build:Update+430,F3 0F 11 6E 2C F3 0F 10 46) // should be unique
+alloc(newmem,$1000,INJECT_FAST_BUILD)
+
+label(code)
+label(return)
+label(i_kingdom_id6)
+newmem:
+  cmp dword ptr [i_kingdom_id6], #99999
+  je code
+
+  push r15
+  mov r15, [rsi+10] // Owner
+  test r15, r15
+  jz endp
+
+  mov r15d, [r15+90] // kingdom_id
+  cmp r15d, [i_kingdom_id6]
+  jne endp
+
+  vmovss xmm5, [vf_1000000]
+
+endp:
+  pop r15
+
+code:
+  movss [rsi+2C],xmm5
+  jmp return
+align 10 cc
+  i_kingdom_id6:
+  dd #99999
+  vf_1000000:
+  dd (float)1000000
+
+INJECT_FAST_BUILD:
+  jmp newmem
+return:
+registersymbol(INJECT_FAST_BUILD)
+registersymbol(i_kingdom_id6)
+[DISABLE]
+
+INJECT_FAST_BUILD:
+  db F3 0F 11 6E 2C
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Logic.Castle+Build:Update+234
+
+Logic.Castle+Build:Update+203: 83 38 00                       - cmp dword ptr [rax],00
+Logic.Castle+Build:Update+206: 49 BB 80 84 36 FF F2 01 00 00  - mov r11,Logic.Resource:get_Item
+Logic.Castle+Build:Update+210: 41 FF D3                       - call r11
+Logic.Castle+Build:Update+213: F3 0F 5A C8                    - cvtss2sd xmm1,xmm0
+Logic.Castle+Build:Update+217: F2 0F 10 45 C8                 - movsd xmm0,[rbp-38]
+Logic.Castle+Build:Update+21c: F3 0F 10 15 CC 00 00 00        - movss xmm2,[Logic.Castle+Build:Update+2f0]
+Logic.Castle+Build:Update+224: F3 0F 5A D2                    - cvtss2sd xmm2,xmm2
+Logic.Castle+Build:Update+228: F2 0F 59 CA                    - mulsd xmm1,xmm2
+Logic.Castle+Build:Update+22c: F2 0F 58 C1                    - addsd xmm0,xmm1
+Logic.Castle+Build:Update+230: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+// ---------- INJECTING HERE ----------
+Logic.Castle+Build:Update+234: F3 0F 11 6E 2C                 - movss [rsi+2C],xmm5
+// ---------- DONE INJECTING  ----------
+Logic.Castle+Build:Update+239: F3 0F 10 46 2C                 - movss xmm0,[rsi+2C]
+Logic.Castle+Build:Update+23e: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+Logic.Castle+Build:Update+242: F3 0F 10 4E 28                 - movss xmm1,[rsi+28]
+Logic.Castle+Build:Update+247: F3 0F 5A C9                    - cvtss2sd xmm1,xmm1
+Logic.Castle+Build:Update+24b: F2 0F 5E C1                    - divsd xmm0,xmm1
+Logic.Castle+Build:Update+24f: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+Logic.Castle+Build:Update+253: F3 0F 11 6E 30                 - movss [rsi+30],xmm5
+Logic.Castle+Build:Update+258: F3 0F 10 46 30                 - movss xmm0,[rsi+30]
+Logic.Castle+Build:Update+25d: F3 0F 5A C0                    - cvtss2sd xmm0,xmm0
+Logic.Castle+Build:Update+261: F3 0F 10 0D 77 00 00 00        - movss xmm1,[Logic.Castle+Build:Update+2e0]
+}
+</AssemblerScript>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>107</ID>
+                          <Description>"Read kingdom ID from "Selected owned city""</Description>
+                          <VariableType>Auto Assembler Script</VariableType>
+                          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+local kid = 0
+kid = readInteger('i_kingdom_id')
+writeInteger('i_kingdom_id6', kid)
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+
+</AssemblerScript>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>106</ID>
+                          <Description>"Set kingdom ID (must):"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>C08000</Color>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_kingdom_id6</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
@@ -1167,7 +1297,7 @@ if syntaxcheck then return end
                           <ID>21</ID>
                           <Description>"pop_acc"</Description>
                           <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
+                          <VariableType>Float</VariableType>
                           <Address>i_base_castle_addr</Address>
                           <Offsets>
                             <Offset>30</Offset>
@@ -1178,7 +1308,8 @@ if syntaxcheck then return end
                           <ID>48</ID>
                           <Description>"rebelion_acc"</Description>
                           <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
                           <Address>i_base_castle_addr</Address>
                           <Offsets>
                             <Offset>34</Offset>
@@ -1200,6 +1331,7 @@ if syntaxcheck then return end
                           <ID>45</ID>
                           <Description>"rebels"</Description>
                           <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
                           <VariableType>4 Bytes</VariableType>
                           <Address>i_base_castle_addr</Address>
                           <Offsets>
@@ -1221,7 +1353,7 @@ if syntaxcheck then return end
                       </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>49</ID>
+                      <ID>91</ID>
                       <Description>"name-&gt;Value"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>String</VariableType>
@@ -1244,6 +1376,151 @@ if syntaxcheck then return end
                       <Offsets>
                         <Offset>124</Offset>
                       </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>90</ID>
+                      <Description>"fortifications (1B0)"</Description>
+                      <GroupHeader>1</GroupHeader>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>96</ID>
+                          <Description>"level"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>30</Offset>
+                            <Offset>1B0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>94</ID>
+                          <Description>"state"</Description>
+                          <ShowAsSigned>1</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>34</Offset>
+                            <Offset>1B0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>49</ID>
+                          <Description>"production_cost"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>38</Offset>
+                            <Offset>1B0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>92</ID>
+                          <Description>"current_production_amount"</Description>
+                          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">20000:20000
+</DropDownList>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>3C</Offset>
+                            <Offset>1B0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>93</ID>
+                          <Description>"current_progress"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>40</Offset>
+                            <Offset>1B0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>97</ID>
+                      <Description>"structure_build (1C0)"</Description>
+                      <GroupHeader>1</GroupHeader>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>98</ID>
+                          <Description>"production_cost"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>28</Offset>
+                            <Offset>1C0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>99</ID>
+                          <Description>"current_production_amount"</Description>
+                          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">20000:20000
+</DropDownList>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>2C</Offset>
+                            <Offset>1C0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>100</ID>
+                          <Description>"current_progress"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>30</Offset>
+                            <Offset>1C0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>101</ID>
+                          <Description>"prefered_slot_index"</Description>
+                          <ShowAsSigned>1</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>34</Offset>
+                            <Offset>1C0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>102</ID>
+                          <Description>"keep_progress"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Byte</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>38</Offset>
+                            <Offset>1C0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>103</ID>
+                          <Description>"state"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>i_base_castle_addr</Address>
+                          <Offsets>
+                            <Offset>38</Offset>
+                            <Offset>1C0</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>38</ID>
@@ -1379,6 +1656,7 @@ if syntaxcheck then return end
                       <ID>24</ID>
                       <Description>"rebelion_risk"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>4 Bytes</VariableType>
                       <Address>i_base_castle_addr</Address>
                       <Offsets>
@@ -1466,7 +1744,7 @@ if syntaxcheck then return end
     </CheatEntry>
     <CheatEntry>
       <ID>54</ID>
-      <Description>"(2024/01/08) Knights of Honor II: Sovereign 1.6.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"(2024/01/11) Knights of Honor II: Sovereign 1.6.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00AE57</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
