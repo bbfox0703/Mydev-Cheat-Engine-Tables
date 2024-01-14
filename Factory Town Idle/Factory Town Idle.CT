@@ -1,0 +1,1085 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>80</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"Enable (enable twice)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then
+    return
+end
+if process == nil then
+    ShowMessage("Process is not selected.")
+elseif readInteger(process) == 0 then
+    ShowMessage("Process cannot be opened.")
+else
+    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
+        monopipe.destroy()
+        monopipe = nil
+    end
+    if monopipe == nil then
+        LaunchMonoDataCollector()
+    end
+end
+
+
+{$asm}
+//define(PlayerControllerManagedUpdateProc,"PlayerController.ManagedUpdate")
+
+//registersymbol(PlayerControllerManagedUpdateProc)
+
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
+
+{$asm}
+unregistersymbol(*)
+
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>79</ID>
+          <Description>"Suggest pausing the game before performing script operations"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"Resource multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Factory Town Idle.exe
+  Version: 
+  Date   : 2024-01-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_ADD_RESOURCE,ConsumableState:ProcessAdd+40,ConsumableState:ProcessAdd+149,F2 0F 11 46 18 F2 0F 10 46 78) // should be unique
+alloc(newmem,$1000,INJECT_ADD_RESOURCE)
+
+label(code)
+label(return)
+label(vf_add_factor)
+label(vf_min_factor)
+
+label(i_base_xp_addr)
+label(i_base_coin_addr)
+label(i_base_rcoin_addr)
+label(i_base_bcoin_addr)
+label(i_base_pcoin_addr)
+label(vf_min_val)
+
+
+newmem:
+  push r15
+  mov r15, [rsi+48] //townProductionStat
+  test r15, r15
+  jz endp
+//  50000:Yellow Coins
+//  50014:Town XP
+//  2:Plunks
+  db EB 3B 54
+  db 68 69 73 20 74 61 62 6C 65
+  db 20 63 6F 6D
+  db 65 73 20 66 72 6F 6D 20
+  db 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61
+  db 74 74 61 62
+  db 6C 65
+  db 73 2E
+  db 63 6F 6D 20
+  db 2F
+  db 20
+  db 43 45 20 37
+  db 2E 34 2B
+
+start_xp_coins_chk:
+  push r15
+  push r14
+  push r13
+
+  xor r14, r14
+
+chk_xp:
+  mov r15d, [rsi+130]
+  cmp r15d, #50014
+  jne chk_coin
+  mov r15, i_base_xp_addr
+  jmp chk_addr
+
+chk_coin:
+  cmp r15d, #50000
+  jne chk_rcoin
+  mov r15, i_base_coin_addr
+  jmp chk_addr
+
+chk_rcoin:
+  cmp r15d, #50001
+  jne chk_bcoin
+  mov r15, i_base_rcoin_addr
+  jmp chk_addr
+
+chk_bcoin:
+  cmp r15d, #50002
+  jne chk_pcoin
+  mov r15, i_base_bcoin_addr
+  jmp chk_addr
+
+chk_pcoin:
+  cmp r15d, #50003
+  jne end_xp_coins_chk
+  mov r15, i_base_pcoin_addr
+  //jmp chk_addr
+
+chk_addr:
+  lea r13, [r15+r14d*8]
+  cmp qword ptr [r13], 0
+  jne chk_addr_exists
+  mov [r13], rsi
+  jmp end_xp_coins_chk
+
+chk_addr_exists:
+  cmp rsi, [r13]
+  je end_xp_coins_chk
+
+  inc r14d
+  cmp r14d, 8
+  jae end_addr_chk
+
+  jmp chk_addr
+
+end_addr_chk:
+
+end_xp_coins_chk:
+  pop r13
+  pop r14
+  pop r15
+
+start_1:
+  vmovsd xmm15, [rsi+18]
+  vcomisd xmm0, xmm15
+  je endp_pre
+
+  vxorps xmm14, xmm14, xmm14
+  vsubsd xmm13, xmm0, xmm15 //delta
+  //vmovsd xmm13, [rsi+C8] //frameDelta
+  vcomisd xmm13, xmm14
+  jna to_add_back // xmm13 less then xmm13
+
+to_add_more:
+  //vsubsd xmm13, xmm0, xmm15
+  vmovsd xmm14, [vf_add_factor]
+  vmulsd xmm13, xmm14, xmm13
+  vaddsd xmm0, xmm15, xmm13
+  jmp endp_pre
+
+to_add_back: // delta is negitave
+  //jmp endp
+  //vsubsd xmm13, xmm15, xmm0
+  vmovsd xmm14, [vf_min_factor]
+  vmulsd xmm15, xmm14, xmm13
+  vsubsd xmm13, xmm13, xmm15
+  vaddsd xmm0, xmm0, xmm13
+  jmp endp_pre
+
+endp_pre:
+  vmovsd xmm14, [vf_min_val]
+  vcomisd xmm0, xmm14
+  jae endp
+  vmovsd xmm0, [vf_min_val]
+
+endp:
+  pop r15
+
+code:
+  movsd [rsi+18],xmm0
+  jmp return
+align 10 cc
+  vf_add_factor:
+  dq (double)3.3333333
+  vf_min_factor:
+  dq (double)0.3333333
+  vf_min_val:
+  dq (double)200
+  align 10 cc
+  i_base_xp_addr:
+  dq 0
+  align 50 0
+  i_base_coin_addr:
+  dq 0
+  align 50 0
+  i_base_rcoin_addr:
+  dq 0
+  align 50 0
+  i_base_bcoin_addr:
+  dq 0
+  align 50 0
+  i_base_pcoin_addr:
+  dq 0
+  align 50 0
+  db 0
+
+
+INJECT_ADD_RESOURCE:
+  jmp newmem
+return:
+registersymbol(INJECT_ADD_RESOURCE)
+registersymbol(vf_add_factor)
+registersymbol(vf_min_factor)
+registersymbol(i_base_xp_addr)
+registersymbol(i_base_coin_addr)
+registersymbol(i_base_rcoin_addr)
+registersymbol(i_base_bcoin_addr)
+registersymbol(i_base_pcoin_addr)
+registersymbol(vf_min_val)
+
+
+[DISABLE]
+
+INJECT_ADD_RESOURCE:
+  db F2 0F 11 46 18
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ConsumableState:ProcessAdd+49
+
+ConsumableState:ProcessAdd+1c: 0F B6 86 2C 01 00 00  - movzx eax,byte ptr [rsi+0000012C]
+ConsumableState:ProcessAdd+23: F2 0F 10 45 E0        - movsd xmm0,[rbp-20]
+ConsumableState:ProcessAdd+28: 66 0F 57 C9           - xorpd xmm1,xmm1
+ConsumableState:ProcessAdd+2c: 66 0F 2F C8           - comisd xmm1,xmm0
+ConsumableState:ProcessAdd+30: 7A 09                 - jp ConsumableState:ProcessAdd+3b
+ConsumableState:ProcessAdd+32: 73 07                 - jae ConsumableState:ProcessAdd+3b
+ConsumableState:ProcessAdd+34: C6 86 E8 00 00 00 01  - mov byte ptr [rsi+000000E8],01
+ConsumableState:ProcessAdd+3b: F2 0F 10 46 18        - movsd xmm0,[rsi+18]
+ConsumableState:ProcessAdd+40: F2 0F 10 4D E0        - movsd xmm1,[rbp-20]
+ConsumableState:ProcessAdd+45: F2 0F 58 C1           - addsd xmm0,xmm1
+// ---------- INJECTING HERE ----------
+ConsumableState:ProcessAdd+49: F2 0F 11 46 18        - movsd [rsi+18],xmm0
+// ---------- DONE INJECTING  ----------
+ConsumableState:ProcessAdd+4e: F2 0F 10 46 78        - movsd xmm0,[rsi+78]
+ConsumableState:ProcessAdd+53: F2 0F 10 4D E0        - movsd xmm1,[rbp-20]
+ConsumableState:ProcessAdd+58: F2 0F 5C C1           - subsd xmm0,xmm1
+ConsumableState:ProcessAdd+5c: F2 0F 11 46 78        - movsd [rsi+78],xmm0
+ConsumableState:ProcessAdd+61: 4C 8B FE              - mov r15,rsi
+ConsumableState:ProcessAdd+64: 48 85 F6              - test rsi,rsi
+ConsumableState:ProcessAdd+67: 74 20                 - je ConsumableState:ProcessAdd+89
+ConsumableState:ProcessAdd+69: 48 8B 06              - mov rax,[rsi]
+ConsumableState:ProcessAdd+6c: 48 8B 00              - mov rax,[rax]
+ConsumableState:ProcessAdd+6f: 48 8B 40 10           - mov rax,[rax+10]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Double</VariableType>
+              <Address>vf_add_factor</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"min. value"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Double</VariableType>
+              <Address>vf_min_val</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"Coins &amp; EXP+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>14</ID>
+                  <Description>"***Only valid when it exists"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>24</ID>
+                  <Description>"XP"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>29</ID>
+                      <Description>"#1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>30</ID>
+                      <Description>"#2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+8</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>31</ID>
+                      <Description>"#3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+10</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>32</ID>
+                      <Description>"#4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+18</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>33</ID>
+                      <Description>"#5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+20</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>34</ID>
+                      <Description>"#6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+28</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>35</ID>
+                      <Description>"#7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+30</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>36</ID>
+                      <Description>"#8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_xp_addr+38</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>37</ID>
+                  <Description>"Yellow Coins"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>38</ID>
+                      <Description>"#1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>39</ID>
+                      <Description>"#2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+8</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>40</ID>
+                      <Description>"#3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+10</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>41</ID>
+                      <Description>"#4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+18</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>42</ID>
+                      <Description>"#5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+20</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>43</ID>
+                      <Description>"#6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+28</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>44</ID>
+                      <Description>"#7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+30</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>45</ID>
+                      <Description>"#8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_coin_addr+38</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>46</ID>
+                  <Description>"Red Coins"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>47</ID>
+                      <Description>"#1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>48</ID>
+                      <Description>"#2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+8</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>49</ID>
+                      <Description>"#3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+10</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>50</ID>
+                      <Description>"#4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+18</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>51</ID>
+                      <Description>"#5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+20</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>52</ID>
+                      <Description>"#6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+28</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>53</ID>
+                      <Description>"#7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+30</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>54</ID>
+                      <Description>"#8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_rcoin_addr+38</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>55</ID>
+                  <Description>"Blue Coins"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>56</ID>
+                      <Description>"#1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>57</ID>
+                      <Description>"#2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+8</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>58</ID>
+                      <Description>"#3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+10</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>59</ID>
+                      <Description>"#4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+18</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>60</ID>
+                      <Description>"#5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+20</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>61</ID>
+                      <Description>"#6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+28</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>62</ID>
+                      <Description>"#7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+30</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>63</ID>
+                      <Description>"#8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_bcoin_addr+38</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>64</ID>
+                  <Description>"Purple Coins"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>65</ID>
+                      <Description>"#1"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>66</ID>
+                      <Description>"#2"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+8</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>67</ID>
+                      <Description>"#3"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+10</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>68</ID>
+                      <Description>"#4"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+18</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>69</ID>
+                      <Description>"#5"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+20</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>70</ID>
+                      <Description>"#6"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+28</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>71</ID>
+                      <Description>"#7"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+30</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>72</ID>
+                      <Description>"#8"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Double</VariableType>
+                      <Address>i_base_pcoin_addr+38</Address>
+                      <Offsets>
+                        <Offset>18</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"inf. Town peak pt (**permanent**)"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Factory Town Idle.exe
+  Version: 
+  Date   : 2024-01-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_INF_TOWN_PEAK_PT,Town:CalcUnassignedPerkPoints+38,Town:CalcUnassignedPerkPoints+88,C1 F2 0F 11 40 30 66) // should be unique
+alloc(newmem,$1000,INJECT_INF_TOWN_PEAK_PT)
+
+label(code)
+label(return)
+label(vf_max_peak_pt)
+
+newmem:
+  vmovsd xmm15, [vf_max_peak_pt]
+  vmovsd [rax+18], xmm15  // currentCount
+
+code:
+  movsd [rax+30],xmm0
+  jmp return
+align 10 cc
+  vf_max_peak_pt:
+  dq (double)99999
+
+INJECT_INF_TOWN_PEAK_PT+01:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_TOWN_PEAK_PT)
+registersymbol(vf_max_peak_pt)
+
+[DISABLE]
+
+INJECT_INF_TOWN_PEAK_PT+01:
+  db F2 0F 11 40 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Town:CalcUnassignedPerkPoints+3c
+
+Town:CalcUnassignedPerkPoints+c: 48 8B F1                       - mov rsi,rcx
+Town:CalcUnassignedPerkPoints+f: 33 C0                          - xor eax,eax
+Town:CalcUnassignedPerkPoints+11: 48 89 45 D0                    - mov [rbp-30],rax
+Town:CalcUnassignedPerkPoints+15: 48 89 45 D8                    - mov [rbp-28],rax
+Town:CalcUnassignedPerkPoints+19: 48 89 45 E0                    - mov [rbp-20],rax
+Town:CalcUnassignedPerkPoints+1d: 48 8B 86 80 01 00 00           - mov rax,[rsi+00000180]
+Town:CalcUnassignedPerkPoints+24: 48 8B 8E 80 01 00 00           - mov rcx,[rsi+00000180]
+Town:CalcUnassignedPerkPoints+2b: F2 0F 10 41 18                 - movsd xmm0,[rcx+18]
+Town:CalcUnassignedPerkPoints+30: F2 0F 10 8E 78 02 00 00        - movsd xmm1,[rsi+00000278]
+Town:CalcUnassignedPerkPoints+38: F2 0F 58 C1                    - addsd xmm0,xmm1
+// ---------- INJECTING HERE ----------
+Town:CalcUnassignedPerkPoints+3c: F2 0F 11 40 30                 - movsd [rax+30],xmm0
+// ---------- DONE INJECTING  ----------
+Town:CalcUnassignedPerkPoints+41: 66 0F 57 C0                    - xorpd xmm0,xmm0
+Town:CalcUnassignedPerkPoints+45: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+Town:CalcUnassignedPerkPoints+49: F3 0F 11 AE 34 02 00 00        - movss [rsi+00000234],xmm5
+Town:CalcUnassignedPerkPoints+51: 48 8B 86 50 01 00 00           - mov rax,[rsi+00000150]
+Town:CalcUnassignedPerkPoints+58: 48 8B C8                       - mov rcx,rax
+Town:CalcUnassignedPerkPoints+5b: 83 38 00                       - cmp dword ptr [rax],00
+Town:CalcUnassignedPerkPoints+5e: 49 BB C0 9F 43 25 AB 01 00 00  - mov r11,System.Collections.Generic.Dictionary`2[PerkType,PerkState]:get_Values
+Town:CalcUnassignedPerkPoints+68: 41 FF D3                       - call r11
+Town:CalcUnassignedPerkPoints+6b: 48 8B D5                       - mov rdx,rbp
+Town:CalcUnassignedPerkPoints+6e: 48 83 C2 D0                    - add rdx,-30
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"Usage: when pt changed"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>77</ID>
+              <Description>"Set to"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Double</VariableType>
+              <Address>vf_max_peak_pt</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"inf. World peak pt  (**permanent**)"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Factory Town Idle.exe
+  Version: 
+  Date   : 2024-01-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_INF_WORLD_PEAK_PT,GameManager:CalcUnassignedQuestCoins+3e,GameManager:CalcUnassignedQuestCoins+7e,F2 0F 11 40 30) // should be unique
+alloc(newmem,$1000,INJECT_INF_WORLD_PEAK_PT)
+
+label(code)
+label(return)
+label(vf_inf_world_pt)
+
+newmem:
+  vmovsd xmm15, [vf_inf_world_pt]
+  vmovsd [rax+18], xmm15 //currentCount
+
+code:
+  movsd [rax+30],xmm0
+  jmp return
+align 10 cc
+  vf_inf_world_pt:
+  dq (double)99999
+
+INJECT_INF_WORLD_PEAK_PT:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_WORLD_PEAK_PT)
+registersymbol(vf_inf_world_pt)
+
+[DISABLE]
+
+INJECT_INF_WORLD_PEAK_PT:
+  db F2 0F 11 40 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameManager:CalcUnassignedQuestCoins+43
+
+GameManager:CalcUnassignedQuestCoins+16: 33 C0                          - xor eax,eax
+GameManager:CalcUnassignedQuestCoins+18: 48 89 45 90                    - mov [rbp-70],rax
+GameManager:CalcUnassignedQuestCoins+1c: 48 89 45 98                    - mov [rbp-68],rax
+GameManager:CalcUnassignedQuestCoins+20: 48 89 45 A0                    - mov [rbp-60],rax
+GameManager:CalcUnassignedQuestCoins+24: 48 89 45 A8                    - mov [rbp-58],rax
+GameManager:CalcUnassignedQuestCoins+28: 48 89 45 B0                    - mov [rbp-50],rax
+GameManager:CalcUnassignedQuestCoins+2c: 48 89 45 B8                    - mov [rbp-48],rax
+GameManager:CalcUnassignedQuestCoins+30: 48 8B 86 D8 00 00 00           - mov rax,[rsi+000000D8]
+GameManager:CalcUnassignedQuestCoins+37: 48 8B 8E D8 00 00 00           - mov rcx,[rsi+000000D8]
+GameManager:CalcUnassignedQuestCoins+3e: F2 0F 10 41 18                 - movsd xmm0,[rcx+18]
+// ---------- INJECTING HERE ----------
+GameManager:CalcUnassignedQuestCoins+43: F2 0F 11 40 30                 - movsd [rax+30],xmm0
+// ---------- DONE INJECTING  ----------
+GameManager:CalcUnassignedQuestCoins+48: 66 0F 57 C0                    - xorpd xmm0,xmm0
+GameManager:CalcUnassignedQuestCoins+4c: F2 0F 5A E8                    - cvtsd2ss xmm5,xmm0
+GameManager:CalcUnassignedQuestCoins+50: F3 0F 11 AE CC 01 00 00        - movss [rsi+000001CC],xmm5
+GameManager:CalcUnassignedQuestCoins+58: 48 8B 86 98 00 00 00           - mov rax,[rsi+00000098]
+GameManager:CalcUnassignedQuestCoins+5f: 48 8B C8                       - mov rcx,rax
+GameManager:CalcUnassignedQuestCoins+62: 83 38 00                       - cmp dword ptr [rax],00
+GameManager:CalcUnassignedQuestCoins+65: 90                             - nop 
+GameManager:CalcUnassignedQuestCoins+66: 49 BB C0 9F 43 25 AB 01 00 00  - mov r11,System.Collections.Generic.Dictionary`2[PerkType,PerkState]:get_Values
+GameManager:CalcUnassignedQuestCoins+70: 41 FF D3                       - call r11
+GameManager:CalcUnassignedQuestCoins+73: 48 8B D5                       - mov rdx,rbp
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>23</ID>
+              <Description>"Usage: when pt changed"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>78</ID>
+              <Description>"Set to"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Double</VariableType>
+              <Address>vf_inf_world_pt</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>75</ID>
+          <Description>"Skill XP multiplier"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Factory Town Idle.exe
+  Version: 
+  Date   : 2024-01-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SKILL_XP_MULTI,LevelStat:GainPoints+18,LevelStat:GainPoints+88,F2 0F 58 C1 F2 0F 11 47 20) // should be unique
+alloc(newmem,$1000,INJECT_SKILL_XP_MULTI)
+
+label(code)
+label(return)
+label(vf_skill_xp_multi)
+
+newmem:
+  vmovsd xmm14, [vf_skill_xp_multi]
+  vmulsd xmm1, xmm1, xmm14
+
+code:
+  addsd xmm0,xmm1
+  movsd [rdi+20],xmm0
+  jmp return
+align 10 cc
+  vf_skill_xp_multi:
+  dq (double)1.33333333
+
+INJECT_SKILL_XP_MULTI:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_SKILL_XP_MULTI)
+registersymbol(vf_skill_xp_multi)
+
+[DISABLE]
+
+INJECT_SKILL_XP_MULTI:
+  db F2 0F 58 C1 F2 0F 11 47 20
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: LevelStat:GainPoints+22
+
+1AB2550BECE: 00 00                          - add [rax],al
+LevelStat:GainPoints: 55                             - push rbp
+LevelStat:GainPoints+1: 48 8B EC                       - mov rbp,rsp
+LevelStat:GainPoints+4: 48 83 EC 40                    - sub rsp,40
+LevelStat:GainPoints+8: 48 89 7D F8                    - mov [rbp-08],rdi
+LevelStat:GainPoints+c: 48 8B F9                       - mov rdi,rcx
+LevelStat:GainPoints+f: F2 0F 11 4D F0                 - movsd [rbp-10],xmm1
+LevelStat:GainPoints+14: 4C 89 45 E8                    - mov [rbp-18],r8
+LevelStat:GainPoints+18: F2 0F 10 47 20                 - movsd xmm0,[rdi+20]
+LevelStat:GainPoints+1d: F2 0F 10 4D F0                 - movsd xmm1,[rbp-10]
+// ---------- INJECTING HERE ----------
+LevelStat:GainPoints+22: F2 0F 58 C1                    - addsd xmm0,xmm1
+// ---------- DONE INJECTING  ----------
+LevelStat:GainPoints+26: F2 0F 11 47 20                 - movsd [rdi+20],xmm0
+LevelStat:GainPoints+2b: 0F B6 45 E8                    - movzx eax,byte ptr [rbp-18]
+LevelStat:GainPoints+2f: 85 C0                          - test eax,eax
+LevelStat:GainPoints+31: 74 10                          - je LevelStat:GainPoints+43
+LevelStat:GainPoints+33: 48 8B CF                       - mov rcx,rdi
+LevelStat:GainPoints+36: 49 BB 1B 9A 83 69 AB 01 00 00  - mov r11,000001AB69839A1B
+LevelStat:GainPoints+40: 41 FF D3                       - call r11
+LevelStat:GainPoints+43: 48 8B 7D F8                    - mov rdi,[rbp-08]
+LevelStat:GainPoints+47: 48 8D 65 00                    - lea rsp,[rbp+00]
+LevelStat:GainPoints+4b: 5D                             - pop rbp
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>76</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Double</VariableType>
+              <Address>vf_skill_xp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
+      <Description>"Factory Town Idle 1.93  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Color>00A200</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>AddressList.Header.OnSectionClick = nil
+
+</LuaScript>
+</CheatTable>
