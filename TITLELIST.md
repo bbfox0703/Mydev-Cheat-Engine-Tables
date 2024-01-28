@@ -236,6 +236,10 @@ ja-JP: ペルソナ５ ザ・ロイヤル
 ## Rise of Industry  
 [Rise of Industry (Steam)](https://store.steampowered.com/app/671440/Rise_of_Industry/)  
 
+## Romancing Saga 3  
+[Romancing Saga 3 (Steam)](https://store.steampowered.com/app/952540/Romancing_SaGa_3/)  
+ja-JP: ロマンシング サガ3  
+
 ## SaGa Frontier Remastered  
 [SaGa Frontier Remastered (Steam)](https://store.steampowered.com/app/1295270/SaGa_Frontier_Remastered/)  
 ja-JP: サガ フロンティア リマスター  
