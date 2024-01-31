@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/01/31  
+1. revised for v1.1.0  
+
 ## 2022/08/19  
 Added steal scripts.  
 

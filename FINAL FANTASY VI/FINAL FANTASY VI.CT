@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="42">
+<CheatTable CheatEngineTableVersion="45">
   <CheatEntries>
     <CheatEntry>
       <ID>64</ID>
@@ -16,21 +16,34 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>171</ID>
       <Description>"Enable (enable twice: 1st: waiting for IL2CPP to complete, then enable again)"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if syntaxcheck then return end
-if process == nil then ShowMessage('Process is not selected.')
-elseif readInteger(process) == 0 then ShowMessage('Process cannot be opened.')
+--[[
+if process == nil then
+    ShowMessage("Process is not selected.")
+elseif readInteger(process) == 0 then
+    ShowMessage("Process cannot be opened.")
 else
-  if (monopipe~=nil) and (monopipe.ProcessID~=getOpenedProcessID()) then
-    monopipe.destroy()
-    monopipe=nil
-  end
-  if (monopipe==nil) then
-    LaunchMonoDataCollector()
-  end
+    if (monopipe ~= nil) and (monopipe.ProcessID ~= getOpenedProcessID()) then
+        monopipe.destroy()
+        monopipe = nil
+    end
+    if (monopipe == nil) then
+        LaunchMonoDataCollector()
+    end
+end
+--]]
+if process == nil then
+    ShowMessage("Process is not selected.")
+elseif readInteger(process) == 0 then
+    ShowMessage("Process cannot be opened.")
+else
+    if (monopipe == nil) then
+        LaunchMonoDataCollector()
+    end
 end
 
 {$asm}
@@ -47,6 +60,7 @@ define(LastBattleFunctionMagicFunctionUpdateParameterProc,"Last.Battle.Function.
 define(LastBattleFunctionRecoveryFunctionUpdateParameterProc,"Last.Battle.Function.RecoveryFunction.UpdateParameter")
 define(LastBattleFunctionBattleFunction52FF6StealItemProc, "Last.Battle.Function.BattleFunction52FF6.StealItem")
 define(LastBattleBattleStealItemPlugStealItemProc, "Last.Battle.BattleStealItemPlug.StealItem")
+Define(LastDataUserOwnedItemDataget_Count, "Last.Data.User.OwnedItemData.get_Count")
 
 
 registersymbol(CharacterParameterBaseset_CurrentMPProc)
@@ -61,6 +75,7 @@ registersymbol(LastBattleFunctionMagicFunctionUpdateParameterProc)
 registersymbol(LastBattleFunctionRecoveryFunctionUpdateParameterProc)
 registersymbol(LastBattleFunctionBattleFunction52FF6StealItemProc)
 registersymbol(LastBattleBattleStealItemPlugStealItemProc)
+registersymbol(LastDataUserOwnedItemDataget_Count)
 [DISABLE]
 {$lua}
 if not syntaxcheck and monopipe then monopipe = nil,monopipe.Destroy()end
@@ -465,20 +480,18 @@ GameAssembly.dll+8E0F5F: 57                    - push rdi
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>26</ID>
+          <ID>188</ID>
           <Description>"Fill item count to 50 (to use: open item menu)"</Description>
-          <Color>A00000</Color>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
   Version: 
-  Date   : 2022-03-01
-  Author : bbfox @ https://opencheattables.org/
+  Date   : 2024-01-31
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
-//LastDataUserOwnedItemDatactorProc
-//aobscanmodule(INJECT_FILL_ITEM,GameAssembly.dll,8B 48 14 49 8B 86 80 00 00 00) // should be unique
-aobscanregion(INJECT_FILL_ITEM,LastDataUserOwnedItemDatactorProc+800,LastDataUserOwnedItemDatactorProc+1800,8B 48 14 49 8B 86 80 00 00 00) // should be unique
+
+aobscanregion(INJECT_FILL_ITEM,LastDataUserOwnedItemDataget_Count+0b,LastDataUserOwnedItemDataget_Count+3b,8B 40 14 48 83 C4 28) // should be unique
 alloc(newmem,$1000,INJECT_FILL_ITEM)
 
 label(code)
@@ -487,8 +500,8 @@ label(return)
 newmem:
 
 code:
-  mov ecx,[rax+14]
 
+  // code start
   cmp dword ptr [rax+10], #39
   jl next1
   cmp dword ptr [rax+10], #89
@@ -504,55 +517,65 @@ code:
 
 
 next1:
+  push rcx
+  mov ecx,[rax+14]
   cmp ecx, #50
   ja @F
   mov ecx, #50
-  mov [rax+14], ecx
+next2:
+  mov [rax+14],ecx
+
+  pop rcx
+
 fill_endp:
 
-  mov rax,[r14+00000080]
+
+  // code end
+
+  mov eax,[rax+14]
+  add rsp,28
   jmp return
 
 INJECT_FILL_ITEM:
   jmp newmem
-  nop 5
+  nop 2
 return:
 registersymbol(INJECT_FILL_ITEM)
 
 [DISABLE]
 
 INJECT_FILL_ITEM:
-  db 8B 48 14 49 8B 86 80 00 00 00
+  db 8B 40 14 48 83 C4 28
 
 unregistersymbol(INJECT_FILL_ITEM)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+8E04FE
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+49D590
 
-GameAssembly.dll+8E04D2: 49 8D 4E 58           - lea rcx,[r14+58]
-GameAssembly.dll+8E04D6: 48 89 11              - mov [rcx],rdx
-GameAssembly.dll+8E04D9: E8 82 CD 8B FF        - call GameAssembly.dll+19D260
-GameAssembly.dll+8E04DE: 41 8B 45 14           - mov eax,[r13+14]
-GameAssembly.dll+8E04E2: 41 89 46 14           - mov [r14+14],eax
-GameAssembly.dll+8E04E6: 41 8B 45 18           - mov eax,[r13+18]
-GameAssembly.dll+8E04EA: 41 89 46 18           - mov [r14+18],eax
-GameAssembly.dll+8E04EE: 49 8B 85 80 00 00 00  - mov rax,[r13+00000080]
-GameAssembly.dll+8E04F5: 48 85 C0              - test rax,rax
-GameAssembly.dll+8E04F8: 0F 84 90 02 00 00     - je GameAssembly.dll+8E078E
+GameAssembly.dll+49D57A: CC                    - int 3 
+GameAssembly.dll+49D57B: CC                    - int 3 
+GameAssembly.dll+49D57C: CC                    - int 3 
+GameAssembly.dll+49D57D: CC                    - int 3 
+GameAssembly.dll+49D57E: CC                    - int 3 
+GameAssembly.dll+49D57F: CC                    - int 3 
+LastDataUserOwnedItemDataget_Count: 48 83 EC 28           - sub rsp,28
+GameAssembly.dll+49D584: 48 8B 81 80 00 00 00  - mov rax,[rcx+00000080]
+GameAssembly.dll+49D58B: 48 85 C0              - test rax,rax
+GameAssembly.dll+49D58E: 74 08                 - je GameAssembly.dll+49D598
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+8E04FE: 8B 48 14              - mov ecx,[rax+14]
+GameAssembly.dll+49D590: 8B 40 14              - mov eax,[rax+14]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+8E0501: 49 8B 86 80 00 00 00  - mov rax,[r14+00000080]
-GameAssembly.dll+8E0508: 48 85 C0              - test rax,rax
-GameAssembly.dll+8E050B: 0F 84 7D 02 00 00     - je GameAssembly.dll+8E078E
-GameAssembly.dll+8E0511: 89 48 14              - mov [rax+14],ecx
-GameAssembly.dll+8E0514: 49 8B 55 60           - mov rdx,[r13+60]
-GameAssembly.dll+8E0518: 49 8D 4E 60           - lea rcx,[r14+60]
-GameAssembly.dll+8E051C: 48 89 11              - mov [rcx],rdx
-GameAssembly.dll+8E051F: E8 3C CD 8B FF        - call GameAssembly.dll+19D260
-GameAssembly.dll+8E0524: 49 8B 55 28           - mov rdx,[r13+28]
-GameAssembly.dll+8E0528: 49 8D 4E 28           - lea rcx,[r14+28]
+GameAssembly.dll+49D593: 48 83 C4 28           - add rsp,28
+GameAssembly.dll+49D597: C3                    - ret 
+GameAssembly.dll+49D598: E8 93 1C DB FF        - call GameAssembly.dll+24F230
+GameAssembly.dll+49D59D: CC                    - int 3 
+GameAssembly.dll+49D59E: CC                    - int 3 
+GameAssembly.dll+49D59F: CC                    - int 3 
+Last.Data.User.OwnedItemData.get_Deiscription: 40 57                 - push rdi
+GameAssembly.dll+49D5A2: 48 83 EC 20           - sub rsp,20
+GameAssembly.dll+49D5A6: 80 3D 23 8C D5 01 00  - cmp byte ptr [GameAssembly.dll+21F61D0],00
+GameAssembly.dll+49D5AD: 48 8B F9              - mov rdi,rcx
 }
 </AssemblerScript>
         </CheatEntry>
@@ -786,14 +809,14 @@ GameAssembly.dll+15C238E: CC              - int 3
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
   Version: 
-  Date   : 2022-08-19
+  Date   : 2024-01-31
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
 //aobscanmodule(INJECT_STEAL_ITEM,GameAssembly.dll,40 84 ED 0F 85 05 01 00 00) // should be unique
-aobscanregion(INJECT_STEAL_ITEM,LastBattleFunctionBattleFunction52FF6StealItemProc+0C, LastBattleFunctionBattleFunction52FF6StealItemProc+60,40 84 ED 0F 85 ?? ?? ?? ?? 48 85 F6) // should be unique
+aobscanregion(INJECT_STEAL_ITEM,LastBattleFunctionBattleFunction52FF6StealItemProc+90, LastBattleFunctionBattleFunction52FF6StealItemProc+F0,40 84 ED 0F 85 ?? ?? ?? ?? 48 85 FF) // should be unique
 alloc(newmem,$1000,INJECT_STEAL_ITEM)
 alloc(INJECT_STEAL_ITEMo,9)
 
@@ -829,31 +852,31 @@ dealloc(newmem)
 dealloc(INJECT_STEAL_ITEMo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+12E1633
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+69B0EA
 
-GameAssembly.dll+12E1604: E8 57 E3 E5 FE           - call GameAssembly.dll+13F960
-GameAssembly.dll+12E1609: C6 05 F8 1E D0 00 01     - mov byte ptr [GameAssembly.dll+1FE3508],01
-GameAssembly.dll+12E1610: 48 8B 0D 39 A8 D5 00     - mov rcx,[GameAssembly.dll+203BE50]
-GameAssembly.dll+12E1617: 4C 89 74 24 40           - mov [rsp+40],r14
-GameAssembly.dll+12E161C: 4C 89 7C 24 48           - mov [rsp+48],r15
-GameAssembly.dll+12E1621: E8 6A E4 E5 FE           - call GameAssembly.dll+13FA90
-GameAssembly.dll+12E1626: 33 D2                    - xor edx,edx
-GameAssembly.dll+12E1628: 48 8B C8                 - mov rcx,rax
-GameAssembly.dll+12E162B: 48 8B F8                 - mov rdi,rax
-GameAssembly.dll+12E162E: E8 8D 10 DF FF           - call StealItemData..ctor
+GameAssembly.dll+69B0C4: E8 27 41 BB FF           - call GameAssembly.dll+24F1F0
+GameAssembly.dll+69B0C9: 33 D2                    - xor edx,edx
+GameAssembly.dll+69B0CB: 48 8B C8                 - mov rcx,rax
+GameAssembly.dll+69B0CE: 48 8B D8                 - mov rbx,rax
+GameAssembly.dll+69B0D1: E8 CA 04 62 00           - call Last.Data.Master.Content..ctor
+GameAssembly.dll+69B0D6: 48 8B D3                 - mov rdx,rbx
+GameAssembly.dll+69B0D9: 49 89 5D 18              - mov [r13+18],rbx
+GameAssembly.dll+69B0DD: 49 8D 4D 18              - lea rcx,[r13+18]
+GameAssembly.dll+69B0E1: E8 3A 3D BB FF           - call GameAssembly.dll+24EE20
+GameAssembly.dll+69B0E6: 45 89 75 10              - mov [r13+10],r14d
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+12E1633: 40 84 ED                 - test bpl,bpl
+GameAssembly.dll+69B0EA: 40 84 ED                 - test bpl,bpl
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+12E1636: 0F 85 05 01 00 00        - jne GameAssembly.dll+12E1741
-GameAssembly.dll+12E163C: 48 85 F6                 - test rsi,rsi
-GameAssembly.dll+12E163F: 0F 84 DD 05 00 00        - je GameAssembly.dll+12E1C22
-GameAssembly.dll+12E1645: 4C 8B 06                 - mov r8,[rsi]
-GameAssembly.dll+12E1648: 48 8B 15 E9 52 D6 00     - mov rdx,[GameAssembly.dll+2046938]
-GameAssembly.dll+12E164F: 45 0F B6 88 28 01 00 00  - movzx r9d,byte ptr [r8+00000128]
-GameAssembly.dll+12E1657: 0F B6 82 28 01 00 00     - movzx eax,byte ptr [rdx+00000128]
-GameAssembly.dll+12E165E: 44 3A C8                 - cmp r9l,al
-GameAssembly.dll+12E1661: 0F 82 BB 05 00 00        - jb GameAssembly.dll+12E1C22
-GameAssembly.dll+12E1667: 8B C8                    - mov ecx,eax
+GameAssembly.dll+69B0ED: 0F 85 05 01 00 00        - jne GameAssembly.dll+69B1F8
+GameAssembly.dll+69B0F3: 48 85 FF                 - test rdi,rdi
+GameAssembly.dll+69B0F6: 0F 84 C4 05 00 00        - je GameAssembly.dll+69B6C0
+GameAssembly.dll+69B0FC: 4C 8B 07                 - mov r8,[rdi]
+GameAssembly.dll+69B0FF: 48 8B 15 EA 3B E7 01     - mov rdx,[GameAssembly.dll+250ECF0]
+GameAssembly.dll+69B106: 45 0F B6 88 28 01 00 00  - movzx r9d,byte ptr [r8+00000128]
+GameAssembly.dll+69B10E: 0F B6 82 28 01 00 00     - movzx eax,byte ptr [rdx+00000128]
+GameAssembly.dll+69B115: 44 3A C8                 - cmp r9b,al
+GameAssembly.dll+69B118: 0F 82 A2 05 00 00        - jb GameAssembly.dll+69B6C0
+GameAssembly.dll+69B11E: 8B C8                    - mov ecx,eax
 }
 </AssemblerScript>
         </CheatEntry>
@@ -863,14 +886,14 @@ GameAssembly.dll+12E1667: 8B C8                    - mov ecx,eax
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
   Version: 
-  Date   : 2022-08-19
+  Date   : 2024-01-31
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_STEAL_RARE,GameAssembly.dll,41 8D 5E 01 83 F8 20) // should be unique
-aobscanregion(INJECT_STEAL_RARE,LastBattleFunctionBattleFunction52FF6StealItemProc+260,LastBattleFunctionBattleFunction52FF6StealItemProc+300,41 8D 5E 01 83 F8 20) // should be unique
+//aobscanmodule(INJECT_STEAL_RARE,GameAssembly.dll,41 8D 5E 01 83 F8 20) // should be unique
+aobscanregion(INJECT_STEAL_RARE,LastBattleFunctionBattleFunction52FF6StealItemProc+260,LastBattleFunctionBattleFunction52FF6StealItemProc+300,8D 5D 01 83 F8 20) // should be unique
 alloc(newmem,$1000,INJECT_STEAL_RARE)
 
 label(code)
@@ -880,50 +903,50 @@ newmem:
   mov eax, 10
 
 code:
-  lea ebx,[r14+01]
+  lea ebx,[rbp+01]
   cmp eax,20
   jmp return
 
 INJECT_STEAL_RARE:
   jmp newmem
-  nop 2
+  nop
 return:
 registersymbol(INJECT_STEAL_RARE)
 
 [DISABLE]
 
 INJECT_STEAL_RARE:
-  db 41 8D 5E 01 83 F8 20
+  db 8D 5D 01 83 F8 20
 
 unregistersymbol(INJECT_STEAL_RARE)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+12E1868
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+69B31C
 
-GameAssembly.dll+12E183A: 48 8B 0D 6F 70 D6 00  - mov rcx,[GameAssembly.dll+20488B0]
-GameAssembly.dll+12E1841: F6 81 2F 01 00 00 02  - test byte ptr [rcx+0000012F],02
-GameAssembly.dll+12E1848: 74 0E                 - je GameAssembly.dll+12E1858
-GameAssembly.dll+12E184A: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
-GameAssembly.dll+12E1851: 75 05                 - jne GameAssembly.dll+12E1858
-GameAssembly.dll+12E1853: E8 88 D5 DE FE        - call GameAssembly.il2cpp_runtime_class_init
-GameAssembly.dll+12E1858: 33 D2                 - xor edx,edx
-GameAssembly.dll+12E185A: B9 00 01 00 00        - mov ecx,00000100
-GameAssembly.dll+12E185F: 44 8D 72 01           - lea r14d,[rdx+01]
-GameAssembly.dll+12E1863: E8 D8 58 AC FF        - call CommonUtility.GetRand
+GameAssembly.dll+69B2ED: 48 8B 0D AC 59 E7 01  - mov rcx,[GameAssembly.dll+2510CA0]
+GameAssembly.dll+69B2F4: F6 81 2F 01 00 00 02  - test byte ptr [rcx+0000012F],02
+GameAssembly.dll+69B2FB: 74 0E                 - je GameAssembly.dll+69B30B
+GameAssembly.dll+69B2FD: 44 39 B1 E0 00 00 00  - cmp [rcx+000000E0],r14d
+GameAssembly.dll+69B304: 75 05                 - jne GameAssembly.dll+69B30B
+GameAssembly.dll+69B306: E8 05 19 B4 FF        - call GameAssembly.il2cpp_runtime_class_init
+GameAssembly.dll+69B30B: 33 D2                 - xor edx,edx
+GameAssembly.dll+69B30D: B9 00 01 00 00        - mov ecx,00000100
+GameAssembly.dll+69B312: BD 01 00 00 00        - mov ebp,00000001
+GameAssembly.dll+69B317: E8 84 DC CA FF        - call CommonUtility.GetRand
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+12E1868: 41 8D 5E 01           - lea ebx,[r14+01]
+GameAssembly.dll+69B31C: 8D 5D 01              - lea ebx,[rbp+01]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+12E186C: 83 F8 20              - cmp eax,20
-GameAssembly.dll+12E186F: 7D 1D                 - jnl GameAssembly.dll+12E188E
-GameAssembly.dll+12E1871: 33 D2                 - xor edx,edx
-GameAssembly.dll+12E1873: 48 8B CD              - mov rcx,rbp
-GameAssembly.dll+12E1876: E8 75 92 2D 00        - call Last.Data.Master.Monster.get_StealContentId2
-GameAssembly.dll+12E187B: 85 C0                 - test eax,eax
-GameAssembly.dll+12E187D: 74 0F                 - je GameAssembly.dll+12E188E
-GameAssembly.dll+12E187F: 33 D2                 - xor edx,edx
-GameAssembly.dll+12E1881: 48 8B CD              - mov rcx,rbp
-GameAssembly.dll+12E1884: 44 8B F3              - mov r14d,ebx
+GameAssembly.dll+69B31F: 83 F8 20              - cmp eax,20
+GameAssembly.dll+69B322: 7D 1C                 - jnl GameAssembly.dll+69B340
+GameAssembly.dll+69B324: 33 D2                 - xor edx,edx
+GameAssembly.dll+69B326: 48 8B CE              - mov rcx,rsi
+GameAssembly.dll+69B329: E8 62 85 AE 00        - call Last.Data.Master.Monster.get_StealContentId2
+GameAssembly.dll+69B32E: 85 C0                 - test eax,eax
+GameAssembly.dll+69B330: 74 0E                 - je GameAssembly.dll+69B340
+GameAssembly.dll+69B332: 33 D2                 - xor edx,edx
+GameAssembly.dll+69B334: 48 8B CE              - mov rcx,rsi
+GameAssembly.dll+69B337: 8B EB                 - mov ebp,ebx
 }
 </AssemblerScript>
         </CheatEntry>
@@ -1366,8 +1389,8 @@ GameAssembly.dll+13A45E6: E8 75 B3 D9 FE        - call GameAssembly.dll+13F960
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
   Version: 
-  Date   : 2022-04-01
-  Author :
+  Date   : 2024-01-31
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
@@ -1438,32 +1461,33 @@ INJECT_NORMAL_ATTACK:
 unregistersymbol(*)
 dealloc(newmem)
 
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+10C8A68
 
-GameAssembly.dll+10C8A3B: 48 8B D9              - mov rbx,rcx
-GameAssembly.dll+10C8A3E: 80 3D EB 96 F1 00 00  - cmp byte ptr [GameAssembly.dll+1FE2130],00
-GameAssembly.dll+10C8A45: 75 12                 - jne GameAssembly.dll+10C8A59
-GameAssembly.dll+10C8A47: 8B 0D CF E3 84 00     - mov ecx,[GameAssembly.dll+1916E1C]
-GameAssembly.dll+10C8A4D: E8 0E 6F 07 FF        - call GameAssembly.dll+13F960
-GameAssembly.dll+10C8A52: C6 05 D7 96 F1 00 01  - mov byte ptr [GameAssembly.dll+1FE2130],01
-GameAssembly.dll+10C8A59: 8B 04 24              - mov eax,[rsp]
-GameAssembly.dll+10C8A5C: 48 83 EC 10           - sub rsp,10
-GameAssembly.dll+10C8A60: 4C 8D 7C 24 20        - lea r15,[rsp+20]
-GameAssembly.dll+10C8A65: 41 8B 07              - mov eax,[r15]
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+6A3A38
+
+GameAssembly.dll+6A3A0B: 48 8B D9              - mov rbx,rcx
+GameAssembly.dll+6A3A0E: 80 3D E5 3A B5 01 00  - cmp byte ptr [GameAssembly.dll+21F74FA],00
+GameAssembly.dll+6A3A15: 75 12                 - jne GameAssembly.dll+6A3A29
+GameAssembly.dll+6A3A17: 8B 0D 87 39 30 01     - mov ecx,[GameAssembly.dll+19A73A4]
+GameAssembly.dll+6A3A1D: E8 9E B6 BA FF        - call GameAssembly.dll+24F0C0
+GameAssembly.dll+6A3A22: C6 05 D1 3A B5 01 01  - mov byte ptr [GameAssembly.dll+21F74FA],01
+GameAssembly.dll+6A3A29: 8B 04 24              - mov eax,[rsp]
+GameAssembly.dll+6A3A2C: 48 83 EC 10           - sub rsp,10
+GameAssembly.dll+6A3A30: 4C 8D 7C 24 20        - lea r15,[rsp+20]
+GameAssembly.dll+6A3A35: 41 8B 07              - mov eax,[r15]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+10C8A68: 4C 8B 43 20           - mov r8,[rbx+20]
+GameAssembly.dll+6A3A38: 4C 8B 43 20           - mov r8,[rbx+20]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+10C8A6C: 4D 85 C0              - test r8,r8
-GameAssembly.dll+10C8A6F: 0F 84 22 02 00 00     - je GameAssembly.dll+10C8C97
-GameAssembly.dll+10C8A75: 45 33 C9              - xor r9d,r9d
-GameAssembly.dll+10C8A78: 48 8B 15 D9 D3 F7 00  - mov rdx,[GameAssembly.dll+2045E58]
-GameAssembly.dll+10C8A7F: 41 8D 49 03           - lea ecx,[r9+03]
-GameAssembly.dll+10C8A83: E8 78 86 F6 FE        - call GameAssembly.dll+31100
-GameAssembly.dll+10C8A88: 44 8B F0              - mov r14d,eax
-GameAssembly.dll+10C8A8B: 48 8B 0D 96 E0 F7 00  - mov rcx,[GameAssembly.dll+2046B28]
-GameAssembly.dll+10C8A92: F6 81 2F 01 00 00 02  - test byte ptr [rcx+0000012F],02
-GameAssembly.dll+10C8A99: 74 0E                 - je GameAssembly.dll+10C8AA9
+GameAssembly.dll+6A3A3C: 4D 85 C0              - test r8,r8
+GameAssembly.dll+6A3A3F: 0F 84 22 02 00 00     - je GameAssembly.dll+6A3C67
+GameAssembly.dll+6A3A45: 45 33 C9              - xor r9d,r9d
+GameAssembly.dll+6A3A48: 48 8B 15 91 A7 E6 01  - mov rdx,[GameAssembly.dll+250E1E0]
+GameAssembly.dll+6A3A4F: 41 8D 49 03           - lea ecx,[r9+03]
+GameAssembly.dll+6A3A53: E8 F8 23 A4 FF        - call GameAssembly.dll+E5E50
+GameAssembly.dll+6A3A58: 44 8B F0              - mov r14d,eax
+GameAssembly.dll+6A3A5B: 48 8B 0D D6 D8 E6 01  - mov rcx,[GameAssembly.dll+2511338]
+GameAssembly.dll+6A3A62: F6 81 2F 01 00 00 02  - test byte ptr [rcx+0000012F],02
+GameAssembly.dll+6A3A69: 74 0E                 - je GameAssembly.dll+6A3A79
 }
 </AssemblerScript>
           <CheatEntries>
@@ -1608,19 +1632,16 @@ GameAssembly.dll+10CA69F: 4D 85 C0              - test r8,r8
         </CheatEntry>
         <CheatEntry>
           <ID>161</ID>
-          <Description>"(v1.04-1.06) Battle+ (affect on normal hit)"</Description>
+          <Description>"Battle control (affect on normal hit)"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : FINAL FANTASY VI.exe
   Version: 
-  Date   : 2022-03-09
-  Author : bbfox @ https://opencheattables.org/
+  Date   : 2024-01-31
+  Author : bbfox @ https://opencheattables.com/
 }
 
 [ENABLE]
-
-aobscanmodule(INJECT_CURR_HP,GameAssembly.dll,89 7B 14 48 8B CB) // should be unique
-
 aobscanregion(INJECT_CURR_HP,LastDataCharacterParameterBaseset_CurrentHPProc+20,LastDataCharacterParameterBaseset_CurrentHPProc+60,89 7B 14 48 8B CB)
 alloc(newmem,$1000,INJECT_CURR_HP)
 
@@ -1637,14 +1658,14 @@ label(is_enemy)
 newmem:
   mov dword ptr [is_enemy], 0
   push rbx
-  mov ebx, [rbx+10]
+  mov ebx, [rbx+10] //&lt;BaseLevel&gt;k__BackingField
   cmp ebx, 1 // level
   pop rbx
 
   je check_start
   //jmp enemy_check
   push rbx
-  mov ebx, [rbx+170]
+  mov ebx, [rbx+178]
   cmp ebx, 1 // monster: &lt;IsAnzen&gt;k__BackingField, player:&lt;TemporaryMaxMpCountList&gt;k__BackingField
   jae endpop1 // player
   mov dword ptr [is_enemy], 1
@@ -1663,7 +1684,7 @@ player_check:
   cmp dword ptr [is_enemy], 1
   je enemy_check
 
-  lea rax, [rbx+14]
+  lea rax, [rbx+14] //currentHP
   mov [p1_curr_hp_addr], rax
   cmp dword ptr [is_full_hp], 0
   je next_mp
@@ -1681,7 +1702,7 @@ next_mp:
   //mov r14d, [rcx+C0]// &lt;TemporaryMaxMp&gt;k__BackingField
   //cmp r15d, r14d
   //cmovg r15d, r14d
-  mov [rbx+18], r15d
+  mov [rbx+18], r15d //currentMP
 
 next_full_stat:
   cmp dword ptr [is_full_stat], 0
@@ -1912,1460 +1933,11 @@ GameAssembly.dll+4AB6CD: 48 8B CB              - mov rcx,rbx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>37</ID>
-      <Description>"(v1.0-1.03) Battle+ (must be on for child scripts)"</Description>
-      <Options moHideChildren="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
-{$asm}
-alloc(newmem, 1000)
-label(HP_Threshold)
-label(MP_Threshold)
-label(SET_AGI)
-label(FAST_KILL)
-
-newmem:
-  HP_Threshold:
-  dd #500
-  MP_Threshold:
-  dd #100
-  SET_AGI:
-  dd 1
-  FAST_KILL:
-  dd 2
-
-registersymbol(FAST_KILL)
-registersymbol(SET_AGI)
-registersymbol(MP_Threshold)
-registersymbol(HP_Threshold)
-
-[DISABLE]
-unregistersymbol(FAST_KILL)
-unregistersymbol(SET_AGI)
-unregistersymbol(MP_Threshold)
-unregistersymbol(HP_Threshold)
-dealloc(newmem, 1000)
-</AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>80</ID>
-          <Description>"Player HP/MP+"</Description>
-          <Options moHideChildren="1"/>
-          <GroupHeader>1</GroupHeader>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>38</ID>
-              <Description>"1. Set HP Threshold"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>HP_Threshold</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>47</ID>
-              <Description>"Speed up?"</Description>
-              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>SET_AGI</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>41</ID>
-              <Description>"2. MP Threshold"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>MP_Threshold</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>130</ID>
-              <Description>"3. Turne HP/MP/Stat options+ (chooe one)"</Description>
-              <Options moHideChildren="1"/>
-              <GroupHeader>1</GroupHeader>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>48</ID>
-                  <Description>"3A. Turn on HP/MP (refill during battle (When &lt; threshold)"</Description>
-                  <Color>A00000</Color>
-                  <VariableType>Auto Assembler Script</VariableType>
-                  <AssemblerScript>{$lua}
-if syntaxcheck then return end
-[ENABLE]
---if (Timer1 == nil) then
-  Timer1 = createTimer()
-  Timer1.Interval = 1000
-  Timer1.OnTimer = function(timer)
-    local tt_i2 = nil
-    local tt_ii = nil
-    local m1 = nil
-    local tt_threshold = readInteger('HP_Threshold')
-    local tt_threshold1 = readInteger('MP_Threshold')
-    local is_stragi = readInteger('SET_AGI')
-    local agi_threshold = 600
-    local i_loop =0
-
-    local a_hp = {[1] = 6, [2] = 27, [3] = 28, [4] = 29, --[[IGP]] [5] = 98, [6] = 99, [7] = 100, [8] = 101, }
-
-    local a_mp = {[1] = 9, [2] = 32, [3] = 33, [4] = 34, --[[IGP]] [5] = 102, [6] = 103, [7] = 104, [8] = 105, }
-
-    local a_agi = {[1] = 43, [2] = 44, [3] = 45, [4] = 46, --[[IGP]] [5] = 106, [6] = 107, [7] = 108, [8] = 109, }
-
-    --"GameAssembly.dll"+01E3FF48
-    tt_i2 = getAddressSafe("GameAssembly.dll")
-    if (tt_i2 and tt_threshold) then
-
-      for _, hp_id in pairs(a_hp) do
-        m1 = getAddressList().getMemoryRecordByID(hp_id)
-        --print(m1.Value)
-        tt_ii = tonumber(m1.Value)
-        if (tt_ii and (tt_ii &lt; tt_threshold)) then
-          m1.Value = "9990"
-          --print('p1')
-        end
-      end
-
-
-      for _, mp_id in pairs(a_mp) do
-        m1 = getAddressList().getMemoryRecordByID(mp_id)
-        tt_ii = tonumber(m1.Value)
-        if (tt_ii and (tt_ii &lt; tt_threshold1)) then
-          m1.Value = "990"
-          --print('p1')
-        end
-      end
-
-      for _, agi_id in pairs(a_agi) do
-        m1 = getAddressList().getMemoryRecordByID(agi_id)
-        tt_ii = tonumber(m1.Value)
-        --print(tt_ii)
-        if (tt_ii and (is_stragi) and (m1)) then
-          m1.Value = "995"
-          --local t_a11 = m1.CurrentAddress
-          --local t_a12 = getAddresSafe(tonumber(t_a11) - 0x8)
-          --print('p1')
-        end
-      end
-    end
-  end
-  print('3A: Enabled')
---end
---Timer1.Enabled = true
-
-
-[DISABLE]
---Timer1.Enabled = false
-Timer1.Destroy()
-print('3A: Disabled')
-</AssemblerScript>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>129</ID>
-                  <Description>"3B. Turn on HP/MP with max stats temporary (refill during battle (When &lt; threshold)"</Description>
-                  <Color>A00000</Color>
-                  <VariableType>Auto Assembler Script</VariableType>
-                  <AssemblerScript>{$lua}
-if syntaxcheck then return end
-[ENABLE]
---if (Timer1 == nil) then
-  Timer2_tick = 0
-  Timer2 = createTimer()
-  Timer2.Interval = 1000
-  Timer2.OnTimer = function(timer2)
-    local tt_i2 = nil
-    local tt_ii = nil
-    local m1 = nil
-    local tt_threshold = readInteger('HP_Threshold')
-    local tt_threshold1 = readInteger('MP_Threshold')
-    local is_stragi = readInteger('SET_AGI')
-    local agi_threshold = 600
-    local i_loop =0
-
-    local a_hp = {[1] = 6, [2] = 27, [3] = 28, [4] = 29, --[[IGP]] [5] = 98, [6] = 99, [7] = 100, [8] = 101, }
-
-    local a_mp = {[1] = 9, [2] = 32, [3] = 33, [4] = 34, --[[IGP]] [5] = 102, [6] = 103, [7] = 104, [8] = 105, }
-
-    local a_agi = {[1] = 43, [2] = 44, [3] = 45, [4] = 46, --[[IGP]] [5] = 106, [6] = 107, [7] = 108, [8] = 109, }
-
-    --"GameAssembly.dll"+01E3FF48
-    tt_i2 = getAddressSafe("GameAssembly.dll")
-    if (tt_i2 and tt_threshold) then
-
-      for _, hp_id in pairs(a_hp) do
-        m1 = getAddressList().getMemoryRecordByID(hp_id)
-        --print(m1.Value)
-        tt_ii = tonumber(m1.Value)
-        if (tt_ii and (tt_ii &lt; tt_threshold)) then
-          m1.Value = "9990"
-        end
-      end
-
-
-      for _, mp_id in pairs(a_mp) do
-        m1 = getAddressList().getMemoryRecordByID(mp_id)
-        if (m1) then
-          tt_ii = tonumber(m1.Value)
-        else
-          tt_ii = nil
-        end
-        if (tt_ii and (tt_ii &lt; tt_threshold1)) then
-          m1.Value = "990"
-        end
-      end
-
-      for _, agi_id in pairs(a_agi) do
-        m1 = getAddressList().getMemoryRecordByID(agi_id)
-        if (m1) then
-          tt_ii = tonumber(m1.Value)
-        else
-          tt_ii = nil
-        end
-
-        --print(m1.CurrentAddress)
-        if (tt_ii and (is_stragi) and (m1)) then
-          m1.Value = "999"
-
-          local t_a11 = m1.CurrentAddress
-          if (t_a11) then
-            local t_a12 = getAddressSafe(t_a11 - 0x8)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) - 0x04)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x08)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x0C)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x10)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x14)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x18)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x1C)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x20)
-            WriteSmallInteger(t_a12, 999)
-            t_a12 = getAddressSafe(tonumber(t_a11) + 0x2C)
-            WriteSmallInteger(t_a12, 999)
-
-          end
-          --print('p1')
-        end
-      end
-    end
-  end
-  print('3B: Enabled')
-
-[DISABLE]
-Timer2.Destroy()
-print('3B: Disabled')
-</AssemblerScript>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>39</ID>
-              <Description>"HP/MP status+"</Description>
-              <Options moHideChildren="1"/>
-              <GroupHeader>1</GroupHeader>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>136</ID>
-                  <Description>"HP/MP Status+ (v1.00)"</Description>
-                  <Options moHideChildren="1"/>
-                  <GroupHeader>1</GroupHeader>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>132</ID>
-                      <Description>"HP"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>6</ID>
-                          <Description>"HP1"</Description>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>27</ID>
-                          <Description>"HP2"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>28</ID>
-                          <Description>"HP3"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>29</ID>
-                          <Description>"HP4"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>131</ID>
-                      <Description>"MP"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>9</ID>
-                          <Description>"MP1"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>32</ID>
-                          <Description>"MP2"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>33</ID>
-                          <Description>"MP3"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>34</ID>
-                          <Description>"MP4"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>52</ID>
-                      <Description>"Others+"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>128</ID>
-                          <Description>"AGI"</Description>
-                          <Options moHideChildren="1"/>
-                          <GroupHeader>1</GroupHeader>
-                          <CheatEntries>
-                            <CheatEntry>
-                              <ID>43</ID>
-                              <Description>"AGI1"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>30</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>20</Offset>
-                                <Offset>A0</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>44</ID>
-                              <Description>"AGI2"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>30</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>28</Offset>
-                                <Offset>A0</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>45</ID>
-                              <Description>"AGI3"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>30</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>30</Offset>
-                                <Offset>A0</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>46</ID>
-                              <Description>"AGI4"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>30</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>38</Offset>
-                                <Offset>A0</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                          </CheatEntries>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>111</ID>
-                  <Description>"HP/MP Status+ (v1.03)"</Description>
-                  <Options moHideChildren="1"/>
-                  <GroupHeader>1</GroupHeader>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>134</ID>
-                      <Description>"HP"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>98</ID>
-                          <Description>"HP1a"</Description>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>99</ID>
-                          <Description>"HP2a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>100</ID>
-                          <Description>"HP3a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>101</ID>
-                          <Description>"HP4a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>14</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>133</ID>
-                      <Description>"MP"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>102</ID>
-                          <Description>"MP1a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>103</ID>
-                          <Description>"MP2a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>104</ID>
-                          <Description>"MP3a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>105</ID>
-                          <Description>"MP4a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>110</ID>
-                      <Description>"Others+"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>106</ID>
-                          <Description>"AGI1a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>30</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>107</ID>
-                          <Description>"AGI2a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>30</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>108</ID>
-                          <Description>"AGI3a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>30</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>109</ID>
-                          <Description>"AGI4a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>30</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A0</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>63</ID>
-          <Description>"Monster HP/MP+"</Description>
-          <Options moHideChildren="1"/>
-          <GroupHeader>1</GroupHeader>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>66</ID>
-              <Description>"1. Fast kill?"</Description>
-              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
-1:On
-2:Suicide
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>FAST_KILL</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>67</ID>
-              <Description>"2. Turn on fast kill"</Description>
-              <Color>A00000</Color>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{$lua}
-if syntaxcheck then return end
-[ENABLE]
---if (Timer1 == nil) then
-  TimerE1 = createTimer()
-  TimerE1.Interval = 1000
-  TimerE1.OnTimer = function(timer1)
-    local tt_i2 = nil
-    local tt_ii = nil
-    local m1 = nil
-
-    local is_fastkill = readInteger('FAST_KILL')
-
-    local ehp_id = 0
-
-
-    local a_ehp = {[1] = 58, [2] = 59, [3] = 57, [4] = 60, [5] = 61, [6] = 62,
-                   --[[IGP]] [7] = 113,  [8] = 114,  [9] = 115,  [10] = 116,  [11] = 121,  [12] = 122, }
-
-
-    --"GameAssembly.dll"+01E3FF48
-    tt_i2 = getAddressSafe("GameAssembly.dll")
-    if (tt_i2 and (is_fastkill &gt; 0)) then
-
-      for _, ehp_id in pairs(a_ehp) do
-        m1 = getAddressList().getMemoryRecordByID(ehp_id)
-        --print(m1.Value)
-        tt_ii = tonumber(m1.Value)
-        if (tt_ii and (tt_ii &gt; 1) and (is_fastkill == 1)) then
-          m1.Value = "1"
-          --print('p1')
-        end
-        if (tt_ii and (tt_ii &gt; 0) and (is_fastkill == 2)) then
-          m1.Value = "0"
-          --print('p1')
-        end
-      end
-    end
-  end
-  print('Enabled')
---end
---Timer1.Enabled = true
-
-
-[DISABLE]
---Timer1.Enabled = false
-TimerE1.Destroy()
-print('Disabled')
-</AssemblerScript>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>78</ID>
-              <Description>"***Game may hang if used in BATTLE with EVENT***"</Description>
-              <Color>0000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>65</ID>
-              <Description>"HP/MP Values+"</Description>
-              <Options moHideChildren="1"/>
-              <GroupHeader>1</GroupHeader>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>93</ID>
-                  <Description>"Others+"</Description>
-                  <Options moHideChildren="1"/>
-                  <GroupHeader>1</GroupHeader>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>94</ID>
-                      <Description>"Level+"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>138</ID>
-                          <Description>"V1.00"</Description>
-                          <Options moHideChildren="1"/>
-                          <GroupHeader>1</GroupHeader>
-                          <CheatEntries>
-                            <CheatEntry>
-                              <ID>81</ID>
-                              <Description>"E.LV1"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>20</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>82</ID>
-                              <Description>"E.LV2"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>28</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>83</ID>
-                              <Description>"E.LV3"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>30</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>84</ID>
-                              <Description>"E.LV4"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>38</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>85</ID>
-                              <Description>"E.LV5"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>40</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>86</ID>
-                              <Description>"E.LV6"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01E3FF48</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>48</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                          </CheatEntries>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>139</ID>
-                          <Description>"V1.03"</Description>
-                          <Options moHideChildren="1"/>
-                          <GroupHeader>1</GroupHeader>
-                          <CheatEntries>
-                            <CheatEntry>
-                              <ID>140</ID>
-                              <Description>"E.LV1"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01DD4D78</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>20</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>141</ID>
-                              <Description>"E.LV2"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01DD4D78</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>28</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>142</ID>
-                              <Description>"E.LV3"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01DD4D78</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>30</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>143</ID>
-                              <Description>"E.LV4"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01DD4D78</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>38</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>144</ID>
-                              <Description>"E.LV5"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01DD4D78</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>40</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                            <CheatEntry>
-                              <ID>145</ID>
-                              <Description>"E.LV6"</Description>
-                              <ShowAsSigned>0</ShowAsSigned>
-                              <VariableType>4 Bytes</VariableType>
-                              <Address>"GameAssembly.dll"+01DD4D78</Address>
-                              <Offsets>
-                                <Offset>10</Offset>
-                                <Offset>10</Offset>
-                                <Offset>30</Offset>
-                                <Offset>48</Offset>
-                                <Offset>A8</Offset>
-                                <Offset>0</Offset>
-                                <Offset>B8</Offset>
-                              </Offsets>
-                            </CheatEntry>
-                          </CheatEntries>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>137</ID>
-                  <Description>"Monster HP/MP Status+ (v1.00)"</Description>
-                  <Options moHideChildren="1"/>
-                  <GroupHeader>1</GroupHeader>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>58</ID>
-                      <Description>"E.HP1"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01E3FF48</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>20</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>59</ID>
-                      <Description>"E.HP2"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01E3FF48</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>28</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>57</ID>
-                      <Description>"E.HP3"</Description>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01E3FF48</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>30</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>60</ID>
-                      <Description>"E.HP4"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01E3FF48</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>38</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>61</ID>
-                      <Description>"E.HP5"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01E3FF48</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>40</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>62</ID>
-                      <Description>"E.HP6"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01E3FF48</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>48</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>95</ID>
-                      <Description>"MP+"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>87</ID>
-                          <Description>"E.MP1"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>88</ID>
-                          <Description>"E.MP2"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>89</ID>
-                          <Description>"E.MP3"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>90</ID>
-                          <Description>"E.MP4"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>91</ID>
-                          <Description>"E.MP5"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>40</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>92</ID>
-                          <Description>"E.MP6"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01E3FF48</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>48</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>112</ID>
-                  <Description>"Monster HP/MP Status+ (v1.03)"</Description>
-                  <Options moHideChildren="1"/>
-                  <GroupHeader>1</GroupHeader>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>113</ID>
-                      <Description>"E.HP1a"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01DD4D78</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>20</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>114</ID>
-                      <Description>"E.HP2a"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01DD4D78</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>28</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>115</ID>
-                      <Description>"E.HP3a"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01DD4D78</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>30</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>116</ID>
-                      <Description>"E.HP4a"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01DD4D78</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>38</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>121</ID>
-                      <Description>"E.HP5a"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01DD4D78</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>40</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>122</ID>
-                      <Description>"E.HP6a"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>4 Bytes</VariableType>
-                      <Address>"GameAssembly.dll"+01DD4D78</Address>
-                      <Offsets>
-                        <Offset>14</Offset>
-                        <Offset>10</Offset>
-                        <Offset>30</Offset>
-                        <Offset>48</Offset>
-                        <Offset>A8</Offset>
-                        <Offset>0</Offset>
-                        <Offset>B8</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>135</ID>
-                      <Description>"MP"</Description>
-                      <Options moHideChildren="1"/>
-                      <GroupHeader>1</GroupHeader>
-                      <CheatEntries>
-                        <CheatEntry>
-                          <ID>117</ID>
-                          <Description>"E.MP1a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>20</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>118</ID>
-                          <Description>"E.MP2a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>28</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>119</ID>
-                          <Description>"E.MP3a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>30</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>120</ID>
-                          <Description>"E.MP4a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>38</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>123</ID>
-                          <Description>"E.MP5a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>40</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>124</ID>
-                          <Description>"E.MP6a"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <VariableType>4 Bytes</VariableType>
-                          <Address>"GameAssembly.dll"+01DD4D78</Address>
-                          <Offsets>
-                            <Offset>18</Offset>
-                            <Offset>10</Offset>
-                            <Offset>30</Offset>
-                            <Offset>48</Offset>
-                            <Offset>A8</Offset>
-                            <Offset>0</Offset>
-                            <Offset>B8</Offset>
-                          </Offsets>
-                        </CheatEntry>
-                      </CheatEntries>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
       <ID>182</ID>
-      <Description>"FINAL FANTASY VI v1.06  /  https://opencheattables.com  /  CE 7.4+"</Description>
-      <Color>400080</Color>
+      <Description>"FINAL FANTASY VI v1.1.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Color>00B900</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>tapmult</Name>
-      <Address>2088B700000</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
 </CheatTable>
