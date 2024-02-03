@@ -222,8 +222,13 @@ zh-TW: 舊世界 Old World
 ## Pathfinder Kingmaker
 [Pathfinder: Kingmaker - Enhanced Plus Edition (Steam)](https://store.steampowered.com/app/640820/Pathfinder_Kingmaker__Enhanced_Plus_Edition/)
 
+## Persona 3 Reload  
+[Persona 3 Reload (Steam)](https://store.steampowered.com/app/2161700/_Reload/)  
+zh-TW: 女神異聞錄３ Reload  
+ja-JP: ペルソナ３ リロード  
+
 ## Persona 5 Royal  
-[Persona 5 Royal (Steam)](https://store.steampowered.com/app/1687950/5//)  
+[Persona 5 Royal (Steam)](https://store.steampowered.com/app/1687950/5/)  
 zh-TW: 女神異聞錄5皇家版  
 ja-JP: ペルソナ５ ザ・ロイヤル  
 
