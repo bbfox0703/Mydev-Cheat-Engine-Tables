@@ -1,0 +1,1052 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>48</ID>
+      <Description>"Compact mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9</ID>
+      <Description>"Battle: Damage control"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_HP_RECV_MULTI,$process,03 51 0C 0F 49 DA) // should be unique
+alloc(newmem,$1000,INJECT_HP_RECV_MULTI)
+
+label(code)
+label(return)
+label(vf_hp_recv_multi)
+label(vf_hp_damage_multi)
+label(vf_hp_damage_to_enemy_multi)
+label(is_also_recovery_sp)
+newmem:
+  pushfq
+
+  cmp dword ptr [rcx+04], 1
+  jne to_enemy
+
+to_player:
+  cmp dword ptr [is_also_recovery_sp], 1
+  jne @F
+
+  db EB 3B 54
+  db 68 69 73 20
+  db 74 61 62 6C 65
+  db 20 63 6F 6D
+  db 65 73 20 66
+  db 72 6F 6D 20
+  db 68 74 74 70
+  db 73 3A 2F 2F
+  db 6F 70 65 6E
+  db 63 68 65 61
+  db 74 74 61 62
+  db 6C 65 73 2E
+  db 63 6F 6D 20
+  db 2F 20
+  db 43 45 20 37
+  db 2E 34 2B
+
+  push rdx
+  mov edx, #999
+  mov [rcx+10], edx
+  pop rdx
+
+@@:
+  cmp edx, 0
+  jl to_player_sub
+  vmovss xmm14, [vf_hp_recv_multi]
+  jmp code_pre
+
+to_player_sub:
+  vmovss xmm14, [vf_hp_damage_multi]
+
+to_player_all:
+  //vcvtsi2ss xmm15, xmm15, edx
+  //vmulss xmm15, xmm14, xmm15
+  //vcvtss2si edx, xmm15
+  jmp code_pre
+
+
+to_enemy:
+  cmp edx, 0
+  jge code_pre1
+  vmovss xmm14, [vf_hp_damage_to_enemy_multi]
+
+code_pre:
+  vcvtsi2ss xmm15, xmm15, edx
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si edx, xmm15
+
+code_pre1:
+
+  popfq
+
+code:
+  add edx,[rcx+0C]
+  cmovns ebx,edx
+  jmp return
+align 10 cc
+  vf_hp_recv_multi:
+  dd (float)1.75
+  vf_hp_damage_multi:
+  dd (float)0.85
+  vf_hp_damage_to_enemy_multi:
+  dd (float)1.08
+  is_also_recovery_sp:
+  dd 1
+
+INJECT_HP_RECV_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_HP_RECV_MULTI)
+registersymbol(vf_hp_recv_multi)
+registersymbol(vf_hp_damage_multi)
+registersymbol(vf_hp_damage_to_enemy_multi)
+registersymbol(is_also_recovery_sp)
+
+[DISABLE]
+
+INJECT_HP_RECV_MULTI:
+  db 03 51 0C 0F 49 DA
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11BAC7F
+
+P3R.exe+11BAC6B: CC              - int 3 
+P3R.exe+11BAC6C: CC              - int 3 
+P3R.exe+11BAC6D: CC              - int 3 
+P3R.exe+11BAC6E: CC              - int 3 
+P3R.exe+11BAC6F: CC              - int 3 
+P3R.exe+11BAC70: 48 89 5C 24 08  - mov [rsp+08],rbx
+P3R.exe+11BAC75: 57              - push rdi
+P3R.exe+11BAC76: 48 83 EC 20     - sub rsp,20
+P3R.exe+11BAC7A: 33 DB           - xor ebx,ebx
+P3R.exe+11BAC7C: 48 8B F9        - mov rdi,rcx
+// ---------- INJECTING HERE ----------
+P3R.exe+11BAC7F: 03 51 0C        - add edx,[rcx+0C]
+// ---------- DONE INJECTING  ----------
+P3R.exe+11BAC82: 0F 49 DA        - cmovns ebx,edx
+P3R.exe+11BAC85: E8 66 24 00 00  - call P3R.exe+11BD0F0
+P3R.exe+11BAC8A: 3B D8           - cmp ebx,eax
+P3R.exe+11BAC8C: 0F 4F D8        - cmovg ebx,eax
+P3R.exe+11BAC8F: 89 5F 0C        - mov [rdi+0C],ebx
+P3R.exe+11BAC92: 8B C3           - mov eax,ebx
+P3R.exe+11BAC94: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+P3R.exe+11BAC99: 48 83 C4 20     - add rsp,20
+P3R.exe+11BAC9D: 5F              - pop rdi
+P3R.exe+11BAC9E: C3              - ret 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"Also recovery SP?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_also_recovery_sp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"HP recovery multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_hp_recv_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Damage to player multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_hp_damage_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Damage to enemy multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_hp_damage_to_enemy_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>31</ID>
+      <Description>"Battle: SP will not decrease"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_SP,$process,03 51 10 0F 49 DA) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_SP)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [rcx+4], 1
+  jne code
+
+  cmp edx, 0
+  jge code
+  xor edx, edx
+
+code:
+  add edx,[rcx+10]
+  cmovns ebx,edx
+  jmp return
+
+INJECT_BATTLE_SP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_SP)
+
+[DISABLE]
+
+INJECT_BATTLE_SP:
+  db 03 51 10 0F 49 DA
+
+unregistersymbol(INJECT_BATTLE_SP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11BAD2F
+
+P3R.exe+11BAD1B: CC              - int 3 
+P3R.exe+11BAD1C: CC              - int 3 
+P3R.exe+11BAD1D: CC              - int 3 
+P3R.exe+11BAD1E: CC              - int 3 
+P3R.exe+11BAD1F: CC              - int 3 
+P3R.exe+11BAD20: 48 89 5C 24 08  - mov [rsp+08],rbx
+P3R.exe+11BAD25: 57              - push rdi
+P3R.exe+11BAD26: 48 83 EC 20     - sub rsp,20
+P3R.exe+11BAD2A: 33 DB           - xor ebx,ebx
+P3R.exe+11BAD2C: 48 8B F9        - mov rdi,rcx
+// ---------- INJECTING HERE ----------
+P3R.exe+11BAD2F: 03 51 10        - add edx,[rcx+10]
+// ---------- DONE INJECTING  ----------
+P3R.exe+11BAD32: 0F 49 DA        - cmovns ebx,edx
+P3R.exe+11BAD35: E8 26 25 00 00  - call P3R.exe+11BD260
+P3R.exe+11BAD3A: 3B D8           - cmp ebx,eax
+P3R.exe+11BAD3C: 0F 4F D8        - cmovg ebx,eax
+P3R.exe+11BAD3F: 89 5F 10        - mov [rdi+10],ebx
+P3R.exe+11BAD42: 8B C3           - mov eax,ebx
+P3R.exe+11BAD44: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+P3R.exe+11BAD49: 48 83 C4 20     - add rsp,20
+P3R.exe+11BAD4D: 5F              - pop rdi
+P3R.exe+11BAD4E: C3              - ret 
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"Map: Open &amp; Close menu: full HP/SP"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CLS_MNU_MAX_HPSP,$process,48 8B CF 8B 5F 0C) // should be unique
+alloc(newmem,$1000,INJECT_CLS_MNU_MAX_HPSP)
+
+label(code)
+label(return)
+
+newmem:
+  mov ebx, #999
+  mov [rdi+0C], ebx
+  mov [rdi+10], ebx
+
+code:
+  mov rcx,rdi
+  mov ebx,[rdi+0C]
+  jmp return
+
+INJECT_CLS_MNU_MAX_HPSP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CLS_MNU_MAX_HPSP)
+
+[DISABLE]
+
+INJECT_CLS_MNU_MAX_HPSP:
+  db 48 8B CF 8B 5F 0C
+
+unregistersymbol(INJECT_CLS_MNU_MAX_HPSP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11BE217
+
+P3R.exe+11BE1EF: CC                    - int 3 
+P3R.exe+11BE1F0: 48 89 5C 24 08        - mov [rsp+08],rbx
+P3R.exe+11BE1F5: 48 89 74 24 10        - mov [rsp+10],rsi
+P3R.exe+11BE1FA: 57                    - push rdi
+P3R.exe+11BE1FB: 48 83 EC 20           - sub rsp,20
+P3R.exe+11BE1FF: 0F B7 D9              - movzx ebx,cx
+P3R.exe+11BE202: E8 59 5E 00 00        - call P3R.exe+11C4060
+P3R.exe+11BE207: 48 69 FB B4 02 00 00  - imul rdi,rbx,000002B4
+P3R.exe+11BE20E: 48 05 B0 01 00 00     - add rax,000001B0
+P3R.exe+11BE214: 48 03 F8              - add rdi,rax
+// ---------- INJECTING HERE ----------
+P3R.exe+11BE217: 48 8B CF              - mov rcx,rdi
+// ---------- DONE INJECTING  ----------
+P3R.exe+11BE21A: 8B 5F 0C              - mov ebx,[rdi+0C]
+P3R.exe+11BE21D: E8 CE EE FF FF        - call P3R.exe+11BD0F0
+P3R.exe+11BE222: 8B D0                 - mov edx,eax
+P3R.exe+11BE224: 8B CB                 - mov ecx,ebx
+P3R.exe+11BE226: E8 B5 B6 EA FF        - call P3R.exe+10698E0
+P3R.exe+11BE22B: BE E7 03 00 00        - mov esi,000003E7
+P3R.exe+11BE230: 3B C6                 - cmp eax,esi
+P3R.exe+11BE232: 7E 08                 - jle P3R.exe+11BE23C
+P3R.exe+11BE234: 66 83 7F 04 02        - cmp word ptr [rdi+04],02
+P3R.exe+11BE239: 0F 45 C6              - cmovne eax,esi
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>36</ID>
+      <Description>"Hero XP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_HERO_XP_MULTI,$process,89 98 84 04 00 00) // should be unique
+alloc(newmem,$1000,INJECT_HERO_XP_MULTI)
+
+label(code)
+label(return)
+label(vf_main_pl_xp_multi)
+
+newmem:
+  push r15
+  mov r15d, [rax+00000484]
+  cmp r15d, ebx
+  jae endp
+
+  vcvtsi2ss xmm15, xmm15, r15d
+  vcvtsi2ss xmm14, xmm14, ebx
+
+  vsubss xmm14, xmm14, xmm15
+  vmovss xmm13, [vf_main_pl_xp_multi]
+  vmulss xmm14, xmm14, xmm13
+  vaddss xmm14, xmm14, xmm15
+  vcvtss2si ebx, xmm14
+
+
+endp:
+  pop r15
+
+code:
+  mov [rax+00000484],ebx
+  jmp return
+align 10 cc
+  vf_main_pl_xp_multi:
+  dd (float)3
+
+INJECT_HERO_XP_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_HERO_XP_MULTI)
+registersymbol(vf_main_pl_xp_multi)
+
+[DISABLE]
+
+INJECT_HERO_XP_MULTI:
+  db 89 98 84 04 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11BE2F2
+
+P3R.exe+11BE2DC: CC                 - int 3 
+P3R.exe+11BE2DD: CC                 - int 3 
+P3R.exe+11BE2DE: CC                 - int 3 
+P3R.exe+11BE2DF: CC                 - int 3 
+P3R.exe+11BE2E0: 66 83 F9 01        - cmp cx,01
+P3R.exe+11BE2E4: 75 17              - jne P3R.exe+11BE2FD
+P3R.exe+11BE2E6: 53                 - push rbx
+P3R.exe+11BE2E7: 48 83 EC 20        - sub rsp,20
+P3R.exe+11BE2EB: 8B DA              - mov ebx,edx
+P3R.exe+11BE2ED: E8 6E 5D 00 00     - call P3R.exe+11C4060
+// ---------- INJECTING HERE ----------
+P3R.exe+11BE2F2: 89 98 84 04 00 00  - mov [rax+00000484],ebx
+// ---------- DONE INJECTING  ----------
+P3R.exe+11BE2F8: 48 83 C4 20        - add rsp,20
+P3R.exe+11BE2FC: 5B                 - pop rbx
+P3R.exe+11BE2FD: C3                 - ret 
+P3R.exe+11BE2FE: CC                 - int 3 
+P3R.exe+11BE2FF: CC                 - int 3 
+P3R.exe+11BE300: 66 83 F9 01        - cmp cx,01
+P3R.exe+11BE304: 75 19              - jne P3R.exe+11BE31F
+P3R.exe+11BE306: 53                 - push rbx
+P3R.exe+11BE307: 48 83 EC 20        - sub rsp,20
+P3R.exe+11BE30B: 0F B7 DA           - movzx ebx,dx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>37</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_main_pl_xp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>33</ID>
+      <Description>"Non-hero / Persona XP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_XP_MULTI,$process,8B 97 10 01 00 00 48 8B CB E8 D7) // should be unique
+alloc(newmem,$1000,INJECT_XP_MULTI)
+
+label(code)
+label(return)
+label(vf_xp_multi)
+
+newmem:
+
+code:
+  mov edx,[rdi+00000110]
+
+  //code start
+  cmp edx, 0
+  je return
+
+  vcvtsi2ss xmm15, xmm15, edx
+  vmovss xmm14, [vf_xp_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si edx, xmm15
+
+  jmp return
+align 10 cc
+  vf_xp_multi:
+  dd (float)1.12
+
+INJECT_XP_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_XP_MULTI)
+registersymbol(vf_xp_multi)
+
+[DISABLE]
+
+INJECT_XP_MULTI:
+  db 8B 97 10 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+147B48B
+
+P3R.exe+147B46E: CC                 - int 3 
+P3R.exe+147B46F: CC                 - int 3 
+P3R.exe+147B470: 48 89 5C 24 08     - mov [rsp+08],rbx
+P3R.exe+147B475: 57                 - push rdi
+P3R.exe+147B476: 48 83 EC 20        - sub rsp,20
+P3R.exe+147B47A: 48 8B FA           - mov rdi,rdx
+P3R.exe+147B47D: 48 8B D9           - mov rbx,rcx
+P3R.exe+147B480: E8 FB 18 D3 FF     - call P3R.exe+11ACD80
+P3R.exe+147B485: 66 83 F8 63        - cmp ax,63
+P3R.exe+147B489: 7D 0E              - jnl P3R.exe+147B499
+// ---------- INJECTING HERE ----------
+P3R.exe+147B48B: 8B 97 10 01 00 00  - mov edx,[rdi+00000110]
+// ---------- DONE INJECTING  ----------
+P3R.exe+147B491: 48 8B CB           - mov rcx,rbx
+P3R.exe+147B494: E8 D7 F0 D2 FF     - call P3R.exe+11AA570
+P3R.exe+147B499: 48 8B D7           - mov rdx,rdi
+P3R.exe+147B49C: 48 8B CB           - mov rcx,rbx
+P3R.exe+147B49F: 48 8B 5C 24 30     - mov rbx,[rsp+30]
+P3R.exe+147B4A4: 48 83 C4 20        - add rsp,20
+P3R.exe+147B4A8: 5F                 - pop rdi
+P3R.exe+147B4A9: E9 92 F3 D2 FF     - jmp P3R.exe+11AA840
+P3R.exe+147B4AE: CC                 - int 3 
+P3R.exe+147B4AF: CC                 - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_xp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Set item consumables quantity"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_SET_COMSUMABLE_CNT,$process,0F B6 84 03 00 0E 00 00) // should be unique
+aobscanmodule(INJECT_SET_COMSUMABLE_CNT,$process,48 89 C1 E8 ?? ?? ?? ?? 0F B6 84 03 ?? ?? 00 ?? 48 83 C4 20 5B C3) // should be unique
+alloc(newmem,$1000,INJECT_SET_COMSUMABLE_CNT)
+
+alloc(INJECT_SET_COMSUMABLE_CNTo,8)
+
+label(code)
+label(return)
+label(ib_min_cons_value)
+label(ib_max_cons_value)
+
+
+INJECT_SET_COMSUMABLE_CNTo:
+  readmem(INJECT_SET_COMSUMABLE_CNT+8, 8)
+
+newmem:
+  push r15
+  push rcx
+  push r14
+  mov r14d, [INJECT_SET_COMSUMABLE_CNTo+4]
+  xor r15, r15
+  lea r15, [r15+r14d]
+  lea r15, [r15+rbx]
+  lea r15, [r15+rax]
+
+  //lea r15, [rbx+rax+00000E00]
+  mov cl, [r15]
+  cmp cl, [ib_min_cons_value]
+  jb endp
+  cmp cl, [ib_max_cons_value]
+  jae endp
+
+  mov cl, [ib_max_cons_value]
+  mov [r15], cl
+
+
+endp:
+  pop r14
+  pop rcx
+  pop r15
+
+code:
+  readmem(INJECT_SET_COMSUMABLE_CNT+8, 8)
+  //movzx eax,byte ptr [rbx+rax+00000E00]
+  jmp return
+align 10 cc
+  ib_min_cons_value:
+  db 2
+  ib_max_cons_value:
+  db 50
+
+INJECT_SET_COMSUMABLE_CNT+8:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_COMSUMABLE_CNT)
+registersymbol(ib_min_cons_value)
+registersymbol(ib_max_cons_value)
+registersymbol(INJECT_SET_COMSUMABLE_CNTo)
+[DISABLE]
+
+INJECT_SET_COMSUMABLE_CNT+8:
+  //db 0F B6 84 03 00 0E 00 00
+  readmem(INJECT_SET_COMSUMABLE_CNTo, 8)
+
+dealloc(INJECT_SET_COMSUMABLE_CNTo)
+unregistersymbol(*)
+dealloc(newmem)
+unregistersymbol(INJECT_SET_COMSUMABLE_CNTo)
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+B8AE4A1
+
+P3R.exe+B8AE482: 48 83 EC 20              - sub rsp,20
+P3R.exe+B8AE486: 0F B7 D9                 - movzx ebx,cx
+P3R.exe+B8AE489: E8 D2 5B 91 F5           - call P3R.exe+11C4060
+P3R.exe+B8AE48E: 48 85 C0                 - test rax,rax
+P3R.exe+B8AE491: 75 06                    - jne P3R.exe+B8AE499
+P3R.exe+B8AE493: 48 83 C4 20              - add rsp,20
+P3R.exe+B8AE497: 5B                       - pop rbx
+P3R.exe+B8AE498: C3                       - ret 
+P3R.exe+B8AE499: 48 89 C1                 - mov rcx,rax
+P3R.exe+B8AE49C: E8 5F 4B 92 F5           - call P3R.exe+11D3000
+// ---------- INJECTING HERE ----------
+P3R.exe+B8AE4A1: 0F B6 84 03 00 0E 00 00  - movzx eax,byte ptr [rbx+rax+00000E00]
+// ---------- DONE INJECTING  ----------
+P3R.exe+B8AE4A9: 48 83 C4 20              - add rsp,20
+P3R.exe+B8AE4AD: 5B                       - pop rbx
+P3R.exe+B8AE4AE: C3                       - ret 
+P3R.exe+B8AE4AF: CC                       - int 3 
+P3R.exe+B8AE4B0: B1 4E                    - mov cl,4E
+P3R.exe+B8AE4B2: EA 00 00 00 00 B8 5E     - jmp 5EB8:00000000
+P3R.exe+B8AE4B9: 49 7C 4A                 - jl P3R.exe+B8AE506
+P3R.exe+B8AE4BC: 01 00                    - add [rax],eax
+P3R.exe+B8AE4BE: 00 00                    - add [rax],al
+P3R.exe+B8AE4C0: 50                       - push rax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Usage: open the consumables menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"value must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_min_cons_value</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"Set to"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_max_cons_value</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>43</ID>
+      <Description>"Set skill cards quantity"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_SKILL_CARD_CNT,$process,0F B6 84 03 00 17 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SET_SKILL_CARD_CNT)
+
+label(code)
+label(return)
+label(i_min_skc_cnt)
+label(i_max_skc_cnt)
+
+newmem:
+  pushfq
+  push rdx
+
+  mov dl, byte ptr [rbx+rax+00001700]
+  cmp dl, [i_min_skc_cnt]
+  jb endp
+  cmp dl, [i_max_skc_cnt]
+  jae endp
+  mov dl, [i_max_skc_cnt]
+  mov byte ptr [rbx+rax+00001700], dl
+
+
+endp:
+  pop rdx
+  popfq
+
+code:
+  movzx eax,byte ptr [rbx+rax+00001700]
+  jmp return
+align 10 cc
+  i_min_skc_cnt:
+  db 2
+  i_max_skc_cnt:
+  db 50
+
+
+
+INJECT_SET_SKILL_CARD_CNT:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_SKILL_CARD_CNT)
+registersymbol(i_min_skc_cnt)
+registersymbol(i_max_skc_cnt)
+
+
+[DISABLE]
+
+INJECT_SET_SKILL_CARD_CNT:
+  db 0F B6 84 03 00 17 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11B5C91
+
+P3R.exe+11B5C72: 48 83 EC 20              - sub rsp,20
+P3R.exe+11B5C76: 0F B7 D9                 - movzx ebx,cx
+P3R.exe+11B5C79: E8 E2 E3 00 00           - call P3R.exe+11C4060
+P3R.exe+11B5C7E: 48 85 C0                 - test rax,rax
+P3R.exe+11B5C81: 75 06                    - jne P3R.exe+11B5C89
+P3R.exe+11B5C83: 48 83 C4 20              - add rsp,20
+P3R.exe+11B5C87: 5B                       - pop rbx
+P3R.exe+11B5C88: C3                       - ret 
+P3R.exe+11B5C89: 48 8B C8                 - mov rcx,rax
+P3R.exe+11B5C8C: E8 6F D3 01 00           - call P3R.exe+11D3000
+// ---------- INJECTING HERE ----------
+P3R.exe+11B5C91: 0F B6 84 03 00 17 00 00  - movzx eax,byte ptr [rbx+rax+00001700]
+// ---------- DONE INJECTING  ----------
+P3R.exe+11B5C99: 48 83 C4 20              - add rsp,20
+P3R.exe+11B5C9D: 5B                       - pop rbx
+P3R.exe+11B5C9E: C3                       - ret 
+P3R.exe+11B5C9F: CC                       - int 3 
+P3R.exe+11B5CA0: 40 53                    - push rbx
+P3R.exe+11B5CA2: 48 83 EC 20              - sub rsp,20
+P3R.exe+11B5CA6: 0F B7 D9                 - movzx ebx,cx
+P3R.exe+11B5CA9: E8 B2 E3 00 00           - call P3R.exe+11C4060
+P3R.exe+11B5CAE: 48 85 C0                 - test rax,rax
+P3R.exe+11B5CB1: 75 06                    - jne P3R.exe+11B5CB9
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>46</ID>
+          <Description>"Usage: open the item menu =&gt; skill cards"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>44</ID>
+          <Description>"# of stock must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_min_skc_cnt</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>45</ID>
+          <Description>"Set to"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_max_skc_cnt</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>40</ID>
+      <Description>"Set items # (materials, sold for cash) to 80, if &gt;= 1"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_ITEM_SOLD_4_CASH,$process,0F B6 84 03 00 13 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SET_ITEM_SOLD_4_CASH)
+
+label(code)
+label(return)
+
+newmem:
+
+  pushfq
+  push rdx
+
+  mov dl, [rbx+rax+00001300]
+  cmp dl, 0
+  je endp
+  cmp dl, 50
+  jae endp
+  mov dl, 50
+  mov [rbx+rax+00001300], dl
+
+
+endp:
+  pop rdx
+  popfq
+
+code:
+  movzx eax,byte ptr [rbx+rax+00001300]
+  jmp return
+
+INJECT_SET_ITEM_SOLD_4_CASH:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_ITEM_SOLD_4_CASH)
+
+[DISABLE]
+
+INJECT_SET_ITEM_SOLD_4_CASH:
+  db 0F B6 84 03 00 13 00 00
+
+unregistersymbol(INJECT_SET_ITEM_SOLD_4_CASH)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11B5C31
+
+P3R.exe+11B5C12: 48 83 EC 20              - sub rsp,20
+P3R.exe+11B5C16: 0F B7 D9                 - movzx ebx,cx
+P3R.exe+11B5C19: E8 42 E4 00 00           - call P3R.exe+11C4060
+P3R.exe+11B5C1E: 48 85 C0                 - test rax,rax
+P3R.exe+11B5C21: 75 06                    - jne P3R.exe+11B5C29
+P3R.exe+11B5C23: 48 83 C4 20              - add rsp,20
+P3R.exe+11B5C27: 5B                       - pop rbx
+P3R.exe+11B5C28: C3                       - ret 
+P3R.exe+11B5C29: 48 8B C8                 - mov rcx,rax
+P3R.exe+11B5C2C: E8 CF D3 01 00           - call P3R.exe+11D3000
+// ---------- INJECTING HERE ----------
+P3R.exe+11B5C31: 0F B6 84 03 00 13 00 00  - movzx eax,byte ptr [rbx+rax+00001300]
+// ---------- DONE INJECTING  ----------
+P3R.exe+11B5C39: 48 83 C4 20              - add rsp,20
+P3R.exe+11B5C3D: 5B                       - pop rbx
+P3R.exe+11B5C3E: C3                       - ret 
+P3R.exe+11B5C3F: CC                       - int 3 
+P3R.exe+11B5C40: 40 53                    - push rbx
+P3R.exe+11B5C42: 48 83 EC 20              - sub rsp,20
+P3R.exe+11B5C46: 0F B7 D9                 - movzx ebx,cx
+P3R.exe+11B5C49: E8 12 E4 00 00           - call P3R.exe+11C4060
+P3R.exe+11B5C4E: 48 85 C0                 - test rax,rax
+P3R.exe+11B5C51: 75 06                    - jne P3R.exe+11B5C59
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Get money"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_MONEY,$process,44 8B 88 F8 3C 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_MONEY)
+
+label(code)
+label(return)
+label(i_base_money_addr)
+
+newmem:
+  mov [i_base_money_addr], rax
+
+code:
+  mov r9d,[rax+00003CF8]
+  jmp return
+align 10 cc
+  i_base_money_addr:
+  dq 0
+
+INJECT_GET_MONEY:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_MONEY)
+registersymbol(i_base_money_addr)
+
+[DISABLE]
+
+INJECT_GET_MONEY:
+  db 44 8B 88 F8 3C 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+12D3215
+
+P3R.exe+12D31E4: 89 44 24 58           - mov [rsp+58],eax
+P3R.exe+12D31E8: 49 8B D7              - mov rdx,r15
+P3R.exe+12D31EB: C7 45 A4 0C 00 00 00  - mov [rbp-5C],0000000C
+P3R.exe+12D31F2: 48 8D 4C 24 40        - lea rcx,[rsp+40]
+P3R.exe+12D31F7: E8 B4 E8 04 00        - call P3R.exe+1321AB0
+P3R.exe+12D31FC: E8 5F 0E EF FF        - call P3R.exe+11C4060
+P3R.exe+12D3201: 48 89 5D C0           - mov [rbp-40],rbx
+P3R.exe+12D3205: 4C 8D 05 68 13 FB 02  - lea r8,[P3R.exe+4284574]
+P3R.exe+12D320C: BA 08 00 00 00        - mov edx,00000008
+P3R.exe+12D3211: 48 8D 4D C0           - lea rcx,[rbp-40]
+// ---------- INJECTING HERE ----------
+P3R.exe+12D3215: 44 8B 88 F8 3C 00 00  - mov r9d,[rax+00003CF8]
+// ---------- DONE INJECTING  ----------
+P3R.exe+12D321C: E8 5F 1C D1 FF        - call P3R.exe+FE4E80
+P3R.exe+12D3221: BF 07 00 00 00        - mov edi,00000007
+P3R.exe+12D3226: 48 8B C3              - mov rax,rbx
+P3R.exe+12D3229: 44 8B F7              - mov r14d,edi
+P3R.exe+12D322C: 0F 1F 40 00           - nop dword ptr [rax+00]
+P3R.exe+12D3230: 80 7C 05 C0 30        - cmp byte ptr [rbp+rax-40],30
+P3R.exe+12D3235: 75 0B                 - jne P3R.exe+12D3242
+P3R.exe+12D3237: 41 FF CE              - dec r14d
+P3R.exe+12D323A: 48 FF C0              - inc rax
+P3R.exe+12D323D: 48 3B C7              - cmp rax,rdi
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Usage: open menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>3CF8</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17</ID>
+      <Description>"Weapon Shop: money do not decrease"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BUY_ITEM_SET_MONEY,$process,48 8B D9 41 B8 7F 96 98 00) // should be unique
+alloc(newmem,$1000,INJECT_BUY_ITEM_SET_MONEY)
+
+label(code)
+label(return)
+
+newmem:
+  // abs edx
+  mov ebx, edx
+  neg edx
+  cmovl edx, ebx
+  //
+
+code:
+  mov rbx,rcx
+  mov r8d,0098967F
+  jmp return
+
+INJECT_BUY_ITEM_SET_MONEY:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_BUY_ITEM_SET_MONEY)
+
+[DISABLE]
+
+INJECT_BUY_ITEM_SET_MONEY:
+  db 48 8B D9 41 B8 7F 96 98 00
+
+unregistersymbol(INJECT_BUY_ITEM_SET_MONEY)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11B8706
+
+P3R.exe+11B86F8: CC                 - int 3 
+P3R.exe+11B86F9: CC                 - int 3 
+P3R.exe+11B86FA: CC                 - int 3 
+P3R.exe+11B86FB: CC                 - int 3 
+P3R.exe+11B86FC: CC                 - int 3 
+P3R.exe+11B86FD: CC                 - int 3 
+P3R.exe+11B86FE: CC                 - int 3 
+P3R.exe+11B86FF: CC                 - int 3 
+P3R.exe+11B8700: 40 53              - push rbx
+P3R.exe+11B8702: 48 83 EC 20        - sub rsp,20
+// ---------- INJECTING HERE ----------
+P3R.exe+11B8706: 48 8B D9           - mov rbx,rcx
+// ---------- DONE INJECTING  ----------
+P3R.exe+11B8709: 41 B8 7F 96 98 00  - mov r8d,0098967F
+P3R.exe+11B870F: 8B 89 F8 3C 00 00  - mov ecx,[rcx+00003CF8]
+P3R.exe+11B8715: 03 CA              - add ecx,edx
+P3R.exe+11B8717: 33 D2              - xor edx,edx
+P3R.exe+11B8719: E8 C2 10 EB FF     - call P3R.exe+10697E0
+P3R.exe+11B871E: 89 83 F8 3C 00 00  - mov [rbx+00003CF8],eax
+P3R.exe+11B8724: 48 83 C4 20        - add rsp,20
+P3R.exe+11B8728: 5B                 - pop rbx
+P3R.exe+11B8729: C3                 - ret 
+P3R.exe+11B872A: CC                 - int 3 
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>47</ID>
+      <Description>"Persona 3 Reload  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Color>00BB00</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>AddressList.Header.OnSectionClick = nil
+
+</LuaScript>
+</CheatTable>
