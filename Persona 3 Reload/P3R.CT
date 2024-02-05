@@ -16,7 +16,7 @@ LuaCall(cycleFullCompact(nil,false))
     </CheatEntry>
     <CheatEntry>
       <ID>94</ID>
-      <Description>"Turn most scripts On / all off"</Description>
+      <Description>"Turn most scripts On / off"</Description>
       <Color>FF80FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -25,7 +25,7 @@ if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 getLuaEngine().menuItem5.doClick()
 
-battle_array = {48,93,9,31,8,36,43,46,14,63,33,51,  5,2,58,40}
+battle_array = {48,93,9,31,8,36,43,14,63,33,51,  2,58,40}
 
 local a_len = #(battle_array)
 
@@ -33,6 +33,7 @@ local i = 0
 
 for i = 1, a_len do
   getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
+  sleep(1)
 end
 
 print("Scripts ON; Total " .. a_len .. " items.")
@@ -43,14 +44,14 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {84,83,91, 40,58,2,5,  51,33,93,9,31,8,36,43,46,14,63,51,48}
+battle_array_close = {84,83,91, 40,58,2,  51,33,93,9,31,8,36,43,46,14,63,51,48,17, 14, 63, 48}
 
-local a_len = #(battle_array)
+local a_len = #(battle_array_close)
 
 local i = 0
 
 for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = false
+  getAddressList().getMemoryRecordByID(battle_array_close[i]).Active = false
 end
 
 print("Scripts OFF.")
@@ -406,17 +407,22 @@ label(code)
 label(return)
 label(vf_main_pl_xp_multi)
 label(vf_main_pl_xp_extra)
-
+label(i_orig_hero_xp)
 newmem:
   push r15
   mov r15d, [rax+00000484]
   cmp r15d, ebx
   jae endp
 
+
+
   vcvtsi2ss xmm15, xmm15, r15d
   vcvtsi2ss xmm14, xmm14, ebx
 
   vsubss xmm14, xmm14, xmm15
+
+  vmovss [i_orig_hero_xp], xmm14
+
   vmovss xmm13, [vf_main_pl_xp_multi]
   vmulss xmm14, xmm14, xmm13
   vaddss xmm14, xmm14, xmm15
@@ -435,7 +441,9 @@ align 10 cc
   vf_main_pl_xp_multi:
   dd (float)1.333
   vf_main_pl_xp_extra:
-  dd (float)48
+  dd (float)99
+  i_orig_hero_xp:
+  dd 0
 
 
 INJECT_HERO_XP_MULTI:
@@ -445,6 +453,7 @@ return:
 registersymbol(INJECT_HERO_XP_MULTI)
 registersymbol(vf_main_pl_xp_multi)
 registersymbol(vf_main_pl_xp_extra)
+registersymbol(i_orig_hero_xp)
 
 [DISABLE]
 
@@ -499,6 +508,14 @@ P3R.exe+11BE30B: 0F B7 DA           - movzx ebx,dx
           <VariableType>Float</VariableType>
           <Address>vf_main_pl_xp_extra</Address>
         </CheatEntry>
+        <CheatEntry>
+          <ID>103</ID>
+          <Description>"XP allocated after distribution"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_orig_hero_xp</Address>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
@@ -521,6 +538,8 @@ label(code)
 label(return)
 label(vf_xp_multi)
 label(vf_xp_extra)
+label(i_orig_xp)
+label(i_new_xp)
 
 newmem:
 
@@ -531,19 +550,28 @@ code:
   cmp edx, 0
   je return
 
+  mov [i_orig_xp], edx
   vcvtsi2ss xmm15, xmm15, edx
   vmovss xmm14, [vf_xp_multi]
   vmulss xmm15, xmm14, xmm15
+
+  vmovss [i_new_xp], xmm15
+
   vmovss xmm14, [vf_xp_extra]
   vaddss xmm15, xmm14, xmm15
   vcvtss2si edx, xmm15
+
 
   jmp return
 align 10 cc
   vf_xp_multi:
   dd (float)1.3
   vf_xp_extra:
-  dd (float)48
+  dd (float)99
+  i_orig_xp:
+  dd 0
+  i_new_xp:
+  dd 0
 
 INJECT_XP_MULTI:
   jmp newmem
@@ -552,6 +580,8 @@ return:
 registersymbol(INJECT_XP_MULTI)
 registersymbol(vf_xp_multi)
 registersymbol(vf_xp_extra)
+registersymbol(i_orig_xp)
+registersymbol(i_new_xp)
 
 [DISABLE]
 
@@ -605,6 +635,22 @@ P3R.exe+147B4AF: CC                 - int 3
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
           <Address>vf_xp_extra</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>102</ID>
+          <Description>"XP allocated after distribution"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_orig_xp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>104</ID>
+          <Description>"new XP (without extra)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_new_xp</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -1606,6 +1652,8 @@ P3R.exe+AAC7A59: 00 00           - add [rax],al
           <Description>"Courage / 勇気"</Description>
           <DropDownList DisplayValueAsItem="1">45:4
 60:5
+79:Before 6
+80:6
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1620,6 +1668,8 @@ P3R.exe+AAC7A59: 00 00           - add [rax],al
           <Description>"Charm / 魅力"</Description>
           <DropDownList DisplayValueAsItem="1">45:4
 70:5
+99:Before 6
+100:6
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1634,6 +1684,8 @@ P3R.exe+AAC7A59: 00 00           - add [rax],al
           <Description>"Academics / 学力"</Description>
           <DropDownList DisplayValueAsItem="1">100:4
 155:5
+229:Before 6
+230:6
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1744,6 +1796,50 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
         </CheatEntry>
         <CheatEntry>
           <ID>77</ID>
+          <Description>"Team pos? (valid: &lt;5)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_str_addr</Address>
+          <Offsets>
+            <Offset>-48</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>100</ID>
+          <Description>"Persona ID?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_str_addr</Address>
+          <Offsets>
+            <Offset>-1E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>101</ID>
+          <Description>"Level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_str_addr</Address>
+          <Offsets>
+            <Offset>-1C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>99</ID>
+          <Description>"EXP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_str_addr</Address>
+          <Offsets>
+            <Offset>-18</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>98</ID>
           <Description>"St / 力"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1863,16 +1959,25 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 95:バリゾーゴン
 96:終末の予言
 101:淀んだ吐息
+102:淀んだ空気
+103:吸血
+104:吸魔
 105:ウィルスブレス
 110:パワースラッシュ
+111:デッドエンド
 113:真空斬
 117:空間殺法
+120:残影
 125:突撃
 126:アサルトダイブ
 129:金剛発破
+130:ヒートウェイブ
+132:アカシャアーツ
+133:ソニックパンチ
 139:シングルショット
 140:エンジェルアロー
 141:ミリオンシュート
+143:アローシャワー
 144:刹那五月雨撃
 145:バスタアタック
 146:イノセントタック
@@ -1881,6 +1986,7 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 155:ディア
 160:メディア
 170:パトラ
+172:バイスディ
 176:アムリタシャワー
 181:ラクカジャ
 184:未使用
@@ -1888,6 +1994,7 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 186:マハラクカジャ
 187:マハスクカジャ
 190:タルンダ
+191:ラクンダ
 192:スクンダ
 196:マハラクンダ
 197:マハスクンダ
@@ -1922,22 +2029,27 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 240:マガツマンダラ
 241:輝矢
 242:未使用
-250:ショックノイズ
+250:(!)ショックノイズ
 251:未使用
 255:未使用
-260:カデンツァ
-261:ジャックブラザイズ
-262:おおさまとおいら
-263:ベストフレンド
-264:紅蓮華斬殺
-265:トリックスター
-266:ハルマゲドン
+260:(!)カデンツァ
+261:(!)ジャックブラザイズ
+262:(!)おおさまとおいら
+263:(!)ベストフレンド
+264:(!)紅蓮華斬殺
+265:(!)トリックスター
+266:(!)ハルマゲドン
 267:未使用
-280:サイクロンアロー
-281:バーストスイング
+280:(!)サイクロンアロー
+281:(!)バーストスイング
+282:(!)ライトニングスフィア
+283:(!)ブリザードイッジ
+284:(!)オラクル
+702:斬撃反射
 703:斬撃吸収
 715:火炎吸収
 719:氷結吸収
+720:疾風耐性
 723:疾風吸收
 727:電撃吸収
 731:光吸収
@@ -1951,6 +2063,8 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 779:カウンタ
 780:ヘビーカウンタ
 781:ハイパーカウンタ
+784:小治癒促進
+786:大治癒促進
 798:火炎ブースタ
 799:火炎ハイブースタ
 800:氷結ブースタ
@@ -1970,6 +2084,7 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 818:凍結率UP
 819:感電率UP
 820:狀態異常成功率UP
+825:スクカジャオート
 827:スクカジャオート
 830:マハスクカオート
 840:未使用
@@ -1979,6 +2094,8 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
 844:明王の加護
 846:ミドルグロウ
 847:ハイグロウ
+851:光からの生還
+852:闇からの生還
 862:未使用
 863:万能ブースタ
 864:万能ハイブースタ
@@ -2155,7 +2272,7 @@ P3R.exe+11B872A: CC                 - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>47</ID>
-      <Description>"(2024/02/04 v3) Persona 3 Reload  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"(2024/02/05 v4) Persona 3 Reload  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00BB00</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
