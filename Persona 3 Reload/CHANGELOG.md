@@ -1,5 +1,9 @@
 # Changelog
 
+## 2024/02/06  
+1. added "Get day progress"  
+1. added Commu scripts  
+
 ## 2024/02/05  
 1. revise scripts  
 
