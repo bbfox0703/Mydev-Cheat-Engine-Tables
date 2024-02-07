@@ -44,7 +44,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {178,179,129,  84,83,91,  40,58,2,  117,108,  51,33,93,9,31,8,36,43,46,14,63,51,48,17, 14, 63, 48}
+battle_array_close = {226,180,178,179,129,  84,83,91,  40,58,2,  117,108,  51,33,93,9,31,8,36,43,46,14,63,51,48,17, 14, 63, 48}
 
 local a_len = #(battle_array_close)
 
@@ -2361,9 +2361,10 @@ P3R.exe+1026BCA: CC                 - int 3
         <CheatEntry>
           <ID>112</ID>
           <Description>"=&gt; Time peroid #1?"</Description>
-          <DropDownList DisplayValueAsItem="1">2:Morning / 早朝
-4:noon break / 昼休み
-6:after school / 放課後
+          <DropDownList DisplayValueAsItem="1">2:Early morning / 早朝
+3:Morning / 午前
+4:Noon break / 昼休み
+6:After school / 放課後
 7:Night / 夜
 8:Dark Hour / 影時間
 </DropDownList>
@@ -2423,9 +2424,10 @@ P3R.exe+1026BCA: CC                 - int 3
         <CheatEntry>
           <ID>110</ID>
           <Description>"=&gt;Time peroid #2?"</Description>
-          <DropDownList DisplayValueAsItem="1">3:Morning / 早朝
-5:noon break / 昼休み
-7:after school / 放課後
+          <DropDownList DisplayValueAsItem="1">3:Early morning / 早朝
+4:Morning / 午前
+5:Noon break / 昼休み
+7:After school / 放課後
 8:Night / 夜
 9:Dark Hour / 影時間
 </DropDownList>
@@ -2514,7 +2516,7 @@ P3R.exe+11B872A: CC                 - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>129</ID>
-      <Description>"Commu+ / social link"</Description>
+      <Description>"Commu / social link / コミュ"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
@@ -2548,7 +2550,7 @@ code:
   jmp return
 align 10 cc
   vf_commu_multi:
-  dd (float)2
+  dd (float)2.5
 
 INJECT_COMMU_MULTI:
   jmp newmem
@@ -2607,7 +2609,7 @@ P3R.exe+10844E0: 48 8B AC 24 08 01 00 00  - mov rbp,[rsp+00000108]
         <CheatEntry>
           <ID>131</ID>
           <Description>"Get existing commu level"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : P3R.exe
   Version: 
@@ -2623,7 +2625,7 @@ alloc(newmem,$1000,INJECT_GET_COMMU_LEVEL_XP)
 label(code)
 label(return)
 label(i_base_commu_addr)
-
+label(i_min_commu_addr)
 newmem:
   push r13
   push r14
@@ -2645,6 +2647,23 @@ loop1:
 
 store_it:
   mov [r13], r15
+
+  // store min. address of level
+
+  // r13 ==&gt; other use
+  mov r13, [r15]
+  cmp qword ptr [i_min_commu_addr], 0
+  jne save_min_next1
+
+
+  mov [i_min_commu_addr], r13
+  jmp endp
+
+save_min_next1:
+  cmp qword ptr [i_min_commu_addr], r13
+  jbe endp
+  mov [i_min_commu_addr], r13
+
   jmp endp
 
 do_next:
@@ -2669,6 +2688,8 @@ align 10 cc
   db 0
   align 60 0
   db 0
+  i_min_commu_addr:
+  dq 0
 
 
 INJECT_GET_COMMU_LEVEL_XP:
@@ -2677,7 +2698,7 @@ INJECT_GET_COMMU_LEVEL_XP:
 return:
 registersymbol(INJECT_GET_COMMU_LEVEL_XP)
 registersymbol(i_base_commu_addr)
-
+registersymbol(i_min_commu_addr)
 [DISABLE]
 
 INJECT_GET_COMMU_LEVEL_XP:
@@ -2717,546 +2738,1052 @@ P3R.exe+1087F7F: CC           - int 3
           <CheatEntries>
             <CheatEntry>
               <ID>143</ID>
-              <Description>"Usage: open commu menu"</Description>
+              <Description>"Usage: Enable -&gt; open commu menu"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>134</ID>
-              <Description>"base"</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C0C0C0</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>i_base_commu_addr</Address>
+              <ID>197</ID>
+              <Description>"Do not enable it while commu menu is open"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>135</ID>
-              <Description>"Lv 1"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
+              <ID>180</ID>
+              <Description>"Enabled commu data+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>134</ID>
+                  <Description>"base"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C0C0C0</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_base_commu_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>135</ID>
+                  <Description>"Lv 1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>136</ID>
+                  <Description>"XP 1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>132</ID>
+                  <Description>"Lv 2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+8</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>133</ID>
+                  <Description>"XP 2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+8</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>137</ID>
+                  <Description>"Lv 3"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+10</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>138</ID>
+                  <Description>"XP 3"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+10</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>139</ID>
+                  <Description>"Lv 4"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+18</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>140</ID>
+                  <Description>"XP 4"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+18</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>141</ID>
+                  <Description>"Lv 5"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+20</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>142</ID>
+                  <Description>"XP 5"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+20</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>144</ID>
+                  <Description>"Lv 6"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+28</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>145</ID>
+                  <Description>"XP 6"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+28</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>146</ID>
+                  <Description>"Lv 7"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+30</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>147</ID>
+                  <Description>"XP 7"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+30</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>148</ID>
+                  <Description>"Lv 8"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+38</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>149</ID>
+                  <Description>"XP 8"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+38</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>150</ID>
+                  <Description>"Lv 9"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+40</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>151</ID>
+                  <Description>"XP 9"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+40</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>152</ID>
+                  <Description>"Lv 10"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+48</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>153</ID>
+                  <Description>"XP 10"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+48</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>154</ID>
+                  <Description>"Lv 11"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+50</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>155</ID>
+                  <Description>"XP 11"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+50</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>156</ID>
+                  <Description>"Lv 12"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+58</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>157</ID>
+                  <Description>"XP 12"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+58</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>158</ID>
+                  <Description>"Lv 13"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+60</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>159</ID>
+                  <Description>"XP 13"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+60</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>160</ID>
+                  <Description>"Lv 14"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+68</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>161</ID>
+                  <Description>"XP 14"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+68</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>162</ID>
+                  <Description>"Lv 15"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+70</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>163</ID>
+                  <Description>"XP 15"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+70</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>164</ID>
+                  <Description>"Lv 16"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+78</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>165</ID>
+                  <Description>"XP 16"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+78</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>166</ID>
+                  <Description>"Lv 17"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+80</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>167</ID>
+                  <Description>"XP 17"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+80</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>168</ID>
+                  <Description>"Lv 18"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+88</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>169</ID>
+                  <Description>"XP 18"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+88</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>170</ID>
+                  <Description>"Lv 19"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+90</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>171</ID>
+                  <Description>"XP 19"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+90</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>172</ID>
+                  <Description>"Lv 20"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+98</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>173</ID>
+                  <Description>"XP 20"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+98</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>176</ID>
+                  <Description>"Lv 21"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+A0</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>177</ID>
+                  <Description>"XP 21"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+A0</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>174</ID>
+                  <Description>"Lv 22"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+A8</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>175</ID>
+                  <Description>"XP 22"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_commu_addr+A8</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>136</ID>
-              <Description>"XP 1"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>132</ID>
-              <Description>"Lv 2"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+8</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>133</ID>
-              <Description>"XP 2"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+8</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>137</ID>
-              <Description>"Lv 3"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+10</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>138</ID>
-              <Description>"XP 3"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+10</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>139</ID>
-              <Description>"Lv 4"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+18</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>140</ID>
-              <Description>"XP 4"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+18</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>141</ID>
-              <Description>"Lv 5"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+20</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>142</ID>
-              <Description>"XP 5"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+20</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>144</ID>
-              <Description>"Lv 6"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+28</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>145</ID>
-              <Description>"XP 6"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+28</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>146</ID>
-              <Description>"Lv 7"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+30</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>147</ID>
-              <Description>"XP 7"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+30</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>148</ID>
-              <Description>"Lv 8"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+38</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>149</ID>
-              <Description>"XP 8"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+38</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>150</ID>
-              <Description>"Lv 9"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+40</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>151</ID>
-              <Description>"XP 9"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+40</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>152</ID>
-              <Description>"Lv 10"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+48</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>153</ID>
-              <Description>"XP 10"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+48</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>154</ID>
-              <Description>"Lv 11"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+50</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>155</ID>
-              <Description>"XP 11"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+50</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>156</ID>
-              <Description>"Lv 12"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+58</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>157</ID>
-              <Description>"XP 12"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+58</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>158</ID>
-              <Description>"Lv 13"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+60</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>159</ID>
-              <Description>"XP 13"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+60</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>160</ID>
-              <Description>"Lv 14"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+68</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>161</ID>
-              <Description>"XP 14"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+68</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>162</ID>
-              <Description>"Lv 15"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+70</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>163</ID>
-              <Description>"XP 15"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+70</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>164</ID>
-              <Description>"Lv 16"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+78</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>165</ID>
-              <Description>"XP 16"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+78</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>166</ID>
-              <Description>"Lv 17"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+80</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>167</ID>
-              <Description>"XP 17"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+80</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>168</ID>
-              <Description>"Lv 18"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+88</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>169</ID>
-              <Description>"XP 18"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+88</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>170</ID>
-              <Description>"Lv 19"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+90</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>171</ID>
-              <Description>"XP 19"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+90</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>172</ID>
-              <Description>"Lv 20"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+98</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>173</ID>
-              <Description>"XP 20"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+98</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>176</ID>
-              <Description>"Lv 21"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+A0</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>177</ID>
-              <Description>"XP 21"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+A0</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>174</ID>
-              <Description>"Lv 22"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+A8</Address>
-              <Offsets>
-                <Offset>0</Offset>
-                <Offset>0</Offset>
-              </Offsets>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>175</ID>
-              <Description>"XP 22"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>408000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>i_base_commu_addr+A8</Address>
-              <Offsets>
-                <Offset>2</Offset>
-                <Offset>0</Offset>
-              </Offsets>
+              <ID>226</ID>
+              <Description>"All commu data+"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>181</ID>
+                  <Description>"Fool / 愚者 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>182</ID>
+                  <Description>"Fool / 愚者 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>2</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>183</ID>
+                  <Description>"Magician / 魔術師 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>186</ID>
+                  <Description>"Magician / 魔術師 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>185</ID>
+                  <Description>"Priestess / 女教皇 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>184</ID>
+                  <Description>"Priestess / 女教皇 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>12</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>187</ID>
+                  <Description>"Empress / 女帝 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>188</ID>
+                  <Description>"Empress / 女帝 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>1A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>189</ID>
+                  <Description>"Emperor / 皇帝 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>190</ID>
+                  <Description>"Emperor / 皇帝 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>22</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>191</ID>
+                  <Description>"Hierophant / 法王 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>192</ID>
+                  <Description>"Hierophant / 法王 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>2A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>193</ID>
+                  <Description>"Lovers / 恋愛 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>194</ID>
+                  <Description>"Lovers / 恋愛 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>32</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>195</ID>
+                  <Description>"Chariot / 戦車 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>38</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>196</ID>
+                  <Description>"Chariot / 戦車 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>3A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>198</ID>
+                  <Description>"Justice / 正義 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>40</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>199</ID>
+                  <Description>"Justice / 正義 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>42</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>200</ID>
+                  <Description>"Hermit / 隠者 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>48</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>201</ID>
+                  <Description>"Hermit / 隠者 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>4A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>202</ID>
+                  <Description>"Fortune / 運命 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>50</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>203</ID>
+                  <Description>"Fortune / 運命 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>52</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>204</ID>
+                  <Description>"Strength / 剛毅 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>58</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>205</ID>
+                  <Description>"Strength / 剛毅 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>5A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>206</ID>
+                  <Description>"Hanged / 刑死者 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>60</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>207</ID>
+                  <Description>"Hanged / 刑死者 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>62</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>208</ID>
+                  <Description>"Death / 死神 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>68</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>209</ID>
+                  <Description>"Death / 死神 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>6A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>210</ID>
+                  <Description>"Temperance / 節制 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>70</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>211</ID>
+                  <Description>"Temperance / 節制 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>72</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>212</ID>
+                  <Description>"Devil / 悪魔 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>78</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>213</ID>
+                  <Description>"Devil / 悪魔 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>7A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>214</ID>
+                  <Description>"Tower / 塔 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>80</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>215</ID>
+                  <Description>"Tower / 塔 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>82</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>216</ID>
+                  <Description>"Star / 星 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>88</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>217</ID>
+                  <Description>"Star / 星 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>8A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>218</ID>
+                  <Description>"Moon / 月 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>90</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>219</ID>
+                  <Description>"Moon / 月 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>92</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>220</ID>
+                  <Description>"Sun / 太陽 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>98</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>221</ID>
+                  <Description>"Sun / 太陽 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>9A</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>222</ID>
+                  <Description>"Judgement / 審判 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>A0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>223</ID>
+                  <Description>"Judgement / 審判 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>A2</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>224</ID>
+                  <Description>"Aeon / 永劫 Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>A8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>225</ID>
+                  <Description>"Aeon / 永劫 XP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>408000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_min_commu_addr</Address>
+                  <Offsets>
+                    <Offset>AA</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>

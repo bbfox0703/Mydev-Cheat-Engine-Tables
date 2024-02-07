@@ -3,7 +3,6 @@
 ## 2024/02/07  
 1. Revised commu scripts  
 
-
 ## 2024/02/06  
 1. added "Get day progress"  
 1. added Commu scripts  
