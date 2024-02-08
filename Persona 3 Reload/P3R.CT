@@ -44,7 +44,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {226,180,178,179,129,  84,83,91,  40,58,2,  117,108,   234,229,51,33,93,9,31,8,36,43,46,14,63,51,48,17,47, 14, 63, 48}
+battle_array_close = {226,180,242,243,179,129,  84,83,91,  40,58,2,  117,108,   234,229,51,33,93,9,31,8,36,43,46,14,63,51,48,17,47, 14, 63, 48}
 
 local a_len1 = #(battle_array_close)
 
@@ -2348,10 +2348,10 @@ P3R.exe+1026BCA: CC                 - int 3
         <CheatEntry>
           <ID>112</ID>
           <Description>"=&gt; Time peroid #1?"</Description>
-          <DropDownList DisplayValueAsItem="1">2:Early morning / 早朝
+          <DropDownList DisplayValueAsItem="1">2:Early morning / 朝
 3:Morning / 午前
 4:Noon break / 昼休み
-5:Daytime / 昼間
+5:Daytime,Afternoon / 昼間,午後
 6:After school / 放課後
 7:Night / 夜
 8:Dark Hour / 影時間
@@ -2412,9 +2412,10 @@ P3R.exe+1026BCA: CC                 - int 3
         <CheatEntry>
           <ID>110</ID>
           <Description>"=&gt;Time peroid #2?"</Description>
-          <DropDownList DisplayValueAsItem="1">3:Early morning / 早朝
+          <DropDownList DisplayValueAsItem="1">3:Early morning / 朝
 4:Morning / 午前
 5:Noon break / 昼休み
+6:Afternoon / 午後
 7:After school / 放課後
 8:Night / 夜
 9:Dark Hour / 影時間
@@ -2509,58 +2510,68 @@ P3R.exe+11B872A: CC                 - int 3
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
-          <ID>178</ID>
-          <Description>"Commu: pt. multiplier"</Description>
+          <ID>242</ID>
+          <Description>"Commu: pt. multiplier, part 1"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : P3R.exe
   Version: 
-  Date   : 2024-02-07
+  Date   : 2024-02-08
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_COMMU_MULTI,$process,0F 5B C9 F3 0F 59 C1 F3 0F 2C D0) // should be unique
+aobscanmodule(INJECT_COMMU_MULTI,$process,66 01 50 02 41 0F B7 0E) // should be unique
 alloc(newmem,$1000,INJECT_COMMU_MULTI)
 
 label(code)
 label(return)
 label(vf_commu_multi)
+label(vf_orig_commu_val)
+
 
 newmem:
+  push rcx
+
+  xor rcx, rcx
+  mov cx, dx
+  vcvtsi2ss xmm15, xmm15, ecx
+  vmovss [vf_orig_commu_val], xmm15
   vmovss xmm14, [vf_commu_multi]
-  vmulss xmm0, xmm0, xmm14
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si ecx, xmm15
+  mov dx, cx
+  pop rcx
 
 code:
-  cvtdq2ps xmm1,xmm1
-  mulss xmm0,xmm1
+  add [rax+02],dx
+  movzx ecx,word ptr [r14]
   jmp return
 align 10 cc
   vf_commu_multi:
   dd (float)2.5
+  vf_orig_commu_val:
+  dd 0
 
 INJECT_COMMU_MULTI:
   jmp newmem
-  nop 2
+  nop 3
 return:
 registersymbol(INJECT_COMMU_MULTI)
 registersymbol(vf_commu_multi)
-
+registersymbol(vf_orig_commu_val)
 [DISABLE]
 
 INJECT_COMMU_MULTI:
-  db 0F 5B C9 F3 0F 59 C1
+  db 66 01 50 02 41 0F B7 0E
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: P3R.exe+10844B0
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+10844BB
 
-P3R.exe+108448C: 48 83 C3 08              - add rbx,08
-P3R.exe+1084490: 48 3B DE                 - cmp rbx,rsi
-P3R.exe+1084493: 75 DB                    - jne P3R.exe+1084470
 P3R.exe+1084495: 41 8B D7                 - mov edx,r15d
 P3R.exe+1084498: 48 8B CF                 - mov rcx,rdi
 P3R.exe+108449B: E8 B0 3E 00 00           - call P3R.exe+1088350
@@ -2568,12 +2579,12 @@ P3R.exe+10844A0: 41 0F B7 C4              - movzx eax,r12w
 P3R.exe+10844A4: F3 0F 59 C6              - mulss xmm0,xmm6
 P3R.exe+10844A8: 66 0F 6E C8              - movd xmm1,eax
 P3R.exe+10844AC: 49 8B 46 08              - mov rax,[r14+08]
-// ---------- INJECTING HERE ----------
 P3R.exe+10844B0: 0F 5B C9                 - cvtdq2ps xmm1,xmm1
-// ---------- DONE INJECTING  ----------
 P3R.exe+10844B3: F3 0F 59 C1              - mulss xmm0,xmm1
 P3R.exe+10844B7: F3 0F 2C D0              - cvttss2si edx,xmm0
+// ---------- INJECTING HERE ----------
 P3R.exe+10844BB: 66 01 50 02              - add [rax+02],dx
+// ---------- DONE INJECTING  ----------
 P3R.exe+10844BF: 41 0F B7 0E              - movzx ecx,word ptr [r14]
 P3R.exe+10844C3: E8 28 9E FE FF           - call P3R.exe+106E2F0
 P3R.exe+10844C8: E8 13 14 14 00           - call P3R.exe+11C58E0
@@ -2581,6 +2592,9 @@ P3R.exe+10844CD: 0F 28 B4 24 C0 00 00 00  - movaps xmm6,[rsp+000000C0]
 P3R.exe+10844D5: 48 8B D8                 - mov rbx,rax
 P3R.exe+10844D8: 48 8B B4 24 10 01 00 00  - mov rsi,[rsp+00000110]
 P3R.exe+10844E0: 48 8B AC 24 08 01 00 00  - mov rbp,[rsp+00000108]
+P3R.exe+10844E8: 48 85 C0                 - test rax,rax
+P3R.exe+10844EB: 74 51                    - je P3R.exe+108453E
+P3R.exe+10844ED: 48 8D 4C 24 30           - lea rcx,[rsp+30]
 }
 </AssemblerScript>
           <CheatEntries>
@@ -2591,6 +2605,106 @@ P3R.exe+10844E0: 48 8B AC 24 08 01 00 00  - mov rbp,[rsp+00000108]
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_commu_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>243</ID>
+          <Description>"Commu: pt. multiplier, part 2"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_COMMU_MULTI2,$process,66 01 5A 02 0F B7 D3) // should be unique
+alloc(newmem,$1000,INJECT_COMMU_MULTI2)
+
+label(code)
+label(return)
+label(vf_commu_multi2)
+label(vf_orig_commu_val2)
+
+
+newmem:
+newmem:
+  push rcx
+
+  xor rcx, rcx
+  mov cx, bx
+  vcvtsi2ss xmm15, xmm15, ecx
+  vmovss [vf_orig_commu_val2], xmm15
+  vmovss xmm14, [vf_commu_multi2]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si ecx, xmm15
+  mov bx, cx
+  pop rcx
+
+code:
+  add [rdx+02],bx
+  movzx edx,bx
+  jmp return
+align 10 cc
+  vf_commu_multi2:
+  dd (float)2.5
+  vf_orig_commu_val2:
+  dd 0
+
+INJECT_COMMU_MULTI2:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_COMMU_MULTI2)
+registersymbol(vf_commu_multi2)
+registersymbol(vf_orig_commu_val2)
+[DISABLE]
+
+INJECT_COMMU_MULTI2:
+  db 66 01 5A 02 0F B7 D3
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+108321C
+
+P3R.exe+10831F6: 41 8B D6        - mov edx,r14d
+P3R.exe+10831F9: 48 8B CD        - mov rcx,rbp
+P3R.exe+10831FC: E8 4F 51 00 00  - call P3R.exe+1088350
+P3R.exe+1083201: 49 8B 57 08     - mov rdx,[r15+08]
+P3R.exe+1083205: 41 0F B7 C4     - movzx eax,r12w
+P3R.exe+1083209: F3 0F 59 C6     - mulss xmm0,xmm6
+P3R.exe+108320D: 66 0F 6E C8     - movd xmm1,eax
+P3R.exe+1083211: 0F 5B C9        - cvtdq2ps xmm1,xmm1
+P3R.exe+1083214: F3 0F 59 C1     - mulss xmm0,xmm1
+P3R.exe+1083218: F3 0F 2C D8     - cvttss2si ebx,xmm0
+// ---------- INJECTING HERE ----------
+P3R.exe+108321C: 66 01 5A 02     - add [rdx+02],bx
+// ---------- DONE INJECTING  ----------
+P3R.exe+1083220: 0F B7 D3        - movzx edx,bx
+P3R.exe+1083223: 41 0F B7 0F     - movzx ecx,word ptr [r15]
+P3R.exe+1083227: E8 C4 B0 FE FF  - call P3R.exe+106E2F0
+P3R.exe+108322C: 48 8B 6C 24 70  - mov rbp,[rsp+70]
+P3R.exe+1083231: 8B C3           - mov eax,ebx
+P3R.exe+1083233: 48 8B 5C 24 68  - mov rbx,[rsp+68]
+P3R.exe+1083238: 0F 28 74 24 20  - movaps xmm6,[rsp+20]
+P3R.exe+108323D: 48 83 C4 30     - add rsp,30
+P3R.exe+1083241: 41 5F           - pop r15
+P3R.exe+1083243: 41 5E           - pop r14
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>244</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_commu_multi2</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -2726,13 +2840,13 @@ P3R.exe+1087F7F: CC           - int 3
           <CheatEntries>
             <CheatEntry>
               <ID>143</ID>
-              <Description>"Usage: Enable -&gt; open commu menu"</Description>
+              <Description>"Usage: Close commu menu -&gt; Enable -&gt; open commu menu"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
               <ID>197</ID>
-              <Description>"Do not enable it while commu menu is open"</Description>
+              <Description>"Disable when not needed"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
@@ -3779,7 +3893,7 @@ P3R.exe+1087F7F: CC           - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>47</ID>
-      <Description>"(2024/02/08 v7) Persona 3 Reload  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"(2024/02/08 v8) Persona 3 Reload  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>00BB00</Color>
       <GroupHeader>1</GroupHeader>
@@ -3813,6 +3927,7 @@ P3R.exe+1087F7F: CC           - int 3
 25:マハブフダイン
 26:ダイアモンドダスト
 30:ガル
+31:ガルーラ
 33:マハガル
 35:マハガルダイン
 36:万物流転
@@ -3829,6 +3944,7 @@ P3R.exe+1087F7F: CC           - int 3
 53:マハンマオン
 54:回転説法
 56:コウハ
+57:コウガ
 58:コウガオン
 59:マハコウハ
 60:マハコウガ
@@ -3856,13 +3972,16 @@ P3R.exe+1087F7F: CC           - int 3
 84:未使用
 85:ポイズマ
 87:マリンカリン
+88:セクシーダンス
 89:ネコダマシ
 90:フラッシュノイズ
 91:プリンパ
+92:テンタラフー
 93:デビルタッチ
 94:デビルスマイル
 95:バリゾーゴン
 96:終末の予言
+100:亡者の嘆き
 101:淀んだ吐息
 102:淀んだ空気
 103:吸血
@@ -3877,6 +3996,7 @@ P3R.exe+1087F7F: CC           - int 3
 126:アサルトダイブ
 129:金剛発破
 130:ヒートウェイブ
+131:ゴッドハンド
 132:アカシャアーツ
 133:ソニックパンチ
 139:シングルショット
@@ -3890,6 +4010,7 @@ P3R.exe+1087F7F: CC           - int 3
 148:ポイズンアロー
 155:ディア
 160:メディア
+165:リカーム
 170:パトラ
 172:バイスディ
 176:アムリタシャワー
@@ -3907,6 +4028,7 @@ P3R.exe+1087F7F: CC           - int 3
 197:マハスクンダ
 198:ランダマイザ
 199:未使用
+200:デカジャ
 205:チャージ
 206:コンセントレイト
 207:ブラッディチャージ
@@ -3956,7 +4078,9 @@ P3R.exe+1087F7F: CC           - int 3
 731:光吸収
 735:闇吸収
 736:未使用
+744:動揺耐性
 746:混乱耐性
+748:恐怖耐性
 754:感耐性電
 756:不動心
 757:狀態異常耐性
@@ -3982,12 +4106,15 @@ P3R.exe+1087F7F: CC           - int 3
 809:闇ハイブースタ
 810:未使用
 811:気絶率UP
+812:毒率UP
+813:惱殺率UP
 814:動揺率UP
 816:恐怖率UP
 818:凍結率UP
 819:感電率UP
 820:狀態異常成功率UP
 825:スクカジャオート
+826:ラクカジャオート
 827:スクカジャオート
 830:マハスクカオート
 840:未使用

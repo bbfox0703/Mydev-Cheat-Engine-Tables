@@ -3,6 +3,7 @@
 ## 2024/02/08  
 1. Added: Battle: Theurgia / テウルギア multiplier  
 1. Added: Battle: inf. Navi SP
+1. Revised Commu: pt. multiplier
 
 ## 2024/02/07  
 1. Revised commu scripts  
