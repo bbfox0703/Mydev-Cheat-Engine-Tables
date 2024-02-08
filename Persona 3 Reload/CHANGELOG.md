@@ -1,5 +1,9 @@
 # Changelog
 
+## 2024/02/08  
+1. Added: Battle: Theurgia / テウルギア multiplier  
+1. Added: Battle: inf. Navi SP
+
 ## 2024/02/07  
 1. Revised commu scripts  
 
