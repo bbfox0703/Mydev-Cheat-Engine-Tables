@@ -25,7 +25,7 @@ if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 getLuaEngine().menuItem5.doClick()
 
-battle_array = {48,93,9,31,8,36,43,14,63,33,51,229,234,  108,117,  2,58,40,  129}
+battle_array = {48,93,9,31,8,36,43,14,63,33,51,229,234,  108,117,  2,58,40,  129,242,243}
 
 local a_len = #(battle_array)
 
@@ -2203,9 +2203,46 @@ alloc(newmem,$1000,INJECT_GET_DAY_PROGRESS)
 label(code)
 label(return)
 label(i_base_day_data_addr)
+label(i_prev_val1)
+label(i_prev_val2)
+label(is_sync_to_prev)
 
 newmem:
   mov [i_base_day_data_addr], rax
+  push rbx
+  mov bl, byte ptr [rax+0C]
+  mov bh, byte ptr [rax+04]
+
+  cmp bl, [i_tmp2]
+  jne store2
+  jmp test1
+
+store2:
+  mov [i_prev_val2], bl
+
+test1:
+  cmp bh, [i_tmp1]
+  jne store1
+  jmp endp
+
+store1:
+  mov [i_prev_val1], bh
+
+endp:
+  cmp byte ptr [i_prev_val1], 1
+  jne @F
+  cmp dword ptr [is_sync_to_prev], 1
+  jne @F
+  mov dword ptr [is_sync_to_prev], 0
+  mov bl, [i_prev_val2]
+  mov bh, [i_prev_val1]
+  mov byte ptr [rax+0C], bl
+  mov byte ptr [rax+04], bh
+
+@@:
+  mov [i_tmp2], bl
+  mov [i_tmp1], bh
+  pop rbx
 
 code:
   movzx eax,byte ptr [rax+0C]
@@ -2215,6 +2252,17 @@ code:
 align 10 cc
   i_base_day_data_addr:
   dq 0
+  is_sync_to_prev:
+  dd 0
+  i_prev_val1:
+  db 0
+  i_prev_val2:
+  db 0
+  i_tmp1:
+  db 0
+  i_tmp2:
+  db 0
+
 
 INJECT_GET_DAY_PROGRESS:
   jmp newmem
@@ -2222,7 +2270,9 @@ INJECT_GET_DAY_PROGRESS:
 return:
 registersymbol(INJECT_GET_DAY_PROGRESS)
 registersymbol(i_base_day_data_addr)
-
+registersymbol(i_prev_val1)
+registersymbol(i_prev_val2)
+registersymbol(is_sync_to_prev)
 [DISABLE]
 
 INJECT_GET_DAY_PROGRESS:
@@ -2279,6 +2329,22 @@ label(code)
 label(return)
 
 newmem:
+  push rbx
+
+  cmp byte ptr [i_prev_val1], 0
+  je @F
+  cmp dword ptr [is_sync_to_prev], 1
+  jne @F
+  mov dword ptr [is_sync_to_prev], 0
+  mov bl, [i_prev_val2]
+  mov bh, [i_prev_val1]
+  mov byte ptr [rax+0C], bl
+  mov byte ptr [rax+04], bh
+
+@@:
+  pop rbx
+
+
   cmp qword ptr [i_base_day_data_addr], rax
   je code
 
@@ -2333,6 +2399,28 @@ P3R.exe+1026BCA: CC                 - int 3
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>247</ID>
+          <Description>"Sync. to previous time period"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+//NO_ACTIVATE
+is_sync_to_prev:
+dd 1
+ 
+ 
+[DISABLE]
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>248</ID>
+              <Description>"Use with caution!"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>109</ID>
           <Description>"Day ?"</Description>
           <DropDownList DisplayValueAsItem="1">68:6/8
@@ -2363,6 +2451,17 @@ P3R.exe+1026BCA: CC                 - int 3
           <Offsets>
             <Offset>4</Offset>
           </Offsets>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>245</ID>
+              <Description>"Prev #1"</Description>
+              <DropDownListLink>=&gt; Time peroid #1?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_prev_val1</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>113</ID>
@@ -2416,7 +2515,7 @@ P3R.exe+1026BCA: CC                 - int 3
 4:Morning / 午前
 5:Noon break / 昼休み
 6:Afternoon / 午後
-7:After school / 放課後
+7:After school / 放課後 / Commu Event
 8:Night / 夜
 9:Dark Hour / 影時間
 </DropDownList>
@@ -2427,6 +2526,17 @@ P3R.exe+1026BCA: CC                 - int 3
           <Offsets>
             <Offset>C</Offset>
           </Offsets>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>246</ID>
+              <Description>"Prev #2"</Description>
+              <DropDownListLink>=&gt;Time peroid #2?</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_prev_val2</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -4163,7 +4273,13 @@ P3R.exe+1087F7F: CC           - int 3
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <LuaScript>IDs = { 239,237,  23,10,21,22,235,37,34,179,95,96  }
+  <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+
+IDs = { 239,237,  23,10,21,22,235,37,34,179,95,96  }
 
 function contains(table, val)
    local i = 0
