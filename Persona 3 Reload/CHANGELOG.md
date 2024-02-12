@@ -1,5 +1,10 @@
 # Changelog
 
+## 2024/02/12  
+1. Added Battle: always have reflect buffs
+1. Added Get equip-ed item ID
+1. Revise scripts
+
 ## 2024/02/08  
 1. Added: Battle: Theurgia / テウルギア multiplier  
 1. Added: Battle: inf. Navi SP

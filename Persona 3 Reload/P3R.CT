@@ -44,7 +44,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {226,180,242,243,179,129,  84,83,91,  40,58,2,  117,108,   234,229,51,33,93,9,31,8,36,43,46,14,63,51,48,17,47, 14, 63, 48}
+battle_array_close = {226,180,242,243,179,129,  84,83,91,  40,58,2,   253,117,108,263,234,229,51,33,93,9,31,8,36,43,46,14,63,51,48,17,47, 14, 63, 48}
 
 local a_len1 = #(battle_array_close)
 
@@ -81,6 +81,8 @@ label(vf_hp_recv_multi)
 label(vf_hp_damage_multi)
 label(vf_hp_damage_to_enemy_multi)
 label(is_also_recovery_sp)
+label(is_also_reflect)
+
 newmem:
   pushfq
 
@@ -112,6 +114,18 @@ to_player:
   mov edx, #999
   mov [rcx+10], edx
   pop rdx
+
+@@:
+  cmp dword ptr [is_also_reflect], 1
+  jne @F
+
+  push rdx
+  mov dl, 60
+  mov dh, [rcx+2E]
+  or dh, dl
+  mov [rcx+2E], dh
+  pop rdx
+
 
 @@:
   cmp edx, 0
@@ -153,9 +167,11 @@ align 10 cc
   vf_hp_damage_multi:
   dd (float)0.85
   vf_hp_damage_to_enemy_multi:
-  dd (float)1.08
+  dd (float)1.025
   is_also_recovery_sp:
   dd 1
+  is_also_reflect:
+  dd 0
 
 INJECT_HP_RECV_MULTI:
   jmp newmem
@@ -166,6 +182,7 @@ registersymbol(vf_hp_recv_multi)
 registersymbol(vf_hp_damage_multi)
 registersymbol(vf_hp_damage_to_enemy_multi)
 registersymbol(is_also_recovery_sp)
+registersymbol(is_also_reflect)
 
 [DISABLE]
 
@@ -214,6 +231,17 @@ P3R.exe+11BAC9E: C3              - ret
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>is_also_recovery_sp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>254</ID>
+          <Description>"Also get reflect buff? (if got hit)"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_also_reflect</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>10</ID>
@@ -315,6 +343,111 @@ P3R.exe+11BAD4D: 5F              - pop rdi
 P3R.exe+11BAD4E: C3              - ret 
 }
 </AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>253</ID>
+      <Description>"Battle: always have reflect buffs"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_BUFF_CTRL,$process,8B 4B 0C 48 8B 5C 24 30) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_BUFF_CTRL)
+
+label(code)
+label(return)
+label(is_reflect_on)
+
+newmem:
+  cmp dword ptr [rbx+04], 1
+  jne code
+
+  inc dword ptr [i_counter]
+  cmp dword ptr [i_counter], 20
+  jb code
+
+
+  mov dword ptr [i_counter], 0
+
+  cmp dword ptr [is_reflect_on], 1
+  jne check2
+  mov cl, 60
+  mov ch, [rbx+2E]
+  cmp ch, cl
+  je check2
+  or ch, cl
+  mov [rbx+2E], ch
+
+check2:
+
+code:
+  mov ecx,[rbx+0C]
+  mov rbx,[rsp+30]
+  jmp return
+align 10 cc
+  i_counter:
+  dd 0
+  is_reflect_on:
+  dd 1
+  is_stats_buff:
+  dd 0
+
+INJECT_BATTLE_BUFF_CTRL:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_BATTLE_BUFF_CTRL)
+registersymbol(is_reflect_on)
+[DISABLE]
+
+INJECT_BATTLE_BUFF_CTRL:
+  db 8B 4B 0C 48 8B 5C 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11A53EA
+
+P3R.exe+11A53CC: 48 8B D9        - mov rbx,rcx
+P3R.exe+11A53CF: BA 00 00 08 00  - mov edx,00080000
+P3R.exe+11A53D4: E8 A7 5F 01 00  - call P3R.exe+11BB380
+P3R.exe+11A53D9: 84 C0           - test al,al
+P3R.exe+11A53DB: 74 0D           - je P3R.exe+11A53EA
+P3R.exe+11A53DD: B0 01           - mov al,01
+P3R.exe+11A53DF: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+P3R.exe+11A53E4: 48 83 C4 20     - add rsp,20
+P3R.exe+11A53E8: 5F              - pop rdi
+P3R.exe+11A53E9: C3              - ret 
+// ---------- INJECTING HERE ----------
+P3R.exe+11A53EA: 8B 4B 0C        - mov ecx,[rbx+0C]
+// ---------- DONE INJECTING  ----------
+P3R.exe+11A53ED: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+P3R.exe+11A53F2: 03 CF           - add ecx,edi
+P3R.exe+11A53F4: 85 C9           - test ecx,ecx
+P3R.exe+11A53F6: 0F 9E C0        - setle al
+P3R.exe+11A53F9: 48 83 C4 20     - add rsp,20
+P3R.exe+11A53FD: 5F              - pop rdi
+P3R.exe+11A53FE: C3              - ret 
+P3R.exe+11A53FF: CC              - int 3 
+P3R.exe+11A5400: 48 89 5C 24 08  - mov [rsp+08],rbx
+P3R.exe+11A5405: 57              - push rdi
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>255</ID>
+          <Description>"Disable it if game lag"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>234</ID>
@@ -2418,6 +2551,12 @@ dd 1
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
+            <CheatEntry>
+              <ID>249</ID>
+              <Description>"Actived after switch back to game screen"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
@@ -2542,7 +2681,7 @@ dd 1
     </CheatEntry>
     <CheatEntry>
       <ID>17</ID>
-      <Description>"Weapon Shop: money will not decrease"</Description>
+      <Description>"Weapon Shop / Summon persona (全書引出し): money will not decrease"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : P3R.exe
   Version: 
@@ -2612,6 +2751,152 @@ P3R.exe+11B8729: C3                 - ret
 P3R.exe+11B872A: CC                 - int 3 
 }
 </AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>263</ID>
+      <Description>"Get equip-ed item ID"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : P3R.exe
+  Version: 
+  Date   : 2024-02-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_EQP_IDs,$process,0F B7 84 41 8C 02 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_EQP_IDs)
+
+label(code)
+label(return)
+label(i_base_eqp_addr)
+
+newmem:
+  test dx, dx
+  jnz code
+
+  mov [i_base_eqp_addr], rcx
+
+
+code:
+  movzx eax,word ptr [rcx+rax*2+0000028C]
+  jmp return
+align 10 cc
+  i_base_eqp_addr:
+  dq 0
+
+INJECT_GET_EQP_IDs:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_EQP_IDs)
+registersymbol(i_base_eqp_addr)
+[DISABLE]
+
+INJECT_GET_EQP_IDs:
+  db 0F B7 84 41 8C 02 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: P3R.exe+11BCF23
+
+P3R.exe+11BCF09: 0F B7 CA                 - movzx ecx,dx
+P3R.exe+11BCF0C: E9 6F 33 FF FF           - jmp P3R.exe+11B0280
+P3R.exe+11BCF11: 66 85 C9                 - test cx,cx
+P3R.exe+11BCF14: 0F 85 26 39 FF FF        - jne P3R.exe+11B0840
+P3R.exe+11BCF1A: 33 C0                    - xor eax,eax
+P3R.exe+11BCF1C: C3                       - ret 
+P3R.exe+11BCF1D: CC                       - int 3 
+P3R.exe+11BCF1E: CC                       - int 3 
+P3R.exe+11BCF1F: CC                       - int 3 
+P3R.exe+11BCF20: 0F B7 C2                 - movzx eax,dx
+// ---------- INJECTING HERE ----------
+P3R.exe+11BCF23: 0F B7 84 41 8C 02 00 00  - movzx eax,word ptr [rcx+rax*2+0000028C]
+// ---------- DONE INJECTING  ----------
+P3R.exe+11BCF2B: C3                       - ret 
+P3R.exe+11BCF2C: CC                       - int 3 
+P3R.exe+11BCF2D: CC                       - int 3 
+P3R.exe+11BCF2E: CC                       - int 3 
+P3R.exe+11BCF2F: CC                       - int 3 
+P3R.exe+11BCF30: E9 AB 14 76 0A           - jmp P3R.exe+B91E3E0
+P3R.exe+11BCF35: BE 97 BE 78 8B           - mov esi,8B78BE97
+P3R.exe+11BCF3A: E9 34 EC 23 00           - jmp P3R.exe+13FBB73
+P3R.exe+11BCF3F: 54                       - push rsp
+P3R.exe+11BCF40: 0D 94 1A BB E9           - or eax,E9BB1A94
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>269</ID>
+          <Description>"Usage: Equip-&gt;select char-&gt;Enter equip setup screen"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>264</ID>
+          <Description>"Weapon"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>28C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>265</ID>
+          <Description>"Protector-Body"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>28E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>266</ID>
+          <Description>"Protector-Foot"</Description>
+          <DropDownList DisplayValueAsItem="1">8201:素足(コロマル)
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>290</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>267</ID>
+          <Description>"Accessories"</Description>
+          <DropDownList DisplayValueAsItem="1">12559:アムリタイトの首飾り
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>292</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>268</ID>
+          <Description>"Clothes"</Description>
+          <DropDownList DisplayValueAsItem="1">32794:ハイレグアーマー(ゆかり)
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>294</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>129</ID>
@@ -4025,7 +4310,9 @@ P3R.exe+1087F7F: CC           - int 3
                   <DropDownList DisplayValueAsItem="1">0:--NONE--
 10:アギ
 11:アギラオ
+12:アギダイン
 13:マハラギ
+14:マハラギオン
 15:マハラギダイン
 16:インフェルノ
 17:未使用
@@ -4034,6 +4321,7 @@ P3R.exe+1087F7F: CC           - int 3
 20:ブフ
 21:ブフーラ
 23:マハブフ
+24:マハブフーラ
 25:マハブフダイン
 26:ダイアモンドダスト
 30:ガル
@@ -4045,6 +4333,7 @@ P3R.exe+1087F7F: CC           - int 3
 40:ジオ
 41:ジオンガ
 43:マハジオ
+44:マハジオンガ
 45:マハジオダイン
 46:真理の雷
 47:未使用
@@ -4070,6 +4359,7 @@ P3R.exe+1087F7F: CC           - int 3
 71:エイガ
 72:エイガオン
 73:マハエイハ
+74:マハエイガ
 75:マハエイガオン
 76:悪魔の審判
 77:未使用
@@ -4081,6 +4371,7 @@ P3R.exe+1087F7F: CC           - int 3
 83:未使用
 84:未使用
 85:ポイズマ
+86:ポイズンミスト
 87:マリンカリン
 88:セクシーダンス
 89:ネコダマシ
@@ -4100,10 +4391,12 @@ P3R.exe+1087F7F: CC           - int 3
 110:パワースラッシュ
 111:デッドエンド
 113:真空斬
+114:利剣乱舞
 117:空間殺法
 120:残影
 125:突撃
 126:アサルトダイブ
+128:ラクカジャ
 129:金剛発破
 130:ヒートウェイブ
 131:ゴッドハンド
@@ -4119,11 +4412,14 @@ P3R.exe+1087F7F: CC           - int 3
 147:プララヤ
 148:ポイズンアロー
 155:ディア
+156:ディアラマ
 160:メディア
+161:メディラマ
 165:リカーム
 170:パトラ
 172:バイスディ
 176:アムリタシャワー
+177:アムリタドロップ
 180:タルカジャ
 181:ラクカジャ
 182:スクカジャ
@@ -4139,11 +4435,13 @@ P3R.exe+1087F7F: CC           - int 3
 198:ランダマイザ
 199:未使用
 200:デカジャ
+201:デクンダ
 205:チャージ
 206:コンセントレイト
 207:ブラッディチャージ
 208:未使用
 210:リベリオン
+211:レボリューション
 215:テトラカーン
 216:マカラカーン
 217:未使用
@@ -4196,12 +4494,14 @@ P3R.exe+1087F7F: CC           - int 3
 757:狀態異常耐性
 758:未使用
 759:斬撃見切リ
+771:電撃見切リ
 779:カウンタ
 780:ヘビーカウンタ
 781:ハイパーカウンタ
 784:小治癒促進
 786:大治癒促進
 790:大気功
+797:貫通ハイブースタ
 798:火炎ブースタ
 799:火炎ハイブースタ
 800:氷結ブースタ
@@ -4227,13 +4527,16 @@ P3R.exe+1087F7F: CC           - int 3
 826:ラクカジャオート
 827:スクカジャオート
 830:マハスクカオート
+833:コーチング
 840:未使用
 841:神々の加護
 842:大天使の加護
 843:大虎
 844:明王の加護
+845:ローグロウ
 846:ミドルグロウ
 847:ハイグロウ
+848:アリ・ダンス
 851:光からの生還
 852:闇からの生還
 862:未使用
@@ -4242,6 +4545,9 @@ P3R.exe+1087F7F: CC           - int 3
 865:魔導の才能
 866:魔導の極意
 867:未使用
+870:瞬間回復
+884:クリティカルUP
+897:マルチブースタ
 900:未使用
 901:ウィークブースタ
 902:ウィークハイブースタ
