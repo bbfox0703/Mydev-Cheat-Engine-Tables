@@ -82,6 +82,8 @@ label(vf_hp_damage_multi)
 label(vf_hp_damage_to_enemy_multi)
 label(is_also_recovery_sp)
 label(is_also_reflect)
+label(is_keep_8th_char_sp_low)
+label(i_8th_char_sp)
 
 newmem:
   pushfq
@@ -91,7 +93,7 @@ newmem:
 
 to_player:
   cmp dword ptr [is_also_recovery_sp], 1
-  jne @F
+  jne chk_reflect
 
   db EB 3B 54
   db 68 69 73 20
@@ -110,12 +112,23 @@ to_player:
   db 43 45 20 37
   db 2E 34 2B
 
+  // recover SP
   push rdx
+
+  mov edx, [rcx+8]
+  cmp edx, 8
+  je @F
   mov edx, #999
+  jmp set_sp
+
+@@:
+  mov edx, [i_8th_char_sp]
+
+set_sp:
   mov [rcx+10], edx
   pop rdx
 
-@@:
+chk_reflect:
   cmp dword ptr [is_also_reflect], 1
   jne @F
 
@@ -172,6 +185,10 @@ align 10 cc
   dd 1
   is_also_reflect:
   dd 0
+  is_keep_8th_char_sp_low:
+  dd 1
+  i_8th_char_sp:
+  dd #90
 
 INJECT_HP_RECV_MULTI:
   jmp newmem
@@ -183,6 +200,8 @@ registersymbol(vf_hp_damage_multi)
 registersymbol(vf_hp_damage_to_enemy_multi)
 registersymbol(is_also_recovery_sp)
 registersymbol(is_also_reflect)
+registersymbol(is_keep_8th_char_sp_low)
+registersymbol(i_8th_char_sp)
 
 [DISABLE]
 
@@ -231,6 +250,28 @@ P3R.exe+11BAC9E: C3              - ret
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>is_also_recovery_sp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>282</ID>
+          <Description>"Set Ken Amada (天田 乾) SP?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_keep_8th_char_sp_low</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>283</ID>
+          <Description>"Target SP of Ken Amada (天田 乾):"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_8th_char_sp</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>254</ID>
@@ -612,6 +653,7 @@ P3R.exe+11BE4DF: CC              - int 3
     <CheatEntry>
       <ID>8</ID>
       <Description>"Map: Open &amp; Close menu: full HP/SP"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : P3R.exe
   Version: 
@@ -626,29 +668,45 @@ alloc(newmem,$1000,INJECT_CLS_MNU_MAX_HPSP)
 
 label(code)
 label(return)
+label(is_fill_8th_char_sp)
 
 newmem:
+  mov ebx, [rdi+8]
+  cmp ebx, 8
   mov ebx, #999
-  mov [rdi+0C], ebx
+  jne full_rec
+  cmp dword ptr [is_fill_8th_char_sp], 0
+  je full_hp
+
+
+full_rec:
+  //mov ebx, #999
   mov [rdi+10], ebx
+
+full_hp:
+  mov [rdi+0C], ebx
 
 code:
   mov rcx,rdi
   mov ebx,[rdi+0C]
   jmp return
+align 10 cc
+  is_fill_8th_char_sp:
+  dd 0
 
 INJECT_CLS_MNU_MAX_HPSP:
   jmp newmem
   nop
 return:
 registersymbol(INJECT_CLS_MNU_MAX_HPSP)
+registersymbol(is_fill_8th_char_sp)
 
 [DISABLE]
 
 INJECT_CLS_MNU_MAX_HPSP:
   db 48 8B CF 8B 5F 0C
 
-unregistersymbol(INJECT_CLS_MNU_MAX_HPSP)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -679,6 +737,19 @@ P3R.exe+11BE234: 66 83 7F 04 02        - cmp word ptr [rdi+04],02
 P3R.exe+11BE239: 0F 45 C6              - cmovne eax,esi
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>284</ID>
+          <Description>"is full Ken Amada (天田 乾) SP?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_fill_8th_char_sp</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>36</ID>
@@ -2089,7 +2160,7 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
         </CheatEntry>
         <CheatEntry>
           <ID>77</ID>
-          <Description>"Team pos? (valid: &lt;9?)"</Description>
+          <Description>"Team pos? (valid: &lt;= 10?)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2283,13 +2354,28 @@ P3R.exe+11AC665: 48 89 6C 24 10  - mov [rsp+10],rbp
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>281</ID>
+          <Description>"Have Item?"</Description>
+          <DropDownList DisplayValueAsItem="1">1:N/A
+7:Yes
+11:Got
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_str_addr</Address>
+          <Offsets>
+            <Offset>-20</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>236</ID>
           <Description>"------"</Description>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
           <ID>228</ID>
-          <Description>"Theurgia / テウルギア"</Description>
+          <Description>"Theurgia / テウルギア (stats menu only)"</Description>
           <DropDownList DisplayValueAsItem="1">260:(!)カデンツァ
 261:(!)ジャックブラザイズ
 262:(!)おおさまとおいら
@@ -2754,7 +2840,7 @@ P3R.exe+11B872A: CC                 - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>263</ID>
-      <Description>"Get equip-ed item ID"</Description>
+      <Description>"Get equip-ed item ID / personality"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : P3R.exe
@@ -2893,7 +2979,7 @@ P3R.exe+11BCF40: 0D 94 1A BB E9           - or eax,E9BB1A94
 32773:腕章付き制服 (美鶴)
 32774:腕章付き制服 (風花)
 32775:通常潜入服 (アイギス)
-32776:腕章付き制服 ()
+32776:腕章付き制服 (乾)
 32777:通常潜入服 (コロマル)
 32779:SEES制式戦闘服 (主人公)
 32780:SEES制式戦闘服 (ゆかり)
@@ -2902,7 +2988,7 @@ P3R.exe+11BCF40: 0D 94 1A BB E9           - or eax,E9BB1A94
 32783:SEES制式戦闘服 (美鶴)
 32784:SEES制式戦闘服 (風花)
 32785:SEES制式戦闘服 (アイギス)
-32786:SEES制式戦闘服 ()
+32786:SEES制式戦闘服 (乾)
 32787:SEES制式戦闘服 (コロマル)
 32794:ハイレグアーマー (ゆかり)
 32813:セクシアーマー (美鶴)
@@ -2914,6 +3000,54 @@ P3R.exe+11BCF40: 0D 94 1A BB E9           - or eax,E9BB1A94
           <Address>i_base_eqp_addr</Address>
           <Offsets>
             <Offset>294</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>276</ID>
+          <Description>"Personality #2?"</Description>
+          <DropDownListLink>-sKILL id-</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>2A0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>277</ID>
+          <Description>"Personality #3 (overwrite #2)"</Description>
+          <DropDownListLink>-sKILL id-</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>2A2</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>278</ID>
+          <Description>"Personality #2 for hero?"</Description>
+          <DropDownListLink>-sKILL id-</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>2A6</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>279</ID>
+          <Description>"Personality #3 for hero? (overwrite #2)"</Description>
+          <DropDownListLink>-sKILL id-</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_eqp_addr</Address>
+          <Offsets>
+            <Offset>2A8</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -4412,10 +4546,13 @@ P3R.exe+1087F7F: CC           - int 3
 115:デスバウンド
 116:ブレイブザッパー
 117:空間殺法
+118:天軍の剣
+119:月影
 120:残影
 121:ニューロクランチ
 125:突撃
 126:アサルトダイブ
+127:ギガンフィスト
 128:ラクカジャ
 129:金剛発破
 130:ヒートウェイブ
@@ -4434,12 +4571,17 @@ P3R.exe+1087F7F: CC           - int 3
 148:ポイズンアロー
 155:ディア
 156:ディアラマ
+157:ディアラハン
 160:メディア
 161:メディラマ
+162:メディアラハン
 163:メシアライザー
 165:リカーム
+166:サマリカーム
 170:パトラ
+171:メパトラ
 172:バイスディ
+173:マハバイスディ
 176:アムリタシャワー
 177:アムリタドロップ
 180:タルカジャ
@@ -4490,6 +4632,7 @@ P3R.exe+1087F7F: CC           - int 3
 703:斬撃吸収
 707:打撃吸収
 711:貫通吸収
+713:火炎無効
 715:火炎吸収
 719:氷結吸収
 720:疾風耐性
@@ -4498,21 +4641,41 @@ P3R.exe+1087F7F: CC           - int 3
 727:電撃吸収
 731:光吸収
 735:闇吸収
+741:毒無効
+742:惱殺耐性
 744:動揺耐性
 746:混乱耐性
 748:恐怖耐性
+752:凍結耐性
 754:感耐性電
 755:感電無効
 756:不動心
 757:狀態異常耐性
 759:斬撃見切リ
+760:真・斬撃見切リ
+761:打撃見切リ
+762:真・打撃見切リ
+763:貫通見切リ
+764:真・貫通見切リ
+765:火炎見切リ
+766:真・火炎見切リ
+767:氷結見切リ
+768:真・氷結見切リ
+769:疾風見切リ
+770:真・疾風見切リ
 771:電撃見切リ
+772:真・電撃見切リ
 779:カウンタ
 780:ヘビーカウンタ
 781:ハイパーカウンタ
 784:小治癒促進
 786:大治癒促進
 790:大気功
+792:斬撃ブースタ
+793:斬撃ハイブースタ
+794:打擊ブースタ
+795:打擊ハイブースタ
+796:貫通ブースタ
 797:貫通ハイブースタ
 798:火炎ブースタ
 799:火炎ハイブースタ
@@ -4541,11 +4704,14 @@ P3R.exe+1087F7F: CC           - int 3
 825:スクカジャオート
 826:ラクカジャオート
 827:スクカジャオート
+829:マハラクカオート
 830:マハスクカオート
+831:リベリオンオート
 833:コーチング
-834:不屈の闘志
+834:アドバンス
 835:食いしばり
-836:アドバイス
+836:不屈の闘志
+838:勝利の息吹
 841:神々の加護
 842:大天使の加護
 843:大虎
@@ -4554,21 +4720,32 @@ P3R.exe+1087F7F: CC           - int 3
 846:ミドルグロウ
 847:ハイグロウ
 848:アリ・ダンス
-851:光からの生還
+850:光からの生還
+851:光からの大生還
 852:闇からの生還
+853:闇からの大生還
 863:万能ブースタ
 864:万能ハイブースタ
 865:魔導の才能
 866:魔導の極意
+869:急速回復
 870:瞬間回復
 884:クリティカルUP
+885:クリティカル大UP
+886:防炎の心得
+887:防氷の心得
+888:防雷の心得
+890:ソウルシフト
+893:シフトブースタ
+894:シフトハイブースタ
 897:マルチブースタ
 901:ウィークブースタ
 902:ウィークハイブースタ
 903:治癒の素養
 904:治癒の極致
 905:会心ブースタ
-905:会心ハイブースタ
+906:会心ハイブースタ
+907:カジャブースタ
 908:カジャハイブースタ
 909:異常発破ブースタ
 910:異常発破ハイブースタ
