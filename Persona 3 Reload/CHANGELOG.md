@@ -1,5 +1,9 @@
 # Changelog
 
+## 2024/02/20  
+1. Added Get some stats
+1. Revise script
+
 ## 2024/02/16  
 1. Added Skill ID (English)
 1. Revise scripts
