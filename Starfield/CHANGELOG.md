@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/02/25
+1. Revised for v1.9.67.0
+
 ## 2023/11/30
 1. fixed get skill pt
 

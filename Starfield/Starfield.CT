@@ -21,21 +21,31 @@ LuaCall(cycleFullCompact(nil,false))
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Starfield.exe
   Version: 
-  Date   : 2023-09-02
+  Date   : 2024-02-25
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_SKPT,Starfield.exe,8B 88 00 0F 00 00) // should be unique
+aobscanmodule(INJECT_GET_SKPT,Starfield.exe,8B 88 ?? ?? 0? 00 89 4C 24 48 48 8B 5C 24 20 48 8D) // should be unique
 alloc(newmem,$1000,INJECT_GET_SKPT)
+
+alloc(INJECT_GET_SKPTo,6)
 
 label(code)
 label(return)
 label(i_sk_pt_addr)
+label(i_sk_pt_off_addr)
+
+INJECT_GET_SKPTo:
+  readmem(INJECT_GET_SKPT, 6)
 
 newmem:
+
   mov [i_sk_pt_addr], rax
+  mov ebx, [INJECT_GET_SKPTo+2]
+  mov [i_sk_pt_off_addr], ebx
+
 
 code:
   //mov ecx,[rax+00000F00]
@@ -44,6 +54,8 @@ code:
 align 10 cc
   i_sk_pt_addr:
   dq 0
+  i_sk_pt_off_addr:
+  dd 0
 
 INJECT_GET_SKPT:
   jmp newmem
@@ -51,41 +63,48 @@ INJECT_GET_SKPT:
 return:
 registersymbol(INJECT_GET_SKPT)
 registersymbol(i_sk_pt_addr)
+registersymbol(INJECT_GET_SKPTo)
+registersymbol(i_sk_pt_off_addr)
+
 [DISABLE]
 
 INJECT_GET_SKPT:
-  db 8B 88 00 0F 00 00
-
+  //db 8B 88 50 0F 00 00
+  readmem(INJECT_GET_SKPTo,6)
 unregistersymbol(INJECT_GET_SKPT)
 unregistersymbol(i_sk_pt_addr)
+unregistersymbol(i_sk_pt_off_addr)
 dealloc(newmem)
+dealloc(INJECT_GET_SKPTo)
+unregistersymbol(INJECT_GET_SKPTo)
+
 
 {
-// ORIGINAL CODE - INJECTION POINT: Starfield.exe+209208D
+// ORIGINAL CODE - INJECTION POINT: Starfield.exe+20D077D
 
-Starfield.exe+2092063: CC                       - int 3
-Starfield.exe+2092064: 40 53                    - push rbx
-Starfield.exe+2092066: 48 83 EC 30              - sub rsp,30
-Starfield.exe+209206A: 48 83 3D 36 93 57 03 00  - cmp qword ptr [Starfield.exe+560B3A8],00
-Starfield.exe+2092072: 74 69                    - je Starfield.exe+20920DD
-Starfield.exe+2092074: 48 81 C1 88 00 00 00     - add rcx,00000088
-Starfield.exe+209207B: 48 8D 54 24 20           - lea rdx,[rsp+20]
-Starfield.exe+2092080: E8 97 F0 7F FF           - call Starfield.exe+189111C
-Starfield.exe+2092085: 90                       - nop
-Starfield.exe+2092086: 48 8B 05 1B 93 57 03     - mov rax,[Starfield.exe+560B3A8]
+Starfield.exe+20D0753: CC                       - int 3
+Starfield.exe+20D0754: 40 53                    - push rbx
+Starfield.exe+20D0756: 48 83 EC 30              - sub rsp,30
+Starfield.exe+20D075A: 48 83 3D 16 56 14 04 00  - cmp qword ptr [Starfield.exe+6215D78],00
+Starfield.exe+20D0762: 74 69                    - je Starfield.exe+20D07CD
+Starfield.exe+20D0764: 48 81 C1 88 00 00 00     - add rcx,00000088
+Starfield.exe+20D076B: 48 8D 54 24 20           - lea rdx,[rsp+20]
+Starfield.exe+20D0770: E8 87 6C 7F FF           - call Starfield.exe+18C73FC
+Starfield.exe+20D0775: 90                       - nop
+Starfield.exe+20D0776: 48 8B 05 FB 55 14 04     - mov rax,[Starfield.exe+6215D78]
 // ---------- INJECTING HERE ----------
-Starfield.exe+209208D: 8B 88 00 0F 00 00        - mov ecx,[rax+00000F00]
+Starfield.exe+20D077D: 8B 88 50 0F 00 00        - mov ecx,[rax+00000F50]
 // ---------- DONE INJECTING  ----------
-Starfield.exe+2092093: 89 4C 24 48              - mov [rsp+48],ecx
-Starfield.exe+2092097: 48 8B 5C 24 20           - mov rbx,[rsp+20]
-Starfield.exe+209209C: 48 8D 8B E0 00 00 00     - lea rcx,[rbx+000000E0]
-Starfield.exe+20920A3: 48 8D 54 24 48           - lea rdx,[rsp+48]
-Starfield.exe+20920A8: E8 E7 96 24 FF           - call Starfield.exe+12DB794
-Starfield.exe+20920AD: 48 8B 05 F4 92 57 03     - mov rax,[Starfield.exe+560B3A8]
-Starfield.exe+20920B4: 8A 88 C3 10 00 00        - mov cl,[rax+000010C3]
-Starfield.exe+20920BA: 80 E1 01                 - and cl,01
-Starfield.exe+20920BD: 88 4C 24 48              - mov [rsp+48],cl
-Starfield.exe+20920C1: 48 8D 8B 20 01 00 00     - lea rcx,[rbx+00000120]
+Starfield.exe+20D0783: 89 4C 24 48              - mov [rsp+48],ecx
+Starfield.exe+20D0787: 48 8B 5C 24 20           - mov rbx,[rsp+20]
+Starfield.exe+20D078C: 48 8D 8B E0 00 00 00     - lea rcx,[rbx+000000E0]
+Starfield.exe+20D0793: 48 8D 54 24 48           - lea rdx,[rsp+48]
+Starfield.exe+20D0798: E8 27 A9 23 FF           - call Starfield.exe+130B0C4
+Starfield.exe+20D079D: 48 8B 05 D4 55 14 04     - mov rax,[Starfield.exe+6215D78]
+Starfield.exe+20D07A4: 8A 88 13 11 00 00        - mov cl,[rax+00001113]
+Starfield.exe+20D07AA: 80 E1 01                 - and cl,01
+Starfield.exe+20D07AD: 88 4C 24 48              - mov [rsp+48],cl
+Starfield.exe+20D07B1: 48 8D 8B 20 01 00 00     - lea rcx,[rbx+00000120]
 }
 </AssemblerScript>
       <CheatEntries>
@@ -97,7 +116,7 @@ Starfield.exe+20920C1: 48 8D 8B 20 01 00 00     - lea rcx,[rbx+00000120]
           <VariableType>2 Bytes</VariableType>
           <Address>i_sk_pt_addr</Address>
           <Offsets>
-            <Offset>F00</Offset>
+            <Offset>[i_sk_pt_off_addr]</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -915,7 +934,7 @@ getLuaEngine().Close()
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Starfield.exe
   Version: 
-  Date   : 2023-10-15
+  Date   : 2024-02-25
   Author : bbfox@https://opencheattables.com
 }
 
@@ -939,7 +958,7 @@ newmem:
   mov r15, [rbx]
   test r15, r15
   jz endp
-  mov r15, [r15+48]
+  mov r15, [r15+40]
   test r15, r15
   jz endp
 
@@ -973,7 +992,7 @@ chk_booster_pre:
   mov r15, [rbx]
   test r15, r15
   jz endp
-  mov r15, [r15+48]
+  mov r15, [r15+40]
   test r15, r15
   jz endp
 
@@ -6482,7 +6501,7 @@ Starfield.exe+155B7F8: 40 53                 - push rbx
     </CheatEntry>
     <CheatEntry>
       <ID>1337160867</ID>
-      <Description>"Starfield (32E64ED5 V1.8.86.0)  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Starfield (32E64ED5 V1.9.67.0)  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00A452</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
