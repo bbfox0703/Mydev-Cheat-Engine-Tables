@@ -8,13 +8,13 @@
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : grim dawn.exe
   Version: 
-  Date   : 2023-11/18
+  Date   : 2024-02-28
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_DATA,Game.dll,F3 0F 10 81 EC 0D 00 00) // should be unique
+aobscanmodule(INJECT_GET_DATA,Game.dll,F3 0F 10 81 4C 0E 00 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_DATA)
 
 label(code)
@@ -34,25 +34,29 @@ chk_mana:
   cmp byte ptr [is_fill_mp], 1
   jne chk_hp
 
-  vmovss xmm15, [rcx+00000E5C] // max mana   (E14+48)
-  vmovss xmm14, [rcx+00000E68] // upkeep mana  (E20+48)
+  vmovss xmm15, [rcx+00000EBC] // max mana
+  vmovss xmm14, [rcx+00000EC8] // upkeep mana
   vsubss xmm13, xmm15, xmm14
-  vmovss [rcx+00000DEC], xmm13 // mana
+  vmovss xmm15, [rcx+00000E4C] // current mana
+  vcomiss xmm15, xmm13
+  jae chk_hp
+  vmovss [rcx+00000E4C], xmm13 // current mana
 
 chk_hp:
   cmp byte ptr [is_min_hp], 1
   jne endp
-  vmovsd xmm15, [rcx+00000DD0] // HP  (D88+48)
+  vmovsd xmm15, [rcx+00000E30] // HP
   vmovsd xmm14, [sd_min_hp_val]
   vcomisd xmm15, xmm14
-  jge endp
+  jae endp
 
-  vmovsd [rcx+00000DD0], xmm14
+  vmovsd [rcx+00000E30], xmm14  // HP
 
 endp:
 
 code:
-  vmovss xmm0,[rcx+00000DEC]
+  //vmovss xmm0,[rcx+00000DEC]
+  vmovss xmm0,[rcx+00000E4C]
   jmp return
 align 10 cc
   i_dbase_addr_2:
@@ -78,7 +82,7 @@ registersymbol(is_min_hp)
 [DISABLE]
 
 INJECT_GET_DATA:
-  db F3 0F 10 81 EC 0D 00 00
+  db F3 0F 10 81 4C 0E 00 00
 
 unregistersymbol(INJECT_GET_DATA)
 unregistersymbol(i_dbase_addr_2)
@@ -102,7 +106,7 @@ Game.GAME::Character::ContributeMiscConversionAttributes+ED: CC                 
 Game.GAME::Character::ContributeMiscConversionAttributes+EE: CC                       - int 3
 Game.GAME::Character::ContributeMiscConversionAttributes+EF: CC                       - int 3
 // ---------- INJECTING HERE ----------
-Game.GAME::Character::GetCurrentMana: F3 0F 10 81 EC 0D 00 00  - movss xmm0,[rcx+00000DEC]
+Game.GAME::Character::GetCurrentMana: F3 0F 10 81 4C 0E 00 00  - movss xmm0,[rcx+00000E4C]
 // ---------- DONE INJECTING  ----------
 Game.GAME::Character::GetCurrentMana+8: 0F 57 C9                 - xorps xmm1,xmm1
 Game.GAME::Character::GetCurrentMana+B: F3 0F 5F C1              - maxss xmm0,xmm1
@@ -111,7 +115,7 @@ Game.GAME::Character::SetCurrentMana: 40 53                    - push rbx
 Game.GAME::Character::SetCurrentMana+2: 48 83 EC 30              - sub rsp,30
 Game.GAME::Character::SetCurrentMana+6: 48 8B D9                 - mov rbx,rcx
 Game.GAME::Character::SetCurrentMana+9: 0F 29 74 24 20           - movaps [rsp+20],xmm6
-Game.GAME::Character::SetCurrentMana+E: 48 81 C1 48 0E 00 00     - add rcx,00000E48
+Game.GAME::Character::SetCurrentMana+E: 48 81 C1 A8 0E 00 00     - add rcx,00000EA8
 Game.GAME::Character::SetCurrentMana+15: BA 05 00 00 00           - mov edx,00000005
 Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,xmm1
 }
@@ -119,8 +123,8 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
       <CheatEntries>
         <CheatEntry>
           <ID>31</ID>
-          <Description>"Fill mana?"</Description>
-          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
+          <Description>"Keep min mana?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
@@ -155,7 +159,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Double</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>DD0</Offset>
+            <Offset>E30</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -166,7 +170,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>151C</Offset>
+            <Offset>157C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -177,7 +181,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>DEC</Offset>
+            <Offset>E4C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -188,18 +192,29 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>12C0</Offset>
+            <Offset>1320</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>21</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>EB8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>67</ID>
           <Description>"Max Mana"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>E5C</Offset>
+            <Offset>EBC</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -210,7 +225,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>E68</Offset>
+            <Offset>EC8</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -221,7 +236,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Byte</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1C84</Offset>
+            <Offset>1CE4</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -232,7 +247,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>Byte</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1C86</Offset>
+            <Offset>1CE6</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -243,7 +258,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>62C</Offset>
+            <Offset>68C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -254,18 +269,40 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1584</Offset>
+            <Offset>15E4</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>49</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>167C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>64</ID>
+          <Description>"Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1680</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>63</ID>
           <Description>"XP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1624</Offset>
+            <Offset>1684</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -276,7 +313,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1628</Offset>
+            <Offset>1688</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -287,7 +324,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1628</Offset>
+            <Offset>1688</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -298,7 +335,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>162C</Offset>
+            <Offset>168C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -309,7 +346,7 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1630</Offset>
+            <Offset>1690</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -320,73 +357,181 @@ Game.GAME::Character::SetCurrentMana+1A: 0F 28 F1                 - movaps xmm6,
           <VariableType>4 Bytes</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>1634</Offset>
+            <Offset>1694</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>66</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1698</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>41</ID>
           <Description>"Run speed"</Description>
+          <DropDownList DisplayValueAsItem="1">20:Default
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4B60</Offset>
+            <Offset>4C48</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>42</ID>
           <Description>"Max Run speed"</Description>
+          <DropDownList DisplayValueAsItem="1">135:Default
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4B64</Offset>
+            <Offset>4C4C</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>45</ID>
           <Description>"Cast speed"</Description>
+          <DropDownListLink>Run speed</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4B68</Offset>
+            <Offset>4C50</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>46</ID>
           <Description>"Max cast speed"</Description>
+          <DropDownList DisplayValueAsItem="1">200:Default
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4B6C</Offset>
+            <Offset>4C54</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>43</ID>
           <Description>"Attack speed"</Description>
+          <DropDownListLink>Run speed</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4B70</Offset>
+            <Offset>4C58</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
           <ID>44</ID>
           <Description>"Max attack speed"</Description>
+          <DropDownListLink>Max cast speed</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_dbase_addr_2</Address>
           <Offsets>
-            <Offset>4B74</Offset>
+            <Offset>4C5C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>65</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>4C60</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>68</ID>
+          <Description>"Factions #1?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1910</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>69</ID>
+          <Description>"Factions #2 (Devil's Crossing)?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1914</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>70</ID>
+          <Description>"Factions #3 (Aetherials)?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1918</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
+          <Description>"Factions #4 (Chthonians)?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>191C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>72</ID>
+          <Description>"Factions #5?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1920</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>73</ID>
+          <Description>"Factions #6 (Beasts)?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1924</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>74</ID>
+          <Description>"Factions #7 (Rovers)?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_dbase_addr_2</Address>
+          <Offsets>
+            <Offset>1928</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -819,8 +964,148 @@ Game.GAME::Item::SetSoulbound+413: C3                       - ret
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>75</ID>
+      <Description>"Faction multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : grim dawn.exe
+  Version: 
+  Date   : 2024-02-28
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FACTION_MULTI,Game.dll,F3 42 0F 11 44 B7 08) // should be unique
+alloc(newmem,$1000,INJECT_FACTION_MULTI)
+
+label(code)
+label(return)
+label(vf_faction_multi)
+label(i_last_faction_addr)
+label(vf_last_orig_val)
+label(vf_last_new_val)
+
+newmem:
+  vmovss [vf_last_orig_val], xmm0
+  vmovss [vf_last_new_val], xmm0
+
+  push r15
+  lea r15, [rdi+r14*4+08]
+  mov [i_last_faction_addr], r15
+  pop r15
+
+  vmovss xmm15, [rdi+r14*4+08]
+  vcomiss xmm0, xmm15
+  jbe code
+
+
+  vmovss xmm14, [vf_faction_multi]
+  vsubss xmm13, xmm0, xmm15
+  vmulss xmm13, xmm14, xmm13
+  vaddss xmm0, xmm15, xmm13
+  vmovss [vf_last_new_val], xmm0
+
+code:
+  movss [rdi+r14*4+08],xmm0
+  jmp return
+align 10 cc
+  vf_faction_multi:
+  dd (float)3.33333333
+  i_last_faction_addr:
+  dq 0
+  vf_last_orig_val:
+  dd 0
+  vf_last_new_val:
+  dd 0
+
+INJECT_FACTION_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FACTION_MULTI)
+registersymbol(vf_faction_multi)
+registersymbol(i_last_faction_addr)
+registersymbol(vf_last_orig_val)
+registersymbol(vf_last_new_val)
+
+[DISABLE]
+
+INJECT_FACTION_MULTI:
+  db F3 42 0F 11 44 B7 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Game.GAME::FactionPack::SetValue+76
+
+Game.GAME::FactionPack::SetValue+49: 45 33 ED                    - xor r13d,r13d
+Game.GAME::FactionPack::SetValue+4C: 4C 89 6D A0                 - mov [rbp-60],r13
+Game.GAME::FactionPack::SetValue+50: 44 88 6D 90                 - mov [rbp-70],r13b
+Game.GAME::FactionPack::SetValue+54: 4C 8D 45 90                 - lea r8,[rbp-70]
+Game.GAME::FactionPack::SetValue+58: F3 42 0F 10 4C B1 08        - movss xmm1,[rcx+r14*4+08]
+Game.GAME::FactionPack::SetValue+5F: 48 8B 0D 92 AB 6C 00        - mov rcx,[Game.GAME::gGameEngine]
+Game.GAME::FactionPack::SetValue+66: E8 65 32 04 00              - call Game.GAME::GameEngine::GetFactionLevelTag
+Game.GAME::FactionPack::SetValue+6B: 0F 28 CE                    - movaps xmm1,xmm6
+Game.GAME::FactionPack::SetValue+6E: 48 8B CF                    - mov rcx,rdi
+Game.GAME::FactionPack::SetValue+71: E8 5A D9 FF FF              - call Game.GAME::FactionPack::FactionClamp
+// ---------- INJECTING HERE ----------
+Game.GAME::FactionPack::SetValue+76: F3 42 0F 11 44 B7 08        - movss [rdi+r14*4+08],xmm0
+// ---------- DONE INJECTING  ----------
+Game.GAME::FactionPack::SetValue+7D: 41 C6 84 3E C4 00 00 00 01  - mov byte ptr [r14+rdi+000000C4],01
+Game.GAME::FactionPack::SetValue+86: FF 15 8C 39 2F 00           - call qword ptr [Game.dll+4F4098]
+Game.GAME::FactionPack::SetValue+8C: 48 8B C8                    - mov rcx,rax
+Game.GAME::FactionPack::SetValue+8F: 8B 97 90 04 00 00           - mov edx,[rdi+00000490]
+Game.GAME::FactionPack::SetValue+95: E8 16 7C E1 FF              - call Game.GAME::AchievementManager::Reset+10F0
+Game.GAME::FactionPack::SetValue+9A: 4C 8B E0                    - mov r12,rax
+Game.GAME::FactionPack::SetValue+9D: 48 85 C0                    - test rax,rax
+Game.GAME::FactionPack::SetValue+A0: 0F 84 02 04 00 00           - je Game.GAME::FactionPack::SetValue+4A8
+Game.GAME::FactionPack::SetValue+A6: 44 38 A8 69 22 00 00        - cmp [rax+00002269],r13b
+Game.GAME::FactionPack::SetValue+AD: 0F 84 F5 03 00 00           - je Game.GAME::FactionPack::SetValue+4A8
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>76</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_faction_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>77</ID>
+          <Description>"Last affected faction"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_last_faction_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>78</ID>
+          <Description>"Last value before changed"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_last_orig_val</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>79</ID>
+          <Description>"New value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_last_new_val</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>62</ID>
-      <Description>"Grim Dawn v1.2.0.0 (x64)  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Grim Dawn v1.2.0.5 (x64)  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00A452</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
