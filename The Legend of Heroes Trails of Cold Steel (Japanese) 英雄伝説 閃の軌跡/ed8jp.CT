@@ -3628,83 +3628,202 @@ ed8jp.exe+A3D93: 66 89 86 D8 01 00 00           - mov [esi+000001D8],ax
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>756</ID>
-      <Description>"HP full during battle"</Description>
+      <ID>761</ID>
+      <Description>"Damage multiplier"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ed8jp.exe
   Version: 
-  Date   : 2024-02-01
+  Date   : 2024-03-01
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATTLE_PLAYER_CTRL,$process,83 BE E4 01 00 00 02 0F 84) // should be unique
+aobscanmodule(INJECT_DMG_MULTI,$process,8B 86 CC 01 00 00 2B) // should be unique
 alloc(newmem,$1000)
 
 label(code)
 label(return)
+label(vf_dmg_multi)
+label(vf_dmg_orig)
+label(vf_dmg_new)
+label(i_last_hp_addr)
+label(is_no_dmg)
+label(vf_dmg_multi_2_player)
 
 newmem:
-  pushf
-  cmp dword ptr [esi+000001E4],00 // HP
-  jne code_pre
+  lea eax, [esi+000001CC]
+  mov [i_last_hp_addr], eax
 
-  push ecx
-  mov ecx, [esi+000001CC]
-  mov [esi+000001D4], ecx
+  cmp word ptr [esi+1DA], 0 // Max CP
+  jne to_player
 
-  pop ecx
+  mov eax, [ebp+08]
+  cvtsi2ss xmm7, eax
+  movss [vf_dmg_orig], xmm7
+  movss xmm6, [vf_dmg_multi]
+  mulss xmm7, xmm6
+  movss [vf_dmg_new], xmm7
+  cvtss2si eax, xmm7
+  mov [ebp+08], eax
 
-code_pre:
-  popf
+
+  jmp code
+
+to_player:
+  cmp dword ptr [is_no_dmg], 1
+  jne to_player_multi
+
+  xor eax, eax
+  mov [ebp+08], eax
+  mov eax, [esi+000001D0]
+  mov [esi+000001CC], eax
+  jmp code
+
+to_player_multi:
+  mov eax, [ebp+08]
+  cvtsi2ss xmm7, eax
+  movss [vf_dmg_orig], xmm7
+  movss xmm6, [vf_dmg_multi_2_player]
+  mulss xmm7, xmm6
+  movss [vf_dmg_new], xmm7
+  cvtss2si eax, xmm7
+  mov [ebp+08], eax
+  jmp code
 
 code:
-  cmp dword ptr [esi+000001E4],02
+  mov eax,[esi+000001CC]
   jmp return
+align 10 cc
+  vf_dmg_multi:
+  dd (float)1.25
+  vf_dmg_orig:
+  dd 0
+  vf_dmg_new:
+  dd 0
+  i_last_hp_addr:
+  dd 0
+  is_no_dmg:
+  dd 0
+  vf_dmg_multi_2_player:
+  dd (float)0.9
 
-INJECT_BATTLE_PLAYER_CTRL:
+INJECT_DMG_MULTI:
   jmp newmem
-  nop 2
+  nop
 return:
-registersymbol(INJECT_BATTLE_PLAYER_CTRL)
+registersymbol(INJECT_DMG_MULTI)
+registersymbol(vf_dmg_multi)
+registersymbol(vf_dmg_orig)
+registersymbol(vf_dmg_new)
+registersymbol(i_last_hp_addr)
+registersymbol(is_no_dmg)
+registersymbol(vf_dmg_multi_2_player)
 
 [DISABLE]
 
-INJECT_BATTLE_PLAYER_CTRL:
-  db 83 BE E4 01 00 00 02
+INJECT_DMG_MULTI:
+  db 8B 86 CC 01 00 00
 
-unregistersymbol(INJECT_BATTLE_PLAYER_CTRL)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: ed8jp.exe+118628
+// ORIGINAL CODE - INJECTION POINT: ed8jp.exe+A3C94
 
-ed8jp.exe+118606: DD D9                 - fstp st(1)
-ed8jp.exe+118608: DD D8                 - fstp st(0)
-ed8jp.exe+11860A: 8B 8E C0 01 00 00     - mov ecx,[esi+000001C0]
-ed8jp.exe+118610: 85 C9                 - test ecx,ecx
-ed8jp.exe+118612: 0F 84 13 01 00 00     - je ed8jp.exe+11872B
-ed8jp.exe+118618: 8B 96 D4 01 00 00     - mov edx,[esi+000001D4]
-ed8jp.exe+11861E: 6A 00                 - push 00
-ed8jp.exe+118620: 6A 00                 - push 00
-ed8jp.exe+118622: 52                    - push edx
-ed8jp.exe+118623: E8 12 6D EF FF        - call ed8jp.exe+F33A
+ed8jp.exe+A3C70: 74 22                          - je ed8jp.exe+A3C94
+ed8jp.exe+A3C72: 0F B7 86 7E 02 00 00           - movzx eax,word ptr [esi+0000027E]
+ed8jp.exe+A3C79: 8B 4E 04                       - mov ecx,[esi+04]
+ed8jp.exe+A3C7C: 50                             - push eax
+ed8jp.exe+A3C7D: E8 61 4F F6 FF                 - call ed8jp.exe+8BE3
+ed8jp.exe+A3C82: 85 C0                          - test eax,eax
+ed8jp.exe+A3C84: 74 0E                          - je ed8jp.exe+A3C94
+ed8jp.exe+A3C86: F7 80 C8 01 00 00 00 00 20 00  - test [eax+000001C8],00200000
+ed8jp.exe+A3C90: 8B F0                          - mov esi,eax
+ed8jp.exe+A3C92: 75 DE                          - jne ed8jp.exe+A3C72
 // ---------- INJECTING HERE ----------
-ed8jp.exe+118628: 83 BE E4 01 00 00 02  - cmp dword ptr [esi+000001E4],02
+ed8jp.exe+A3C94: 8B 86 CC 01 00 00              - mov eax,[esi+000001CC]
 // ---------- DONE INJECTING  ----------
-ed8jp.exe+11862F: 0F 84 A2 00 00 00     - je ed8jp.exe+1186D7
-ed8jp.exe+118635: 8B 4D 0C              - mov ecx,[ebp+0C]
-ed8jp.exe+118638: 8D 14 89              - lea edx,[ecx+ecx*4]
-ed8jp.exe+11863B: 03 D2                 - add edx,edx
-ed8jp.exe+11863D: 03 D2                 - add edx,edx
-ed8jp.exe+11863F: B8 1F 85 EB 51        - mov eax,51EB851F
-ed8jp.exe+118644: F7 E2                 - mul edx
-ed8jp.exe+118646: C1 EA 05              - shr edx,05
-ed8jp.exe+118649: 85 C9                 - test ecx,ecx
-ed8jp.exe+11864B: 74 2E                 - je ed8jp.exe+11867B
+ed8jp.exe+A3C9A: 2B 45 08                       - sub eax,[ebp+08]
+ed8jp.exe+A3C9D: 8B 8E D0 01 00 00              - mov ecx,[esi+000001D0]
+ed8jp.exe+A3CA3: 33 D2                          - xor edx,edx
+ed8jp.exe+A3CA5: 85 C0                          - test eax,eax
+ed8jp.exe+A3CA7: 0F 9E C2                       - setle dl
+ed8jp.exe+A3CAA: 4A                             - dec edx
+ed8jp.exe+A3CAB: 23 C2                          - and eax,edx
+ed8jp.exe+A3CAD: 3B C1                          - cmp eax,ecx
+ed8jp.exe+A3CAF: 7D 0B                          - jnl ed8jp.exe+A3CBC
+ed8jp.exe+A3CB1: 89 86 CC 01 00 00              - mov [esi+000001CC],eax
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>762</ID>
+          <Description>"multiplier to enemy"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_dmg_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>768</ID>
+          <Description>"multiplier to player"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_dmg_multi_2_player</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>767</ID>
+          <Description>"No dmg. to player?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_no_dmg</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>765</ID>
+          <Description>"Latest target HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_last_hp_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>766</ID>
+          <Description>"Latest target max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_last_hp_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>763</ID>
+          <Description>"Orig. dmg."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_dmg_orig</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>764</ID>
+          <Description>"New dmg."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_dmg_new</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>706</ID>

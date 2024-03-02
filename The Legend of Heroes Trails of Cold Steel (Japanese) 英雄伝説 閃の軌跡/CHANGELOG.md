@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2024/02/01  
+1. added "damage multiplier"  
+1. removed "HP full during battle"  
+
+
+## 2024/02/01  
 1. added "Card game "blade" score"  
 1. added "HP full during battle"  
 
