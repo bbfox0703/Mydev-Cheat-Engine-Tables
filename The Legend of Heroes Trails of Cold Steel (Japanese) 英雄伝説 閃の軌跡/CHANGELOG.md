@@ -1,9 +1,12 @@
 # Changelog
 
-## 2024/02/01  
+## 2024/03/03  
+1. added "Fast fishing"  
+1. removed "Faster fish point (Japanese ver.)"  
+
+## 2024/03/01  
 1. added "damage multiplier"  
 1. removed "HP full during battle"  
-
 
 ## 2024/02/01  
 1. added "Card game "blade" score"  
