@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/03/09  
+1. added scripts  
+
 ## 2024/03/03  
 1. added "Fast fishing"  
 1. removed "Faster fish point (Japanese ver.)"  
