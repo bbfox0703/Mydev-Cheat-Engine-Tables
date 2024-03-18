@@ -1,6 +1,6 @@
 # Repository for self-developed Cheat Engine tables
 Contains a selection of simple self-developed Cheat Engine tables.  
-Also post all tables in Open Cheat Tables (OCT) site:
+Also post all tables in <img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png"> Open Cheat Tables (OCT) site:
 
 ## OpenCheatTables (OCT) site URL: https://opencheattables.com  
 To search with keywords, please go to [<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png">OCT forum](https://opencheattables.com)  
