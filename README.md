@@ -2,7 +2,7 @@
 Contains a selection of simple self-developed Cheat Engine tables.  
 Also post all tables in [<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png">Open Cheat Tables (OCT)](https://opencheattables.com) site:  
 
-## OpenCheatTables (OCT) site URL: https://opencheattables.com  
+## OpenCheatTables (OCT) site URL: <img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png">https://opencheattables.com  
 To search with keywords, please go to [OCT forum](https://opencheattables.com)  
 キーワードで検索するには、[OCT forum](https://opencheattables.com)  にアクセスしてください。  
 如果要進行全文檢索，請至 [OCT討論區](https://opencheattables.com) 中進行搜尋。  
