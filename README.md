@@ -17,7 +17,7 @@ Cheat Engine: [7.5](https://github.com/cheat-engine/cheat-engine/releases)
   
 For any issues, please post in the OCT forum under the topic related to the game table: https://opencheattables.com  
 どんな問題でも、ゲームテーブルに関連するトピックでOCTフォーラムに投稿してください：https://opencheattables.com  
-如有問題，請在OCT的網站中、相關的遊戲標題下進行詢問 (繁中可私訊)：https://opencheattables.com  
+如有問題，請在OCT的網站中、相關的遊戲標題下進行詢問：https://opencheattables.com  
 
 Notice: Tables may not be up-to-date. I do not monitor if game got update.  
 
