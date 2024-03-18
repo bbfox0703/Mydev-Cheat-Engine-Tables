@@ -27,3 +27,7 @@ or:
 * Browse game directory  
 * Click on \*.CT file  
 * There is a "Download Raw" icon in the top-right of the file window. Click it.  
+
+
+## Others
+If you intend to publish these tables on other websites, please clearly specify that the source is [<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png">Open Cheat Tables (OCT)](https://opencheattables.com).
