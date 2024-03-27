@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/03/27  
+1. added "inf. new game+ pt"
+
 ## 2024/03/21  
 1. Added "Snow board game: always win"  
   
