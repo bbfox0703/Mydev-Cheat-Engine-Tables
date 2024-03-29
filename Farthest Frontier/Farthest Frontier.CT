@@ -1029,7 +1029,7 @@ GameAssembly.dll+82ED11: C3                 - ret
 
 [ENABLE]
 //Character.get_movementSpeed
-aobscanmodule(INJECT_SET_VILLAGER_DATA,GameAssembly.dll,F3 0F 10 73 4C F3 0F) // should be unique
+aobscanmodule(INJECT_SET_VILLAGER_DATA,GameAssembly.dll,F3 0F 10 73 58 F3 0F 59) // should be unique
 alloc(newmem,$1000,INJECT_SET_VILLAGER_DATA)
 
 label(code)
@@ -1060,6 +1060,13 @@ newmem:
   // Float: 78:26C: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998
   // Pointer: E8 &lt;immuneSystem&gt;k__BackingField = 0
 
+  // v0.9.2
+  // Raider:
+  // Float: 58: _movementSpeedBase = 3 (Villager = 4.199999809 / Immigrant = 4.125)
+  // ???Pointer: F0: _raiderGroup &lt;&gt; 0 (Villiger = 0 (E0 equals to onDeath)
+  // Byte: 88:BC &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
+  // Float: 88:2A4: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998 (villager = 3.349962711)
+  // Pointer: E8 &lt;immuneSystem&gt;k__BackingField = 0
 
 
   mov dword ptr [is_this_object_rider], 0
@@ -1068,14 +1075,18 @@ newmem:
   jne check_armor
 
   push r15
-  mov r15, [rbx+78] //&lt;combatComp&gt;k__BackingField
+  mov r15, [rbx+88] //&lt;combatComp&gt;k__BackingField
   test r15, r15
   jz endp1
 
   mov dword ptr [is_this_object_rider], 1
-  cmp byte ptr [r15+B4], 1 //canBeWounded = 0 -&gt; assume Rider
+  cmp dword ptr [rbx+58], (float)4.125 //_movementSpeedBase
+  je chk_v1 //Immigrant
+
+  cmp byte ptr [r15+BC], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp1
 
+chk_v1:
   // Villager
   mov dword ptr [is_this_object_rider], 0
 
@@ -1094,22 +1105,27 @@ check_armor:
   jne check_rider
 
   push r15
-  mov r15, [rbx+78] //&lt;combatComp&gt;k__BackingField
+  mov r15, [rbx+88] //&lt;combatComp&gt;k__BackingField
   test r15, r15
   jz endp2
 
   mov dword ptr [is_this_object_rider], 1
-  cmp byte ptr [r15+B4], 1 //canBeWounded = 0 -&gt; assume Rider
+
+  cmp dword ptr [rbx+58], (float)4.125 //_movementSpeedBase
+  je chk_v2 //Immigrant
+
+  cmp byte ptr [r15+BC], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp2
 
   //Villager
+chk_v2:
   mov dword ptr [is_this_object_rider], 0
 
   vmovss xmm15, [vf_min_armor_value]
-  vmovss xmm14, [r15+78] //baseArmor
+  vmovss xmm14, [r15+80] //baseArmor
   vucomiss xmm14, xmm15
   jae endp2
-  vmovss [r15+78], xmm15
+  vmovss [r15+80], xmm15
 
 endp2:
   pop r15
@@ -1120,19 +1136,23 @@ check_rider:
   jne code
 
   push r15
-  mov r15, [rbx+78] //&lt;combatComp&gt;k__BackingField
+  mov r15, [rbx+88] //&lt;combatComp&gt;k__BackingField
   test r15, r15
   jz endp3
 
   mov dword ptr [is_this_object_rider], 0
-  cmp byte ptr [r15+b4], 0 //canBeWounded = 0 -&gt; assume Rider
+
+  cmp dword ptr [rbx+58], (float)4.125 //_movementSpeedBase
+  je endp3 // Immigrant
+
+  cmp byte ptr [r15+BC], 0 //canBeWounded = 0 -&gt; assume Rider
   jne endp3
 
   // Rider
   mov dword ptr [is_this_object_rider], 1
 
-  mov dword ptr [r15+78], 0 // baseArmor
-  mov dword ptr [r15+D0], 0 // _trainingLevel
+  mov dword ptr [r15+80], 0 // baseArmor
+  mov dword ptr [r15+D8], 0 // _trainingLevel
 
 endp3:
   pop r15
@@ -1140,7 +1160,8 @@ endp3:
 
 code:
   // orig code
-  movss xmm6,[rbx+4C] //_movementSpeedBase
+  //movss xmm6,[rbx+4C] //_movementSpeedBase
+  movss xmm6,[rbx+58] //_movementSpeedBase
   //
 
   cmp dword ptr [is_this_object_rider], 1
@@ -1150,7 +1171,7 @@ code:
   vmulss xmm6, xmm6, xmm14
 
   vmovss xmm15, [vf_shoe_bonus_base]
-  vmovss [rbx+54], xmm15 //_shoeBonusBase
+  vmovss [rbx+60], xmm15 //_shoeBonusBase
   jmp return
 
 set_rider_moving_speed:
@@ -1159,7 +1180,7 @@ set_rider_moving_speed:
 
   //vmovss xmm15, [vf_shoe_bonus_base]
   vxorps xmm15, xmm15, xmm15
-  vmovss [rbx+54], xmm15 //_shoeBonusBase
+  vmovss [rbx+60], xmm15 //_shoeBonusBase
 
   jmp return
 align 10 cc
@@ -1181,6 +1202,8 @@ align 10 cc
   dd 1
   is_this_object_rider:
   dd 0
+  vf_Immigrant_move_speed:
+  dd (float)4.125
 
 INJECT_SET_VILLAGER_DATA:
   jmp newmem
@@ -1197,37 +1220,37 @@ registersymbol(vf_raider_moving_speed_multi)
 [DISABLE]
 
 INJECT_SET_VILLAGER_DATA:
-  db F3 0F 10 73 4C
+  db F3 0F 10 73 58
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+DE7E15
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+E2DF95
 
-GameAssembly.dll+DE7DE5: 57                    - push rdi
-GameAssembly.dll+DE7DE6: 48 83 EC 30           - sub rsp,30
-GameAssembly.dll+DE7DEA: 80 3D 87 0A B3 02 00  - cmp byte ptr [GameAssembly.dll+3918878],00
-GameAssembly.dll+DE7DF1: 48 8B D9              - mov rbx,rcx
-GameAssembly.dll+DE7DF4: 0F 29 74 24 20        - movaps [rsp+20],xmm6
-GameAssembly.dll+DE7DF9: 75 13                 - jne GameAssembly.dll+DE7E0E
-GameAssembly.dll+DE7DFB: 48 8D 0D 46 74 98 02  - lea rcx,[GameAssembly.dll+376F248]
-GameAssembly.dll+DE7E02: E8 99 6C 57 FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+54E0
-GameAssembly.dll+DE7E07: C6 05 6A 0A B3 02 01  - mov byte ptr [GameAssembly.dll+3918878],01
-GameAssembly.dll+DE7E0E: 48 8B 0D 33 74 98 02  - mov rcx,[GameAssembly.dll+376F248]
+GameAssembly.dll+E2DF65: 57                    - push rdi
+GameAssembly.dll+E2DF66: 48 83 EC 30           - sub rsp,30
+GameAssembly.dll+E2DF6A: 80 3D 87 31 C1 02 00  - cmp byte ptr [GameAssembly.dll+3A410F8],00
+GameAssembly.dll+E2DF71: 48 8B D9              - mov rbx,rcx
+GameAssembly.dll+E2DF74: 0F 29 74 24 20        - movaps [rsp+20],xmm6
+GameAssembly.dll+E2DF79: 75 13                 - jne GameAssembly.dll+E2DF8E
+GameAssembly.dll+E2DF7B: 48 8D 0D 6E 3D A6 02  - lea rcx,[GameAssembly.dll+3891CF0]
+GameAssembly.dll+E2DF82: E8 79 11 54 FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+54E0
+GameAssembly.dll+E2DF87: C6 05 6A 31 C1 02 01  - mov byte ptr [GameAssembly.dll+3A410F8],01
+GameAssembly.dll+E2DF8E: 48 8B 0D 5B 3D A6 02  - mov rcx,[GameAssembly.dll+3891CF0]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+DE7E15: F3 0F 10 73 4C        - movss xmm6,[rbx+4C]
+GameAssembly.dll+E2DF95: F3 0F 10 73 58        - movss xmm6,[rbx+58]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+DE7E1A: F3 0F 59 73 48        - mulss xmm6,[rbx+48]
-GameAssembly.dll+DE7E1F: 48 8B 7B 78           - mov rdi,[rbx+78]
-GameAssembly.dll+DE7E23: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
-GameAssembly.dll+DE7E2A: 75 05                 - jne GameAssembly.dll+DE7E31
-GameAssembly.dll+DE7E2C: E8 1F C0 51 FF        - call GameAssembly.dll+303E50
-GameAssembly.dll+DE7E31: 80 3D 30 AA B3 02 00  - cmp byte ptr [GameAssembly.dll+3922868],00
-GameAssembly.dll+DE7E38: 75 13                 - jne GameAssembly.dll+DE7E4D
-GameAssembly.dll+DE7E3A: 48 8D 0D 07 74 98 02  - lea rcx,[GameAssembly.dll+376F248]
-GameAssembly.dll+DE7E41: E8 5A 6C 57 FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+54E0
-GameAssembly.dll+DE7E46: C6 05 1B AA B3 02 01  - mov byte ptr [GameAssembly.dll+3922868],01
+GameAssembly.dll+E2DF9A: F3 0F 59 73 48        - mulss xmm6,[rbx+48]
+GameAssembly.dll+E2DF9F: 48 8B BB 88 00 00 00  - mov rdi,[rbx+00000088]
+GameAssembly.dll+E2DFA6: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+E2DFAD: 75 05                 - jne GameAssembly.dll+E2DFB4
+GameAssembly.dll+E2DFAF: E8 FC 64 4E FF        - call GameAssembly.dll+3144B0
+GameAssembly.dll+E2DFB4: 80 3D 05 F3 C1 02 00  - cmp byte ptr [GameAssembly.dll+3A4D2C0],00
+GameAssembly.dll+E2DFBB: 75 13                 - jne GameAssembly.dll+E2DFD0
+GameAssembly.dll+E2DFBD: 48 8D 0D 2C 3D A6 02  - lea rcx,[GameAssembly.dll+3891CF0]
+GameAssembly.dll+E2DFC4: E8 37 11 54 FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+54E0
+GameAssembly.dll+E2DFC9: C6 05 F0 F2 C1 02 01  - mov byte ptr [GameAssembly.dll+3A4D2C0],01
 }
 </AssemblerScript>
           <CheatEntries>
@@ -1651,6 +1674,7 @@ GameAssembly.dll+7FF421: 41 5C                 - pop r12
 1:Yes
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>is_prevent_corrupt_after_remove</Address>
             </CheatEntry>
@@ -1859,8 +1883,8 @@ GameAssembly.dll+80338D: 0F 83 31 01 00 00              - jae GameAssembly.dll+8
     </CheatEntry>
     <CheatEntry>
       <ID>28</ID>
-      <Description>"Farthest Frontier v0.9.1a  /  https://opencheattables.com  /  CE 7.5+"</Description>
-      <Color>800080</Color>
+      <Description>"Farthest Frontier v0.9.2 /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Color>009700</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
