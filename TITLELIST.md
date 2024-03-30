@@ -328,6 +328,10 @@ The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)
 The Legend of Heroes: Trails of Cold Steel II (Japanese language) (Steam)  
 [ja-JP: 英雄伝説 閃の軌跡II](https://store.steampowered.com/app/748490/The_Legend_of_Heroes_Trails_of_Cold_Steel_II/) 
 
+## The Legend of Heroes Trails of Cold Steel III (Japanese) 英雄伝説 閃の軌跡III  
+The Legend of Heroes: Trails of Cold Steel III (Japanese language) (Steam)  
+[ja-JP: 英雄伝説 閃の軌跡III](https://store.steampowered.com/app/991270/The_Legend_of_Heroes_Trails_of_Cold_Steel_III/) 
+
 ## The Legend of Heroes Zero no Kiseki KAI  
 [The Legend of Heroes: Zero no Kiseki Kai (Steam)](https://store.steampowered.com/app/1457520/_/)  
 zh-TW: 英雄傳說 零之軌跡：改  
