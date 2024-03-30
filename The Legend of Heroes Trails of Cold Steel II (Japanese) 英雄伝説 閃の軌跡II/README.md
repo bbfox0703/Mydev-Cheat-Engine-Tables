@@ -1,4 +1,4 @@
-# The Legend of Heroes: Trails of Cold Steel Japanese ver. Cheat Engine table
+# The Legend of Heroes: Trails of Cold Steel II Japanese ver. Cheat Engine table
 
 The Legend of Heroes: Trails of Cold Steel II (Japanese language) (Steam)
 
