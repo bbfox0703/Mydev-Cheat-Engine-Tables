@@ -25,7 +25,7 @@ if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 getLuaEngine().menuItem5.doClick()
 
-battle_array = {32,17,19,132,126,36,54,119,114,45,47,20,78,41,40,142,107,108,140}
+battle_array = {32,17,19,126,36,54,119,114,45,47,20,78,41,40,142,107,108,140,153}
 
 
 local a_len = #(battle_array)
@@ -45,7 +45,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {143,57,109,41,40,96,     17,19,132,126,5,36,54,119,114,45,47,20,78,142,107,108,81,30,140,32,145,    30}
+battle_array_close = {143,57,109,41,40,96,     17,19,126,5,36,54,119,114,45,47,20,78,142,107,108,81,30,140,32,145,153,    30}
 
 local a_len1 = #(battle_array_close)
 
@@ -349,116 +349,141 @@ ed8_3_PC_JP.exe+1C3289: BA 00 04 00 00                 - mov edx,00000400
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>132</ID>
+      <ID>153</ID>
       <Description>"Battle: Link EXP multiplier"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ed8_3_PC_JP.exe
   Version: 
-  Date   : 2024-03-30
-  Author : bbfox@https://opencheattables.com
+  Date   : 2024-03-31
+  Author : bbfox2https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_LINK_XP_MULTI,$process,45 89 04 86 74 55) // should be unique
-alloc(newmem,$1000,INJECT_LINK_XP_MULTI)
+aobscanmodule(INJECT_LINK_EXP_MULTI_V2,$process,A8 26 00 89 84 BE 7C 87 00 00) // should be unique
+alloc(newmem,$1000,INJECT_LINK_EXP_MULTI_V2)
 
 label(code)
 label(return)
-label(vf_link_multi)
-label(vf_link_extra_pt)
+label(vf_link_xp_multi)
+label(i_old_lxp)
+label(i_new_lxp)
 
 newmem:
-  cmp dword ptr [r14+rax*4], 0
+  cmp eax, 0
   je code
 
-  cmp [r14+rax*4],r8d
+  cmp [rsi+rdi*4+0000877C], eax
   jae code
 
+  mov [i_old_lxp], eax
+
   vcvtsi2ss xmm15, xmm15, eax
-  vcvtsi2ss xmm14, xmm14, [r14+rax*4]
+  vmovss xmm14, [vf_link_xp_multi]
+  push eax
+  mov eax, [rsi+rdi*4+0000877C]
+  vcvtsi2ss xmm13, xmm13, eax
+  pop eax
 
-  vsubss xmm15, xmm15, xmm14
-  vmovss xmm13, [vf_link_multi]
-  vmulss xmm15, xmm13, xmm15
-  vmovss xmm13, [vf_link_extra_pt]
-  vaddss xmm15, xmm15, xmm13
-  vaddss xmm14, xmm14, xmm15
+  vsubss xmm12, xmm15, xmm13
+  vmulss xmm12, xmm12, xmm14
+  vaddss xmm15, xmm13, xmm12
 
-  vcvtss2si eax, xmm14
+  vmovss xmm14, [vf_5]
+  vdivss xmm15, xmm15, xmm14
+  vcvttps2dq xmm13, xmm15
+  vcvtdq2ps xmm15, xmm13
+  vmulss xmm15, xmm15, xmm14
 
+  vcvtss2si eax, xmm15
+  mov [i_new_lxp], eax
 
 code:
-  mov [r14+rax*4],r8d
-  je ed8_3_PC_JP.exe+4199AD
+  mov [rsi+rdi*4+0000877C],eax
   jmp return
 align 10 cc
-  vf_link_multi:
-  dd (float)1.66666666
-  vf_link_extra_pt:
-  dd (float)1
+  vf_link_xp_multi:
+  dd (float)2
+  vf_10:
+  dd (float)10
+  vf_5:
+  dd (float)5
+  i_old_lxp:
+  dd 0
+  i_new_lxp:
+  dd 0
 
-INJECT_LINK_XP_MULTI:
+
+INJECT_LINK_EXP_MULTI_V2+03:
   jmp newmem
-  nop
+  nop 2
 return:
-registersymbol(INJECT_LINK_XP_MULTI)
-registersymbol(vf_link_multi)
-registersymbol(vf_link_extra_pt)
+registersymbol(INJECT_LINK_EXP_MULTI_V2)
+registersymbol(vf_link_xp_multi)
+registersymbol(i_old_lxp)
+registersymbol(i_new_lxp)
 
 [DISABLE]
 
-INJECT_LINK_XP_MULTI:
-  db 45 89 04 86 74 55
+INJECT_LINK_EXP_MULTI_V2+03:
+  db 89 84 BE 7C 87 00 00
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: ed8_3_PC_JP.exe+419952
+// ORIGINAL CODE - INJECTION POINT: ed8_3_PC_JP.exe+1AADA6
 
-ed8_3_PC_JP.exe+41992C: 48 8D 04 40              - lea rax,[rax+rax*2]
-ed8_3_PC_JP.exe+419930: 48 C1 E0 04              - shl rax,04
-ed8_3_PC_JP.exe+419934: 48 03 C1                 - add rax,rcx
-ed8_3_PC_JP.exe+419937: 4D 8D 0C 86              - lea r9,[r14+rax*4]
-ed8_3_PC_JP.exe+41993B: 48 8D 41 0C              - lea rax,[rcx+0C]
-ed8_3_PC_JP.exe+41993F: 45 89 01                 - mov [r9],r8d
-ed8_3_PC_JP.exe+419942: 48 8D 04 40              - lea rax,[rax+rax*2]
-ed8_3_PC_JP.exe+419946: 48 C1 E0 04              - shl rax,04
-ed8_3_PC_JP.exe+41994A: 48 03 C2                 - add rax,rdx
-ed8_3_PC_JP.exe+41994D: 80 7C 24 70 00           - cmp byte ptr [rsp+70],00
+ed8_3_PC_JP.exe+1AAD74: 48 03 F8              - add rdi,rax
+ed8_3_PC_JP.exe+1AAD77: 45 0F B7 C4           - movzx r8d,r12w
+ed8_3_PC_JP.exe+1AAD7B: 41 0F B7 D7           - movzx edx,r15w
+ed8_3_PC_JP.exe+1AAD7F: 48 8B 8B 28 2E 00 00  - mov rcx,[rbx+00002E28]
+ed8_3_PC_JP.exe+1AAD86: E8 85 A8 26 00        - call ed8_3_PC_JP.exe+415610
+ed8_3_PC_JP.exe+1AAD8B: 88 84 37 7C 6C 00 00  - mov [rdi+rsi+00006C7C],al
+ed8_3_PC_JP.exe+1AAD92: 45 0F B7 C4           - movzx r8d,r12w
+ed8_3_PC_JP.exe+1AAD96: 41 0F B7 D7           - movzx edx,r15w
+ed8_3_PC_JP.exe+1AAD9A: 48 8B 8B 28 2E 00 00  - mov rcx,[rbx+00002E28]
+ed8_3_PC_JP.exe+1AADA1: E8 0A A8 26 00        - call ed8_3_PC_JP.exe+4155B0
 // ---------- INJECTING HERE ----------
-ed8_3_PC_JP.exe+419952: 45 89 04 86              - mov [r14+rax*4],r8d
+ed8_3_PC_JP.exe+1AADA6: 89 84 BE 7C 87 00 00  - mov [rsi+rdi*4+0000877C],eax
 // ---------- DONE INJECTING  ----------
-ed8_3_PC_JP.exe+419956: 74 55                    - je ed8_3_PC_JP.exe+4199AD
-ed8_3_PC_JP.exe+419958: 48 89 6C 24 50           - mov [rsp+50],rbp
-ed8_3_PC_JP.exe+41995D: 41 8B 29                 - mov ebp,[r9]
-ed8_3_PC_JP.exe+419960: 48 89 7C 24 60           - mov [rsp+60],rdi
-ed8_3_PC_JP.exe+419965: 40 B7 01                 - mov dil,01
-ed8_3_PC_JP.exe+419968: 0F 1F 84 00 00 00 00 00  - nop dword ptr [rax+rax+00000000]
-ed8_3_PC_JP.exe+419970: 8D 5F 01                 - lea ebx,[rdi+01]
-ed8_3_PC_JP.exe+419973: 48 8B CE                 - mov rcx,rsi
-ed8_3_PC_JP.exe+419976: 0F B6 D3                 - movzx edx,bl
-ed8_3_PC_JP.exe+419979: E8 C2 08 E6 FF           - call ed8_3_PC_JP.exe+27A240
+ed8_3_PC_JP.exe+1AADAD: 48 8B 8B 28 2E 00 00  - mov rcx,[rbx+00002E28]
+ed8_3_PC_JP.exe+1AADB4: 48 81 C1 11 5A 00 00  - add rcx,00005A11
+ed8_3_PC_JP.exe+1AADBB: 45 0F B7 C4           - movzx r8d,r12w
+ed8_3_PC_JP.exe+1AADBF: 41 0F B7 D7           - movzx edx,r15w
+ed8_3_PC_JP.exe+1AADC3: E8 18 A8 26 00        - call ed8_3_PC_JP.exe+4155E0
+ed8_3_PC_JP.exe+1AADC8: 88 84 37 7C 7E 00 00  - mov [rdi+rsi+00007E7C],al
+ed8_3_PC_JP.exe+1AADCF: 41 FF C5              - inc r13d
+ed8_3_PC_JP.exe+1AADD2: 8B 93 D8 00 00 00     - mov edx,[rbx+000000D8]
+ed8_3_PC_JP.exe+1AADD8: 44 3B EA              - cmp r13d,edx
+ed8_3_PC_JP.exe+1AADDB: 0F 82 4F FF FF FF     - jb ed8_3_PC_JP.exe+1AAD30
 }
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>133</ID>
+          <ID>154</ID>
           <Description>"multiplier"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
-          <Address>vf_link_multi</Address>
+          <Address>vf_link_xp_multi</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>134</ID>
-          <Description>"Extra EXP"</Description>
+          <ID>155</ID>
+          <Description>"old val"</Description>
           <ShowAsSigned>0</ShowAsSigned>
-          <Color>C08000</Color>
-          <VariableType>Float</VariableType>
-          <Address>vf_link_extra_pt</Address>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_old_lxp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>156</ID>
+          <Description>"new val"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_new_lxp</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -557,22 +582,6 @@ ed8_3_PC_JP.exe+1BA797: 0F 42 C1                 - cmovb eax,ecx
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
           <Address>vf_xp_multi</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>128</ID>
-          <Description>"Old base XP"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>808080</Color>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_old_bxp</Address>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>129</ID>
-          <Description>"New base XP"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <Color>808080</Color>
-          <VariableType>4 Bytes</VariableType>
-          <Address>i_new_bxp</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -2182,6 +2191,8 @@ ed8_3_PC_JP.exe+339108: 4C 8B E3                       - mov r12,rbx
 3603:玉藻
 3605:賢王珠
 3606:銀狼珠
+3807:教官用水着・ユウナ
+3809:教官用水着・アルティナ
 52685:Error
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
@@ -3136,12 +3147,6 @@ ed8_3_PC_JP.exe+352273: F3 41 0F 59 C3           - mulss xmm0,xmm11
 </AssemblerScript>
         </CheatEntry>
       </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>144</ID>
-      <Description>"No description"</Description>
-      <VariableType>Float</VariableType>
-      <Address>3D4D1B40</Address>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
