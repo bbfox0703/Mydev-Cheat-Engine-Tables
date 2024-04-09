@@ -230,7 +230,7 @@ ed8_4_PC_JP.exe+1154D3: 75 23              - jne ed8_4_PC_JP.exe+1154F8
     </CheatEntry>
     <CheatEntry>
       <ID>212</ID>
-      <Description>"Battle: Link EXP multiplier"</Description>
+      <Description>"(not working) Battle: Link EXP multiplier"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ed8_4_PC_JP.exe
@@ -247,8 +247,13 @@ alloc(newmem,$1000,INJECT_LINK_XP_MULTI)
 label(code)
 label(return)
 label(vf_link_xp_multi)
+label(i_lexp_org)
+label(i_lexp_new)
+label(i_lexp_old)
 
 newmem:
+  jmp code
+
   test eax, eax
   jz code
 
@@ -261,8 +266,19 @@ newmem:
   test r15d, r15d
   jz endp
 
+  push rcx
+  mov ecx, [r12]
+  mov [i_lexp_org], ecx
+  pop rcx
+
+  mov [i_lexp_old], eax
+
+
   vcvtsi2ss xmm15, xmm15, eax
   vcvtsi2ss xmm13, xmm13, dword ptr [r12]
+  //vcvtsi2ss xmm13, xmm13, ecx
+
+
   vmovss xmm14, [vf_link_xp_multi]
 
   vsubss xmm12, xmm15, xmm13
@@ -271,11 +287,18 @@ newmem:
   vaddss xmm15, xmm13, xmm12
   vmovss xmm14, [vf_5]
   vdivss xmm15, xmm15, xmm14
+  //vmovss xmm14, [vf_005]
+  vaddss xmm15, xmm15, xmm14
+  //vmovss xmm14, [vf_5]
   vcvtps2dq xmm13, xmm15
   vcvtdq2ps xmm15, xmm13
   vmulss xmm15, xmm15, xmm14
+  //vcvtss2si eax, xmm15
 
-  mov [r12], eax
+  mov [i_lexp_new], eax
+
+  //mov eax, #1000
+  //mov [r12], eax
 
 endp:
   pop r15
@@ -289,6 +312,14 @@ align 10 cc
   dd (float)2
   vf_5:
   dd (float)5
+  i_lexp_old:
+  dd 0
+  i_lexp_new:
+  dd 0
+  i_lexp_org:
+  dd 0
+  vf_005:
+  dd (float)0.05
 
 INJECT_LINK_XP_MULTI+03:
   jmp newmem
@@ -296,6 +327,9 @@ INJECT_LINK_XP_MULTI+03:
 return:
 registersymbol(INJECT_LINK_XP_MULTI)
 registersymbol(vf_link_xp_multi)
+registersymbol(i_lexp_org)
+registersymbol(i_lexp_new)
+registersymbol(i_lexp_old)
 
 [DISABLE]
 
@@ -342,7 +376,117 @@ ed8_4_PC_JP.exe+1765EB: 66 83 FF 40                       - cmp di,40
           <VariableType>Float</VariableType>
           <Address>vf_link_xp_multi</Address>
         </CheatEntry>
+        <CheatEntry>
+          <ID>266</ID>
+          <Description>"LExp before"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_lexp_org</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>267</ID>
+          <Description>"LExp orig"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_lexp_old</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>268</ID>
+          <Description>"LExp new"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C0C0C0</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_lexp_new</Address>
+        </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>272</ID>
+      <Description>"Set link LV"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed8_4_PC_JP.exe
+  Version: 
+  Date   : 2024-04-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_LINK_XP,$process,48 03 C2 8B 04 81) // should be unique
+alloc(newmem,$1000,INJECT_SET_LINK_XP)
+
+label(code)
+label(return)
+label(i_min_link_exp)
+
+newmem:
+
+code:
+  add rax,rdx
+  mov eax,[rcx+rax*4]
+
+  // code start
+  test eax, eax
+  jz return
+
+  cmp eax, [i_min_link_exp]
+  jae return
+
+  mov eax, [i_min_link_exp]
+  mov [rcx+rax*4], eax
+  // code end
+
+
+  jmp return
+align 10 cc
+  i_min_link_exp:
+  dd #1000
+
+INJECT_SET_LINK_XP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_LINK_XP)
+registersymbol(i_min_link_exp)
+
+[DISABLE]
+
+INJECT_SET_LINK_XP:
+  db 48 03 C2 8B 04 81
+
+unregistersymbol(INJECT_SET_LINK_XP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed8_4_PC_JP.exe+46BCEC
+
+ed8_4_PC_JP.exe+46BCCE: CC              - int 3 
+ed8_4_PC_JP.exe+46BCCF: CC              - int 3 
+ed8_4_PC_JP.exe+46BCD0: 66 83 FA 40     - cmp dx,40
+ed8_4_PC_JP.exe+46BCD4: 73 1D           - jae ed8_4_PC_JP.exe+46BCF3
+ed8_4_PC_JP.exe+46BCD6: 66 41 83 F8 40  - cmp r8w,40
+ed8_4_PC_JP.exe+46BCDB: 73 16           - jae ed8_4_PC_JP.exe+46BCF3
+ed8_4_PC_JP.exe+46BCDD: 0F B7 C2        - movzx eax,dx
+ed8_4_PC_JP.exe+46BCE0: 48 83 C0 10     - add rax,10
+ed8_4_PC_JP.exe+46BCE4: 41 0F B7 D0     - movzx edx,r8w
+ed8_4_PC_JP.exe+46BCE8: 48 C1 E0 06     - shl rax,06
+// ---------- INJECTING HERE ----------
+ed8_4_PC_JP.exe+46BCEC: 48 03 C2        - add rax,rdx
+// ---------- DONE INJECTING  ----------
+ed8_4_PC_JP.exe+46BCEF: 8B 04 81        - mov eax,[rcx+rax*4]
+ed8_4_PC_JP.exe+46BCF2: C3              - ret 
+ed8_4_PC_JP.exe+46BCF3: 33 C0           - xor eax,eax
+ed8_4_PC_JP.exe+46BCF5: C3              - ret 
+ed8_4_PC_JP.exe+46BCF6: CC              - int 3 
+ed8_4_PC_JP.exe+46BCF7: CC              - int 3 
+ed8_4_PC_JP.exe+46BCF8: CC              - int 3 
+ed8_4_PC_JP.exe+46BCF9: CC              - int 3 
+ed8_4_PC_JP.exe+46BCFA: CC              - int 3 
+ed8_4_PC_JP.exe+46BCFB: CC              - int 3 
+}
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>209</ID>
@@ -532,7 +676,7 @@ ed8_4_PC_JP.exe+473B32: 41 8B 8C 80 48 3F 47 00  - mov ecx,[r8+rax*4+00473F48]
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATTLE_INF_EP,$process,2B C7 85 C0 0F 4F C8) // should be unique
+aobscanmodule(INJECT_BATTLE_INF_EP,$process,B6 03 00 00 2B C7 85 C0 0F 4F C8) // should be unique
 alloc(newmem,$1000,INJECT_BATTLE_INF_EP)
 
 label(code)
@@ -555,7 +699,7 @@ code:
   cmovg ecx,eax
   jmp return
 
-INJECT_BATTLE_INF_EP:
+INJECT_BATTLE_INF_EP+04:
   jmp newmem
   nop 2
 return:
@@ -563,7 +707,7 @@ registersymbol(INJECT_BATTLE_INF_EP)
 
 [DISABLE]
 
-INJECT_BATTLE_INF_EP:
+INJECT_BATTLE_INF_EP+04:
   db 2B C7 85 C0 0F 4F C8
 
 unregistersymbol(INJECT_BATTLE_INF_EP)
@@ -2514,10 +2658,22 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>250</ID>
+      <ID>269</ID>
       <Description>"No description"</Description>
       <VariableType>4 Bytes</VariableType>
-      <Address>ed8_4_PC_JP.exe+D18B44</Address>
+      <Address>ed8_4_PC_JP.exe+155D70C</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>270</ID>
+      <Description>"No description"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ed8_4_PC_JP.exe+155D75C</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>273</ID>
+      <Description>"No Description"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>40B4B7B8</Address>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
