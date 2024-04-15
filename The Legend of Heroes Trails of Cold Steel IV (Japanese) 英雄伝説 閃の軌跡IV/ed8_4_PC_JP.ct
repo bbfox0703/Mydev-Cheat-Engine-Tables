@@ -45,7 +45,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {243,196,149,    180,221,209,175,171,169,182,140,148,244,249,185,272,     162,198,224,252,32 }
+battle_array_close = {243,196,149,    180,221,209,175,171,169,182,140,148,244,249,185,272,285,     162,198,224,252,32 }
 
 local a_len1 = #(battle_array_close)
 
@@ -172,7 +172,7 @@ code:
   jmp return
 align 10 cc
   vf_break_multi:
-  dd (float)1.66666666666
+  dd (float)1.81
 
 INJECT_BREAK_MULTI:
   jmp newmem
@@ -337,6 +337,7 @@ ed8_4_PC_JP.exe+46BCFB: CC              - int 3
           <ID>277</ID>
           <Description>"Min. link EXP"</Description>
           <DropDownList DisplayValueAsItem="1">2000:Lv4.2
+2800:Lv5
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -377,7 +378,7 @@ code:
   jmp return
 align 10 cc
   vf_min_xp_bonus:
-  dd (float)1.5
+  dd (float)1.4
 
 INJECT_SET_MIN_XP_BONUS+0A:
   jmp newmem
@@ -540,10 +541,24 @@ label(code)
 label(return)
 
 newmem:
-  //cmp byte ptr [rbx+000003A9], 8
-  cmp dword ptr [rbx+000003E0], 0 // max break pt
+  // check if player w/ 2 condifions
+  push r15
+  xor r15, r15
+  cmp byte ptr [rbx+000003A9], 8
+  //jne to_enemy
+  jne to_add_2
+  inc r15d
 
-  jne code
+to_add_2:
+  cmp dword ptr [rbx+000003E0], 0 // max break pt
+  //jne to_enemy
+  jne to_add_post
+  inc r15d
+
+to_add_post:
+  test r15d, r15d
+  pop r15
+  jz code
 
   xor edi, edi
   mov cx, [rbx+000003B6]
@@ -618,9 +633,24 @@ label(code)
 label(return)
 
 newmem:
-  //cmp byte ptr [rbx+000003A9], 8
+  // check if player w/ 2 condifions
+  push r15
+  xor r15, r15
+  cmp byte ptr [rbx+000003A9], 8
+  //jne to_enemy
+  jne to_add_2
+  inc r15d
+
+to_add_2:
   cmp dword ptr [rbx+000003E0], 0 // max break pt
-  jne code
+  //jne to_enemy
+  jne to_add_post
+  inc r15d
+
+to_add_post:
+  test r15d, r15d
+  pop r15
+  jz code
 
   xor edi, edi
   mov cx, [rbx+000003BA]
@@ -784,8 +814,11 @@ label(vf_damage_to_player)
 label(vf_damage_to_enemy)
 label(is_rec_ep_hit)
 label(is_rec_cp_hit)
+label(is_keep_1hp)
 
 newmem:
+  test ebx, ebx
+  jz code
 
   vcvtsi2ss xmm15, xmm15, ebx // xmm15 = new hp
 
@@ -808,10 +841,26 @@ newmem:
   vbroadcastss xmm13, xmm13
   vsubps xmm12, xmm13, xmm12 // old hp - new delta = new hp; packed sub: lower 32-bit = player; 33-64 bit = enemy
 
-  //cmp byte ptr [rsi+000003A9], 8
-  cmp dword ptr [rsi+000003E0], 0 // max break pt
+  // check if player w/ 2 condifions
+  push r15
+  xor r15, r15
+  cmp byte ptr [rsi+000003A9], 8
+  //jne to_enemy
+  jne to_add_2
+  inc r15d
 
-  jne to_enemy
+to_add_2:
+  cmp dword ptr [rsi+000003E0], 0 // max break pt
+  //jne to_enemy
+  jne to_add_post
+  inc r15d
+
+to_add_post:
+  test r15d, r15d
+  pop r15
+
+  jz to_enemy
+
 
 to_Player:
   cmp dword ptr [is_rec_ep_hit], 1
@@ -838,7 +887,10 @@ to_Player:
   vcvtss2si ebx, xmm12  // lower 32 bit float = player HP
 
   jmp code
+
 to_enemy:
+  cmp ebx, 1
+  je code
   ////vmovss xmm11, [vf_1]
 
   //vmovss xmm14, [vf_damage_to_enemy]
@@ -849,14 +901,22 @@ to_enemy:
   //vsubss xmm12, xmm13, xmm12 // old hp - new delta = new hp
 
 
-  vextractps [tmp1], xmm0, 1 // move 2nd 32-bit to memory
+  vextractps [tmp1], xmm12, 1 // move 2nd 32-bit to memory
   vmovd xmm12, [tmp1]
 
 
   vxorps xmm11, xmm11, xmm11
   vucomiss xmm12, xmm11
   ja to_enemy_1
+
+  cmp dword ptr [is_keep_1hp], 1
+  jne @F
+  vmovss xmm12, [vf_1]
+  jmp to_enemy_1
+
+en_set_0:
   vxorps xmm12, xmm12, xmm12
+
 
 
 to_enemy_1:
@@ -868,11 +928,13 @@ code:
   mov [rsi+000003AC],ebx
   jmp return
 align 10 cc
+  // packed scaler start
   vf_damage_to_player:
   dd (float)0.85
   vf_damage_to_enemy:
   dd (float)1
   dd 0 0
+  // packed scaler end
   is_rec_ep_hit:
   dd 1
   is_rec_cp_hit:
@@ -880,6 +942,8 @@ align 10 cc
   vf_1:
   dd (float)1
   tmp1:
+  dd 0
+  is_keep_1hp:
   dd 0
 
 INJECT_DAMAGE_MULTI:
@@ -891,6 +955,7 @@ registersymbol(vf_damage_to_player)
 registersymbol(vf_damage_to_enemy)
 registersymbol(is_rec_ep_hit)
 registersymbol(is_rec_cp_hit)
+registersymbol(is_keep_1hp)
 
 [DISABLE]
 
@@ -930,6 +995,12 @@ ed8_4_PC_JP.exe+1129AA: CC                       - int 3
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>288</ID>
+          <Description>"Warning: 龍眼 / "Dragon Vision" may not work"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
           <ID>163</ID>
           <Description>"Recover EP when hit?"</Description>
           <DropDownList DisplayValueAsItem="1">0:No
@@ -962,10 +1033,31 @@ ed8_4_PC_JP.exe+1129AA: CC                       - int 3
         <CheatEntry>
           <ID>166</ID>
           <Description>"Damage multiplier to enemy"</Description>
+          <DropDownList DisplayValueAsItem="1">1:Default
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
           <Address>vf_damage_to_enemy</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>289</ID>
+          <Description>"Keep 1HP if overkill w/ damage multiplier to enemy?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_keep_1hp</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>291</ID>
+              <Description>"Set this to "1" to make 龍眼 / "Dragon Vision" more workable (not 100%)"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -1331,6 +1423,7 @@ ed8_4_PC_JP.exe+326346: 41 81 E4 FF FF FF 7F     - and r12d,7FFFFFFF
 3502:風神珠
 3503:雷神珠
 3516:行動力1
+3525:クロノバーストR
 3539:行動力3
 3544:冥皇
 3545:影輪牙
@@ -1345,6 +1438,7 @@ ed8_4_PC_JP.exe+326346: 41 81 E4 FF FF FF 7F     - and r12d,7FFFFFFF
 3588:七剣珠
 3590:シルバーソーン
 3596:EP1
+3606:EP2
 3611:月鏡
 3613:龍眼
 3627:賢王珠
@@ -1977,6 +2071,183 @@ ed8_4_PC_JP.exe+35BD1A: 41 88 83 0B 08 00 00     - mov [r11+0000080B],al
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
+      <ID>285</ID>
+      <Description>"ARCUS II game "ポムっと" (Pom)"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ed8_4_PC_JP.exe
+  Version: 
+  Date   : 2024-04-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_PON_GAME_DATA,$process,44 8B 87 D4 7A 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_PON_GAME_DATA)
+
+label(code)
+label(return)
+label(i_base_pdata_1)
+label(i_base_pdata_2)
+label(is_lock_cp)
+
+newmem:
+  cmp rdi, [i_base_pdata_1]
+  je code
+  cmp rdi, [i_base_pdata_2]
+  je code_pre
+  cmp qword ptr [i_base_pdata_1], 0
+  je save1
+  cmp qword ptr [i_base_pdata_2], 0
+  je save2
+  //jmp code
+// reset
+  vxorps xmm15, xmm15, xmm15
+  movaps [i_base_pdata_1], xmm15
+  //mov dword ptr [i_base_pdata_1], 0
+  //mov dword ptr [i_base_pdata_1], 0
+  jmp newmem
+
+save1:
+  mov [i_base_pdata_1], rdi
+  jmp code
+
+save2:
+  cmp dword ptr [i_base_pdata_2], 0
+  jne @F
+  mov [i_base_pdata_2], rdi
+
+  push r15
+  mov r15, [i_base_pdata_1]
+  cmp rdi, r15
+  ja swap_done
+  mov [i_tmp1], r15
+  mov [i_base_pdata_1], rdi
+  mov [i_base_pdata_2], r15
+
+swap_done:
+  pop r15
+  jmp code
+
+code_pre:
+  cmp dword ptr [is_lock_cp], 1
+  jne code
+
+  push r15
+  mov r15, [i_base_pdata_1]
+  test r15, r15
+  jz @F
+
+  lea r15, [r15+7AD4]
+  mov dword ptr [r15], #500
+
+  mov r15, [i_base_pdata_2]
+  test r15, r15
+  jz @F
+
+  lea r15, [r15+7AD4]
+  mov dword ptr [r15], 0
+
+@@:
+  pop r15
+
+code:
+  mov r8d,[rdi+00007AD4]
+  jmp return
+align 10 cc
+  i_base_pdata_1:
+  dq 0
+  i_base_pdata_2:
+  dq 0
+  i_tmp1:
+  dq 0
+  is_lock_cp:
+  dd 1
+
+INJECT_GET_PON_GAME_DATA:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_PON_GAME_DATA)
+registersymbol(i_base_pdata_1)
+registersymbol(i_base_pdata_2)
+registersymbol(is_lock_cp)
+
+
+[DISABLE]
+
+INJECT_GET_PON_GAME_DATA:
+  db 44 8B 87 D4 7A 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed8_4_PC_JP.exe+353E28
+
+ed8_4_PC_JP.exe+353E00: B8 1F 85 EB 51        - mov eax,51EB851F
+ed8_4_PC_JP.exe+353E05: F7 E9                 - imul ecx
+ed8_4_PC_JP.exe+353E07: C1 FA 05              - sar edx,05
+ed8_4_PC_JP.exe+353E0A: 8B C2                 - mov eax,edx
+ed8_4_PC_JP.exe+353E0C: C1 E8 1F              - shr eax,1F
+ed8_4_PC_JP.exe+353E0F: 03 D0                 - add edx,eax
+ed8_4_PC_JP.exe+353E11: 89 97 E4 7A 00 00     - mov [rdi+00007AE4],edx
+ed8_4_PC_JP.exe+353E17: 44 89 B7 E8 7A 00 00  - mov [rdi+00007AE8],r14d
+ed8_4_PC_JP.exe+353E1E: 44 8B 8F D8 7A 00 00  - mov r9d,[rdi+00007AD8]
+ed8_4_PC_JP.exe+353E25: 41 8B C1              - mov eax,r9d
+// ---------- INJECTING HERE ----------
+ed8_4_PC_JP.exe+353E28: 44 8B 87 D4 7A 00 00  - mov r8d,[rdi+00007AD4]
+// ---------- DONE INJECTING  ----------
+ed8_4_PC_JP.exe+353E2F: 45 3B C8              - cmp r9d,r8d
+ed8_4_PC_JP.exe+353E32: 74 73                 - je ed8_4_PC_JP.exe+353EA7
+ed8_4_PC_JP.exe+353E34: 7E 34                 - jle ed8_4_PC_JP.exe+353E6A
+ed8_4_PC_JP.exe+353E36: 41 8B C9              - mov ecx,r9d
+ed8_4_PC_JP.exe+353E39: B8 89 88 88 88        - mov eax,88888889
+ed8_4_PC_JP.exe+353E3E: 41 2B C8              - sub ecx,r8d
+ed8_4_PC_JP.exe+353E41: F7 E9                 - imul ecx
+ed8_4_PC_JP.exe+353E43: 41 8B C1              - mov eax,r9d
+ed8_4_PC_JP.exe+353E46: 03 D1                 - add edx,ecx
+ed8_4_PC_JP.exe+353E48: C1 FA 05              - sar edx,05
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>290</ID>
+          <Description>"Lock CP?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_lock_cp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>286</ID>
+          <Description>"CP #1"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_pdata_1</Address>
+          <Offsets>
+            <Offset>7AD4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>287</ID>
+          <Description>"CP #2"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_pdata_2</Address>
+          <Offsets>
+            <Offset>7AD4</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>185</ID>
       <Description>"Get Mira / Sepiths"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -2424,7 +2695,7 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>261</ID>
-          <Description>"?? (0xB)"</Description>
+          <Description>"絆pt (0xB)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2525,111 +2796,6 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
       </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>283</ID>
-      <Description>"No description"</Description>
-      <VariableType>2 Bytes</VariableType>
-      <Address>14A3998F4</Address>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>284</ID>
-      <Description>"No description"</Description>
-      <VariableType>2 Bytes</VariableType>
-      <Address>14A3998F8</Address>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>285</ID>
-      <Description>"Auto Assemble script"</Description>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ed8_4_PC_JP.exe
-  Version: 
-  Date   : 2024-04-14
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_GET_PON_GAME_DATA,$process,44 8B 87 D4 7A 00 00) // should be unique
-alloc(newmem,$1000,INJECT_GET_PON_GAME_DATA)
-
-label(code)
-label(return)
-label(i_base_pdata_1)
-label(i_base_pdata_2)
-
-newmem:
-  cmp rdi, [i_base_pdata_1]
-  je code
-  cmp rdi, [i_base_pdata_2]
-  je code
-  cmp dword ptr [i_base_pdata_1], 0
-  je save1
-  jmp save2
-
-save1:
-  mov [i_base_pdata_1], rdi
-  jmp code
-
-save2:
-  cmp dword ptr [i_base_pdata_1], 0
-  jne @F
-  mov [i_base_pdata_2], rdi
-  jmp code
-
-
-code:
-  mov r8d,[rdi+00007AD4]
-  jmp return
-align 10 cc
-  i_base_pdata_1:
-  dq 0
-  i_base_pdata_2:
-  dq 0
-
-INJECT_GET_PON_GAME_DATA:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_GET_PON_GAME_DATA)
-registersymbol(i_base_pdata_1)
-registersymbol(i_base_pdata_2)
-[DISABLE]
-
-INJECT_GET_PON_GAME_DATA:
-  db 44 8B 87 D4 7A 00 00
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: ed8_4_PC_JP.exe+353E28
-
-ed8_4_PC_JP.exe+353E00: B8 1F 85 EB 51        - mov eax,51EB851F
-ed8_4_PC_JP.exe+353E05: F7 E9                 - imul ecx
-ed8_4_PC_JP.exe+353E07: C1 FA 05              - sar edx,05
-ed8_4_PC_JP.exe+353E0A: 8B C2                 - mov eax,edx
-ed8_4_PC_JP.exe+353E0C: C1 E8 1F              - shr eax,1F
-ed8_4_PC_JP.exe+353E0F: 03 D0                 - add edx,eax
-ed8_4_PC_JP.exe+353E11: 89 97 E4 7A 00 00     - mov [rdi+00007AE4],edx
-ed8_4_PC_JP.exe+353E17: 44 89 B7 E8 7A 00 00  - mov [rdi+00007AE8],r14d
-ed8_4_PC_JP.exe+353E1E: 44 8B 8F D8 7A 00 00  - mov r9d,[rdi+00007AD8]
-ed8_4_PC_JP.exe+353E25: 41 8B C1              - mov eax,r9d
-// ---------- INJECTING HERE ----------
-ed8_4_PC_JP.exe+353E28: 44 8B 87 D4 7A 00 00  - mov r8d,[rdi+00007AD4]
-// ---------- DONE INJECTING  ----------
-ed8_4_PC_JP.exe+353E2F: 45 3B C8              - cmp r9d,r8d
-ed8_4_PC_JP.exe+353E32: 74 73                 - je ed8_4_PC_JP.exe+353EA7
-ed8_4_PC_JP.exe+353E34: 7E 34                 - jle ed8_4_PC_JP.exe+353E6A
-ed8_4_PC_JP.exe+353E36: 41 8B C9              - mov ecx,r9d
-ed8_4_PC_JP.exe+353E39: B8 89 88 88 88        - mov eax,88888889
-ed8_4_PC_JP.exe+353E3E: 41 2B C8              - sub ecx,r8d
-ed8_4_PC_JP.exe+353E41: F7 E9                 - imul ecx
-ed8_4_PC_JP.exe+353E43: 41 8B C1              - mov eax,r9d
-ed8_4_PC_JP.exe+353E46: 03 D1                 - add edx,ecx
-ed8_4_PC_JP.exe+353E48: C1 FA 05              - sar edx,05
-}
-</AssemblerScript>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
