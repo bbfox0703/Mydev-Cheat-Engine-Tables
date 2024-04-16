@@ -817,7 +817,6 @@ label(is_rec_cp_hit)
 label(is_keep_1hp)
 
 newmem:
-
   vcvtsi2ss xmm15, xmm15, ebx // xmm15 = new hp
 
   push rbx
@@ -828,7 +827,7 @@ newmem:
   vucomiss xmm15, xmm13  // skip if new HP &gt; old HP
   jae code
 
-
+  // damage calc. start
   vsubss xmm12, xmm13, xmm15  // damage (delta) = old HP - new HP
   //vunpcklps xmm12, xmm12, xmm12  // place lower 32-bit float to 33-64 bit
   vbroadcastss xmm12, xmm12
@@ -838,8 +837,10 @@ newmem:
   vmulps xmm12, xmm12, xmm14 // new delta; packed mul calc.
   vbroadcastss xmm13, xmm13
   vsubps xmm12, xmm13, xmm12 // old hp - new delta = new hp; packed sub: lower 32-bit = player; 33-64 bit = enemy
+  // damage calc end
 
-  // check if player w/ 2 condifions
+  // check if player w/ 2 conditions
+
   push r15
   xor r15, r15
   cmp byte ptr [rsi+000003A9], 8
@@ -879,29 +880,27 @@ to_Player:
   pop r15
 
 @@:
-  //vmovss xmm14, [vf_damage_to_player]
-  //vmulss xmm12, xmm12, xmm14 // new delta
-  //vsubss xmm12, xmm13, xmm12 // old hp - new delta = new hp
+  // Write player HP back
   vcvtss2si ebx, xmm12  // lower 32 bit float = player HP
 
   jmp code
 
 to_enemy:
-  test ebx, ebx
+  vmovss xmm10, [vf_1]
+  vmovss xmm11, [vf_damage_to_enemy]
+  vucomiss xmm11, xmm10
+  jb @F // if multiplier &lt; 1, skip 0 HP check
+
+  test ebx, ebx // this part will be checked only multiplier &gt; 1
+                // already 0, no need to write new Hp back
   jz code
+
+@@:
+
   cmp ebx, 1
   je code
-  ////vmovss xmm11, [vf_1]
 
-  //vmovss xmm14, [vf_damage_to_enemy]
-  ////vucomiss xmm11, xmm14  // multiplier = 1
-  ////je code
-
-  //vmulss xmm12, xmm12, xmm14 // new delta
-  //vsubss xmm12, xmm13, xmm12 // old hp - new delta = new hp
-
-
-  vextractps [tmp1], xmm12, 1 // move 2nd 32-bit to memory
+  vextractps [tmp1], xmm12, 1 // move xmm lower 2nd 32-bit part to memory
   vmovd xmm12, [tmp1]
 
 
@@ -917,8 +916,6 @@ to_enemy:
 en_set_0:
   vxorps xmm12, xmm12, xmm12
 
-
-
 to_enemy_1:
   vcvtss2si ebx, xmm12
 
@@ -933,7 +930,8 @@ align 10 cc
   dd (float)0.85
   vf_damage_to_enemy:
   dd (float)1
-  dd 0 0
+  dd 0
+  dd 0
   // packed scaler end
   is_rec_ep_hit:
   dd 1
