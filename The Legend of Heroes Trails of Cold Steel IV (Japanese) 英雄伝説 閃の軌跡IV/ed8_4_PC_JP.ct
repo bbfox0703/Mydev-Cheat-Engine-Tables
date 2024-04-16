@@ -45,7 +45,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-battle_array_close = {243,196,149,    180,221,209,175,171,169,182,140,148,244,249,185,272,285,     162,198,224,252,32 }
+battle_array_close = {294,243,196,149,    180,221,209,175,171,169,182,140,148,244,249,185,272,285,     162,198,224,252,32 }
 
 local a_len1 = #(battle_array_close)
 
@@ -1878,7 +1878,7 @@ ed8_4_PC_JP.exe+4B62C0: C7 84 24 C0 00 00 00 03 00 00 00  - mov [rsp+000000C0],0
         </CheatEntry>
         <CheatEntry>
           <ID>230</ID>
-          <Description>"先制攻撃発生回数"</Description>
+          <Description>"先制攻撃発生回数 / Preemptive Attacks"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2582,6 +2582,7 @@ alloc(newmem,$1000,INJECT_GET_MAIN_STATS)
 label(code)
 label(return)
 label(i_base_main_stats_addr)
+label(i_base_main_stats_root_addr)
 
 newmem:
   cmp eax, 12
@@ -2590,6 +2591,7 @@ newmem:
   push r15
   lea r15, [rcx+rax*4+0000368C]
   mov [i_base_main_stats_addr], r15
+  mov [i_base_main_stats_root_addr], rcx
   pop r15
 
 code:
@@ -2598,6 +2600,8 @@ code:
 align 10 cc
   i_base_main_stats_addr:
   dq 0
+  i_base_main_stats_root_addr:
+  dq 0
 
 INJECT_GET_MAIN_STATS:
   jmp newmem
@@ -2605,6 +2609,7 @@ INJECT_GET_MAIN_STATS:
 return:
 registersymbol(INJECT_GET_MAIN_STATS)
 registersymbol(i_base_main_stats_addr)
+registersymbol(i_base_main_stats_root_addr)
 
 [DISABLE]
 
@@ -2648,6 +2653,91 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
           <Description>"Usage: menu "メイン" -&gt; 総合成績"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>294</ID>
+          <Description>"Keep min. 絆 / bonding pt"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ed8_4_PC_JP.exe
+  Version: 
+  Date   : 2024-04-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MIN_KIZ_PT,$process,44 89 84 81 8C 36 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SET_MIN_KIZ_PT)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  push r14
+
+  mov r14, [i_base_main_stats_root_addr]
+  cmp rcx, r14
+  jne endp
+
+  mov r14, A
+  cmp rax, r14
+  jne endp
+
+  test r8d, r8d
+  jnz endp
+  mov r8d, 1
+
+endp:
+  pop r14
+  pop r15
+
+code:
+  mov [rcx+rax*4+0000368C],r8d
+  jmp return
+
+INJECT_SET_MIN_KIZ_PT:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_MIN_KIZ_PT)
+
+[DISABLE]
+
+INJECT_SET_MIN_KIZ_PT:
+  db 44 89 84 81 8C 36 00 00
+
+unregistersymbol(INJECT_SET_MIN_KIZ_PT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed8_4_PC_JP.exe+30877A
+
+ed8_4_PC_JP.exe+308769: CC                       - int 3 
+ed8_4_PC_JP.exe+30876A: CC                       - int 3 
+ed8_4_PC_JP.exe+30876B: CC                       - int 3 
+ed8_4_PC_JP.exe+30876C: CC                       - int 3 
+ed8_4_PC_JP.exe+30876D: CC                       - int 3 
+ed8_4_PC_JP.exe+30876E: CC                       - int 3 
+ed8_4_PC_JP.exe+30876F: CC                       - int 3 
+ed8_4_PC_JP.exe+308770: 81 FA 00 01 00 00        - cmp edx,00000100
+ed8_4_PC_JP.exe+308776: 73 0A                    - jae ed8_4_PC_JP.exe+308782
+ed8_4_PC_JP.exe+308778: 8B C2                    - mov eax,edx
+// ---------- INJECTING HERE ----------
+ed8_4_PC_JP.exe+30877A: 44 89 84 81 8C 36 00 00  - mov [rcx+rax*4+0000368C],r8d
+// ---------- DONE INJECTING  ----------
+ed8_4_PC_JP.exe+308782: C3                       - ret 
+ed8_4_PC_JP.exe+308783: CC                       - int 3 
+ed8_4_PC_JP.exe+308784: CC                       - int 3 
+ed8_4_PC_JP.exe+308785: CC                       - int 3 
+ed8_4_PC_JP.exe+308786: CC                       - int 3 
+ed8_4_PC_JP.exe+308787: CC                       - int 3 
+ed8_4_PC_JP.exe+308788: CC                       - int 3 
+ed8_4_PC_JP.exe+308789: CC                       - int 3 
+ed8_4_PC_JP.exe+30878A: CC                       - int 3 
+ed8_4_PC_JP.exe+30878B: CC                       - int 3 
+}
+</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>253</ID>
@@ -2694,8 +2784,19 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>292</ID>
+          <Description>"絆pt / bonding pt."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_main_stats_addr</Address>
+          <Offsets>
+            <Offset>-20</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>261</ID>
-          <Description>"絆pt (0xB)"</Description>
+          <Description>"絆pt / bonding pt. high watermark"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2706,7 +2807,7 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>260</ID>
-          <Description>"教官ランク"</Description>
+          <Description>"教官ランク / Instructor Rank"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2739,7 +2840,7 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>257</ID>
-          <Description>"トールズ再起度"</Description>
+          <Description>"トールズ再起度 / Thors Rebuild Rating"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2750,7 +2851,7 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>254</ID>
-          <Description>"再起グレート"</Description>
+          <Description>"再起グレート / Great Revival"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2785,7 +2886,7 @@ ed8_4_PC_JP.exe+2EEF8B: CC                    - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>30</ID>
-      <Description>"英雄伝説 閃の軌跡IV  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"英雄伝説 閃の軌跡IV 1.2.1 /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Options moHideChildren="1"/>
       <Color>009100</Color>
       <GroupHeader>1</GroupHeader>
