@@ -25,7 +25,22 @@ if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 getLuaEngine().menuItem5.doClick()
 
-battle_array = {32,180,221,209,175,171,169,182,140,148,244,249,185        ,149,196}
+P_NAME = 'ed8_4_PC_JP.exe'
+P_NAME1 = 'ed8_4_PC_EN.exe'
+
+if (p_ated == nil) and (getProcessIDFromProcessName(P_NAME) ~= nil) then
+	openProcess(P_NAME)
+    p_ated = true
+    Sleep(500)
+end
+
+if (p_ated == nil) and (getProcessIDFromProcessName(P_NAME1) ~= nil) then
+	openProcess(P_NAME1)
+    p_ated = true
+    Sleep(500)
+end
+
+battle_array = {32,162,180,221,209,175,171,169,182,140,148,244,249,185        ,149,196}
 
 
 local a_len = #(battle_array)
@@ -879,6 +894,24 @@ to_Player:
   mov [rsi+000003B8], r15w
   pop r15
 
+  // check if damage multiplier to player &lt; 1
+  //
+  // i.e.
+  // ebx = 0 (new HP = 0)
+  // [rsi+000003AC] = 100 (old HP)
+  // if multiplier &lt; 1, player will not die
+
+  vmovss xmm10, [vf_1]
+  vmovss xmm11, [vf_damage_to_player]
+  vucomiss xmm11, xmm10
+  jb @F // if multiplier &lt; 1, skip 0 HP check
+  je code // multiplier = 1
+
+  test ebx, ebx // this part will be checked only multiplier &gt; 1
+                // already 0, no need to write new Hp back
+  jz code
+
+
 @@:
   // Write player HP back
   vcvtss2si ebx, xmm12  // lower 32 bit float = player HP
@@ -890,6 +923,7 @@ to_enemy:
   vmovss xmm11, [vf_damage_to_enemy]
   vucomiss xmm11, xmm10
   jb @F // if multiplier &lt; 1, skip 0 HP check
+  je code // multiplier = 1, no need to write back
 
   test ebx, ebx // this part will be checked only multiplier &gt; 1
                 // already 0, no need to write new Hp back
@@ -927,7 +961,7 @@ code:
 align 10 cc
   // packed scaler start
   vf_damage_to_player:
-  dd (float)0.85
+  dd (float)1
   vf_damage_to_enemy:
   dd (float)1
   dd 0
