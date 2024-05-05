@@ -320,21 +320,25 @@ ja-JP: 英雄伝説 黎の軌跡
 zh-TW: 英雄傳說 黎之軌跡Ⅱ -緋紅原罪-  
 ja-JP: 英雄伝説 黎の軌跡Ⅱ-CRIMSON SiN-  
 
+## The Legend of Heroes Sen no Kiseki I KAI -Thors Military Academy 1204-  
+The Legend of Heroes: Sen no Kiseki I KAI -Thors Military Academy 1204- (Steam)  
+[zh-TW: 英雄傳說 閃之軌跡I：改 –Thors Military Academy 1204–](https://store.steampowered.com/app/1450120/___I_Kai_Thors_Military_Academy_1204/)  
+
 ## The Legend of Heroes Trails of Cold Steel (Japanese) 英雄伝説 閃の軌跡  
 The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡](https://store.steampowered.com/app/538680/_/) 
+[ja-JP: 英雄伝説 閃の軌跡](https://store.steampowered.com/app/538680/_/)  
 
 ## The Legend of Heroes Trails of Cold Steel II (Japanese) 英雄伝説 閃の軌跡II  
 The Legend of Heroes: Trails of Cold Steel II (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡II](https://store.steampowered.com/app/748490/The_Legend_of_Heroes_Trails_of_Cold_Steel_II/) 
+[ja-JP: 英雄伝説 閃の軌跡II](https://store.steampowered.com/app/748490/The_Legend_of_Heroes_Trails_of_Cold_Steel_II/)  
 
 ## The Legend of Heroes Trails of Cold Steel III (Japanese) 英雄伝説 閃の軌跡III  
 The Legend of Heroes: Trails of Cold Steel III (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡III](https://store.steampowered.com/app/991270/The_Legend_of_Heroes_Trails_of_Cold_Steel_III/) 
+[ja-JP: 英雄伝説 閃の軌跡III](https://store.steampowered.com/app/991270/The_Legend_of_Heroes_Trails_of_Cold_Steel_III/)  
 
 ## The Legend of Heroes Trails of Cold Steel IV (Japanese) 英雄伝説 閃の軌跡IV  
 The Legend of Heroes: Trails of Cold Steel IV (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡IV](https://store.steampowered.com/app/1198090/The_Legend_of_Heroes_Trails_of_Cold_Steel_IV/) 
+[ja-JP: 英雄伝説 閃の軌跡IV](https://store.steampowered.com/app/1198090/The_Legend_of_Heroes_Trails_of_Cold_Steel_IV/)  
 
 ## The Legend of Heroes Zero no Kiseki KAI  
 [The Legend of Heroes: Zero no Kiseki Kai (Steam)](https://store.steampowered.com/app/1457520/_/)  
