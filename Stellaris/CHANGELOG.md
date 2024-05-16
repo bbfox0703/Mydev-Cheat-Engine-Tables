@@ -1,6 +1,9 @@
 # Changelog
 
-## 2024/05/11
+## 2024/05/16  
+1. Revised for 3.12.2 (54e1)
+
+## 2024/05/11  
 1. Revise scripts  
 1. Added: Obtain current espionage value  
 
