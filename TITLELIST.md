@@ -154,6 +154,10 @@ ja-JP: ファイナルファンタジーX HD リマスター
 ## Frostpunk
 [Frostpunk (Steam)](https://store.steampowered.com/app/323190/Frostpunk/)
 
+## Ghost of Tsushima  
+[Ghost of Tsushima DIRECTOR'S CUT (Steam)](https://store.steampowered.com/app/2215430/Ghost_of_Tsushima/)  
+zh-TW: 《Ghost of Tsushima導演剪輯版》 /  對馬戰鬼  
+
 ## Gold Wiper / NSFW  
 [Gold Wiper (Steam)](https://store.steampowered.com/app/1926870/Gold_Wiper/)  
 
