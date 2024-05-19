@@ -20,12 +20,16 @@ alloc(newmem,$1000,INJECT_SET_EN)
 label(code)
 label(return)
 label(i_base_data_addr)
+label(is_raise_en)
 
 newmem:
   mov [i_base_data_addr], rbx
   vmovss xmm15, [vf_0]
   vucomiss xmm6, xmm15
   jae code
+  cmp dword ptr [is_raise_en], 1
+  jne @F
+
   vmovss xmm15, [vf_01]
   vmulss xmm6, xmm6, xmm15
 
@@ -36,6 +40,8 @@ code:
 align 10 cc
   i_base_data_addr:
   dq 0
+  is_raise_en:
+  dd 1
   vf_0:
   dd 0
   vf_01:
@@ -49,6 +55,7 @@ INJECT_SET_EN:
 return:
 registersymbol(INJECT_SET_EN)
 registersymbol(i_base_data_addr)
+registersymbol(is_raise_en)
 
 [DISABLE]
 
@@ -94,14 +101,25 @@ GhostOfTsushima.exe+90EE05: 0F 28 C8                 - movaps xmm1,xmm0
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
+          <ID>26</ID>
+          <Description>"Enabled?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_raise_en</Address>
+        </CheatEntry>
+        <CheatEntry>
           <ID>22</ID>
-          <Description>"Fast get data"</Description>
+          <Description>"Fast get data &amp; HP option"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : GhostOfTsushima.exe
   Version: 
   Date   : 2024-05-18
-  Author :
+  Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
@@ -111,31 +129,42 @@ alloc(newmem,$1000,INJECT_GET_EN2)
 
 label(code)
 label(return)
+label(i_is_keep_hp)
 
 newmem:
   test rdi,rdi
   jz code
-  cmp qword ptr [i_base_data_addr], 0
-  jne code
+  //cmp qword ptr [i_base_data_addr], 0
+  //jne code
   mov [i_base_data_addr], rdi
+  cmp dword ptr [i_is_keep_hp], 1
+  jne @F
+  push r15
+  mov r15d, [rdi+00001970]
+  mov [rdi+00001974], r15d
+  pop r15
 
 code:
   xorps xmm9,xmm9
   test rdi,rdi
   jmp return
+align 10 cc
+  i_is_keep_hp:
+  dd 0
 
 INJECT_GET_EN2:
   jmp newmem
   nop 2
 return:
 registersymbol(INJECT_GET_EN2)
+registersymbol(i_is_keep_hp)
 
 [DISABLE]
 
 INJECT_GET_EN2:
   db 45 0F 57 C9 48 85 FF
 
-unregistersymbol(INJECT_GET_EN2)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -169,9 +198,26 @@ GhostOfTsushima.exe+5A6C7C: EB 0C                       - jmp GhostOfTsushima.ex
           <CheatEntries>
             <CheatEntry>
               <ID>23</ID>
-              <Description>"Disable when get data"</Description>
+              <Description>"Disable when get data,"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>24</ID>
+              <Description>"in case if you just want to get resolve value"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"Keep high HP? (not god mode)"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_is_keep_hp</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
