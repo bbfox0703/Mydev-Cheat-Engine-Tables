@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/05/29
+1. for v1053.0.0524.1422  
+
 ## 2024/05/24
 1. added "Fast ghost mode  
 
