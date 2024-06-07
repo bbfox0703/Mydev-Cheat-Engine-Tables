@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/06/07
+1. Revised for 0.7.5.1-5317 EA
+
 ## 2023/12/31
 1. Revised for 0.7.2.2-d595 EA
 
