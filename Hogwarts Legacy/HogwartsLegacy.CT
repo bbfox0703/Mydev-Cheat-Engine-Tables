@@ -21,14 +21,14 @@ LuaCall(cycleFullCompact(nil,false))
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : HogwartsLegacy.exe
   Version: 
-  Date   : 2023-02-10
+  Date   : 2024-06-07
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_XP_MULTI,HogwartsLegacy.exe,42 8D 14 31 4C 89 A4 24 D8 00 00 00 48 8B CE) // should be unique
-alloc(newmem,$1000)
+aobscanmodule(INJECT_XP_MULTI,HogwartsLegacy.exe,8B 46 40 42 8D 14 31) // should be unique
+alloc(newmem,$1000,INJECT_XP_MULTI)
 
 label(code)
 label(return)
@@ -43,10 +43,9 @@ newmem:
   cvtss2si r14, xmm15
 
 code:
+  mov eax,[rsi+40]
   lea edx,[rcx+r14]
-  mov [rsp+000000D8],r12
-  mov rcx,rsi
-  jmp far return
+  jmp return
 align 10 cc
   vf_xp_multi:
   dd (float)1.5
@@ -55,8 +54,8 @@ align 10 cc
 
 
 INJECT_XP_MULTI:
-  jmp far newmem
-  nop
+  jmp newmem
+  nop 2
 return:
 registersymbol(INJECT_XP_MULTI)
 registersymbol(vf_xp_multi)
@@ -65,10 +64,38 @@ registersymbol(i_base_xp_addr2)
 [DISABLE]
 
 INJECT_XP_MULTI:
-  db 42 8D 14 31 4C 89 A4 24 D8 00 00 00 48 8B CE
+  db 8B 46 40 42 8D 14 31
 
 unregistersymbol(*)
 dealloc(newmem)
+{
+// ORIGINAL CODE - INJECTION POINT: HogwartsLegacy.exe+2B61E08
+
+HogwartsLegacy.exe+2B61DE0: E9 B5 06 00 00           - jmp HogwartsLegacy.exe+2B6249A
+HogwartsLegacy.exe+2B61DE5: 48 89 BC 24 D8 00 00 00  - mov [rsp+000000D8],rdi
+HogwartsLegacy.exe+2B61DED: 8B 7E 44                 - mov edi,[rsi+44]
+HogwartsLegacy.exe+2B61DF0: 89 7D 07                 - mov [rbp+07],edi
+HogwartsLegacy.exe+2B61DF3: 83 FF 28                 - cmp edi,28
+HogwartsLegacy.exe+2B61DF6: 0F 84 7B 06 00 00        - je HogwartsLegacy.exe+2B62477
+HogwartsLegacy.exe+2B61DFC: 8B 4E 38                 - mov ecx,[rsi+38]
+HogwartsLegacy.exe+2B61DFF: 8B 46 3C                 - mov eax,[rsi+3C]
+HogwartsLegacy.exe+2B61E02: 89 4D F7                 - mov [rbp-09],ecx
+HogwartsLegacy.exe+2B61E05: 89 45 FB                 - mov [rbp-05],eax
+// ---------- INJECTING HERE ----------
+HogwartsLegacy.exe+2B61E08: 8B 46 40                 - mov eax,[rsi+40]
+// ---------- DONE INJECTING  ----------
+HogwartsLegacy.exe+2B61E0B: 42 8D 14 31              - lea edx,[rcx+r14]
+HogwartsLegacy.exe+2B61E0F: 4C 89 A4 24 D0 00 00 00  - mov [rsp+000000D0],r12
+HogwartsLegacy.exe+2B61E17: 48 8B CE                 - mov rcx,rsi
+HogwartsLegacy.exe+2B61E1A: 4C 8D 66 3C              - lea r12,[rsi+3C]
+HogwartsLegacy.exe+2B61E1E: 89 56 38                 - mov [rsi+38],edx
+HogwartsLegacy.exe+2B61E21: 89 45 FF                 - mov [rbp-01],eax
+HogwartsLegacy.exe+2B61E24: E8 E7 B2 00 00           - call HogwartsLegacy.exe+2B6D110
+HogwartsLegacy.exe+2B61E29: 41 83 7D 08 01           - cmp dword ptr [r13+08],01
+HogwartsLegacy.exe+2B61E2E: 8B D8                    - mov ebx,eax
+HogwartsLegacy.exe+2B61E30: 0F 8E FE 00 00 00        - jng HogwartsLegacy.exe+2B61F34
+}
+
 
 {
 // ORIGINAL CODE - INJECTION POINT: HogwartsLegacy.exe+2A31E7B
@@ -144,7 +171,7 @@ HogwartsLegacy.exe+2A31EA5: E8 16 F7 CA FF           - call HogwartsLegacy.exe+2
     </CheatEntry>
     <CheatEntry>
       <ID>3</ID>
-      <Description>"Get XP"</Description>
+      <Description>"Get XP (not working)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">{ Game   : HogwartsLegacy.exe
@@ -630,22 +657,30 @@ db 0
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">{ Game   : HogwartsLegacy.exe
   Version: 
-  Date   : 2023-05-05
+  Date   : 2024-06-07
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_QUICK_ANC_SPELL_CHARGE,HogwartsLegacy.exe,F3 0F 11 BB 18 3C 00 00) // should be unique
+aobscanmodule(INJECT_QUICK_ANC_SPELL_CHARGE,$process,F3 0F 5D C1 0F 28 F8 0F) // should be unique
 alloc(newmem,$1000,INJECT_QUICK_ANC_SPELL_CHARGE)
 
 label(code)
 label(return)
 label(vf_min_anc_magic)
 label(i_base_anc_magic_addr)
+label(i_base_anc_magic_off)
 
 newmem:
   mov [i_base_anc_magic_addr], rbx
+
+  push r15
+  mov r15, INJECT_QUICK_ANC_SPELL_CHARGE+E
+  mov r15d, [r15]
+  mov [i_base_anc_magic_off], r15d
+  pop r15
+
   movss xmm14, [vf_min_anc_magic]
   comiss xmm7, xmm14
   jae code
@@ -653,30 +688,62 @@ newmem:
   //movss xmm7, [vf_min_anc_magic]
 
 code:
-  movss [rbx+00003C18],xmm7
+  minss xmm0,xmm1
+  movaps xmm7,xmm0
   jmp return
 align 10 cc
   i_base_anc_magic_addr:
   dq 0
+  i_base_anc_magic_off:
+  dd 0
   vf_min_anc_magic:
   dd (float)200
 
 
 INJECT_QUICK_ANC_SPELL_CHARGE:
   jmp newmem
-  nop 3
+  nop 2
 return:
 registersymbol(INJECT_QUICK_ANC_SPELL_CHARGE)
 registersymbol(vf_min_anc_magic)
 registersymbol(i_base_anc_magic_addr)
+registersymbol(i_base_anc_magic_off)
 
 [DISABLE]
 
 INJECT_QUICK_ANC_SPELL_CHARGE:
-  db F3 0F 11 BB 18 3C 00 00
+  db F3 0F 5D C1 0F 28 F8
 
 unregistersymbol(*)
 dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: HogwartsLegacy.ABase_Character::SetCharacterHidden+E0C9
+
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E09C: 0F 28 C8                    - movaps xmm1,xmm0
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E09F: EB 03                       - jmp HogwartsLegacy.ABase_Character::SetCharacterHidden+E0A4
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0A1: 0F 28 CE                    - movaps xmm1,xmm6
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0A4: F3 44 0F 10 8B 18 3D 00 00  - movss xmm9,[rbx+00003D18]
+INJECT_FOCUS_MULTI: E9 7E 45 71 FD              - jmp 13FFE0000
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0B2: F3 41 0F 59 CA              - mulss xmm1,xmm10
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0B7: F3 41 0F 58 C9              - addss xmm1,xmm9
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0BC: 0F 2F CF                    - comiss xmm1,xmm7
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0BF: 72 0F                       - jb HogwartsLegacy.ABase_Character::SetCharacterHidden+E0D0
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0C1: F3 0F 10 83 28 1D 00 00     - movss xmm0,[rbx+00001D28]
+// ---------- INJECTING HERE ----------
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0C9: F3 0F 5D C1                 - minss xmm0,xmm1
+// ---------- DONE INJECTING  ----------
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0CD: 0F 28 F8                    - movaps xmm7,xmm0
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0D0: 0F 28 CE                    - movaps xmm1,xmm6
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0D3: F3 0F 11 BB 18 3D 00 00     - movss [rbx+00003D18],xmm7
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0DB: F3 0F 5E 8B 30 1D 00 00     - divss xmm1,[rbx+00001D30]
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0E3: 0F 28 C1                    - movaps xmm0,xmm1
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0E6: F3 41 0F 59 C9              - mulss xmm1,xmm9
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0EB: F3 0F 59 C7                 - mulss xmm0,xmm7
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0EF: 0F 28 BC 24 30 01 00 00     - movaps xmm7,[rsp+00000130]
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0F7: F3 0F 2C C1                 - cvttss2si eax,xmm1
+HogwartsLegacy.ABase_Character::SetCharacterHidden+E0FB: F3 0F 2C C8                 - cvttss2si ecx,xmm0
+}
 
 {
 // ORIGINAL CODE - INJECTION POINT: HogwartsLegacy.exe+27AC433
@@ -717,7 +784,7 @@ HogwartsLegacy.exe+27AC463: E8 58 98 F3 FF              - call HogwartsLegacy.ex
         </CheatEntry>
         <CheatEntry>
           <ID>52</ID>
-          <Description>"data"</Description>
+          <Description>"data (not working)"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
@@ -729,7 +796,7 @@ HogwartsLegacy.exe+27AC463: E8 58 98 F3 FF              - call HogwartsLegacy.ex
               <VariableType>Float</VariableType>
               <Address>i_base_anc_magic_addr</Address>
               <Offsets>
-                <Offset>3C00</Offset>
+                <Offset>[i_base_anc_magic_off]-18</Offset>
               </Offsets>
             </CheatEntry>
             <CheatEntry>
@@ -926,13 +993,13 @@ HogwartsLegacy.exe+279E49B: F3 0F 5E 8B 18 1C 00 00     - divss xmm1,[rbx+00001C
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : HogwartsLegacy.exe
   Version: 
-  Date   : 2023-05-05
+  Date   : 2024-06-07
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_SET_PRICE,HogwartsLegacy.exe,F3 0F 10 B6 28 24 00 00) // should be unique
+aobscanmodule(INJECT_SET_PRICE,HogwartsLegacy.exe,F3 0F 10 B6 28 25 00 00) // should be unique
 alloc(newmem,$1000,INJECT_SET_PRICE)
 
 label(code)
@@ -942,7 +1009,7 @@ label(vf_m1)
 newmem:
 
 code:
-  //movss xmm6,[rsi+00002428]
+  //movss xmm6,[rsi+00002528]
   movss xmm6, [vf_m1]
   jmp return
 align 10 cc
@@ -958,10 +1025,38 @@ registersymbol(vf_m1)
 [DISABLE]
 
 INJECT_SET_PRICE:
-  db F3 0F 10 B6 28 24 00 00
+  db F3 0F 10 B6 28 25 00 00
 
 unregistersymbol(*)
 dealloc(newmem)
+{
+// ORIGINAL CODE - INJECTION POINT: HogwartsLegacy.exe+28D0F55
+
+HogwartsLegacy.exe+28D0F27: 45 33 C9                 - xor r9d,r9d
+HogwartsLegacy.exe+28D0F2A: 48 8B D6                 - mov rdx,rsi
+HogwartsLegacy.exe+28D0F2D: E8 1E DE 75 FF           - call HogwartsLegacy.exe+202ED50
+HogwartsLegacy.exe+28D0F32: 48 8D 44 24 30           - lea rax,[rsp+30]
+HogwartsLegacy.exe+28D0F37: 48 8B CF                 - mov rcx,rdi
+HogwartsLegacy.exe+28D0F3A: 48 8D 54 24 60           - lea rdx,[rsp+60]
+HogwartsLegacy.exe+28D0F3F: 48 89 44 24 60           - mov [rsp+60],rax
+HogwartsLegacy.exe+28D0F44: E8 67 5F C6 FE           - call HogwartsLegacy.exe+1536EB0
+HogwartsLegacy.exe+28D0F49: 83 7C 24 28 00           - cmp dword ptr [rsp+28],00
+HogwartsLegacy.exe+28D0F4E: 48 8D 05 3B BC EC 03     - lea rax,[HogwartsLegacy.exe+679CB90]
+// ---------- INJECTING HERE ----------
+HogwartsLegacy.exe+28D0F55: F3 0F 10 B6 28 25 00 00  - movss xmm6,[rsi+00002528]
+// ---------- DONE INJECTING  ----------
+HogwartsLegacy.exe+28D0F5D: 48 89 44 24 30           - mov [rsp+30],rax
+HogwartsLegacy.exe+28D0F62: 74 37                    - je HogwartsLegacy.exe+28D0F9B
+HogwartsLegacy.exe+28D0F64: 48 8B 4C 24 20           - mov rcx,[rsp+20]
+HogwartsLegacy.exe+28D0F69: 48 85 C9                 - test rcx,rcx
+HogwartsLegacy.exe+28D0F6C: 74 3F                    - je HogwartsLegacy.exe+28D0FAD
+HogwartsLegacy.exe+28D0F6E: 48 8B 01                 - mov rax,[rcx]
+HogwartsLegacy.exe+28D0F71: 33 D2                    - xor edx,edx
+HogwartsLegacy.exe+28D0F73: FF 10                    - call qword ptr [rax]
+HogwartsLegacy.exe+28D0F75: 48 8B 44 24 20           - mov rax,[rsp+20]
+HogwartsLegacy.exe+28D0F7A: 48 85 C0                 - test rax,rax
+}
+
 
 {
 // ORIGINAL CODE - INJECTION POINT: HogwartsLegacy.exe+27B1855
@@ -2114,7 +2209,7 @@ HogwartsLegacy.exe+2CD408A: 48 85 C0                 - test rax,rax
     </CheatEntry>
     <CheatEntry>
       <ID>30</ID>
-      <Description>"Hogwarts Legacy (1140773)  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Hogwarts Legacy (1218405)  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00BB5E</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
