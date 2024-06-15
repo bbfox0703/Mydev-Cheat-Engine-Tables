@@ -55,107 +55,106 @@ unregistersymbol(*)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>7</ID>
+          <ID>50</ID>
           <Description>"戰役：HP滿血 / Group Battle: inf HP"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Mortal.exe
   Version: 
-  Date   : 2024-06-14
+  Date   : 2024-06-15
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-//aobscan(INJECT_SET_HEALTH,8B 46 20 03 45 0C 89 46 20 8B 4E 10) // should be unique
-aobscanregion(INJECT_SET_HEALTH,Mortal.Battle.CharacterHealth:ModifyHealth+10,Mortal.Battle.CharacterHealth:ModifyHealth+20,8B 46 20 03 45 0C) // should be unique
+//aobscan(INJECT_SET_BAT_HEALTH,8B 41 20 50 DB 04 24) // should be unique
+aobscanregion(INJECT_SET_BAT_HEALTH,Mortal.Battle.PlayerStateTransition:CanDash+40,Mortal.Battle.PlayerStateTransition:CanDash+80,8B 41 20 50 DB 04 24) // should be unique
 alloc(newmem,$1000)
 
 label(code)
 label(return)
-label(is_uhp_enabled)
-label(i_hp_addr)
-
+label(is_uhp_enabled2)
+label(i_hp_addr2)
 newmem:
+  push eax
   push edx
-  mov edx,  [esi+14]
-  test edx, edx
-  jz endp
+  mov [i_hp_addr2], ecx
 
-  mov [i_hp_addr], esi
-
-  mov edx, [ebp+0C]
-
-  cmp dword ptr [is_uhp_enabled], 1
+  cmp dword ptr [is_uhp_enabled2], 1
   jne endp
 
-  cmp edx, 0
-  jg endp
-  xor edx, edx
-  mov [ebp+0C], edx
+  mov eax, [ecx+10] //_defaultHealth
+  mov eax, [eax+C] //_health
+
+  mov [i_base_health], eax
+  mov eax, [ecx+18] //_defaultAddHealth
+  add eax, [i_base_health]
+  mov [ecx+20], eax //&lt;CurrentHealth&gt;k__BackingField
 
 endp:
   pop edx
+  pop eax
 
 
 code:
-  mov eax,[esi+20]
-  add eax,[ebp+0C]
+  mov eax,[ecx+20]
+  push eax
+  fild dword ptr [esp]
   jmp return
 align 10 cc
-  is_uhp_enabled:
+  is_uhp_enabled2:
   dd 1
-  i_hp_addr:
+  i_hp_addr2:
+  dd 0
+  i_base_health:
   dd 0
 
-
-INJECT_SET_HEALTH:
+INJECT_SET_BAT_HEALTH:
   jmp newmem
-  nop
+  nop 2
 return:
-registersymbol(INJECT_SET_HEALTH)
-registersymbol(is_uhp_enabled)
-registersymbol(i_hp_addr)
-
+registersymbol(INJECT_SET_BAT_HEALTH)
+registersymbol(is_uhp_enabled2)
+registersymbol(i_hp_addr2)
 [DISABLE]
 
-INJECT_SET_HEALTH:
-  db 8B 46 20 03 45 0C
+INJECT_SET_BAT_HEALTH:
+  db 8B 41 20 50 DB 04 24
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Mortal.Battle.CharacterHealth:ModifyHealth+12
+// ORIGINAL CODE - INJECTION POINT: Mortal.Battle.PlayerStateTransition:CanDash+49
 
-0FAD70B3: 00 00                    - add [eax],al
-0FAD70B5: 00 00                    - add [eax],al
-0FAD70B7: 00 55 8B                 - add [ebp-75],dl
-Mortal.Battle.CharacterHealth:ModifyHealth+2: EC                       - in al,dx
-Mortal.Battle.CharacterHealth:ModifyHealth+3: 56                       - push esi
-Mortal.Battle.CharacterHealth:ModifyHealth+4: 83 EC 24                 - sub esp,24
-Mortal.Battle.CharacterHealth:ModifyHealth+7: 8B 75 08                 - mov esi,[ebp+08]
-Mortal.Battle.CharacterHealth:ModifyHealth+a: 0F B6 46 1C              - movzx eax,byte ptr [esi+1C]
-Mortal.Battle.CharacterHealth:ModifyHealth+e: 85 C0                    - test eax,eax
-Mortal.Battle.CharacterHealth:ModifyHealth+10: 75 31                    - jne Mortal.Battle.CharacterHealth:ModifyHealth+43
+Mortal.Battle.PlayerStateTransition:CanDash+30: 85 C0           - test eax,eax
+Mortal.Battle.PlayerStateTransition:CanDash+32: 74 07           - je Mortal.Battle.PlayerStateTransition:CanDash+3b
+Mortal.Battle.PlayerStateTransition:CanDash+34: 33 C0           - xor eax,eax
+Mortal.Battle.PlayerStateTransition:CanDash+36: E9 9E 01 00 00  - jmp Mortal.Battle.PlayerStateTransition:CanDash+1d9
+Mortal.Battle.PlayerStateTransition:CanDash+3b: 8B 47 08        - mov eax,[edi+08]
+Mortal.Battle.PlayerStateTransition:CanDash+3e: 8B C8           - mov ecx,eax
+Mortal.Battle.PlayerStateTransition:CanDash+40: 39 09           - cmp [ecx],ecx
+Mortal.Battle.PlayerStateTransition:CanDash+42: 8B 48 58        - mov ecx,[eax+58]
+Mortal.Battle.PlayerStateTransition:CanDash+45: 8B C1           - mov eax,ecx
+Mortal.Battle.PlayerStateTransition:CanDash+47: 39 00           - cmp [eax],eax
 // ---------- INJECTING HERE ----------
-Mortal.Battle.CharacterHealth:ModifyHealth+12: 8B 46 20                 - mov eax,[esi+20]
+Mortal.Battle.PlayerStateTransition:CanDash+49: 8B 41 20        - mov eax,[ecx+20]
 // ---------- DONE INJECTING  ----------
-Mortal.Battle.CharacterHealth:ModifyHealth+15: 03 45 0C                 - add eax,[ebp+0C]
-Mortal.Battle.CharacterHealth:ModifyHealth+18: 89 46 20                 - mov [esi+20],eax
-Mortal.Battle.CharacterHealth:ModifyHealth+1b: 8B 4E 10                 - mov ecx,[esi+10]
-Mortal.Battle.CharacterHealth:ModifyHealth+1e: 8B D1                    - mov edx,ecx
-Mortal.Battle.CharacterHealth:ModifyHealth+20: 39 12                    - cmp [edx],edx
-Mortal.Battle.CharacterHealth:ModifyHealth+22: 8B 49 0C                 - mov ecx,[ecx+0C]
-Mortal.Battle.CharacterHealth:ModifyHealth+25: 8B 56 18                 - mov edx,[esi+18]
-Mortal.Battle.CharacterHealth:ModifyHealth+28: 03 CA                    - add ecx,edx
-Mortal.Battle.CharacterHealth:ModifyHealth+2a: 89 4C 24 08              - mov [esp+08],ecx
-Mortal.Battle.CharacterHealth:ModifyHealth+2e: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Mortal.Battle.PlayerStateTransition:CanDash+4c: 50              - push eax
+Mortal.Battle.PlayerStateTransition:CanDash+4d: DB 04 24        - fild dword ptr [esp]
+Mortal.Battle.PlayerStateTransition:CanDash+50: D9 1C 24        - fstp dword ptr [esp]
+Mortal.Battle.PlayerStateTransition:CanDash+53: D9 04 24        - fld dword ptr [esp]
+Mortal.Battle.PlayerStateTransition:CanDash+56: 83 C4 04        - add esp,04
+Mortal.Battle.PlayerStateTransition:CanDash+59: 8B 41 10        - mov eax,[ecx+10]
+Mortal.Battle.PlayerStateTransition:CanDash+5c: 8B D0           - mov edx,eax
+Mortal.Battle.PlayerStateTransition:CanDash+5e: 39 12           - cmp [edx],edx
+Mortal.Battle.PlayerStateTransition:CanDash+60: 8B 40 0C        - mov eax,[eax+0C]
+Mortal.Battle.PlayerStateTransition:CanDash+63: 8B 49 18        - mov ecx,[ecx+18]
 }
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>18</ID>
+              <ID>51</ID>
               <Description>"啟用? / Enabled?"</Description>
               <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
@@ -163,15 +162,15 @@ Mortal.Battle.CharacterHealth:ModifyHealth+2e: C7 44 24 04 00 00 00 00  - mov [e
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>is_uhp_enabled</Address>
+              <Address>is_uhp_enabled2</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>19</ID>
+              <ID>52</ID>
               <Description>"HP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_hp_addr</Address>
+              <Address>i_hp_addr2</Address>
               <Offsets>
                 <Offset>20</Offset>
               </Offsets>
@@ -180,8 +179,8 @@ Mortal.Battle.CharacterHealth:ModifyHealth+2e: C7 44 24 04 00 00 00 00  - mov [e
         </CheatEntry>
         <CheatEntry>
           <ID>23</ID>
-          <Description>"戰你娘親：HP / Battle: HP"</Description>
-          <Options moHideChildren="1"/>
+          <Description>"戰．你．娘．親：HP / Battle: HP"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript Async="1">{ Game   : Mortal.exe
   Version: 
@@ -276,6 +275,103 @@ Mortal.Combat.CombatStatUI+&lt;UpdateHealth&gt;d__13:MoveNext+66: B8 01 00 00 00
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
+              <ID>60</ID>
+              <Description>"對敵人傷害倍率 / damage multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">{ Game   : Mortal.exe
+  Version: 
+  Date   : 2024-06-15
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_DAMAGE_MULTI,8B 48 74 8B 57 14) // should be unique
+aobscanregion(INJECT_DAMAGE_MULTI,Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+20,Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+60,8B 48 74 8B 57 14) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(vf_damage_multi)
+
+newmem:
+
+code:
+  mov ecx,[eax+74]
+  mov edx,[edi+14]
+
+  // code start
+  cmp eax, [i_base_player_hp_addr]
+  je return
+
+  movss xmm7, [vf_damage_multi]
+  cvtsi2ss xmm6, edx
+  mulss xmm6, xmm7
+  cvtss2si edx, xmm6
+  mov [edi+14], edx
+  // code end
+
+  jmp return
+align 10 cc
+  vf_damage_multi:
+  dd (float)1.5
+
+INJECT_DAMAGE_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_DAMAGE_MULTI)
+registersymbol(vf_damage_multi)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI:
+  db 8B 48 74 8B 57 14
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+30
+
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+c: 8B 77 10              - mov esi,[edi+10]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+f: 8B 5F 0C              - mov ebx,[edi+0C]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+12: 85 F6                 - test esi,esi
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+14: 74 10                 - je Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+26
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+16: 83 FE 01              - cmp esi,01
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+19: 0F 84 D2 00 00 00     - je Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+f1
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+1f: 33 C0                 - xor eax,eax
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+21: E9 D4 00 00 00        - jmp Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+fa
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+26: C7 47 10 FF FF FF FF  - mov [edi+10],FFFFFFFF
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+2d: 8B 43 10              - mov eax,[ebx+10]
+// ---------- INJECTING HERE ----------
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+30: 8B 48 74              - mov ecx,[eax+74]
+// ---------- DONE INJECTING  ----------
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+33: 8B 57 14              - mov edx,[edi+14]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+36: 03 CA                 - add ecx,edx
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+38: 89 48 74              - mov [eax+74],ecx
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+3b: 8B 43 10              - mov eax,[ebx+10]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+3e: 89 45 C8              - mov [ebp-38],eax
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+41: 8B 40 74              - mov eax,[eax+74]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+44: 8B 8B AC 00 00 00     - mov ecx,[ebx+000000AC]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+4a: 8B 53 10              - mov edx,[ebx+10]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+4d: 8B 52 64              - mov edx,[edx+64]
+Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+50: 89 54 24 08           - mov [esp+08],edx
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>61</ID>
+                  <Description>"倍率 / multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_damage_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
               <ID>28</ID>
               <Description>"試著滿血? / try to full HP?"</Description>
               <DropDownList DisplayValueAsItem="1">0:No
@@ -313,7 +409,7 @@ Mortal.Combat.CombatStatUI+&lt;UpdateHealth&gt;d__13:MoveNext+66: B8 01 00 00 00
         <CheatEntry>
           <ID>10</ID>
           <Description>"取得一些數據 / Get stats"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Mortal.exe
   Version: 
@@ -343,8 +439,12 @@ label(i_alch_addr)
 label(i_disposition_addr)
 label(i_conduct_addr)
 label(i_refinement_addr)
-
-
+label(i_con_addr)
+label(i_chi_addr)
+label(i_lightness_addr)
+label(i_sword_addr)
+label(i_fist_addr)
+label(i_hidden_weapons_addr)
 
 newmem:
   push ecx
@@ -450,6 +550,47 @@ t_refinement:
 
   jmp endp
 
+t_con:
+  cmp ecx, 0
+  jne @F
+  mov [i_con_addr], edi
+
+  jmp endp
+
+t_chi:
+  cmp ecx, 1
+  jne @F
+  mov [i_chi_addr], edi
+
+  jmp endp
+
+t_ightness:
+  cmp ecx, 2
+  jne @F
+  mov [i_lightness_addr], edi
+
+  jmp endp
+
+t_sword:
+  cmp ecx, #100
+  jne @F
+  mov [i_sword_addr], edi
+
+  jmp endp
+
+t_fist:
+  cmp ecx, #102
+  jne @F
+  mov [i_fist_addr], edi
+
+  jmp endp
+
+t_hweapon:
+  cmp ecx, #101
+  jne @F
+  mov [i_hidden_weapons_addr], edi
+
+  jmp endp
 
 
 endp:
@@ -490,7 +631,18 @@ align 10 cc
   dd 0
   i_refinement_addr: //10
   dd 0
-
+  i_con_addr: // 0
+  dd 0
+  i_chi_addr: // 1
+  dd 0
+  i_lightness_addr: // 2
+  dd 0
+  i_sword_addr: // 100
+  dd 0
+  i_fist_addr: // 102
+  dd 0
+  i_hidden_weapons_addr: // 101
+  dd 0
 
 
 
@@ -514,6 +666,12 @@ registersymbol(i_alch_addr)
 registersymbol(i_disposition_addr)
 registersymbol(i_conduct_addr)
 registersymbol(i_refinement_addr)
+registersymbol(i_con_addr)
+registersymbol(i_chi_addr)
+registersymbol(i_lightness_addr)
+registersymbol(i_sword_addr)
+registersymbol(i_fist_addr)
+registersymbol(i_hidden_weapons_addr)
 
 [DISABLE]
 
@@ -723,6 +881,72 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
                 <Offset>28</Offset>
               </Offsets>
             </CheatEntry>
+            <CheatEntry>
+              <ID>54</ID>
+              <Description>"基礎體力 / base constitution"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_con_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>55</ID>
+              <Description>"基礎內力 / base chi"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_chi_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>58</ID>
+              <Description>"基礎拳掌 / base fist &amp; palm skill"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_fist_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>59</ID>
+              <Description>"基礎暗器 / base hidden weapons skill"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_hidden_weapons_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>57</ID>
+              <Description>"基礎刀劍 / base sword skill"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_sword_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>56</ID>
+              <Description>"基礎輕功 / base lightness skill"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_lightness_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
@@ -862,6 +1086,94 @@ Mortal.Core.MartialPanel+&lt;StartHandleUpgarde&gt;d__70:MoveNext+b7: C7 40 10 0
 Mortal.Core.MartialPanel+&lt;StartHandleUpgarde&gt;d__70:MoveNext+be: 89 48 0C                 - mov [eax+0C],ecx
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>46</ID>
+          <Description>"設定擲骰子結果 / Set dice result"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Mortal.exe
+  Version: 
+  Date   : 2024-06-15
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_SET_DICE_RESULT,8B C3 8D 65 F8 8D 65 F8 5E 5B C9 C3 00 00 68 88) // should be unique
+aobscanregion(INJECT_SET_DICE_RESULT,Mortal.Story.DiceCheckResult:get_ResultCount+90,Mortal.Story.DiceCheckResult:get_ResultCount+E0,8B C3 8D 65 F8) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(i_dtarget_value)
+newmem:
+  cmp dword ptr [i_dtarget_value], -1
+  je code
+  mov ebx, [i_dtarget_value]
+  //mov dword ptr [i_dtarget_value], -1
+code:
+  mov eax,ebx
+  lea esp,[ebp-08]
+  jmp return
+align 10 cc
+  i_dtarget_value:
+  dd -1
+
+INJECT_SET_DICE_RESULT:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_DICE_RESULT)
+registersymbol(i_dtarget_value)
+
+[DISABLE]
+
+INJECT_SET_DICE_RESULT:
+  db 8B C3 8D 65 F8
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Mortal.Story.DiceCheckResult:get_ResultCount+9a
+
+Mortal.Story.DiceCheckResult:get_ResultCount+7e: 74 08           - je Mortal.Story.DiceCheckResult:get_ResultCount+88
+Mortal.Story.DiceCheckResult:get_ResultCount+80: 8D 6D 00        - lea ebp,[ebp+00]
+Mortal.Story.DiceCheckResult:get_ResultCount+83: E8 C0 CB 63 F4  - call 046F37D8
+Mortal.Story.DiceCheckResult:get_ResultCount+88: EB 10           - jmp Mortal.Story.DiceCheckResult:get_ResultCount+9a
+Mortal.Story.DiceCheckResult:get_ResultCount+8a: 89 65 F4        - mov [ebp-0C],esp
+Mortal.Story.DiceCheckResult:get_ResultCount+8d: 83 EC 10        - sub esp,10
+Mortal.Story.DiceCheckResult:get_ResultCount+90: 8D 45 DC        - lea eax,[ebp-24]
+Mortal.Story.DiceCheckResult:get_ResultCount+93: 89 45 D4        - mov [ebp-2C],eax
+Mortal.Story.DiceCheckResult:get_ResultCount+96: 8B 65 F4        - mov esp,[ebp-0C]
+Mortal.Story.DiceCheckResult:get_ResultCount+99: C3              - ret 
+// ---------- INJECTING HERE ----------
+Mortal.Story.DiceCheckResult:get_ResultCount+9a: 8B C3           - mov eax,ebx
+// ---------- DONE INJECTING  ----------
+Mortal.Story.DiceCheckResult:get_ResultCount+9c: 8D 65 F8        - lea esp,[ebp-08]
+Mortal.Story.DiceCheckResult:get_ResultCount+9f: 8D 65 F8        - lea esp,[ebp-08]
+Mortal.Story.DiceCheckResult:get_ResultCount+a2: 5E              - pop esi
+Mortal.Story.DiceCheckResult:get_ResultCount+a3: 5B              - pop ebx
+Mortal.Story.DiceCheckResult:get_ResultCount+a4: C9              - leave 
+Mortal.Story.DiceCheckResult:get_ResultCount+a5: C3              - ret 
+100B6C36: 00 00           - add [eax],al
+100B6C38: 68 88 CA B8 23  - push 23B8CA88
+100B6C3D: E9 BE 94 5A F4  - jmp 04660100
+100B6C42: 00 00           - add [eax],al
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>47</ID>
+              <Description>"結果 / result"</Description>
+              <DropDownList DisplayValueAsItem="1">-1:不設定
+</DropDownList>
+              <ShowAsSigned>1</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_dtarget_value</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
