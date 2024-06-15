@@ -190,6 +190,10 @@ ja-JP: けものフレンズ Cellien May Cry
 zh-TW:夢幻模擬戰 I & II  
 ja-JP:ラングリッサーI&II  
 
+## Legend of Mortal  
+[Legend of Mortal (Steam)](https://store.steampowered.com/app/1859910/_/)  
+zh-TW:活俠傳  
+
 ## LIVE A LIVE
 [LIVE A LIVE (Steam)](https://store.steampowered.com/app/2014380/LIVE_A_LIVE/)  
 
