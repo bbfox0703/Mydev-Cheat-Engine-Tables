@@ -445,6 +445,9 @@ label(i_lightness_addr)
 label(i_sword_addr)
 label(i_fist_addr)
 label(i_hidden_weapons_addr)
+label(i_def_addr)
+
+label(i_mind_phase_addr_min)
 
 newmem:
   push ecx
@@ -471,10 +474,24 @@ t_cb:
   jmp endp
 t_mindp:
   cmp ecx, 6
-  jne @F
+  jne t_next1
   mov [i_mind_phase_addr], edi
 
+
+  // adjust value
+  push ecx
+  mov ecx, [i_mind_phase_addr_min]
+  cmp ecx, [edi+28]
+  jle mp_endp
+  mov [edi+28], ecx
+
+mp_endp:
+  pop ecx
+  // end
+
   jmp endp
+
+t_next1:
 t_assets:
   cmp ecx, #33
   jne @F
@@ -592,6 +609,13 @@ t_hweapon:
 
   jmp endp
 
+t_def:
+  cmp ecx, #29
+  jne @F
+  mov [i_def_addr], edi
+
+  jmp endp
+
 
 endp:
   pop ecx
@@ -643,6 +667,13 @@ align 10 cc
   dd 0
   i_hidden_weapons_addr: // 101
   dd 0
+  i_def_addr: // 29
+  dd 0
+
+
+
+  i_mind_phase_addr_min:
+  dd 0
 
 
 
@@ -672,6 +703,8 @@ registersymbol(i_lightness_addr)
 registersymbol(i_sword_addr)
 registersymbol(i_fist_addr)
 registersymbol(i_hidden_weapons_addr)
+registersymbol(i_mind_phase_addr_min)
+registersymbol(i_def_addr)
 
 [DISABLE]
 
@@ -741,7 +774,7 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
             <CheatEntry>
               <ID>13</ID>
               <Description>"貢獻 / contribution"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
+              <ShowAsSigned>1</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_contribution_addr</Address>
@@ -759,6 +792,16 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
               <Offsets>
                 <Offset>28</Offset>
               </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>78</ID>
+                  <Description>"最小心相值 / min. value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_mind_phase_addr_min</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>15</ID>
@@ -784,7 +827,7 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
             </CheatEntry>
             <CheatEntry>
               <ID>34</ID>
-              <Description>"向心力 / cohesive force"</Description>
+              <Description>"向心 / cohesive force"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -877,6 +920,17 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_refinement_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>79</ID>
+              <Description>"基礎防禦 / base def."</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_def_addr</Address>
               <Offsets>
                 <Offset>28</Offset>
               </Offsets>
@@ -1088,6 +1142,304 @@ Mortal.Core.MartialPanel+&lt;StartHandleUpgarde&gt;d__70:MoveNext+be: 89 48 0C  
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>65</ID>
+          <Description>"取得親蜜度 / Get relationship pt"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Mortal.exe
+  Version: 
+  Date   : 2024-06-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_GET_RELATION,8B 40 20 B9 67 66 66 66 F7 E9 89 55 E4) // should be unique
+aobscanregion(INJECT_GET_RELATION,Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+f,Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+2f,8B 40 20 B9 67 66 66 66) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(i_base_rel_addr)
+
+newmem:
+  mov [i_base_rel_addr], eax
+
+code:
+  mov eax,[eax+20]
+  mov ecx,66666667
+  jmp return
+align 10 cc
+  i_base_rel_addr:
+  dd 0
+
+INJECT_GET_RELATION:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_RELATION)
+registersymbol(i_base_rel_addr)
+
+[DISABLE]
+
+INJECT_GET_RELATION:
+  db 8B 40 20 B9 67 66 66 66
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+13
+
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle: 55              - push ebp
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+1: 8B EC           - mov ebp,esp
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+3: 53              - push ebx
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+4: 57              - push edi
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+5: 56              - push esi
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+6: 83 EC 3C        - sub esp,3C
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+9: 8B 45 08        - mov eax,[ebp+08]
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+c: 8B 40 38        - mov eax,[eax+38]
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+f: 8B C8           - mov ecx,eax
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+11: 39 09           - cmp [ecx],ecx
+// ---------- INJECTING HERE ----------
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+13: 8B 40 20        - mov eax,[eax+20]
+// ---------- DONE INJECTING  ----------
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+16: B9 67 66 66 66  - mov ecx,66666667
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+1b: F7 E9           - imul ecx
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+1d: 89 55 E4        - mov [ebp-1C],edx
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+20: 89 45 E0        - mov [ebp-20],eax
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+23: 8B 4D E4        - mov ecx,[ebp-1C]
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+26: C1 F9 02        - sar ecx,02
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+29: 8B C1           - mov eax,ecx
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+2b: C1 E8 1F        - shr eax,1F
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+2e: 03 C1           - add eax,ecx
+Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+30: 89 45 DC        - mov [ebp-24],eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>70</ID>
+              <Description>"手動使用方式：狀態 -&gt; 人際關係"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>71</ID>
+                  <Description>"Usage: stats -&gt; relationship"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>66</ID>
+              <Description>"ID"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_rel_addr</Address>
+              <Offsets>
+                <Offset>1C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>67</ID>
+              <Description>"親蜜度 / rel."</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_rel_addr</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>68</ID>
+              <Description>"預設親蜜度 / def. rel."</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_rel_addr</Address>
+              <Offsets>
+                <Offset>24</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>72</ID>
+          <Description>"親蜜度增減時倍率 / relationship multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Mortal.exe
+  Version: 
+  Date   : 2024-06-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_ADD_REL_PT,8B 46 20 03 45 0C 89) // should be unique
+aobscanregion(INJECT_ADD_REL_PT,Mortal.Core.RelationshipStat:AddValue+7,Mortal.Core.RelationshipStat:AddValue+27,8B 46 20 03 45 0C 89) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(is_mul_rel_add)
+label(is_mul_rel_min)
+label(vf_rel_add_multi)
+label(vf_rel_min_multi)
+label(i_base_rel_addr_4mul)
+
+newmem:
+  mov [i_base_rel_addr_4mul], esi
+  cvtsi2ss xmm7, [ebp+0C]
+
+  xorps xmm5, xmm5
+  ucomiss xmm7, xmm5
+  je code
+
+  movaps xmm6, [vf_rel_add_multi]
+  shufps xmm7, xmm7, 0
+  mulps xmm7, xmm6
+
+  ucomiss xmm7, xmm5
+  jb to_min
+
+to_add:
+  cmp dword ptr [is_mul_rel_add], 1
+  jne code
+
+  jmp code_pre
+
+to_min:
+  cmp dword ptr [is_mul_rel_min], 1
+  jne code
+
+  shufps xmm7, xmm7, 55
+
+code_pre:
+  cvtss2si eax, xmm7
+  mov [ebp+0C], eax
+
+code:
+  mov eax,[esi+20]
+  add eax,[ebp+0C]
+  jmp return
+align 10 cc
+  vf_rel_add_multi:
+  dd (float)1.5
+  vf_rel_min_multi:
+  dd (float)0.75
+  dd 0 0
+  is_mul_rel_add:
+  dd 1
+  is_mul_rel_min:
+  dd 0
+  i_base_rel_addr_4mul:
+  dd 0
+
+INJECT_ADD_REL_PT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_ADD_REL_PT)
+registersymbol(is_mul_rel_add)
+registersymbol(is_mul_rel_min)
+registersymbol(vf_rel_add_multi)
+registersymbol(vf_rel_min_multi)
+registersymbol(i_base_rel_addr_4mul)
+
+
+[DISABLE]
+
+INJECT_ADD_REL_PT:
+  db 8B 46 20 03 45 0C
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Mortal.Core.RelationshipStat:AddValue+a
+
+&lt;Module&gt;:runtime_invoke_void__this___object_int_int+da: 74 BD                    - je &lt;Module&gt;:runtime_invoke_void__this___object_int_int+99
+&lt;Module&gt;:runtime_invoke_void__this___object_int_int+dc: 83 EC 0C                 - sub esp,0C
+&lt;Module&gt;:runtime_invoke_void__this___object_int_int+df: 57                       - push edi
+&lt;Module&gt;:runtime_invoke_void__this___object_int_int+e0: 8D 6D 00                 - lea ebp,[ebp+00]
+&lt;Module&gt;:runtime_invoke_void__this___object_int_int+e3: E8 D8 E7 BD 00           - call 01A00B40
+Mortal.Core.RelationshipStat:AddValue: 55                       - push ebp
+Mortal.Core.RelationshipStat:AddValue+1: 8B EC                    - mov ebp,esp
+Mortal.Core.RelationshipStat:AddValue+3: 56                       - push esi
+Mortal.Core.RelationshipStat:AddValue+4: 83 EC 24                 - sub esp,24
+Mortal.Core.RelationshipStat:AddValue+7: 8B 75 08                 - mov esi,[ebp+08]
+// ---------- INJECTING HERE ----------
+Mortal.Core.RelationshipStat:AddValue+a: 8B 46 20                 - mov eax,[esi+20]
+// ---------- DONE INJECTING  ----------
+Mortal.Core.RelationshipStat:AddValue+d: 03 45 0C                 - add eax,[ebp+0C]
+Mortal.Core.RelationshipStat:AddValue+10: 89 46 20                 - mov [esi+20],eax
+Mortal.Core.RelationshipStat:AddValue+13: 8B 4E 28                 - mov ecx,[esi+28]
+Mortal.Core.RelationshipStat:AddValue+16: 89 4C 24 08              - mov [esp+08],ecx
+Mortal.Core.RelationshipStat:AddValue+1a: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Mortal.Core.RelationshipStat:AddValue+22: 89 04 24                 - mov [esp],eax
+Mortal.Core.RelationshipStat:AddValue+25: 8B C0                    - mov eax,eax
+Mortal.Core.RelationshipStat:AddValue+27: E8 9C DE F1 1B           - call UnityEngine.Mathf:Clamp
+Mortal.Core.RelationshipStat:AddValue+2c: 89 46 20                 - mov [esi+20],eax
+Mortal.Core.RelationshipStat:AddValue+2f: 8D 65 FC                 - lea esp,[ebp-04]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>73</ID>
+              <Description>"增加時啟動? / mul. when pt increase?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_mul_rel_add</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>74</ID>
+              <Description>"減少時啟動? / mul. when pt decrease?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_mul_rel_min</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>75</ID>
+              <Description>"增加時倍率 / inc. multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_rel_add_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>76</ID>
+              <Description>"減少時倍率 / dec. multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_rel_min_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>77</ID>
+              <Description>"目前值 / cur. value"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_rel_addr_4mul</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>46</ID>
           <Description>"設定擲骰子結果 / Set dice result"</Description>
           <Options moHideChildren="1"/>
@@ -1107,9 +1459,12 @@ alloc(newmem,$1000)
 label(code)
 label(return)
 label(i_dtarget_value)
+label(i_dice_result)
+
 newmem:
   cmp dword ptr [i_dtarget_value], -1
   je code
+  mov [i_dice_result], ebx
   mov ebx, [i_dtarget_value]
   //mov dword ptr [i_dtarget_value], -1
 code:
@@ -1119,12 +1474,15 @@ code:
 align 10 cc
   i_dtarget_value:
   dd -1
+  i_dice_result:
+  dd 1
 
 INJECT_SET_DICE_RESULT:
   jmp newmem
 return:
 registersymbol(INJECT_SET_DICE_RESULT)
 registersymbol(i_dtarget_value)
+registersymbol(i_dice_result)
 
 [DISABLE]
 
@@ -1173,13 +1531,21 @@ Mortal.Story.DiceCheckResult:get_ResultCount+a5: C3              - ret
               <VariableType>4 Bytes</VariableType>
               <Address>i_dtarget_value</Address>
             </CheatEntry>
+            <CheatEntry>
+              <ID>62</ID>
+              <Description>"orig. result"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_dice_result</Address>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>32</ID>
-      <Description>"活俠傳 Legend of Mortal v1.0.3122  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"活俠傳 Legend of Mortal v1.0.3124  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00AE57</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
