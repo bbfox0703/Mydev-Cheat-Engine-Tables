@@ -206,9 +206,17 @@ newmem:
   jne endp
   mov [i_base_player_hp_addr], ecx
   cmp dword ptr [is_full_hp], 1
-  jne endp
+  jne next2
 
   mov edx, [ecx+64]
+  mov [ecx+74], edx
+  jmp endp
+
+next2:
+  cmp dword ptr [is_full_hp], 2
+  jne endp
+
+  xor edx, edx
   mov [ecx+74], edx
 
 endp:
@@ -373,9 +381,10 @@ Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+50: 89 54
             </CheatEntry>
             <CheatEntry>
               <ID>28</ID>
-              <Description>"試著滿血? / try to full HP?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
+              <Description>"HP選項 / HP Option"</Description>
+              <DropDownList DisplayValueAsItem="1">0:不設定 / N/A
+1:試著滿血 / full
+2:一擊趴地 / one hit down
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -451,6 +460,11 @@ label(i_antip_addr)
 label(i_burst_addr)
 label(i_knowledge_addr)
 label(i_coco_addr_min)
+label(i_destiny_addr)
+label(i_guild_stat_addr)
+label(i_elemental_addr)
+label(i_morality_addr_min)
+
 
 label(i_mind_phase_addr_min)
 
@@ -524,8 +538,19 @@ t_forge:
   jmp endp
 t_morality:
   cmp ecx, #11
-  jne @F
+  jne t_cohesive
   mov [i_morality_addr], edi
+
+  // adjust value
+  push ecx
+  mov ecx, [i_morality_addr_min]
+  cmp ecx, [edi+28]
+  jle mp_endp_m0
+  mov [edi+28], ecx
+
+mp_endp_m0:
+  pop ecx
+  // end
 
   jmp endp
 
@@ -662,6 +687,27 @@ t_knowledge:
 
   jmp endp
 
+t_destiny:
+  cmp ecx, 7
+  jne @F
+  mov [i_destiny_addr], edi
+
+  jmp endp
+
+t_guild:
+  cmp ecx, #13
+  jne @F
+  mov [i_guild_stat_addr], edi
+
+  jmp endp
+
+t_element:
+  cmp ecx, #28
+  jne @F
+  mov [i_elemental_addr], edi
+
+  jmp endp
+
 
 endp:
   pop ecx
@@ -723,11 +769,20 @@ align 10 cc
   dd 0
   i_knowledge_addr: // 5
   dd 0
+  i_destiny_addr: // 7
+  dd 0
+  i_guild_stat_addr: // 13
+  dd 0
+  i_elemental_addr:  // 28
+  dd 0
+
 
 
   i_mind_phase_addr_min:
   dd 0
   i_coco_addr_min:
+  dd 0
+  i_morality_addr_min:
   dd 0
 
 
@@ -765,6 +820,10 @@ registersymbol(i_antip_addr)
 registersymbol(i_burst_addr)
 registersymbol(i_knowledge_addr)
 registersymbol(i_coco_addr_min)
+registersymbol(i_destiny_addr)
+registersymbol(i_guild_stat_addr)
+registersymbol(i_elemental_addr)
+registersymbol(i_morality_addr_min)
 
 [DISABLE]
 
@@ -805,7 +864,7 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
           <CheatEntries>
             <CheatEntry>
               <ID>17</ID>
-              <Description>"等待遊戲進行 / Wait turn "</Description>
+              <Description>"等待遊戲進行 / waiting for the game to proceed"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
@@ -918,6 +977,24 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
               </Offsets>
             </CheatEntry>
             <CheatEntry>
+              <ID>86</ID>
+              <Description>"唐門狀況 / Guild stat"</Description>
+              <DropDownList DisplayValueAsItem="1">1:日薄稀山
+2:雲開見日
+3:噴薄欲出
+4:旭日東昇
+5:如日方中
+6:烈日當空
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_guild_stat_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
               <ID>39</ID>
               <Description>"武學點數 / Skill pt."</Description>
               <ShowAsSigned>0</ShowAsSigned>
@@ -982,6 +1059,16 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
               <Offsets>
                 <Offset>28</Offset>
               </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>129</ID>
+                  <Description>"最低道德值 / min. morality / may not work"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_morality_addr_min</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>45</ID>
@@ -1111,6 +1198,28 @@ Mortal.Core.GameStat:get_FinalValue+2b: 03 D0           - add edx,eax
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_lightness_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>128</ID>
+              <Description>"屬性 / Elemental"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_elemental_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>85</ID>
+              <Description>"命運 (移至屬性人物頭像上) / Destiny"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_destiny_addr</Address>
               <Offsets>
                 <Offset>28</Offset>
               </Offsets>
@@ -1274,17 +1383,17 @@ alloc(newmem,$1000)
 
 label(code)
 label(return)
-label(i_base_rel_addr)
+label(i_base_rel_addr1)
 
 newmem:
-  mov [i_base_rel_addr], eax
+  mov [i_base_rel_addr1], eax
 
 code:
   mov eax,[eax+20]
   mov ecx,66666667
   jmp return
 align 10 cc
-  i_base_rel_addr:
+  i_base_rel_addr1:
   dd 0
 
 INJECT_GET_RELATION:
@@ -1292,7 +1401,7 @@ INJECT_GET_RELATION:
   nop 3
 return:
 registersymbol(INJECT_GET_RELATION)
-registersymbol(i_base_rel_addr)
+registersymbol(i_base_rel_addr1)
 
 [DISABLE]
 
@@ -1351,7 +1460,7 @@ Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+30: 89 45 DC        - mov 
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_base_rel_addr</Address>
+              <Address>i_base_rel_addr1</Address>
               <Offsets>
                 <Offset>1C</Offset>
               </Offsets>
@@ -1362,7 +1471,7 @@ Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+30: 89 45 DC        - mov 
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_base_rel_addr</Address>
+              <Address>i_base_rel_addr1</Address>
               <Offsets>
                 <Offset>20</Offset>
               </Offsets>
@@ -1373,9 +1482,20 @@ Mortal.Core.SocialStatPanel:UpdateCharacterInfoToggle+30: 89 45 DC        - mov 
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>i_base_rel_addr</Address>
+              <Address>i_base_rel_addr1</Address>
               <Offsets>
                 <Offset>24</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>87</ID>
+              <Description>"是否已經啟用 / active?"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_rel_addr1</Address>
+              <Offsets>
+                <Offset>2C</Offset>
               </Offsets>
             </CheatEntry>
           </CheatEntries>
@@ -1444,7 +1564,7 @@ align 10 cc
   vf_rel_add_multi:
   dd (float)1.5
   vf_rel_min_multi:
-  dd (float)0.75
+  dd (float)0.5
   dd 0 0
   is_mul_rel_add:
   dd 1
@@ -1554,6 +1674,549 @@ Mortal.Core.RelationshipStat:AddValue+2f: 8D 65 FC                 - lea esp,[eb
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>88</ID>
+          <Description>"編輯人際關係顯示或隱藏 (依操作、可能無法復原) / force active relationship"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Mortal.exe
+  Version: 
+  Date   : 2024-06-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscan(INJECT_FORCE_ACTIVE_REL,0F B6 40 2C 89 44 24 04) // should be unique
+aobscanregion(INJECT_FORCE_ACTIVE_REL,Mortal.Core.SocialCharacterButton:InitData+39,Mortal.Core.SocialCharacterButton:InitData+59,0F B6 40 2C 89 44 24 04) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return)
+label(is_force_show_all)
+label(i_base_rel_addr)
+
+newmem:
+  cmp dword ptr [is_force_show_all], 1
+  jne @F
+  mov byte ptr [eax+2C], 1
+
+chk_next:
+  push ecx
+  push edi
+  xor edi, edi
+
+loop_start:
+  mov ecx, i_base_rel_addr
+  lea ecx, [ecx+edi*4]
+  cmp [ecx], eax
+  je endp
+
+  cmp dword ptr [ecx], 0
+  jne loop_n
+  mov [ecx], eax
+  jmp endp
+
+loop_n:
+  inc edi
+  cmp edi, 21
+  jae endp
+  jmp loop_start
+
+endp:
+  pop edi
+  pop ecx
+
+
+code:
+  movzx eax,byte ptr [eax+2C]
+  mov [esp+04],eax
+  jmp return
+align 10 cc
+  is_force_show_all:
+  dd 0
+  i_base_rel_addr:
+  dd 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
+
+INJECT_FORCE_ACTIVE_REL:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FORCE_ACTIVE_REL)
+registersymbol(is_force_show_all)
+registersymbol(i_base_rel_addr)
+
+[DISABLE]
+
+INJECT_FORCE_ACTIVE_REL:
+  db 0F B6 40 2C 89 44 24 04
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Mortal.Core.SocialCharacterButton:InitData+40
+
+Mortal.Core.SocialCharacterButton:InitData+1b: E8 D8 AA 0E EA           - call UnityEngine.Object:op_Equality
+Mortal.Core.SocialCharacterButton:InitData+20: 85 C0                    - test eax,eax
+Mortal.Core.SocialCharacterButton:InitData+22: 74 15                    - je Mortal.Core.SocialCharacterButton:InitData+39
+Mortal.Core.SocialCharacterButton:InitData+24: C7 44 24 04 00 00 00 00  - mov [esp+04],00000000
+Mortal.Core.SocialCharacterButton:InitData+2c: 89 3C 24                 - mov [esp],edi
+Mortal.Core.SocialCharacterButton:InitData+2f: E8 6C 00 00 00           - call 32F067E8
+Mortal.Core.SocialCharacterButton:InitData+34: E9 4F 00 00 00           - jmp Mortal.Core.SocialCharacterButton:InitData+88
+Mortal.Core.SocialCharacterButton:InitData+39: 8B 47 20                 - mov eax,[edi+20]
+Mortal.Core.SocialCharacterButton:InitData+3c: 8B C8                    - mov ecx,eax
+Mortal.Core.SocialCharacterButton:InitData+3e: 39 09                    - cmp [ecx],ecx
+// ---------- INJECTING HERE ----------
+Mortal.Core.SocialCharacterButton:InitData+40: 0F B6 40 2C              - movzx eax,byte ptr [eax+2C]
+// ---------- DONE INJECTING  ----------
+Mortal.Core.SocialCharacterButton:InitData+44: 89 44 24 04              - mov [esp+04],eax
+Mortal.Core.SocialCharacterButton:InitData+48: 89 3C 24                 - mov [esp],edi
+Mortal.Core.SocialCharacterButton:InitData+4b: E8 60 00 00 00           - call Mortal.Core.SocialCharacterButton:SetActive
+Mortal.Core.SocialCharacterButton:InitData+50: 8B 77 1C                 - mov esi,[edi+1C]
+Mortal.Core.SocialCharacterButton:InitData+53: 33 DB                    - xor ebx,ebx
+Mortal.Core.SocialCharacterButton:InitData+55: EB 2A                    - jmp Mortal.Core.SocialCharacterButton:InitData+81
+Mortal.Core.SocialCharacterButton:InitData+57: 90                       - nop 
+Mortal.Core.SocialCharacterButton:InitData+58: 39 5E 0C                 - cmp [esi+0C],ebx
+Mortal.Core.SocialCharacterButton:InitData+5b: 0F 86 32 00 00 00        - jbe Mortal.Core.SocialCharacterButton:InitData+93
+Mortal.Core.SocialCharacterButton:InitData+61: 8D 44 9E 10              - lea eax,[esi+ebx*4+10]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>89</ID>
+              <Description>"手動使用方式：狀態 -&gt; 人際關係"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>90</ID>
+                  <Description>"Usage: stats -&gt; relationship"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>91</ID>
+              <Description>"強制顯示全部? / Force active all?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_force_show_all</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>92</ID>
+                  <Description>"切換頁面生效 / switch tabs to proceed"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>94</ID>
+              <Description>"各別資料 (點擊展開) / Data+"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>96</ID>
+                  <Description>"#1 唐中翎"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:隱藏 / Hide
+1:顯示 / Show
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>97</ID>
+                  <Description>"#2 唐布衣"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+4</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>98</ID>
+                  <Description>"#3 唐錚"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+8</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>99</ID>
+                  <Description>"#4 唐陞"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>100</ID>
+                  <Description>"#5 唐惟元"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+10</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>101</ID>
+                  <Description>"#6 唐默鈴"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+14</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>102</ID>
+                  <Description>"#7 龍淵"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+18</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>103</ID>
+                  <Description>"#8 龍湘"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+1C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>104</ID>
+                  <Description>"#9 石公遠"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+20</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>105</ID>
+                  <Description>"#10 葉雲舟"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+24</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>106</ID>
+                  <Description>"#11 葉雲裳"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+28</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>107</ID>
+                  <Description>"#12 宋悲"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+2C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>108</ID>
+                  <Description>"#13 王二壯"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+30</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>109</ID>
+                  <Description>"#14 宋富貴"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+34</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>110</ID>
+                  <Description>"#15 樊嘯天"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+38</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>111</ID>
+                  <Description>"#16 劉顎"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+3C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>112</ID>
+                  <Description>"#17 福韞"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+40</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>113</ID>
+                  <Description>"#18 萬里鵬程"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+44</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>114</ID>
+                  <Description>"#19 南宮深"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+48</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>115</ID>
+                  <Description>"#20 南宮淺"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+4C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>116</ID>
+                  <Description>"#21 尹志平"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+50</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>117</ID>
+                  <Description>"#22 申屠龍"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+54</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>118</ID>
+                  <Description>"#23 解無塵"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+58</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>119</ID>
+                  <Description>"#24 丹霞子"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+5C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>120</ID>
+                  <Description>"#25上官螢"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+60</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>121</ID>
+                  <Description>"#26 虞小梅"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+64</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>122</ID>
+                  <Description>"#27 夏侯蘭"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+68</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>123</ID>
+                  <Description>"#28 郁竹"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+6C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>124</ID>
+                  <Description>"#29 魏菊"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+70</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>125</ID>
+                  <Description>"#30 瑞笙"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+74</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>126</ID>
+                  <Description>"#31 夏靈犀"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+78</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>127</ID>
+                  <Description>"#32 趙逵"</Description>
+                  <DropDownListLink>#1 唐中翎</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_rel_addr+7C</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>46</ID>
           <Description>"設定擲骰子結果 / Set dice result"</Description>
           <Options moHideChildren="1"/>
@@ -1659,7 +2322,7 @@ Mortal.Story.DiceCheckResult:get_ResultCount+a5: C3              - ret
     </CheatEntry>
     <CheatEntry>
       <ID>32</ID>
-      <Description>"活俠傳 Legend of Mortal v1.0.3125  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"活俠傳 Legend of Mortal v1.0.3126  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00AE57</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
