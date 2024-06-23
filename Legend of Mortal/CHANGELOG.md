@@ -1,7 +1,8 @@
 # Changelog
 
 ## 2024/06/23  
-1. added "生死簿發生次數 / Types of death"
+1. added "生死簿發生次數 / Types of death"  
+1. added "汗青書 / Endings record"  
 
 ## 2024/06/22  
 1. added "取得所有書籍 / Get all books", "取得混戰/戰役剩餘人數 / Get group battle remaining NPC #"  
