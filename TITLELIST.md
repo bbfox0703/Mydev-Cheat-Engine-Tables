@@ -332,6 +332,10 @@ ja-JP: 英雄伝説 黎の軌跡Ⅱ-CRIMSON SiN-
 The Legend of Heroes: Sen no Kiseki I KAI -Thors Military Academy 1204- (Steam)  
 [zh-TW: 英雄傳說 閃之軌跡I：改 –Thors Military Academy 1204–](https://store.steampowered.com/app/1450120/___I_Kai_Thors_Military_Academy_1204/)  
 
+## THE LEGEND OF HEROES SEN NO KISEKI II KAI -The Erebonian Civil War-  
+The Legend of Heroes: Sen no Kiseki II KAI -The Erebonian Civil War- (Steam)
+zh-TW: 英雄傳說 閃之軌跡II：改 –The Erebonian Civil War- / THE LEGEND OF HEROES: SEN NO KISEKI II KAI -The Erebonian Civil War- (https://store.steampowered.com/app/1450090/_II_The_Erebonian_Civil_War__THE_LEGEND_OF_HEROES_SEN_NO_KISEKI_II_KAI_The_Erebonian_Civil_War/)
+
 ## The Legend of Heroes Trails of Cold Steel (Japanese) 英雄伝説 閃の軌跡  
 The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)  
 [ja-JP: 英雄伝説 閃の軌跡](https://store.steampowered.com/app/538680/_/)  
