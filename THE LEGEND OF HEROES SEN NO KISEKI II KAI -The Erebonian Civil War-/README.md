@@ -1,4 +1,4 @@
-# The Legend of Heroes: Sen no Kiseki I KAI -Thors Military Academy 1204- Cheat Engine table
+# The Legend of Heroes: Sen no Kiseki II KAI -The Erebonian Civil War- Cheat Engine table
 
 The Legend of Heroes: Sen no Kiseki II KAI -The Erebonian Civil War- (Steam)
 
