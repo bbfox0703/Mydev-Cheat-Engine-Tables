@@ -330,31 +330,35 @@ ja-JP: 英雄伝説 黎の軌跡Ⅱ-CRIMSON SiN-
 
 ## The Legend of Heroes Sen no Kiseki I KAI -Thors Military Academy 1204-  
 The Legend of Heroes: Sen no Kiseki I KAI -Thors Military Academy 1204- (Steam)  
-[zh-TW: 英雄傳說 閃之軌跡I：改 –Thors Military Academy 1204–](https://store.steampowered.com/app/1450120/___I_Kai_Thors_Military_Academy_1204/)  
+[zh-TW: 英雄傳說 閃之軌跡I：改 –Thors Military Academy 1204– (Steam)](https://store.steampowered.com/app/1450120/___I_Kai_Thors_Military_Academy_1204/)  
 
 ## THE LEGEND OF HEROES SEN NO KISEKI II KAI -The Erebonian Civil War-  
 The Legend of Heroes: Sen no Kiseki II KAI -The Erebonian Civil War- (Steam)
-zh-TW: 英雄傳說 閃之軌跡II：改 –The Erebonian Civil War- / THE LEGEND OF HEROES: SEN NO KISEKI II KAI -The Erebonian Civil War- (https://store.steampowered.com/app/1450090/_II_The_Erebonian_Civil_War__THE_LEGEND_OF_HEROES_SEN_NO_KISEKI_II_KAI_The_Erebonian_Civil_War/)
+[zh-TW: 英雄傳說 閃之軌跡II：改 –The Erebonian Civil War- / THE LEGEND OF HEROES: SEN NO KISEKI II KAI -The Erebonian Civil War- (Steam)](https://store.steampowered.com/app/1450090/_II_The_Erebonian_Civil_War__THE_LEGEND_OF_HEROES_SEN_NO_KISEKI_II_KAI_The_Erebonian_Civil_War/)
 
 ## The Legend of Heroes Sen no Kiseki III  
 The Legend of Heroes: Sen no Kiseki III (Steam)
-zh-TW: 英雄傳說 閃之軌跡III / THE LEGEND OF HEROES: SEN NO KISEKI III (https://store.steampowered.com/app/1450080/The_Legend_of_Heroes_Sen_no_Kiseki_III/)  
+[zh-TW: 英雄傳說 閃之軌跡III / THE LEGEND OF HEROES: SEN NO KISEKI III (Steam)](https://store.steampowered.com/app/1450080/The_Legend_of_Heroes_Sen_no_Kiseki_III/)  
+
+## The Legend of Heroes Sen no Kiseki IV -THE END OF SAGA-  
+The Legend of Heroes Sen no Kiseki IV -THE END OF SAGA- (Steam)
+[zh-TW: 英雄傳說 閃之軌跡IV -THE END OF SAGA- (Steam)](https://store.steampowered.com/app/1457510/___IV_THE_END_OF_SAGA/)  
 
 ## The Legend of Heroes Trails of Cold Steel (Japanese) 英雄伝説 閃の軌跡  
 The Legend of Heroes: Trails of Cold Steel (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡](https://store.steampowered.com/app/538680/_/)  
+[ja-JP: 英雄伝説 閃の軌跡 (Steam)](https://store.steampowered.com/app/538680/_/)  
 
 ## The Legend of Heroes Trails of Cold Steel II (Japanese) 英雄伝説 閃の軌跡II  
 The Legend of Heroes: Trails of Cold Steel II (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡II](https://store.steampowered.com/app/748490/The_Legend_of_Heroes_Trails_of_Cold_Steel_II/)  
+[ja-JP: 英雄伝説 閃の軌跡II (Steam)](https://store.steampowered.com/app/748490/The_Legend_of_Heroes_Trails_of_Cold_Steel_II/)  
 
 ## The Legend of Heroes Trails of Cold Steel III (Japanese) 英雄伝説 閃の軌跡III  
 The Legend of Heroes: Trails of Cold Steel III (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡III](https://store.steampowered.com/app/991270/The_Legend_of_Heroes_Trails_of_Cold_Steel_III/)  
+[ja-JP: 英雄伝説 閃の軌跡III (Steam)](https://store.steampowered.com/app/991270/The_Legend_of_Heroes_Trails_of_Cold_Steel_III/)  
 
 ## The Legend of Heroes Trails of Cold Steel IV (Japanese) 英雄伝説 閃の軌跡IV  
 The Legend of Heroes: Trails of Cold Steel IV (Japanese language) (Steam)  
-[ja-JP: 英雄伝説 閃の軌跡IV](https://store.steampowered.com/app/1198090/The_Legend_of_Heroes_Trails_of_Cold_Steel_IV/)  
+[ja-JP: 英雄伝説 閃の軌跡IV (Steam)](https://store.steampowered.com/app/1198090/The_Legend_of_Heroes_Trails_of_Cold_Steel_IV/)  
 
 ## The Legend of Heroes Zero no Kiseki KAI  
 [The Legend of Heroes: Zero no Kiseki Kai (Steam)](https://store.steampowered.com/app/1457520/_/)  
