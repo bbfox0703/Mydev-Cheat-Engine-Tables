@@ -2,7 +2,7 @@
 
 THE LEGEND OF HEROES: HAJIMARI NO KISEKI  (Steam)
 
-zh-TW: THE LEGEND OF HEROES: HAJIMARI NO KISEKI  
+zh-TW: 英雄傳說 創之軌跡  
 ha-JP: 英雄伝説 創の軌跡  
  
 ## Release
