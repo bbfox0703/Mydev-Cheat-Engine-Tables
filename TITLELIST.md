@@ -151,6 +151,11 @@ ja-JP: ファイナルファンタジーVI ピクセルリマスター
 [FINAL FANTASY X HD Remaster (Steam)](https://store.steampowered.com/app/359870/FINAL_FANTASY_XX2_HD_Remaster/)  
 ja-JP: ファイナルファンタジーX HD リマスター  
 
+## FINAL FANTASY XVI  
+[FINAL FANTASY XVI (Steam)] (https://store.steampowered.com/app/2515020/FINAL_FANTASY_XVI/)  
+zh-TW: 太空戰士XVI   
+ja-JP: ファイナルファンタジー XVI  
+
 ## Frostpunk
 [Frostpunk (Steam)](https://store.steampowered.com/app/323190/Frostpunk/)
 
