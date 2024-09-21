@@ -239,10 +239,20 @@ alloc(newmem,$1000,INJECT_LIMIT_BREAK_MULTI)
 label(code)
 label(return)
 label(vf_lb_multi)
+label(i_min_lb_value)
 
 newmem:
   cmp r9d, 0
   jle code
+
+  push r15
+  mov r15d, [i_min_lb_value]
+  cmp dword ptr [rbx+48], r15d
+  jae @F
+
+  mov dword ptr [rbx+48], r15d
+@@:
+  pop r15
 
   vcvtsi2ss xmm15, xmm15, r9d
   vmovss xmm14, [vf_lb_multi]
@@ -256,6 +266,8 @@ code:
 align 10 cc
   vf_lb_multi:
   dd (float)3.3333333333
+  i_min_lb_value:
+  dd #10000
 
 INJECT_LIMIT_BREAK_MULTI:
   jmp newmem
@@ -263,6 +275,7 @@ INJECT_LIMIT_BREAK_MULTI:
 return:
 registersymbol(INJECT_LIMIT_BREAK_MULTI)
 registersymbol(vf_lb_multi)
+registersymbol(i_min_lb_value)
 [DISABLE]
 
 INJECT_LIMIT_BREAK_MULTI:
@@ -307,6 +320,14 @@ ffxvi.exe+5DDC10: C3              - ret
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
           <Address>vf_lb_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>25</ID>
+          <Description>"min. value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_min_lb_value</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -616,7 +637,8 @@ ffxvi.exe+6A96F0: 4C 8B C8        - mov r9,rax
     </CheatEntry>
     <CheatEntry>
       <ID>17</ID>
-      <Description>"Gil gain: x4 income"</Description>
+      <Description>"Gil gain: *4 income"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ffxvi.exe
   Version: 
@@ -631,10 +653,12 @@ alloc(newmem,$1000,INJECT_ADD_GIL)
 
 label(code)
 label(return)
+label(i_ig_base_addr)
 
 newmem:
+  mov [i_ig_base_addr], rdx
   cmp esi, 0
-  jl @F
+  jl code
   vcvtsi2ss xmm15, xmm15, esi
   vmovss xmm14, [vf_gil_multi]
   vmulss xmm15, xmm15, xmm14
@@ -651,18 +675,21 @@ code:
 align 10 cc
   vf_gil_multi:
   dd (float)4
+  i_ig_base_addr:
+  dq 0
 
 INJECT_ADD_GIL:
   jmp newmem
 return:
 registersymbol(INJECT_ADD_GIL)
+registersymbol(i_ig_base_addr)
 
 [DISABLE]
 
 INJECT_ADD_GIL:
   db 03 C6 89 42 04
 
-unregistersymbol(INJECT_ADD_GIL)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -693,6 +720,33 @@ ffxvi.exe+6A8F3B: 8B CF           - mov ecx,edi
 ffxvi.exe+6A8F3D: C6 44 24 28 01  - mov byte ptr [rsp+28],01
 }
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"Last ID"</Description>
+          <DropDownList DisplayValueAsItem="1">1:Gil
+3:Ability pt
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_ig_base_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"#"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_ig_base_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>19</ID>
