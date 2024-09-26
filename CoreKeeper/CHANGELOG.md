@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/09/26
+1. Revised for 1.0.0.10
+
 ## 2024/09/10
 1. Revised for 1.0.0.6
 
