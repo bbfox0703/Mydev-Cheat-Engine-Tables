@@ -1,4 +1,7 @@
 # Changelog
+  
+## 2024/09/27  
+1. revised for 1.01  
 
 ## 2024/09/24  
 1. added alternative scripts  
