@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/10/05  
+1. Minor tweaks  
+
 ## 2024/10/04  
 1. Minor tweaks  
 
