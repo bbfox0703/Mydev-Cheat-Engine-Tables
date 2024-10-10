@@ -77,8 +77,7 @@ unregistersymbol(*)
             </CheatEntry>
             <CheatEntry>
               <ID>3</ID>
-              <Description>"1. Get dust / influence (Active: in empire summary window, click on empire summary again / 於帝國概要中、再點擊帝國概要)"</Description>
-              <Options moHideChildren="1"/>
+              <Description>"1. Get dust / influence"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : EndlessSpace2.exe
   Version: 
@@ -98,10 +97,13 @@ label(i_influence_addr)
 
 newmem:
   push rbx
-  mov ebx, [rax+38] //InternalPropertyNameHandle
-  cmp ebx, #52453
+
+  //mov ebx, [rax+38] //InternalPropertyNameHandle
+  //cmp ebx, #52453
+  cmp dword ptr [i_idx], 0
   je to_set_dust
-  cmp ebx, #52454
+  //cmp ebx, #52454
+  cmp dword ptr [i_idx], 3
   je to_set_influence
 
   jmp endp
@@ -120,6 +122,8 @@ to_set_influence:
   jmp endp
 
 endp:
+  inc dword ptr [i_idx]
+
   pop rbx
 
 code:
@@ -131,6 +135,9 @@ align 10 cc
   dq 0
   i_influence_addr:
   dq 0
+  i_idx:
+  dd 0
+
 
 INJECT_GET_VALUES:
   jmp newmem
@@ -179,6 +186,24 @@ Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+1c: C3  
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
+                  <ID>63</ID>
+                  <Description>"Active: in empire summary window, click on empire summary again / 於帝國概要中、再點擊帝國概要"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>64</ID>
+                  <Description>"Re-enable if value is invalid / 數值不對時請重來"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"Notice: Wait for seconds if game just loaded / 剛讀檔或是新遊戲時、請等一下"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
                   <ID>4</ID>
                   <Description>"Dust / 星塵"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -205,16 +230,17 @@ Amplitude.Unity.Simulation.SimulationProperty_DefaultProperty:get_Value+1c: C3  
             <CheatEntry>
               <ID>10</ID>
               <Description>"2. Get strategic resources (Active: in empire summary window, click on empire summary again / 於帝國概要中、再點擊帝國概要)"</Description>
-              <Options moHideChildren="1"/>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : EndlessSpace2.exe
-  Version: 
-  Date   : 2023-03-08
-  Author : bbfox @ https://opencheattables.com
+  Version:
+  Date   : 2024-10-09
+  Author :
 }
 
 [ENABLE]
-aobscanregion(INJECT_GET_MINRES_VALUE,AmplitudeUnitySimulationPropertiesSimulationProperty_PropertyWithMinget_ValueProc+b,AmplitudeUnitySimulationPropertiesSimulationProperty_PropertyWithMinget_ValueProc+1b,F3 0F 10 40 68) // should be unique
+
+aobscanregion(INJECT_GET_MINRES_VALUE,DepartmentOfTheTreasury:TryGetResourceStockValue+123,DepartmentOfTheTreasury:TryGetResourceStockValue+143,FF 90 A0 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_MINRES_VALUE)
 
 label(code)
@@ -227,82 +253,153 @@ label(i_orichalcix_addr)
 label(i_quadrinix_addr)
 label(i_human_resource_addr)
 label(i_approval_addr)
+label(i_base_stra_data)
+label(i_base_offset)
+label(i_base_offset_r)
 
 newmem:
+  movss xmm15,[rcx+68]
+
+  pushfq
+  push r15
+  push r14
+  mov dword ptr [i_idx2], 0
+loop_1:
+  mov r15, i_base_stra_data
+  mov r14d, [i_idx2]
+  lea r15, [r15+r14d*8]
+  cmp [r15], rcx
+  je endp1
+  cmp qword ptr [r15], 0
+  jne next_1
+
+  mov [r15], rcx
+
+  cmp dword ptr [i_idx2], 1
+  jne endp1
+  mov r14, i_base_stra_data
+  mov r14d, [r14+38]
+  mov r15d, [rcx+38]
+  add r14d, 1
+  cmp r14d, r15d
+  je set_to_0
+  jmp set_to_1
+
+set_to_0:
+  cmp dword ptr [i_base_offset], 100
+  jne endp1
+  mov dword ptr [i_base_offset], 0
+  jmp endp1
+
+set_to_1:
+  cmp dword ptr [i_base_offset], 100
+  jne endp1
+  mov dword ptr [i_base_offset], 8
+  jmp endp1
+
+next_1:
+  inc dword ptr [i_idx2]
+  cmp dword ptr [i_idx2], 14
+  jae endp1_pre
+  jmp loop_1
+
+endp1_pre:
+  //mov dword ptr [i_filled], 1
+
+
+endp1:
+  pop r14
+  pop r15
+  popfq
+
+  jmp code
+
+
+  //cmp dword ptr [i_idx2], 1
+  //jbe code
+  pushfq
   push rbx
-  mov ebx, [rax+38] //InternalPropertyNameHandle
-  cmp ebx, #52501
+  //mov ebx, [rax+38] //InternalPropertyNameHandle
+  mov ebx, [i_base_offset]
+  cmp dword ptr [i_idx], ebx
   je to_set_titanium
-  cmp ebx, #52502
+  add ebx, 1
+  cmp dword ptr [i_idx], ebx
   je to_set_hyperium
-  cmp ebx, #52503
+  add ebx, 1
+  cmp dword ptr [i_idx], ebx
   je to_set_adamantian
-  cmp ebx, #52504
+  add ebx, 1
+  cmp dword ptr [i_idx], ebx
   je to_set_antimatter
-  cmp ebx, #52505
+  add ebx, 1
+  cmp dword ptr [i_idx], ebx
   je to_set_orichalcix
-  cmp ebx, #52506
+  add ebx, 1
+  cmp dword ptr [i_idx], ebx
   je to_set_quadrinix
-  cmp ebx, #50684
-  je to_set_human_resource
-  cmp ebx, #51153
-  je to_set_approval
+  //cmp ebx, #50684
+  //je to_set_human_resource
+  //cmp ebx, #51153
+  //je to_set_approval
   jmp endp
 
 to_set_titanium:
   cmp qword ptr [i_titanium_addr], 0
   jne endp
-  lea rbx, [rax+68] //value
+  lea rbx, [rcx+68] //value
   mov [i_titanium_addr], rbx
   jmp endp
 to_set_hyperium:
   cmp qword ptr [i_hyperium_addr], 0
   jne endp
-  lea rbx, [rax+68]
+  lea rbx, [rcx+68]
   mov [i_hyperium_addr], rbx
   jmp endp
 to_set_adamantian:
   cmp qword ptr [i_adamantian_addr], 0
   jne endp
-  lea rbx, [rax+68]
+  lea rbx, [rcx+68]
   mov [i_adamantian_addr], rbx
   jmp endp
 to_set_antimatter:
   cmp qword ptr [i_antimatter_addr], 0
   jne endp
-  lea rbx, [rax+68] //value
+  lea rbx, [rcx+68] //value
   mov [i_antimatter_addr], rbx
   jmp endp
 to_set_orichalcix:
   cmp qword ptr [i_orichalcix_addr], 0
   jne endp
-  lea rbx, [rax+68]
+  lea rbx, [rcx+68]
   mov [i_orichalcix_addr], rbx
   jmp endp
 to_set_quadrinix:
   cmp qword ptr [i_quadrinix_addr], 0
   jne endp
-  lea rbx, [rax+68]
+  lea rbx, [rcx+68]
   mov [i_quadrinix_addr], rbx
   jmp endp
 to_set_human_resource:
   cmp qword ptr [i_human_resource_addr], 0
   jne endp
-  lea rbx, [rax+68] //value
+  lea rbx, [rcx+68] //value
   mov [i_human_resource_addr], rbx
   jmp endp
 to_set_approval:
   cmp qword ptr [i_approval_addr], 0
   jne endp
-  lea rbx, [rax+68] //value
+  lea rbx, [rcx+68] //value
   mov [i_approval_addr], rbx
   jmp endp
 
 endp:
+  inc dword ptr [i_idx]
   pop rbx
+  popfq
 
 code:
-  movss xmm0,[rax+68]
+  call qword ptr [rax+000000A0]
   jmp return
 align 10 cc
   i_titanium_addr:
@@ -321,55 +418,74 @@ align 10 cc
   dq 0
   i_approval_addr:
   dq 0
+  i_idx:
+  dd 0
+  i_idx2:
+  dd 0
+  i_base_offset:
+  dd 100
+  i_base_offset_r:
+  dd 0
+  i_stra_idx:
+  dd 0
+  align 10 cc
+  i_base_stra_data:
+  dq 0
+  align 100 0
+  db 0
+
 
 INJECT_GET_MINRES_VALUE:
   jmp newmem
+  nop
 return:
-
 registersymbol(i_human_resource_addr)
 registersymbol(i_quadrinix_addr)
 registersymbol(i_orichalcix_addr)
 registersymbol(i_antimatter_addr)
 registersymbol(i_hyperium_addr)
 registersymbol(i_adamantian_addr)
-registersymbol(INJECT_GET_MINRES_VALUE)
 registersymbol(i_titanium_addr)
 registersymbol(i_approval_addr)
+registersymbol(i_base_stra_data)
+registersymbol(i_base_offset)
+registersymbol(INJECT_GET_MINRES_VALUE)
+registersymbol(i_base_offset_r)
 
 [DISABLE]
 
 INJECT_GET_MINRES_VALUE:
-  db F3 0F 10 40 68
+  db FF 90 A0 00 00 00
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+b
+// ORIGINAL CODE - INJECTION POINT: DepartmentOfTheTreasury:TryGetResourceStockValue+133
 
-308DC813: 00 00              - add [rax],al
-308DC815: 00 00              - add [rax],al
-308DC817: 00 00              - add [rax],al
-308DC819: 00 00              - add [rax],al
-308DC81B: 00 00              - add [rax],al
-308DC81D: 00 00              - add [rax],al
-308DC81F: 00 48 83           - add [rax-7D],cl
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+2: EC                 - in al,dx
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+3: 08 48 89           - or [rax-77],cl
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+6: 0C 24              - or al,24
+DepartmentOfTheTreasury:TryGetResourceStockValue+11a: 41 FF D3           - call r11
+DepartmentOfTheTreasury:TryGetResourceStockValue+11d: 48 83 C4 20        - add rsp,20
+DepartmentOfTheTreasury:TryGetResourceStockValue+121: 33 C0              - xor eax,eax
+DepartmentOfTheTreasury:TryGetResourceStockValue+123: EB 29              - jmp DepartmentOfTheTreasury:TryGetResourceStockValue+14e
+DepartmentOfTheTreasury:TryGetResourceStockValue+125: 49 8B CC           - mov rcx,r12
+DepartmentOfTheTreasury:TryGetResourceStockValue+128: 48 83 EC 20        - sub rsp,20
+DepartmentOfTheTreasury:TryGetResourceStockValue+12c: 49 8B 04 24        - mov rax,[r12]
+DepartmentOfTheTreasury:TryGetResourceStockValue+130: 90                 - nop
+DepartmentOfTheTreasury:TryGetResourceStockValue+131: 90                 - nop
+DepartmentOfTheTreasury:TryGetResourceStockValue+132: 90                 - nop
 // ---------- INJECTING HERE ----------
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+8: 48 8B C1           - mov rax,rcx
+DepartmentOfTheTreasury:TryGetResourceStockValue+133: FF 90 A0 00 00 00  - call qword ptr [rax+000000A0]
 // ---------- DONE INJECTING  ----------
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+b: F3 0F 10 40 68     - movss xmm0,[rax+68]
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+10: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+14: F2 0F 5A C0        - cvtsd2ss xmm0,xmm0
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+18: 48 83 C4 08        - add rsp,08
-Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Value+1c: C3                 - ret 
-308DC83D: 00 00              - add [rax],al
-308DC83F: 00 00              - add [rax],al
-308DC841: 00 00              - add [rax],al
-308DC843: 00 1D 00 00 00 2C  - add [5C8DC849],bl
-308DC849: 00 00              - add [rax],al
+DepartmentOfTheTreasury:TryGetResourceStockValue+139: 48 83 C4 20        - add rsp,20
+DepartmentOfTheTreasury:TryGetResourceStockValue+13d: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
+DepartmentOfTheTreasury:TryGetResourceStockValue+141: F2 0F 5A E8        - cvtsd2ss xmm5,xmm0
+DepartmentOfTheTreasury:TryGetResourceStockValue+145: F3 0F 11 2F        - movss [rdi],xmm5
+DepartmentOfTheTreasury:TryGetResourceStockValue+149: B8 01 00 00 00     - mov eax,00000001
+DepartmentOfTheTreasury:TryGetResourceStockValue+14e: 48 8D 65 E0        - lea rsp,[rbp-20]
+DepartmentOfTheTreasury:TryGetResourceStockValue+152: 41 5F              - pop r15
+DepartmentOfTheTreasury:TryGetResourceStockValue+154: 41 5E              - pop r14
+DepartmentOfTheTreasury:TryGetResourceStockValue+156: 41 5C              - pop r12
+DepartmentOfTheTreasury:TryGetResourceStockValue+158: 5F                 - pop rdi
 }
 </AssemblerScript>
               <CheatEntries>
@@ -379,9 +495,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_titanium_addr</Address>
+                  <Address>i_base_stra_data+[i_base_offset]</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -390,9 +506,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_hyperium_addr</Address>
+                  <Address>i_base_stra_data+[i_base_offset]+[i_base_offset]</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -401,9 +517,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_adamantian_addr</Address>
+                  <Address>i_base_stra_data+[i_base_offset]+[i_base_offset]+[i_base_offset]</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -412,9 +528,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_antimatter_addr</Address>
+                  <Address>i_base_stra_data+[i_base_offset]+[i_base_offset]+[i_base_offset]+[i_base_offset]</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -423,9 +539,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_orichalcix_addr</Address>
+                  <Address>i_base_stra_data+[i_base_offset]+[i_base_offset]+[i_base_offset]+[i_base_offset]+[i_base_offset]</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -434,9 +550,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_quadrinix_addr</Address>
+                  <Address>i_base_stra_data+[i_base_offset]+[i_base_offset]+[i_base_offset]+[i_base_offset]+[i_base_offset]+[i_base_offset]</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -445,9 +561,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_human_resource_addr</Address>
+                  <Address>i_base_unneeded_addr+30</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -456,9 +572,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_human_resource_addr</Address>
+                  <Address>i_base_unneeded_addr+30</Address>
                   <Offsets>
-                    <Offset>-18</Offset>
+                    <Offset>50</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -467,9 +583,9 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_human_resource_addr</Address>
+                  <Address>i_base_unneeded_addr+30</Address>
                   <Offsets>
-                    <Offset>-10</Offset>
+                    <Offset>58</Offset>
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
@@ -478,10 +594,157 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Float</VariableType>
-                  <Address>i_approval_addr</Address>
+                  <Address>i_base_unneeded_addr+8</Address>
                   <Offsets>
-                    <Offset>0</Offset>
+                    <Offset>68</Offset>
                   </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>65</ID>
+                  <Description>"Colony limit"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>i_base_unneeded_addr+10</Address>
+                  <Offsets>
+                    <Offset>68</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>60</ID>
+                  <Description>"2.1 Get HR &amp; Approval"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : EndlessSpace2.exe
+  Version: 
+  Date   : 2024-10-09
+  Author :
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_HR,Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+47,Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+67,FF 90 A0 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_HR)
+
+label(code)
+label(return)
+label(i_base_unneeded_addr)
+
+newmem:
+  cmp qword ptr [rcx+10], 0
+  je code
+
+  //cmp dword ptr [rcx+3C], 64
+  //jbe code
+
+  movss xmm15, [rcx+68]
+
+  cmp dword ptr [i_filled], 1
+  je code
+
+  push r15
+  push r14
+  mov dword ptr [i_idx], 0
+loop_1:
+  mov r15, i_base_unneeded_addr
+  mov r14d, [i_idx]
+  lea r15, [r15+r14d*8]
+  cmp [r15], rcx
+  je endp
+  cmp qword ptr [r15], 0
+  jne next_1
+  mov [r15], rcx
+  jmp endp
+
+next_1:
+  inc dword ptr [i_idx]
+  cmp dword ptr [i_idx], 64
+  jae endp_pre
+  jmp loop_1
+
+endp_pre:
+  mov dword ptr [i_filled], 1
+
+endp:
+  pop r14
+  pop r15
+
+code:
+  call qword ptr [rax+000000A0]
+  jmp return
+align 10 cc
+  i_idx:
+  dd 0
+  i_filled:
+  dd 0
+  align 10 0
+  i_base_unneeded_addr:
+  dq 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
+INJECT_GET_HR:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_HR)
+registersymbol(i_base_unneeded_addr)
+
+[DISABLE]
+
+INJECT_GET_HR:
+  db FF 90 A0 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+57
+
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+3e: 75 0A              - jne Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+4a
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+40: 66 0F 57 C0        - xorpd xmm0,xmm0
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+44: F2 0F 5A C0        - cvtsd2ss xmm0,xmm0
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+48: EB 1F              - jmp Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+69
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+4a: 48 8B CE           - mov rcx,rsi
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+4d: 48 83 EC 20        - sub rsp,20
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+51: 48 8B 06           - mov rax,[rsi]
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+54: 90                 - nop 
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+55: 90                 - nop 
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+56: 90                 - nop 
+// ---------- INJECTING HERE ----------
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+57: FF 90 A0 00 00 00  - call qword ptr [rax+000000A0]
+// ---------- DONE INJECTING  ----------
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+5d: 48 83 C4 20        - add rsp,20
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+61: F3 0F 5A C0        - cvtss2sd xmm0,xmm0
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+65: F2 0F 5A C0        - cvtsd2ss xmm0,xmm0
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+69: 48 8B 75 F8        - mov rsi,[rbp-08]
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+6d: C9                 - leave 
+Amplitude.Unity.Simulation.SimulationObject:Unsafe_GetPropertyValue+6e: C3                 - ret 
+41F0281F: 00 00              - add [rax],al
+41F02821: 00 00              - add [rax],al
+41F02823: 00 6F 00           - add [rdi+00],ch
+41F02826: 00 00              - add [rax],al
+}
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>61</ID>
+                      <Description>"Active: Close any window, in main screen click on empire summary window / 關閉任何視窗 (只有主畫面)，點擊帝國概要"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>62</ID>
+                      <Description>"Notice: have to try several times"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -894,10 +1157,54 @@ Hero:get_SkillPoints+10e: C3                             - ret
     </CheatEntry>
     <CheatEntry>
       <ID>49</ID>
-      <Description>"ENDLESS™ Space 2 v1.5.60 S5 GOLD-Public  /  https://opencheattables.com  /  CE 7.4+"</Description>
+      <Description>"ENDLESS™ Space 2 v1.5.60 S5 GOLD-Public  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00A400</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
+  <Structures StructVersion="2">
+    <Structure Name="SimulationProperty_PropertyWithMin" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
+      <Elements>
+        <Element Offset="16" Vartype="Pointer" Bytesize="8" OffsetHex="00000010" Description="PropertyWhichDependOnMe" DisplayMethod="unsigned integer"/>
+        <Element Offset="24" Vartype="Pointer" Bytesize="8" OffsetHex="00000018" Description="PropertyFromWhichIDepend" DisplayMethod="unsigned integer"/>
+        <Element Offset="32" Vartype="Pointer" Bytesize="8" OffsetHex="00000020" Description="InternalModifierProviders" DisplayMethod="unsigned integer"/>
+        <Element Offset="40" Vartype="Pointer" Bytesize="8" OffsetHex="00000028" Description="InternalModifierProviderPathIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="48" Vartype="Pointer" Bytesize="8" OffsetHex="00000030" Description="InternalPropertyDescriptor" DisplayMethod="unsigned integer"/>
+        <Element Offset="56" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000038" Description="InternalPropertyNameHandle" DisplayMethod="unsigned integer"/>
+        <Element Offset="60" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000003C" Description="OrderedIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="64" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000040" Description="ModifierWithTagRefreshCount" DisplayMethod="unsigned integer"/>
+        <Element Offset="68" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000044" Description="InternalComposition" DisplayMethod="unsigned integer"/>
+        <Element Offset="72" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000048" Description="InternalRoundingFunction" DisplayMethod="unsigned integer"/>
+        <Element Offset="76" Vartype="Byte" Bytesize="1" OffsetHex="0000004C" Description="InternalIsSealed" DisplayMethod="unsigned integer"/>
+        <Element Offset="80" Vartype="Float" Bytesize="4" OffsetHex="00000050" Description="ComputedValue" DisplayMethod="unsigned integer"/>
+        <Element Offset="88" Vartype="Float" Bytesize="4" OffsetHex="00000058" Description="baseValue" DisplayMethod="unsigned integer"/>
+        <Element Offset="92" Vartype="Byte" Bytesize="1" OffsetHex="0000005C" Description="baseValueWasModified" DisplayMethod="unsigned integer"/>
+        <Element Offset="96" Vartype="Float" Bytesize="4" OffsetHex="00000060" Description="value" DisplayMethod="unsigned integer"/>
+        <Element Offset="104" Vartype="Float" Bytesize="4" OffsetHex="00000068" Description="value" DisplayMethod="unsigned integer"/>
+        <Element Offset="108" Vartype="Float" Bytesize="4" OffsetHex="0000006C" Description="minValue" DisplayMethod="unsigned integer"/>
+      </Elements>
+    </Structure>
+    <Structure Name="SimulationProperty_PropertyWithMin" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
+      <Elements>
+        <Element Offset="16" Vartype="Pointer" Bytesize="8" OffsetHex="00000010" Description="PropertyWhichDependOnMe" DisplayMethod="unsigned integer"/>
+        <Element Offset="24" Vartype="Pointer" Bytesize="8" OffsetHex="00000018" Description="PropertyFromWhichIDepend" DisplayMethod="unsigned integer"/>
+        <Element Offset="32" Vartype="Pointer" Bytesize="8" OffsetHex="00000020" Description="InternalModifierProviders" DisplayMethod="unsigned integer"/>
+        <Element Offset="40" Vartype="Pointer" Bytesize="8" OffsetHex="00000028" Description="InternalModifierProviderPathIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="48" Vartype="Pointer" Bytesize="8" OffsetHex="00000030" Description="InternalPropertyDescriptor" DisplayMethod="unsigned integer"/>
+        <Element Offset="56" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000038" Description="InternalPropertyNameHandle" DisplayMethod="unsigned integer"/>
+        <Element Offset="60" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000003C" Description="OrderedIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="64" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000040" Description="ModifierWithTagRefreshCount" DisplayMethod="unsigned integer"/>
+        <Element Offset="68" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000044" Description="InternalComposition" DisplayMethod="unsigned integer"/>
+        <Element Offset="72" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000048" Description="InternalRoundingFunction" DisplayMethod="unsigned integer"/>
+        <Element Offset="76" Vartype="Byte" Bytesize="1" OffsetHex="0000004C" Description="InternalIsSealed" DisplayMethod="unsigned integer"/>
+        <Element Offset="80" Vartype="Float" Bytesize="4" OffsetHex="00000050" Description="ComputedValue" DisplayMethod="unsigned integer"/>
+        <Element Offset="88" Vartype="Float" Bytesize="4" OffsetHex="00000058" Description="baseValue" DisplayMethod="unsigned integer"/>
+        <Element Offset="92" Vartype="Byte" Bytesize="1" OffsetHex="0000005C" Description="baseValueWasModified" DisplayMethod="unsigned integer"/>
+        <Element Offset="96" Vartype="Float" Bytesize="4" OffsetHex="00000060" Description="value" DisplayMethod="unsigned integer"/>
+        <Element Offset="104" Vartype="Float" Bytesize="4" OffsetHex="00000068" Description="value" DisplayMethod="unsigned integer"/>
+        <Element Offset="108" Vartype="Float" Bytesize="4" OffsetHex="0000006C" Description="minValue" DisplayMethod="unsigned integer"/>
+      </Elements>
+    </Structure>
+  </Structures>
 </CheatTable>
