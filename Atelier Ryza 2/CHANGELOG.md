@@ -1,5 +1,8 @@
 # Change log
 
+## 2024/10/12
+1. Revised for v1.08
+
 ## 2024/09/21
 1. Revised for v1.07
  
