@@ -60,7 +60,7 @@ unregistersymbol(*)
         <CheatEntry>
           <ID>17</ID>
           <Description>"Empire, dust, incluence, strategic resource / 帝國,星塵,影響力和戰略資源"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
@@ -1287,12 +1287,13 @@ label(i_base_ship_move_addr)
 label(i_base_ship_hp_addr)
 label(i_base_ship_sensor_addr)
 label(i_base_research_prog_addr)
+label(i_base_ship_sensor_addrs)
 
 newmem:
   cmp dword ptr [rcx+3C], #38  // colony progress
   jne @F
-  cmp qword ptr [i_base_colony_data_addr], 0
-  jne code
+  //cmp qword ptr [i_base_colony_data_addr], 0
+  //jne code
   mov [i_base_colony_data_addr], rcx
   jmp code
 
@@ -1315,7 +1316,7 @@ newmem:
 
 @@:
   // get ship HP
-  cmp dword ptr [rcx+3C], #12  // ship steps
+  cmp dword ptr [rcx+3C], #12
   jne @F
 
   mov [i_base_ship_hp_addr], rcx
@@ -1324,12 +1325,73 @@ newmem:
 @@:
   // get ship sensors
   cmp dword ptr [rcx+3C], #161
-  jne @F
+  jne chk_research
 
-  mov [i_base_ship_sensor_addr], rcx
+  vmovss xmm14, [vf_1]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
+  vmovss xmm14, [vf_2]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
+  vmovss xmm14, [vf_3]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
+  vmovss xmm14, [vf_4]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
+  vmovss xmm14, [vf_5]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
+  vmovss xmm14, [vf_6]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
+  vmovss xmm14, [vf_7]
+  vmovss xmm15, [rcx+68]
+  vucomiss xmm15, xmm14
+  je s_next_1
   jmp code
 
-@@:
+s_next_1:
+  mov [i_base_ship_sensor_addr], rcx
+
+  push r15
+  push r14
+  xor r14, r14
+
+loop_1:
+  mov r15, i_base_ship_sensor_addrs
+  lea r15, [r15+r14d*8]
+  cmp qword ptr [r15], 0
+  je write_data
+  cmp [r15], rcx
+  je end_write_1
+  jmp loop_pre
+
+write_data:
+  mov [r15], rcx
+  jmp end_write_1
+
+loop_pre:
+  inc r14d
+  cmp r14d, 1E
+  ja end_write_1
+
+  jmp loop_1
+
+end_write_1:
+  pop r14
+  pop r15
+
+
+  jmp code
+
+chk_research:
   // research progress
   cmp dword ptr [rcx+3C], #46
   jne @F
@@ -1362,6 +1424,23 @@ align 10 cc
   dd (float)1
   vf_18:
   dd (float)18
+  vf_2:
+  dd (float)2
+  vf_3:
+  dd (float)3
+  vf_4:
+  dd (float)4
+  vf_5:
+  dd (float)5
+  vf_6:
+  dd (float)6
+  vf_7:
+  dd (float)7
+  align 10 cc
+  i_base_ship_sensor_addrs:
+  dq 0
+  align 100 0
+  db 0
 
 
 INJECT_GET_COLONY_PROGESSS:
@@ -1373,6 +1452,7 @@ registersymbol(i_base_ship_move_addr)
 registersymbol(i_base_ship_hp_addr)
 registersymbol(i_base_ship_sensor_addr)
 registersymbol(i_base_research_prog_addr)
+registersymbol(i_base_ship_sensor_addrs)
 
 [DISABLE]
 
@@ -1466,7 +1546,7 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                 </CheatEntry>
                 <CheatEntry>
                   <ID>82</ID>
-                  <Description>"Get ship available movement"</Description>
+                  <Description>"Get ship available movement (must be non-zero)"</Description>
                   <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
@@ -1556,7 +1636,7 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                 </CheatEntry>
                 <CheatEntry>
                   <ID>95</ID>
-                  <Description>"Get ship sensor"</Description>
+                  <Description>"Get ship sensor (must be non-zero)"</Description>
                   <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
@@ -1582,6 +1662,178 @@ Amplitude.Unity.Simulation.Properties.SimulationProperty_PropertyWithMin:get_Val
                       <Offsets>
                         <Offset>68</Offset>
                       </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>119</ID>
+                      <Description>"First 15 records"</Description>
+                      <GroupHeader>1</GroupHeader>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>117</ID>
+                          <Description>"01"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>118</ID>
+                          <Description>"02"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+8</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>120</ID>
+                          <Description>"03"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+10</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>121</ID>
+                          <Description>"04"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+18</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>122</ID>
+                          <Description>"05"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+20</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>123</ID>
+                          <Description>"06"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+28</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>124</ID>
+                          <Description>"07"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+30</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>125</ID>
+                          <Description>"08"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+38</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>126</ID>
+                          <Description>"09"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+40</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>127</ID>
+                          <Description>"10"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+48</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>128</ID>
+                          <Description>"11"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+50</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>129</ID>
+                          <Description>"12"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+58</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>130</ID>
+                          <Description>"13"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+60</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>131</ID>
+                          <Description>"14"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+68</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>132</ID>
+                          <Description>"15"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Float</VariableType>
+                          <Address>i_base_ship_sensor_addrs+70</Address>
+                          <Offsets>
+                            <Offset>68</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
