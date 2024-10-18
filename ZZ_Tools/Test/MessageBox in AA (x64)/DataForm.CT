@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Code: start_a subroutine (Enable first)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : project1.exe
+  Version: 
+  Date   : 2022-10-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+alloc(newmem,$1000, project1.exe)
+
+label(code)
+label(start_a)
+
+newmem:
+start_a:
+   push rbp
+   // method 1,
+   mov rbp,rsp
+   lea rsp,[rsp-40]
+
+   // store fastcall registers
+   // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
+   //push rax
+   //push rcx
+   //push rdx
+   //push r8
+   //push r9
+
+   // method 2: edit rsp
+   sub rsp, #8  //Align the stack to a multiple of 16 bytes
+   sub rsp, #32 //32 bytes of shadow space
+
+   call MessageBoxA
+
+   // return code in rax register
+   add rsp, #40
+
+   //pop r9
+   //pop r8
+   //pop rdx
+   //pop rcx
+   //pop rax
+
+code:
+   //use leave as:
+   //lea rsp,[rbp+00]
+   //pop rbp
+
+   leave
+   ret
+align 10 cc
+   MB_ICONASTERISK:
+   dd 40
+
+
+registersymbol(start_a)
+
+
+[DISABLE]
+unregistersymbol(start_a)
+dealloc(newmem)
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"MessageBox  (call/ret, AA)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : project1.exe
+  Version: 
+  Date   : 2022-10-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TEST,project1.exe,83 80 C8 07 00 00 01) // should be unique
+alloc(newmem,$1000,INJECT_TEST)
+
+label(code)
+label(return)
+
+newmem:
+
+  push rax
+  push rcx
+  push rdx
+  push r8
+  push r9
+  xor ecx, ecx
+  mov rdx, s_text
+  mov r8, s_caption
+  //mov r9d, 0
+  mov r9d, 24 //MB_YESNO or MB_ICONQUESTION
+  call start_a
+  // return rax: IDYES: 6, IDNO: 7
+  pop r9
+  pop r8
+  pop rdx
+  pop rcx
+  pop rax
+
+code:
+  add dword ptr [rax+000007C8],01
+  jmp return
+align 10 cc
+  s_text:
+  db 'Click on Yes or No for test', 0
+  align 10 0
+  s_caption:
+  db 'This is message title', 0
+
+INJECT_TEST:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_TEST)
+
+[DISABLE]
+
+INJECT_TEST:
+  db 83 80 C8 07 00 00 01
+
+unregistersymbol(INJECT_TEST)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: project1.exe+2C331
+
+project1.exe+2C30C: 00 00                    - add [rax],al
+project1.exe+2C30E: 00 00                    - add [rax],al
+project1.exe+2C310: 55                       - push rbp
+project1.exe+2C311: 48 89 E5                 - mov rbp,rsp
+project1.exe+2C314: 48 8D A4 24 C0 FE FF FF  - lea rsp,[rsp-00000140]
+project1.exe+2C31C: 48 89 4D F0              - mov [rbp-10],rcx
+project1.exe+2C320: 48 89 55 F8              - mov [rbp-08],rdx
+project1.exe+2C324: 48 C7 45 E8 00 00 00 00  - mov qword ptr [rbp-18],00000000
+project1.exe+2C32C: 90                       - nop 
+project1.exe+2C32D: 48 8B 45 F0              - mov rax,[rbp-10]
+// ---------- INJECTING HERE ----------
+project1.exe+2C331: 83 80 C8 07 00 00 01     - add dword ptr [rax+000007C8],01
+// ---------- DONE INJECTING  ----------
+project1.exe+2C338: 48 8B 45 F0              - mov rax,[rbp-10]
+project1.exe+2C33C: 8B 80 C8 07 00 00        - mov eax,[rax+000007C8]
+project1.exe+2C342: 89 45 E4                 - mov [rbp-1C],eax
+project1.exe+2C345: 41 B9 FF 00 00 00        - mov r9d,000000FF
+project1.exe+2C34B: 4C 8D 85 E4 FE FF FF     - lea r8,[rbp-0000011C]
+project1.exe+2C352: 48 C7 C2 FF FF FF FF     - mov rdx,FFFFFFFFFFFFFFFF
+project1.exe+2C359: 48 63 4D E4              - movsxd  rcx,dword ptr [rbp-1C]
+project1.exe+2C35D: E8 5E 9C FD FF           - call project1.exe+5FC0
+project1.exe+2C362: 45 31 C0                 - xor r8d,r8d
+project1.exe+2C365: 48 8D 95 E4 FE FF FF     - lea rdx,[rbp-0000011C]
+}
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"MessageBox  (direct, AA)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : project1.exe
+  Version: 
+  Date   : 2022-10-27
+  Author :  bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TEST,project1.exe,83 80 C8 07 00 00 01) // should be unique
+alloc(newmem,$1000,INJECT_TEST)
+
+label(code)
+label(return)
+
+newmem:
+
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+
+   sub rsp, #8  //Align the stack to a multiple of 16 bytes
+   sub rsp, #32 //32 bytes of shadow space
+   xor ecx, ecx
+   mov rdx, s_text
+   mov r8, s_caption
+   mov r9d, 0
+   call  MessageBoxA
+   add rsp, #40
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+
+code:
+  add dword ptr [rax+000007C8],01
+  jmp return
+align 10 cc
+  s_text:
+  db 'This is message body', 0
+  align 10 0
+  s_caption:
+  db 'This is message title', 0
+
+INJECT_TEST:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_TEST)
+
+[DISABLE]
+
+INJECT_TEST:
+  db 83 80 C8 07 00 00 01
+
+unregistersymbol(INJECT_TEST)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: project1.exe+2C331
+
+project1.exe+2C30C: 00 00                    - add [rax],al
+project1.exe+2C30E: 00 00                    - add [rax],al
+project1.exe+2C310: 55                       - push rbp
+project1.exe+2C311: 48 89 E5                 - mov rbp,rsp
+project1.exe+2C314: 48 8D A4 24 C0 FE FF FF  - lea rsp,[rsp-00000140]
+project1.exe+2C31C: 48 89 4D F0              - mov [rbp-10],rcx
+project1.exe+2C320: 48 89 55 F8              - mov [rbp-08],rdx
+project1.exe+2C324: 48 C7 45 E8 00 00 00 00  - mov qword ptr [rbp-18],00000000
+project1.exe+2C32C: 90                       - nop 
+project1.exe+2C32D: 48 8B 45 F0              - mov rax,[rbp-10]
+// ---------- INJECTING HERE ----------
+project1.exe+2C331: 83 80 C8 07 00 00 01     - add dword ptr [rax+000007C8],01
+// ---------- DONE INJECTING  ----------
+project1.exe+2C338: 48 8B 45 F0              - mov rax,[rbp-10]
+project1.exe+2C33C: 8B 80 C8 07 00 00        - mov eax,[rax+000007C8]
+project1.exe+2C342: 89 45 E4                 - mov [rbp-1C],eax
+project1.exe+2C345: 41 B9 FF 00 00 00        - mov r9d,000000FF
+project1.exe+2C34B: 4C 8D 85 E4 FE FF FF     - lea r8,[rbp-0000011C]
+project1.exe+2C352: 48 C7 C2 FF FF FF FF     - mov rdx,FFFFFFFFFFFFFFFF
+project1.exe+2C359: 48 63 4D E4              - movsxd  rcx,dword ptr [rbp-1C]
+project1.exe+2C35D: E8 5E 9C FD FF           - call project1.exe+5FC0
+project1.exe+2C362: 45 31 C0                 - xor r8d,r8d
+project1.exe+2C365: 48 8D 95 E4 FE FF FF     - lea rdx,[rbp-0000011C]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"LoadForm"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : project1.exe
+  Version: 
+  Date   : 2022-10-27
+  Author :  bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TEST,project1.exe,83 80 C8 07 00 00 01) // should be unique
+alloc(newmem,$1000,INJECT_TEST)
+
+
+alloc(ShowValuesMemory, 200)  // 分配一塊記憶體來保存地址和其他資料
+alloc(loadMemoryViewer, 256)   // 用來保存LoadLibrary返回的地址
+alloc(procAddress, 8)          // 保存ShowValues函數的地址
+
+label(returnHere)
+label(callShowValues)
+
+
+
+
+
+label(code)
+label(return)
+
+newmem:
+  sub rsp, 8
+  sub rsp, 20               // 保留 32 字節的 shadow space
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+  lea rcx, [MemoryViewer_dll] // 加載DLL的完整路徑到RCX中 (RCX是x64呼叫規約中第一個參數)
+  call LoadLibraryA           // 呼叫LoadLibraryA
+
+  add rsp, 28               // 恢復堆疊指針，釋放 shadow space
+  mov [loadMemoryViewer], rax // 保存DLL基址
+  test rax, rax              // 檢查返回值是否為0
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+  jz returnHere              // 如果LoadLibrary失敗則跳回
+  //mov [loadMemoryViewer], rax // 保存DLL基址
+
+// 取得ShowValues的函數地址
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+   push r15
+  mov rcx, [loadMemoryViewer]
+  sub rsp, 8
+  sub rsp, 20               // 保留 32 字節的 shadow space
+  lea rdx, [ShowValues_str]
+  //push r15
+  call GetProcAddress
+  add rsp, 28               // 恢復堆疊指針，釋放 shadow space
+  mov [procAddress], rax     // 保存函數地址
+  test rax, rax              // 檢查返回值是否為0
+   pop r15
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+  jz returnHere              // 如果GetProcAddress失敗則跳回
+  //mov [procAddress], rax     // 保存函數地址
+
+// 呼叫ShowValues函數
+callShowValues:
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+  mov rdx, ShowValuesMemory  // 第二個參數是指向地址陣列的指標
+  mov rcx, 1                   // 陣列長度為1
+  mov rax, [procAddress]
+  sub rsp, 8
+  sub rsp, 20                 // 保留 32 字節的 shadow space
+  call rax                     // 呼叫ShowValues函數
+  add rsp, 28                 // 恢復堆疊指針，釋放 shadow space
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+
+returnHere:
+  nop
+
+code:
+  add dword ptr [rax+000007C8],01
+  jmp return
+align 10 cc
+  s_text:
+  db 'This is message body', 0
+  align 10 0
+  s_caption:
+  db 'This is message title', 0
+  ShowValues_str:
+  db 'ShowValues', 0             // ANSI字串，結束符為0
+  ShowValuesMemory:
+  dq 0x12345678               // 這是範例地址，你可以依需求自行設定
+  MemoryViewer_dll:
+  db 'D:\GitHub\Mydev-Cheat-Engine-Tables\ZZ_Tools\Test\DataForm\DataForm.dll', 0  // DLL路徑
+
+INJECT_TEST:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_TEST)
+
+[DISABLE]
+
+INJECT_TEST:
+  db 83 80 C8 07 00 00 01
+
+unregistersymbol(INJECT_TEST)
+dealloc(newmem)
+dealloc(ShowValuesMemory)
+dealloc(loadMemoryViewer)
+dealloc(procAddress)
+{
+// ORIGINAL CODE - INJECTION POINT: project1.exe+2C331
+
+project1.exe+2C30C: 00 00                    - add [rax],al
+project1.exe+2C30E: 00 00                    - add [rax],al
+project1.exe+2C310: 55                       - push rbp
+project1.exe+2C311: 48 89 E5                 - mov rbp,rsp
+project1.exe+2C314: 48 8D A4 24 C0 FE FF FF  - lea rsp,[rsp-00000140]
+project1.exe+2C31C: 48 89 4D F0              - mov [rbp-10],rcx
+project1.exe+2C320: 48 89 55 F8              - mov [rbp-08],rdx
+project1.exe+2C324: 48 C7 45 E8 00 00 00 00  - mov qword ptr [rbp-18],00000000
+project1.exe+2C32C: 90                       - nop 
+project1.exe+2C32D: 48 8B 45 F0              - mov rax,[rbp-10]
+// ---------- INJECTING HERE ----------
+project1.exe+2C331: 83 80 C8 07 00 00 01     - add dword ptr [rax+000007C8],01
+// ---------- DONE INJECTING  ----------
+project1.exe+2C338: 48 8B 45 F0              - mov rax,[rbp-10]
+project1.exe+2C33C: 8B 80 C8 07 00 00        - mov eax,[rax+000007C8]
+project1.exe+2C342: 89 45 E4                 - mov [rbp-1C],eax
+project1.exe+2C345: 41 B9 FF 00 00 00        - mov r9d,000000FF
+project1.exe+2C34B: 4C 8D 85 E4 FE FF FF     - lea r8,[rbp-0000011C]
+project1.exe+2C352: 48 C7 C2 FF FF FF FF     - mov rdx,FFFFFFFFFFFFFFFF
+project1.exe+2C359: 48 63 4D E4              - movsxd  rcx,dword ptr [rbp-1C]
+project1.exe+2C35D: E8 5E 9C FD FF           - call project1.exe+5FC0
+project1.exe+2C362: 45 31 C0                 - xor r8d,r8d
+project1.exe+2C365: 48 8D 95 E4 FE FF FF     - lea rdx,[rbp-0000011C]
+}
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
