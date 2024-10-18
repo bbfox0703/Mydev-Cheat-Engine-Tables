@@ -41,7 +41,7 @@ end
 
 {$asm}
 define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
-define(ResidenceUpdateFirewoodProc, "Residence.UpdateFirewood")
+define(ResidenceUpdateHeatingProc, "Residence.UpdateHeating")
 define(ResidenceUpdateWaterProc, "Residence.UpdateWater")
 define(VillagerEatIfNecessaryProc, "Villager.EatIfNecessary")
 define(ItemStorageRemoveItemsProc, "ItemStorage.RemoveItems")
@@ -66,7 +66,7 @@ define(ReservableItemStorageGetItemCountOfAllUnneededItemsProc, "ReservableItemS
 //ItemStorage.RemoveItems  GameAssembly.dll+938C74
 
 registersymbol(ResourceManagerClearItemCountsProc)
-registersymbol(ResidenceUpdateFirewoodProc)
+registersymbol(ResidenceUpdateHeatingProc)
 registersymbol(ResidenceUpdateWaterProc)
 registersymbol(VillagerEatIfNecessaryProc)
 registersymbol(ItemStorageRemoveItemsProc)
@@ -97,14 +97,15 @@ unregistersymbol(*)
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
-  Date   : 2023-11-19
+  Date   : 2024-10-18
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
 //aobscanmodule(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,GameAssembly.dll,F3 0F 58 87 78 05 00 00) // should be unique
-aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,ResidenceUpdateFirewoodProc+260,ResidenceUpdateFirewoodProc+320,F3 0F 58 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 48 8B 0D) // should be unique
+//aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,ResidenceUpdateHeatingProc+260,ResidenceUpdateHeatingProc+320,F3 0F 58 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 48 8B 0D) // should be unique
+aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,ResidenceUpdateHeatingProc+200,ResidenceUpdateHeatingProc+320,F3 0F 10 ?? ?? ?? 00 00 F3 0F 58 ?? ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 ?? ?? ?? ?? ?? ?? ?? 0F ?? ?? ?? ?? ?? 0F ?? ?? 8B) // should be unique
 alloc(newmem,$1000,INJECT_RESIDENCE_FIREWOOD_BURN_RATE)
 
 alloc(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo,8)
@@ -120,7 +121,7 @@ newmem:
 
 
 code:
-  //addss xmm0,[rbx+00000590]
+  //addss xmm1,[rdi+00000608]
   jmp return
 
 INJECT_RESIDENCE_FIREWOOD_BURN_RATE:
@@ -133,7 +134,7 @@ registersymbol(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo)
 [DISABLE]
 
 INJECT_RESIDENCE_FIREWOOD_BURN_RATE:
-  //db F3 0F 58 87 FC 05 00 00
+  //db .. .. ......
   readmem(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo, 8)
 
 unregistersymbol(*)
@@ -142,31 +143,31 @@ dealloc(newmem)
 dealloc(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+D5063F
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+E5A2B2
 
-GameAssembly.dll+D5060D: 0F 28 74 24 50           - movaps xmm6,[rsp+50]
-GameAssembly.dll+D50612: 4C 8B 7C 24 60           - mov r15,[rsp+60]
-GameAssembly.dll+D50617: 48 8B B4 24 90 00 00 00  - mov rsi,[rsp+00000090]
-GameAssembly.dll+D5061F: 48 8B AC 24 88 00 00 00  - mov rbp,[rsp+00000088]
-GameAssembly.dll+D50627: 48 8B 9C 24 80 00 00 00  - mov rbx,[rsp+00000080]
-GameAssembly.dll+D5062F: 48 83 C4 68              - add rsp,68
-GameAssembly.dll+D50633: 41 5E                    - pop r14
-GameAssembly.dll+D50635: 5F                       - pop rdi
-GameAssembly.dll+D50636: C3                       - ret
-GameAssembly.dll+D50637: F3 0F 10 87 F8 05 00 00  - movss xmm0,[rdi+000005F8]
+GameAssembly.dll+E5A288: 45 33 C0                 - xor r8d,r8d
+GameAssembly.dll+E5A28B: E8 F0 79 A1 FF           - call ItemStorage.GetItemCount
+GameAssembly.dll+E5A290: 0F 57 F6                 - xorps xmm6,xmm6
+GameAssembly.dll+E5A293: 85 DB                    - test ebx,ebx
+GameAssembly.dll+E5A295: 0F 85 82 01 00 00        - jne GameAssembly.dll+E5A41D
+GameAssembly.dll+E5A29B: 85 C0                    - test eax,eax
+GameAssembly.dll+E5A29D: 75 13                    - jne GameAssembly.dll+E5A2B2
+GameAssembly.dll+E5A29F: 44 89 B7 14 06 00 00     - mov [rdi+00000614],r14d
+GameAssembly.dll+E5A2A6: 44 89 B7 0C 06 00 00     - mov [rdi+0000060C],r14d
+GameAssembly.dll+E5A2AD: E9 CF 02 00 00           - jmp GameAssembly.dll+E5A581
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+D5063F: F3 0F 58 87 FC 05 00 00  - addss xmm0,[rdi+000005FC]
+GameAssembly.dll+E5A2B2: F3 0F 10 8F 0C 06 00 00  - movss xmm1,[rdi+0000060C]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+D50647: F3 0F 11 87 FC 05 00 00  - movss [rdi+000005FC],xmm0
-GameAssembly.dll+D5064F: 48 8B 0D F2 EB A1 02     - mov rcx,[GameAssembly.dll+376F248]
-GameAssembly.dll+D50656: 44 39 B1 E0 00 00 00     - cmp [rcx+000000E0],r14d
-GameAssembly.dll+D5065D: 75 05                    - jne GameAssembly.dll+D50664
-GameAssembly.dll+D5065F: E8 EC 37 5B FF           - call GameAssembly.dll+303E50
-GameAssembly.dll+D50664: 44 38 35 FD 21 BD 02     - cmp [GameAssembly.dll+3922868],r14b
-GameAssembly.dll+D5066B: 75 13                    - jne GameAssembly.dll+D50680
-GameAssembly.dll+D5066D: 48 8D 0D D4 EB A1 02     - lea rcx,[GameAssembly.dll+376F248]
-GameAssembly.dll+D50674: E8 27 E4 60 FF           - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+54E0
-GameAssembly.dll+D50679: C6 05 E8 21 BD 02 01     - mov byte ptr [GameAssembly.dll+3922868],01
+GameAssembly.dll+E5A2BA: F3 0F 58 8F 08 06 00 00  - addss xmm1,[rdi+00000608]
+GameAssembly.dll+E5A2C2: 0F 2F 0D 2F C8 92 02     - comiss xmm1,[GameAssembly.dll+3786AF8]
+GameAssembly.dll+E5A2C9: F3 0F 11 8F 0C 06 00 00  - movss [rdi+0000060C],xmm1
+GameAssembly.dll+E5A2D1: 0F 82 AA 02 00 00        - jb GameAssembly.dll+E5A581
+GameAssembly.dll+E5A2D7: 0F 57 C0                 - xorps xmm0,xmm0
+GameAssembly.dll+E5A2DA: 8B C0                    - mov eax,eax
+GameAssembly.dll+E5A2DC: F2 48 0F 2A C0           - cvtsi2sd xmm0,rax
+GameAssembly.dll+E5A2E1: 66 0F 5A D0              - cvtpd2ps xmm2,xmm0
+GameAssembly.dll+E5A2E5: F3 0F 5D D1              - minss xmm2,xmm1
+GameAssembly.dll+E5A2E9: 0F 2F F2                 - comiss xmm6,xmm2
 }
 </AssemblerScript>
         </CheatEntry>
@@ -1069,7 +1070,7 @@ code:
   jmp return
   align 10 cc
   vf_wagon_multi:
-  dd (float)6.6666666
+  dd (float)7.6666666
 
 INJECT_SET_TRANS_WAGON_SPPEED:
   jmp newmem
@@ -1992,7 +1993,7 @@ GameAssembly.dll+80338D: 0F 83 31 01 00 00              - jae GameAssembly.dll+8
     </CheatEntry>
     <CheatEntry>
       <ID>28</ID>
-      <Description>"Farthest Frontier v0.9.4 /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Farthest Frontier v0.9.5 /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>009700</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
