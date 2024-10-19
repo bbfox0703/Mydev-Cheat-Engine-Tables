@@ -1,4 +1,7 @@
 # Changelog
+  
+## 2024/10/19  
+1. update for v1.0.3206  
 
 ## 2024/06/23  
 1. added "生死簿發生次數 / Types of death"  
