@@ -62,7 +62,7 @@ Add-Type @"
         public const uint SWP_SHOWWINDOW = 0x0040;
         public const int HWND_TOP = 0;
 
-        // 系統螢幕解析度常量
+        // 系統螢幕解析度常數
         public const int SM_CXSCREEN = 0;  // 主螢幕的寬度
         public const int SM_CYSCREEN = 1;  // 主螢幕的高度
     }
