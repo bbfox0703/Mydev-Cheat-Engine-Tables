@@ -63,8 +63,8 @@ Add-Type @"
         public const int HWND_TOP = 0;
 
         // 系統螢幕解析度常量
-        public const int SM_CXSCREEN = 1920;  // 主螢幕的寬度
-        public const int SM_CYSCREEN = 1080;  // 主螢幕的高度
+        public const int SM_CXSCREEN = 0;  // 主螢幕的寬度
+        public const int SM_CYSCREEN = 1;  // 主螢幕的高度
     }
 "@ -PassThru
 
