@@ -14,18 +14,21 @@ var
 begin
   //Application.Initialize;
   //Application.CreateForm(TMainForm, MainForm);
-  MemoryForm := TMainForm.Create(nil);
+  try
+    MemoryForm := TMainForm.Create(nil);
 
-  MainForm.Memo.Clear;
-  for i := 0 to Count - 1 do
-  begin
-    MainForm.Memo.Lines.Add(IntToStr(i));
-    //Value := PInt64(Addresses + i)^;  // 取出地址中的值
-    //MainForm.Memo.Lines.Add(Format('Address: %p, Value: %d', [Pointer(Addresses[i]), Value]));
+    MainForm.Memo.Clear;
+    for i := 0 to Count - 1 do
+    begin
+      MainForm.Memo.Lines.Add(IntToStr(i));
+      //Value := PInt64(Addresses + i)^;  // 取出地址中的值
+      //MainForm.Memo.Lines.Add(Format('Address: %p, Value: %d', [Pointer(Addresses[i]), Value]));
+    end;
+
+    MainForm.ShowModal;
+  finally
+    MainForm.Free;
   end;
-
-  MainForm.ShowModal;
-  MainForm.Free;
 end;
 
 function GetCurrentProcessIdWrapper: DWORD; stdcall;

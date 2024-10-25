@@ -21,7 +21,7 @@ begin
     for i := 0 to Count - 1 do
     begin
       MainForm.Memo.Lines.Add(IntToStr(i));
-      //Value := PInt64(Addresses + i)^;  // 取出地址中的值
+      //Value := PInt64(Addresses + i)^;  // 取出位址中的值
       //MainForm.Memo.Lines.Add(Format('Address: %p, Value: %d', [Pointer(Addresses[i]), Value]));
     end;
 
@@ -33,7 +33,7 @@ end;
 
 function GetCurrentProcessIdWrapper: DWORD; stdcall;
 begin
-  Result := GetCurrentProcessId();  // 使用 Windows API 取得當前進程 ID
+  Result := GetCurrentProcessId();  // 使用 Windows API 取得目前程序 ID
 end;
 
 exports
