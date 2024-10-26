@@ -6,9 +6,14 @@ interface
 
 uses
   Windows, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, ComCtrls, ValEdit;
+  ExtCtrls, ComCtrls, ValEdit, Math, Clipbrd;
 
 type
+  TAddressPair = record
+    Address: Int64;
+    Value: Integer;
+  end;
+  PAddressPair = ^TAddressPair; // 宣告指向 TAddressPair 的指標
 
   { TMainForm }
 
@@ -17,6 +22,7 @@ type
     btnSetInterval: TButton;
     btnTimerToggle: TButton;
     btnWrite: TButton;
+    btnCopy: TButton;
     cboDataType: TComboBox;
     lblTimerInt: TLabel;
     PageControl1: TPageControl;
@@ -31,6 +37,7 @@ type
     txtTimerInt: TEdit;
     UpDownInterval: TUpDown;
     VLEditor1: TValueListEditor;
+    procedure btnCopyClick(Sender: TObject);
     procedure btnReadClick(Sender: TObject);
     procedure btnSetIntervalClick(Sender: TObject);
     procedure btnTimerToggleClick(Sender: TObject);
@@ -62,6 +69,11 @@ var
   MainForm: TMainForm;
 
 implementation
+
+function CompareAddressPairs(Item1, Item2: Pointer): Integer;
+begin
+  Result := CompareValue(PAddressPair(Item1)^.Address, PAddressPair(Item2)^.Address);
+end;
 
 {$R *.lfm}
 procedure TMainForm.OpenSharedMemory;
@@ -124,7 +136,7 @@ begin
   end;
 end;
 
-procedure TMainForm.waitForIdleState;
+procedure TMainForm.WaitForIdleState;
 var
   StatePtr: PInteger;
 begin
@@ -230,7 +242,6 @@ begin
     AppendSysOutputWithTimestamp('Failed to map shared memory state for setting data type.');
 end;
 
-
 procedure TMainForm.btnReadClick(Sender: TObject);
 var
   Ptr: Pointer;
@@ -241,7 +252,13 @@ var
   FloatData: Single;
   DoubleData: Double;
   StrData: array[0..2047] of AnsiChar;
-  OutputText: string;
+  Address: Int64;
+  Value: Integer;
+  Offset: Integer;
+  AddressStr, OutputText: string;
+  AddressList: TList;
+  i: Integer;
+  AddressPair: ^TAddressPair;
 begin
   if SharedMemoryHandle = 0 then
   begin
@@ -249,19 +266,19 @@ begin
     Exit;
   end;
 
-  waitForIdleState;  // 等待共享記憶體空閒
-  setOperationState(-2);  // 將操作狀態設為讀取中 (-2)
+  WaitForIdleState;  // 等待共享記憶體空閒
+  SetOperationState(-2);  // 將操作狀態設為讀取中 (-2)
 
   // 鎖定共享記憶體
   Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_READ, 0, 0, SharedMemorySize);
   if Ptr = nil then
   begin
     AppendSysOutputWithTimestamp('Unable to map shared memory for reading.');
-    setOperationState(0);  // 將狀態設為空閒
+    SetOperationState(0);  // 重設狀態為空閒
     Exit;
   end;
 
-  // 嘗試從偏移量 4 讀取數據類型
+  // 從偏移量 4 讀取資料型態
   StatePtr := MapViewOfFile(SharedMemoryStateHandle, FILE_MAP_READ or FILE_MAP_WRITE, 0, 0, 8);  // 映射完整 8 個位元組
   if StatePtr <> nil then
   begin
@@ -271,61 +288,117 @@ begin
   end
   else
   begin
-    //AppendSysOutputWithTimestamp('Unable to map shared memory state for reading.');
-    setOperationState(0);  // 將狀態設為空閒
-    UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
+    AppendSysOutputWithTimestamp('Unable to map shared memory state for reading.');
+    SetOperationState(0);
+    UnmapViewOfFile(Ptr);
     Exit;
   end;
 
-  IntData := -99999;
-  QwordData := -99999;
-  FloatData := -99999;
-  DoubleData := -99999;
-  StrData := '';
-
-
-  // 根據數據類型讀取對應的數據
-  OutputText := '';
+  // 根據 DataType 讀取對應資料
   case DataType of
     1: begin  // 32-bit 整數
          Move(Ptr^, IntData, SizeOf(IntData));
-         OutputText := IntToStr(IntData);
+         OutputText := '32-bit Integer: ' + IntToStr(IntData);
        end;
     2: begin  // 64-bit 整數
          Move(Ptr^, QwordData, SizeOf(QwordData));
-         OutputText := IntToStr(QwordData);
+         OutputText := '64-bit Integer: ' + IntToStr(QwordData);
        end;
     3: begin  // 單精度浮點數
          Move(Ptr^, FloatData, SizeOf(FloatData));
-         OutputText := FloatToStr(FloatData);
+         OutputText := 'Single Precision Float: ' + FloatToStr(FloatData);
        end;
     4: begin  // 雙精度浮點數
          Move(Ptr^, DoubleData, SizeOf(DoubleData));
-         OutputText := FloatToStr(DoubleData);
+         OutputText := 'Double Precision Float: ' + FloatToStr(DoubleData);
        end;
     5: begin  // 字串
          FillChar(StrData, SizeOf(StrData), 0);
          Move(Ptr^, StrData, SizeOf(StrData) - 1);
-         OutputText := string(StrData);
+         OutputText := 'String: ' + string(StrData);
+       end;
+    6: begin  // 新資料型態: 64-bit 位址 + 32-bit 整數值
+         Offset := 0;
+         AddressList := TList.Create;
+         try
+           VLEditor1.Strings.BeginUpdate;  // 暫停 UI 更新
+           while Offset < SharedMemorySize do
+           begin
+             Address := PInt64(PByte(Ptr) + Offset)^;  // 讀取 64-bit 位址
+             Value := PInteger(PByte(Ptr) + Offset + 8)^;  // 讀取 32-bit 整數值
+             if Address = 0 then Break;  // 位址為 0 表示結束
+
+             // 將地址轉為十六進位字串，並填補前導零至 16 位數
+             AddressStr := IntToHex(Address, 12);
+             AddressStr := '0x' + AddressStr;  // 添加 "0x" 前綴
+
+             // 將新資料插入 VLEditor1
+             if VLEditor1.Strings.IndexOfName(AddressStr) = -1 then
+               VLEditor1.InsertRow(AddressStr, IntToStr(Value), True)  // 位址不存在時新增
+             else
+               VLEditor1.Values[AddressStr] := IntToStr(Value);  // 位址存在時更新資料
+
+             Offset := Offset + 12;  // 移動到下一筆 12-byte 結構
+           end;
+
+           // 排序 VLEditor1 中的所有項目
+           VLEditor1.Strings.Sort;
+           OutputText := 'New data type (Address-Value pairs) displayed and sorted in VLEditor1.';
+         finally
+           VLEditor1.Strings.EndUpdate;  // 恢復 UI 更新
+           for i := 0 to AddressList.Count - 1 do
+             Dispose(PAddressPair(AddressList[i]));
+           AddressList.Free;
+         end;
        end;
   else
-    //OutputText := 'Unsupported data type or empty memory!';
+    asm
+      nop
+    end;
   end;
 
-  // 清除共享記憶體內容
+  // 清除共享記憶體並重設操作狀態
   ClearSharedMemory;
+  PInteger(StatePtr)^ := 0;  // 重設操作狀態為空閒
+  PInteger(PByte(StatePtr) + 4)^ := 0;  // 重設 DataType
+  SetOperationState(0);
+  UnmapViewOfFile(StatePtr);
+  UnmapViewOfFile(Ptr);
 
-  // 清除 `State` 和 `DataType`
-  PInteger(StatePtr)^ := 0;          // 設定操作狀態為空閒
-  PInteger(PByte(StatePtr) + 4)^ := 0; // 設定數據類型為 0
-
-  setOperationState(0);  // 重設狀態為空閒
-  UnmapViewOfFile(StatePtr);  // 解鎖共享記憶體狀態
-  UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
-  if length(OutputText) > 0 then
-    AppendOutputWithTimestamp(OutputText);  // 輸出結果
+  // 顯示結果於輸出視窗
+  if Length(OutputText) > 0 then
+    AppendOutputWithTimestamp(OutputText);
 end;
 
+
+procedure TMainForm.btnCopyClick(Sender: TObject);
+var
+  i: Integer;
+  CSVData: TStringList;
+  Row: string;
+begin
+  // 創建 TStringList 來存儲 CSV 資料
+  CSVData := TStringList.Create;
+  try
+    // 添加標頭列
+    CSVData.Add('Address,Value');
+
+    // 遍歷 VLEditor1 中的每個項目，並以 CSV 格式添加到 CSVData
+    for i := 1 to VLEditor1.RowCount - 1 do
+    begin
+      Row := VLEditor1.Keys[i] + ',' + VLEditor1.Values[VLEditor1.Keys[i]];
+      CSVData.Add(Row);
+    end;
+
+    // 將 CSVData 的所有內容複製到剪貼簿
+    Clipboard.AsText := CSVData.Text;
+
+    // 輸出訊息
+    AppendSysOutputWithTimestamp('VLEditor1 content copied to clipboard as CSV.');
+  finally
+    CSVData.Free;  // 釋放記憶體
+  end;
+end;
 
 
 procedure TMainForm.btnSetIntervalClick(Sender: TObject);
