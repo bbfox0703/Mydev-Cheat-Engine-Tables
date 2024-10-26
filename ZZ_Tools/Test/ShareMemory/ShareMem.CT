@@ -8,11 +8,13 @@
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 {$lua}
+-- Share memory test with new data type
+-- bbfox@https://opencheattables.com
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
 getLuaEngine().menuItem5.doClick()
 
--- 確保清理先前的共享記憶體
+-- 清理先前的共享記憶體
 _G.sharedMemory = _G.sharedMemory or {}
 _G.sharedMemoryState = _G.sharedMemoryState or {}
 
@@ -26,9 +28,9 @@ if (_G.sharedMemoryState.mem ~= nil) then
     _G.sharedMemoryState.mem = nil
 end
 
--- 設定共享記憶體大小
-local memSize = 2048
-local memStatSize = 8  -- 為了保存操作狀態和數據類型，增加到 8 bytes
+-- 設定共享記憶體大小為4K
+local memSize = 4096
+local memStatSize = 8  -- 為了保存操作狀態和數據類型，使用8 bytes
 
 -- 建立共享記憶體
 _G.sharedMemory.mem = allocateSharedMemoryLocal('MySharedMemory', memSize)
@@ -47,10 +49,17 @@ else
 end
 
 -- 等待共享記憶體空閒
-function waitForIdleState()
+function waitForIdleState(timeout_ms)
+    timeout_ms = timeout_ms or 3000  -- 預設超時時間為3秒
+    local startTime = getTickCount()
     while readIntegerLocal(_G.sharedMemoryState.mem) ~= 0 do
-        sleep(10)  -- 等待10毫秒再檢查
+        if (getTickCount() - startTime) &gt; timeout_ms then
+            print("waitForIdleState timed out.")
+            return false
+        end
+        sleep(10)  -- 每10毫秒檢查一次
     end
+    return true
 end
 
 -- 設定操作狀態
@@ -60,45 +69,63 @@ end
 
 -- 設定數據類型
 function setDataType(dataType)
-    writeIntegerLocal(_G.sharedMemoryState.mem + 4, dataType)  -- 偏移4 bytes寫入數據類型（1 到 5）
+    writeIntegerLocal(_G.sharedMemoryState.mem + 4, dataType)  -- 偏移4 bytes寫入數據類型（1 到 6）
 end
 
--- 寫入共享記憶體，根據數據類型設定狀態
+-- 新的資料型態代碼
+-- 1：32-bit int (dd)
+-- 2：64-bit int (dq)
+-- 3：32-bit Single (float)
+-- 4：64-bit double (double)
+-- 5：String (string)
+-- 6：64-bit integer + 32-bit integer (12 bytes per data)
+
 function writeSharedMemory(data, dataType)
     if _G.sharedMemory.mem ~= nil then
-        waitForIdleState()  -- 等待共享記憶體空閒
-        setOperationState(-1)  -- 將操作狀態設為寫入中 (-1)
+        waitForIdleState()  -- 確保共享記憶體是空閒的
+        setOperationState(-1)  -- 設定為寫入中
 
-        -- 根據 dataType 設置共享記憶體狀態
+        local offset = 0
         if dataType == "dd" then
-            setDataType(1)  -- 設置數據類型為 1: 32-bit 整數
+            setDataType(1)
             writeIntegerLocal(_G.sharedMemory.mem, data)
         elseif dataType == "dq" then
-            setDataType(2)  -- 設置數據類型為 2: 64-bit 整數
+            setDataType(2)
             writeQwordLocal(_G.sharedMemory.mem, data)
         elseif dataType == "float" then
-            setDataType(3)  -- 設置數據類型為 3: 浮點數
+            setDataType(3)
             writeFloatLocal(_G.sharedMemory.mem, data)
         elseif dataType == "double" then
-            setDataType(4)  -- 設置數據類型為 4: 雙精度浮點數
+            setDataType(4)
             writeDoubleLocal(_G.sharedMemory.mem, data)
         elseif dataType == "string" then
-            setDataType(5)  -- 設置數據類型為 5: 字串
+            setDataType(5)
             writeStringLocal(_G.sharedMemory.mem, data)
+        elseif dataType == "addr_val" then
+            setDataType(6)
+            for _, entry in ipairs(data) do
+                local addr, val = entry[1], entry[2]
+                if addr == 0 then break end
+                writeQwordLocal(_G.sharedMemory.mem + offset, addr)
+                writeIntegerLocal(_G.sharedMemory.mem + offset + 8, val)
+                offset = offset + 12
+                if offset &gt;= memSize then break end
+            end
         else
             print("Unsupported data type!")
-            setOperationState(0)  -- 將操作狀態重設為空閒
+            setOperationState(0)  -- 設定為空閒
             return
         end
 
-        setOperationState(0)  -- 將操作狀態設為空閒
-        print("Data written to shared memory:", data, "as type", dataType)
+        setOperationState(0)  -- 完成後設定為空閒
+        print("Data written to shared memory as type", dataType)
     else
         print("Shared memory is not created yet!")
     end
 end
 
--- 讀取共享記憶體，根據狀態位決定數據類型
+
+-- 讀取共享記憶體
 function readSharedMemory()
     if _G.sharedMemory.mem ~= nil then
         waitForIdleState()  -- 等待共享記憶體空閒
@@ -117,6 +144,16 @@ function readSharedMemory()
             result = readDoubleLocal(_G.sharedMemory.mem)
         elseif dataType == 5 then
             result = readStringLocal(_G.sharedMemory.mem, memSize)
+        elseif dataType == 6 then
+            result = {}
+            local offset = 0
+            while offset &lt; memSize do
+                local addr = readQwordLocal(_G.sharedMemory.mem + offset)
+                local val = readIntegerLocal(_G.sharedMemory.mem + offset + 8)
+                if addr == 0 then break end  -- 0 表示結束
+                table.insert(result, {addr, val})
+                offset = offset + 12
+            end
         else
             result = "(unknown data type)"
         end
@@ -127,7 +164,7 @@ function readSharedMemory()
         print("Shared memory is not created yet!")
     end
 end
-
+setOperationState(0)
 getLuaEngine().Close()
 
 [DISABLE]
@@ -144,92 +181,6 @@ getLuaEngine().Close()
 
 </AssemblerScript>
       <CheatEntries>
-        <CheatEntry>
-          <ID>5</ID>
-          <Description>"Rendom write integer data"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then return end
-if memrec then print(memrec.Description) end
---NO_ACTIVATE
--- 設定隨機數範圍
-local minRandom = 1
-local maxRandom = 1000
-
-if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
-  -- 生成隨機數
-  local randomNumber = math.random(minRandom, maxRandom)
-
-  -- 等待共享記憶體空閒
-  waitForIdleState()  -- 確保共享記憶體是空閒的
-  print("Generated number: " .. randomNumber)
-
-  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
-  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
-  writeIntegerLocal(_G.sharedMemory.mem, randomNumber)  -- 寫入隨機數到共享記憶體
-  setDataType(1)  -- 將數據類型設置為 1 (表示 "dd")
-
-  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
-
-  print("Random number written to shared memory:", randomNumber)
-else
-  print("Shared memory is not created yet!")
-end
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-if memrec then print(memrec.Description) end
-{$asm}
-
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>8</ID>
-          <Description>"Rendom write double data"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then return end
-if memrec then print(memrec.Description) end
---NO_ACTIVATE
-
--- 設定隨機雙精度數範圍
-local minRandom = 1.0
-local maxRandom = 1000.0
-
-if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
-  -- 生成隨機雙精度數
-  local randomDouble = minRandom + math.random() * (maxRandom - minRandom)
-
-  -- 等待共享記憶體空閒
-  waitForIdleState()  -- 確保共享記憶體是空閒的
-  print("Generated double: " .. randomDouble)
-
-  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
-  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
-  writeDoubleLocal(_G.sharedMemory.mem, randomDouble)  -- 寫入隨機雙精度數到共享記憶體
-  setDataType(4)  -- 將數據類型設置為 4 (表示 "double")
-
-  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
-
-  print("Random double written to shared memory:", randomDouble)
-else
-  print("Shared memory is not created yet!")
-end
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-if memrec then print(memrec.Description) end
-{$asm}
-
-
-</AssemblerScript>
-        </CheatEntry>
         <CheatEntry>
           <ID>7</ID>
           <Description>"read data"</Description>
@@ -249,34 +200,268 @@ if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryStat
 
   -- 獲取數據類型
   local dataType = readIntegerLocal(_G.sharedMemoryState.mem + 4)  -- 偏移 4 bytes 讀取數據類型
-  local result
 
-  -- 根據數據類型讀取數據
+  -- 檢查數據類型，並根據類型讀取數據
   if dataType == 1 then
-    result = readIntegerLocal(_G.sharedMemory.mem)
+    local result = readIntegerLocal(_G.sharedMemory.mem)
     print("Read integer (dd):", result)
   elseif dataType == 2 then
-    result = readQwordLocal(_G.sharedMemory.mem)
+    local result = readQwordLocal(_G.sharedMemory.mem)
     print("Read 64-bit integer (dq):", result)
   elseif dataType == 3 then
-    result = readFloatLocal(_G.sharedMemory.mem)
+    local result = readFloatLocal(_G.sharedMemory.mem)
     print("Read float:", result)
   elseif dataType == 4 then
-    result = readDoubleLocal(_G.sharedMemory.mem)
+    local result = readDoubleLocal(_G.sharedMemory.mem)
     print("Read double:", result)
   elseif dataType == 5 then
-    result = readStringLocal(_G.sharedMemory.mem, 2048)  -- 假設最大字串長度為 2048
+    local result = readStringLocal(_G.sharedMemory.mem, 2048)  -- 假設最大字串長度為 2048
     print("Read string:", result)
+  elseif dataType == 6 then
+    print("Reading address-value pairs (type 6):")
+    local offset = 0
+    while true do
+      -- 讀取 12-byte 結構的前 8 bytes 為 64-bit 地址
+      local address = readQwordLocal(_G.sharedMemory.mem + offset)
+      -- 如果地址為 0，則結束讀取
+      if address == 0 then
+        print("End of address-value data.")
+        break
+      end
+      -- 讀取 12-byte 結構的後 4 bytes 為 32-bit 整數值
+      local value = readIntegerLocal(_G.sharedMemory.mem + offset + 8)
+      print(string.format("Address: 0x%X, Value: %d", address, value))
+      offset = offset + 12  -- 更新偏移量以讀取下一筆資料
+    end
   else
     print("Unknown data type or empty memory.")
   end
 
   -- 清空共享記憶體數據
-  writeBytesLocal(_G.sharedMemory.mem, string.rep("\0", 2048))  -- 將記憶體設置為空
+  writeBytesLocal(_G.sharedMemory.mem, string.rep("\0", 4096))  -- 設定為 4K 空值
   setDataType(0)  -- 將數據類型重設為 0 表示無類型
 
   -- 完成後將操作狀態重設為空閒 (0)
   setOperationState(0)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Random write integer data"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+-- 設定隨機數範圍
+local minRandom = 1
+local maxRandom = 1000
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 生成隨機數
+  local randomNumber = math.random(minRandom, maxRandom)
+
+  writeSharedMemory(randomNumber, "dd")
+  -- 等待共享記憶體空閒
+  --[[waitForIdleState()  -- 確保共享記憶體是空閒的
+  print("Generated number: " .. randomNumber)
+
+  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
+  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
+  writeIntegerLocal(_G.sharedMemory.mem, randomNumber)  -- 寫入隨機數到共享記憶體
+  setDataType(1)  -- 將數據類型設置為 1 (表示 "dd")
+
+  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
+  ]]
+
+  print("Random number written to shared memory:", randomNumber)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"Random write double data"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+
+-- 設定隨機雙精度數範圍
+local minRandom = 1.0
+local maxRandom = 1000.0
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 生成隨機雙精度數
+  local randomDouble = minRandom + math.random() * (maxRandom - minRandom)
+  writeSharedMemory(randomDouble, "double")
+
+  --[[
+  -- 等待共享記憶體空閒
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+  print("Generated double: " .. randomDouble)
+
+  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
+  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
+  writeDoubleLocal(_G.sharedMemory.mem, randomDouble)  -- 寫入隨機雙精度數到共享記憶體
+  setDataType(4)  -- 將數據類型設置為 4 (表示 "double")
+
+  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
+  ]]
+
+  print("Random double written to shared memory:", randomDouble)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Random write string data"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+
+-- 設定隨機字串的長度
+local minStringLength = 5
+local maxStringLength = 20
+local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+-- 隨機生成字串
+local function generateRandomString(length)
+  local randomString = {}
+  for i = 1, length do
+    local randomIndex = math.random(1, #chars)
+    table.insert(randomString, chars:sub(randomIndex, randomIndex))
+  end
+  return table.concat(randomString)
+end
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 隨機生成字串長度和內容
+  local randomLength = math.random(minStringLength, maxStringLength)
+  local randomString = generateRandomString(randomLength)
+
+  -- 等待共享記憶體空閒
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+  print("Generated string: " .. randomString)
+
+  writeSharedMemory(randomString, "string")
+
+  --[[
+  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
+  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
+  writeStringLocal(_G.sharedMemory.mem, randomString)  -- 寫入隨機字串到共享記憶體
+  setDataType(5)  -- 將數據類型設置為 5 (表示 "string")
+
+  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
+  ]]
+
+  print("Random string written to shared memory:", randomString)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Random write address:int pair data"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+
+-- 設定隨機地址和數值範圍
+local minAddress = 0x100000000  -- 64-bit address 最小值
+local maxAddress = 0x7FFFFFFFFF  -- 64-bit address 最大值
+local minValue = 1  -- 32-bit 整數值的最小值
+local maxValue = 1000  -- 32-bit 整數值的最大值
+
+-- 逐位元組清空共享記憶體函數
+local function slowClearSharedMemory()
+  local memSize = 4096
+  local intZero = 0  -- 32-bit 整數 0
+
+  -- 使用 32-bit 清空記憶體
+  for offset = 0, memSize - 4, 4 do
+      writeIntegerLocal(_G.sharedMemory.mem + offset, intZero)
+  end
+end
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 等待共享記憶體空閒
+
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+
+  -- 使用逐位元組的方式清空共享記憶體，避免讀取到舊資料
+  slowClearSharedMemory()
+
+  -- 隨機決定要生成的資料結構數量（2 到 10 筆）
+  local entryCount = math.random(2, 10)
+  local dataEntries = {}
+
+  -- 生成隨機資料結構，包含 64-bit 地址和 32-bit 整數值
+  for i = 1, entryCount do
+    local randomAddress = math.random(minAddress, maxAddress)
+    local randomValue = math.random(minValue, maxValue)
+    table.insert(dataEntries, {randomAddress, randomValue})
+    print("Generated entry " .. i .. ": Address = 0x" .. string.format("%X", randomAddress) .. ", Value = " .. randomValue)
+  end
+
+  -- 在最後插入結束標誌，地址為 0
+  table.insert(dataEntries, {0, 0})
+
+  print("Data pair generated")
+
+  writeSharedMemory(dataEntries, "addr_val")  -- 使用 "addr_val" 類型寫入資料
+
+  print("Random address-value entries written to shared memory:", #dataEntries - 1)  -- 不包括結束標誌
 else
   print("Shared memory is not created yet!")
 end
@@ -300,7 +485,7 @@ if memrec then print(memrec.Description) end
       <CheatEntries>
         <CheatEntry>
           <ID>2</ID>
-          <Description>"Enable share memory block &amp; do a read test"</Description>
+          <Description>"v00 Enable share memory block &amp; do a read test"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>[ENABLE]
@@ -392,6 +577,368 @@ deallocateSharedMemoryLocal(_G.sharedMemoryState.mem)
 _G.sharedMemoryState.mem = nil
 getLuaEngine().Close()
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"v01 Enable share memory block &amp; do a read test"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+-- Share memory test
+-- bbfox@https://opencheattables.com
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+
+-- 確保清理先前的共享記憶體
+_G.sharedMemory = _G.sharedMemory or {}
+_G.sharedMemoryState = _G.sharedMemoryState or {}
+
+if (_G.sharedMemory.mem ~= nil) then
+    deallocateSharedMemoryLocal(_G.sharedMemory.mem)
+    _G.sharedMemory.mem = nil
+end
+
+if (_G.sharedMemoryState.mem ~= nil) then
+    deallocateSharedMemoryLocal(_G.sharedMemoryState.mem)
+    _G.sharedMemoryState.mem = nil
+end
+
+-- 設定共享記憶體大小
+local memSize = 2048
+local memStatSize = 8  -- 為了保存操作狀態和數據類型，增加到 8 bytes
+
+-- 建立共享記憶體
+_G.sharedMemory.mem = allocateSharedMemoryLocal('MySharedMemory', memSize)
+_G.sharedMemoryState.mem = allocateSharedMemoryLocal('MySharedMemoryState', memStatSize)
+
+--_G.sharedMemory.mem = createMemoryStream()
+--_G.sharedMemory.mem.Size=memSize
+
+
+if (_G.sharedMemory.mem == nil or _G.sharedMemory.mem == 0) then
+    print("Failed to create shared memory!")
+else
+    print("Shared memory created successfully.")
+end
+
+if (_G.sharedMemoryState.mem == nil or _G.sharedMemoryState.mem == 0) then
+    print("Failed to create shared state memory!")
+else
+    print("Shared state memory created successfully.")
+end
+
+-- 等待共享記憶體空閒
+function waitForIdleState()
+    while readIntegerLocal(_G.sharedMemoryState.mem) ~= 0 do
+        sleep(10)  -- 等待10毫秒再檢查
+    end
+end
+
+-- 設定操作狀態
+function setOperationState(state)
+    writeIntegerLocal(_G.sharedMemoryState.mem, state)  -- 寫入操作狀態（-1、-2、或 0）
+end
+
+-- 設定數據類型
+function setDataType(dataType)
+    writeIntegerLocal(_G.sharedMemoryState.mem + 4, dataType)  -- 偏移4 bytes寫入數據類型（1 到 5）
+end
+
+-- 寫入共享記憶體，根據數據類型設定狀態
+--[[
+1：32-bit int (dd)
+2：64-bit int (dq)
+3：32-bit Single (float)
+4：64-bit double (double)
+5：String (string)
+]]
+
+function writeSharedMemory(data, dataType)
+    if _G.sharedMemory.mem ~= nil then
+        waitForIdleState()  -- 等待共享記憶體空閒
+        setOperationState(-1)  -- 將操作狀態設為寫入中 (-1)
+
+        -- 根據 dataType 設置共享記憶體狀態
+        if dataType == "dd" then
+            setDataType(1)  -- 設置數據類型為 1: 32-bit 整數
+            writeIntegerLocal(_G.sharedMemory.mem, data)
+        elseif dataType == "dq" then
+            setDataType(2)  -- 設置數據類型為 2: 64-bit 整數
+            writeQwordLocal(_G.sharedMemory.mem, data)
+        elseif dataType == "float" then
+            setDataType(3)  -- 設置數據類型為 3: 浮點數
+            writeFloatLocal(_G.sharedMemory.mem, data)
+        elseif dataType == "double" then
+            setDataType(4)  -- 設置數據類型為 4: 雙精度浮點數
+            writeDoubleLocal(_G.sharedMemory.mem, data)
+        elseif dataType == "string" then
+            setDataType(5)  -- 設置數據類型為 5: 字串
+            writeStringLocal(_G.sharedMemory.mem, data)
+        else
+            print("Unsupported data type!")
+            setOperationState(0)  -- 將操作狀態重設為空閒
+            return
+        end
+
+        setOperationState(0)  -- 將操作狀態設為空閒
+        print("Data written to shared memory:", data, "as type", dataType)
+    else
+        print("Shared memory is not created yet!")
+    end
+end
+
+-- 讀取共享記憶體，根據狀態位決定數據類型
+function readSharedMemory()
+    if _G.sharedMemory.mem ~= nil then
+        waitForIdleState()  -- 等待共享記憶體空閒
+        setOperationState(-2)  -- 將操作狀態設為讀取中 (-2)
+
+        local dataType = readIntegerLocal(_G.sharedMemoryState.mem + 4)  -- 讀取數據類型
+        local result
+
+        if dataType == 1 then
+            result = readIntegerLocal(_G.sharedMemory.mem)
+        elseif dataType == 2 then
+            result = readQwordLocal(_G.sharedMemory.mem)
+        elseif dataType == 3 then
+            result = readFloatLocal(_G.sharedMemory.mem)
+        elseif dataType == 4 then
+            result = readDoubleLocal(_G.sharedMemory.mem)
+        elseif dataType == 5 then
+            result = readStringLocal(_G.sharedMemory.mem, memSize)
+        else
+            result = "(unknown data type)"
+        end
+
+        setOperationState(0)  -- 將操作狀態設為空閒
+        return result or "(empty)"
+    else
+        print("Shared memory is not created yet!")
+    end
+end
+
+getLuaEngine().Close()
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+
+deallocateSharedMemoryLocal(_G.sharedMemory.mem)
+--_G.sharedMemory.mem.destroy()
+_G.sharedMemory.mem = nil
+
+deallocateSharedMemoryLocal(_G.sharedMemoryState.mem)
+_G.sharedMemoryState.mem = nil
+getLuaEngine().Close()
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"read data"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 等待共享記憶體空閒
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+
+  -- 設置操作狀態為讀取中 (-2)
+  setOperationState(-2)
+
+  -- 獲取數據類型
+  local dataType = readIntegerLocal(_G.sharedMemoryState.mem + 4)  -- 偏移 4 bytes 讀取數據類型
+  local result
+
+  -- 根據數據類型讀取數據
+  if dataType == 1 then
+    result = readIntegerLocal(_G.sharedMemory.mem)
+    print("Read integer (dd):", result)
+  elseif dataType == 2 then
+    result = readQwordLocal(_G.sharedMemory.mem)
+    print("Read 64-bit integer (dq):", result)
+  elseif dataType == 3 then
+    result = readFloatLocal(_G.sharedMemory.mem)
+    print("Read float:", result)
+  elseif dataType == 4 then
+    result = readDoubleLocal(_G.sharedMemory.mem)
+    print("Read double:", result)
+  elseif dataType == 5 then
+    result = readStringLocal(_G.sharedMemory.mem, 2048)  -- 假設最大字串長度為 2048
+    print("Read string:", result)
+  else
+    print("Unknown data type or empty memory.")
+  end
+
+  -- 清空共享記憶體數據
+  writeBytesLocal(_G.sharedMemory.mem, string.rep("\0", 2048))  -- 將記憶體設置為空
+  setDataType(0)  -- 將數據類型重設為 0 表示無類型
+
+  -- 完成後將操作狀態重設為空閒 (0)
+  setOperationState(0)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"Rendom write integer data"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+-- 設定隨機數範圍
+local minRandom = 1
+local maxRandom = 1000
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 生成隨機數
+  local randomNumber = math.random(minRandom, maxRandom)
+
+  -- 等待共享記憶體空閒
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+  print("Generated number: " .. randomNumber)
+
+  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
+  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
+  writeIntegerLocal(_G.sharedMemory.mem, randomNumber)  -- 寫入隨機數到共享記憶體
+  setDataType(1)  -- 將數據類型設置為 1 (表示 "dd")
+
+  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
+
+  print("Random number written to shared memory:", randomNumber)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"Rendom write double data"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+
+-- 設定隨機雙精度數範圍
+local minRandom = 1.0
+local maxRandom = 1000.0
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 生成隨機雙精度數
+  local randomDouble = minRandom + math.random() * (maxRandom - minRandom)
+
+  -- 等待共享記憶體空閒
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+  print("Generated double: " .. randomDouble)
+
+  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
+  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
+  writeDoubleLocal(_G.sharedMemory.mem, randomDouble)  -- 寫入隨機雙精度數到共享記憶體
+  setDataType(4)  -- 將數據類型設置為 4 (表示 "double")
+
+  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
+
+  print("Random double written to shared memory:", randomDouble)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>14</ID>
+              <Description>"Rendom write string data"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+--NO_ACTIVATE
+
+-- 設定隨機字串的長度
+local minStringLength = 5
+local maxStringLength = 20
+local chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+-- 隨機生成字串
+local function generateRandomString(length)
+  local randomString = {}
+  for i = 1, length do
+    local randomIndex = math.random(1, #chars)
+    table.insert(randomString, chars:sub(randomIndex, randomIndex))
+  end
+  return table.concat(randomString)
+end
+
+if _G.sharedMemory ~= nil and _G.sharedMemory.mem ~= nil and _G.sharedMemoryState ~= nil and _G.sharedMemoryState.mem ~= nil then
+  -- 隨機生成字串長度和內容
+  local randomLength = math.random(minStringLength, maxStringLength)
+  local randomString = generateRandomString(randomLength)
+
+  -- 等待共享記憶體空閒
+  waitForIdleState()  -- 確保共享記憶體是空閒的
+  print("Generated string: " .. randomString)
+
+  -- 使用主程式中定義的 setOperationState 和 setDataType 函數
+  setOperationState(-1)  -- 將操作狀態設置為寫入中 (-1)
+  writeStringLocal(_G.sharedMemory.mem, randomString)  -- 寫入隨機字串到共享記憶體
+  setDataType(5)  -- 將數據類型設置為 5 (表示 "string")
+
+  setOperationState(0)  -- 將操作狀態重設為空閒 (0)
+
+  print("Random string written to shared memory:", randomString)
+else
+  print("Shared memory is not created yet!")
+end
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+{$asm}
+
+
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>

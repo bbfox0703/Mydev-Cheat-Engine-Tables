@@ -6,7 +6,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, ComCtrls;
+  ExtCtrls, ComCtrls, ValEdit;
 
 type
 
@@ -14,17 +14,23 @@ type
 
   TMainForm = class(TForm)
     btnRead: TButton;
-    btnWrite: TButton;
-    btnTimerToggle: TButton;
     btnSetInterval: TButton;
+    btnTimerToggle: TButton;
+    btnWrite: TButton;
     cboDataType: TComboBox;
-    txtTimerInt: TEdit;
     lblTimerInt: TLabel;
-    txtSysOutput: TMemo;
+    PageControl1: TPageControl;
+    Panel1: TPanel;
+    StatusBar1: TStatusBar;
+    TabSheetGeneral: TTabSheet;
+    TabSheetBlockData: TTabSheet;
+    txtInput: TEdit;
     TimerRead: TTimer;
     txtOutput: TMemo;
-    txtInput: TEdit;
+    txtSysOutput: TMemo;
+    txtTimerInt: TEdit;
     UpDownInterval: TUpDown;
+    VLEditor1: TValueListEditor;
     procedure btnReadClick(Sender: TObject);
     procedure btnSetIntervalClick(Sender: TObject);
     procedure btnTimerToggleClick(Sender: TObject);
@@ -160,7 +166,7 @@ var
   Timestamp: string;
 begin
   Timestamp := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now);  // 包含毫秒
-  txtOutput.Lines.Add('[' + Timestamp + '] ' + Msg);
+  txtOutput.Lines.Add('[' + Timestamp + ']: ' + Msg);
 end;
 
 procedure TMainForm.AppendSysOutputWithTimestamp(const Msg: string);
@@ -168,7 +174,7 @@ var
   Timestamp: string;
 begin
   Timestamp := FormatDateTime('yyyy-mm-dd hh:nn:ss.zzz', Now);  // 包含毫秒
-  txtSysOutput.Lines.Add('[' + Timestamp + '] ' + Msg);
+  txtSysOutput.Lines.Add('[' + Timestamp + ']: ' + Msg);
 end;
 
 procedure TMainForm.ClearSharedMemory;
@@ -208,17 +214,22 @@ end;
 
 procedure TMainForm.SetDataType(DataType: Integer);
 var
+  BasePtr: Pointer;
   DataTypePtr: PInteger;
 begin
-  DataTypePtr := MapViewOfFile(SharedMemoryStateHandle, FILE_MAP_WRITE, 0, 4, SizeOf(Integer));
-  if DataTypePtr <> nil then
+  // 映射整個狀態記憶體，並從中偏移4個字節
+  BasePtr := MapViewOfFile(SharedMemoryStateHandle, FILE_MAP_WRITE, 0, 0, 8);  // 映射 8 個字節
+  if BasePtr <> nil then
   begin
+    DataTypePtr := PInteger(PByte(BasePtr) + 4);  // 偏移 4 字節
     DataTypePtr^ := DataType;  // 設置數據類型
-    UnmapViewOfFile(DataTypePtr);
+    UnmapViewOfFile(BasePtr);  // 解鎖
+    AppendSysOutputWithTimestamp('Data type set to ' + IntToStr(DataType));
   end
   else
-    AppendSysOutputWithTimestamp('Failed to set data type.');
+    AppendSysOutputWithTimestamp('Failed to map shared memory state for setting data type.');
 end;
+
 
 procedure TMainForm.btnReadClick(Sender: TObject);
 var
@@ -265,6 +276,13 @@ begin
     UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
     Exit;
   end;
+
+  IntData := -99999;
+  QwordData := -99999;
+  FloatData := -99999;
+  DoubleData := -99999;
+  StrData := '';
+
 
   // 根據數據類型讀取對應的數據
   OutputText := '';
@@ -344,6 +362,8 @@ var
   DoubleData: Double;
   StrData: AnsiString;
 begin
+  //btnWrite.Tag := btnWrite.Tag + 1;
+  //AppendSysOutputWithTimestamp(IntToStr(btnWrite.Tag));
   if SharedMemoryHandle = 0 then Exit;
 
   waitForIdleState;  // 等待共享記憶體空閒
