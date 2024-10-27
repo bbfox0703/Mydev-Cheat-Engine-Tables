@@ -23,6 +23,7 @@ type
     btnTimerToggle: TButton;
     btnWrite: TButton;
     btnCopy: TButton;
+    btnClear: TButton;
     cboDataType: TComboBox;
     lblTimerInt: TLabel;
     PageControl1: TPageControl;
@@ -37,6 +38,7 @@ type
     txtTimerInt: TEdit;
     UpDownInterval: TUpDown;
     VLEditor1: TValueListEditor;
+    procedure btnClearClick(Sender: TObject);
     procedure btnCopyClick(Sender: TObject);
     procedure btnReadClick(Sender: TObject);
     procedure btnSetIntervalClick(Sender: TObject);
@@ -51,6 +53,7 @@ type
     SharedMemorySize: Integer;
     SharedMemoryName: string;
     SharedMemoryStateName: string;
+    CurrentOffset: Integer;  // 用來追蹤目前的偏移量
     procedure OpenSharedMemory;
     procedure CloseSharedMemory;
     function IsMemoryIdle: Boolean;
@@ -59,8 +62,18 @@ type
     procedure AppendOutputWithTimestamp(const Msg: string);
     procedure AppendSysOutputWithTimestamp(const Msg: string);
     procedure ClearSharedMemory;
+    function GetOperationState: Integer;
     procedure SetOperationState(State: Integer);
     procedure SetDataType(DataType: Integer);
+    procedure StartWriteIntBlock;
+    procedure AppendIntBlockData(Address: Int64; Value: Integer);
+    procedure EndWriteIntBlock;
+    procedure StartWriteFloatBlock;
+    procedure AppendFloatBlockData(Address: Int64; Value: Single);
+    procedure EndWriteFloatBlock;
+    procedure StartWriteQWordBlock;
+    procedure AppendQWordBlockData(Address: Int64; Value: Int64);
+    procedure EndWriteQWordBlock;
   public
 
   end;
@@ -78,7 +91,7 @@ end;
 {$R *.lfm}
 procedure TMainForm.OpenSharedMemory;
 begin
-  SharedMemorySize := 2048;
+  SharedMemorySize := 65536;
   SharedMemoryName := 'MySharedMemory';
   SharedMemoryStateName := 'MySharedMemoryState';
 
@@ -221,7 +234,7 @@ begin
     UnmapViewOfFile(StatePtr);
   end
   else
-    AppendSysOutputWithTimestamp('Failed to set operation state.');
+    AppendSysOutputWithTimestamp('***Failed to set operation state.');
 end;
 
 procedure TMainForm.SetDataType(DataType: Integer);
@@ -239,7 +252,207 @@ begin
     AppendSysOutputWithTimestamp('Data type set to ' + IntToStr(DataType));
   end
   else
-    AppendSysOutputWithTimestamp('Failed to map shared memory state for setting data type.');
+    AppendSysOutputWithTimestamp('***Failed to map shared memory state for setting data type.');
+end;
+
+// 開始寫入程序 (Type 6: Int Block)
+procedure TMainForm.StartWriteIntBlock;
+var
+  Ptr: Pointer;
+begin
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
+    Exit;
+  end;
+
+  Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
+  if Ptr = nil then
+  begin
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for clearing.');
+    Exit;
+  end;
+
+  FillChar(Ptr^, SharedMemorySize, 0);  // 清空記憶體
+  UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
+
+  CurrentOffset := 0;
+  SetOperationState(-1);  // 設定狀態為寫入中 (-1)
+  SetDataType(6);         // 設定資料型別為 6 (Int Block)
+  AppendSysOutputWithTimestamp('Started write procedure for Type 6 (Int Block) data.');
+end;
+
+// 寫入資料程序 (Type 6: Int Block) - 每次寫入一對 Address:Int
+procedure TMainForm.AppendIntBlockData(Address: Int64; Value: Integer);
+var
+  Ptr: Pointer;
+begin
+  if CurrentOffset >= SharedMemorySize - 12 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory is full.');
+    Exit;
+  end;
+
+  Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
+  if Ptr = nil then
+  begin
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for appending data.');
+    Exit;
+  end;
+
+  // 正確地使用偏移位置進行寫入
+  Move(Address, (PByte(Ptr) + CurrentOffset)^, SizeOf(Address));
+  Move(Value, (PByte(Ptr) + CurrentOffset + 8)^, SizeOf(Value));
+  CurrentOffset := CurrentOffset + 12;
+
+  UnmapViewOfFile(Ptr);
+  AppendSysOutputWithTimestamp(Format('Appended Int Block Address: 0x%012X, Value: %d', [Address, Value]));
+end;
+
+
+// 結束寫入程序 (Type 6: Int Block)
+procedure TMainForm.EndWriteIntBlock;
+begin
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
+    Exit;
+  end;
+
+  SetOperationState(-3);  // 設定狀態為寫入完成 (-3)
+  AppendSysOutputWithTimestamp('Finished write procedure for Type 6 (Int Block) data.');
+end;
+
+// 開始寫入程序 (Type 7: Float Block)
+procedure TMainForm.StartWriteFloatBlock;
+var
+  Ptr: Pointer;
+begin
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
+    Exit;
+  end;
+
+  Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
+  if Ptr = nil then
+  begin
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for clearing.');
+    Exit;
+  end;
+
+  FillChar(Ptr^, SharedMemorySize, 0);  // 清空記憶體
+  UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
+
+  CurrentOffset := 0;
+  SetOperationState(-1);  // 設定狀態為寫入中 (-1)
+  SetDataType(7);         // 設定資料型別為 7 (Float Block)
+  AppendSysOutputWithTimestamp('Started write procedure for Type 7 (Float Block) data.');
+end;
+
+// 寫入資料程序 (Type 7: Float Block) - 每次寫入一對 Address:Float
+procedure TMainForm.AppendFloatBlockData(Address: Int64; Value: Single);
+var
+  Ptr: Pointer;
+begin
+  if CurrentOffset >= SharedMemorySize - 12 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory is full.');
+    Exit;
+  end;
+
+  Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
+  if Ptr = nil then
+  begin
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for appending data.');
+    Exit;
+  end;
+
+  Move(Address, (PByte(Ptr) + CurrentOffset)^, SizeOf(Address));
+  Move(Value, (PByte(Ptr) + CurrentOffset + 8)^, SizeOf(Value));
+  CurrentOffset := CurrentOffset + 12;
+
+  UnmapViewOfFile(Ptr);
+  AppendSysOutputWithTimestamp(Format('Appended Float Block Address: 0x%012X, Value: %f', [Address, Value]));
+end;
+
+// 結束寫入程序 (Type 7: Float Block)
+procedure TMainForm.EndWriteFloatBlock;
+begin
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
+    Exit;
+  end;
+
+  SetOperationState(-3);  // 設定狀態為寫入完成 (-3)
+  AppendSysOutputWithTimestamp('Finished write procedure for Type 7 (Float Block) data.');
+end;
+
+// 開始寫入程序 (Type 8: QWord Block)
+procedure TMainForm.StartWriteQWordBlock;
+var
+  Ptr: Pointer;
+begin
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
+    Exit;
+  end;
+
+  Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
+  if Ptr = nil then
+  begin
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for clearing.');
+    Exit;
+  end;
+
+  FillChar(Ptr^, SharedMemorySize, 0);  // 清空記憶體
+  UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
+
+  CurrentOffset := 0;
+  SetOperationState(-1);  // 設定狀態為寫入中 (-1)
+  SetDataType(8);         // 設定資料型別為 8 (QWord Block)
+  AppendSysOutputWithTimestamp('Started write procedure for Type 8 (QWord Block) data.');
+end;
+
+// 寫入資料程序 (Type 8: QWord Block) - 每次寫入一對 Address:QWord
+procedure TMainForm.AppendQWordBlockData(Address: Int64; Value: Int64);
+var
+  Ptr: Pointer;
+begin
+  if CurrentOffset >= SharedMemorySize - 16 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory is full.');
+    Exit;
+  end;
+
+  Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
+  if Ptr = nil then
+  begin
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for appending data.');
+    Exit;
+  end;
+
+  Move(Address, (PByte(Ptr) + CurrentOffset)^, SizeOf(Address));
+  Move(Value, (PByte(Ptr) + CurrentOffset + 8)^, SizeOf(Value));
+  CurrentOffset := CurrentOffset + 16;
+
+  UnmapViewOfFile(Ptr);
+  AppendSysOutputWithTimestamp(Format('Appended QWord Block Address: 0x%012X, Value: %d', [Address, Value]));
+end;
+
+// 結束寫入程序 (Type 8: QWord Block)
+procedure TMainForm.EndWriteQWordBlock;
+begin
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
+    Exit;
+  end;
+
+  SetOperationState(-3);  // 設定狀態為寫入完成 (-3)
+  AppendSysOutputWithTimestamp('Finished write procedure for Type 8 (QWord Block) data.');
 end;
 
 procedure TMainForm.btnReadClick(Sender: TObject);
@@ -253,114 +466,149 @@ var
   DoubleData: Double;
   StrData: array[0..2047] of AnsiChar;
   Address: Int64;
-  Value: Integer;
+  ValueInt: Integer;
+  ValueFloat: Single;
+  ValueQword: Int64;
   Offset: Integer;
   AddressStr, OutputText: string;
-  AddressList: TList;
-  i: Integer;
-  AddressPair: ^TAddressPair;
 begin
   if SharedMemoryHandle = 0 then
   begin
-    AppendSysOutputWithTimestamp('Shared memory handle is not initialized.');
+    AppendSysOutputWithTimestamp('***Shared memory handle is not initialized.');
     Exit;
   end;
 
-  WaitForIdleState;  // 等待共享記憶體空閒
+  // 檢查狀態是否為 -3 (寫入完成)
+  if getOperationState <> -3 then
+  begin
+    Exit;
+  end;
+
   SetOperationState(-2);  // 將操作狀態設為讀取中 (-2)
 
   // 鎖定共享記憶體
   Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_READ, 0, 0, SharedMemorySize);
   if Ptr = nil then
   begin
-    AppendSysOutputWithTimestamp('Unable to map shared memory for reading.');
+    AppendSysOutputWithTimestamp('***Unable to map shared memory for reading.');
     SetOperationState(0);  // 重設狀態為空閒
     Exit;
   end;
 
   // 從偏移量 4 讀取資料型態
-  StatePtr := MapViewOfFile(SharedMemoryStateHandle, FILE_MAP_READ or FILE_MAP_WRITE, 0, 0, 8);  // 映射完整 8 個位元組
+  StatePtr := MapViewOfFile(SharedMemoryStateHandle, FILE_MAP_READ or FILE_MAP_WRITE, 0, 0, 8);
   if StatePtr <> nil then
   begin
-    DataType := PInteger(PByte(StatePtr) + 4)^;  // 從偏移量 4 開始讀取 `DataType`
-    if DataType > 0 then
-      AppendSysOutputWithTimestamp('Data type read successfully: ' + IntToStr(DataType));
+    DataType := PInteger(PByte(StatePtr) + 4)^;
+    AppendSysOutputWithTimestamp('Data type read successfully: ' + IntToStr(DataType));
   end
   else
   begin
-    AppendSysOutputWithTimestamp('Unable to map shared memory state for reading.');
+    AppendSysOutputWithTimestamp('***Unable to map shared memory state for reading.');
     SetOperationState(0);
     UnmapViewOfFile(Ptr);
     Exit;
   end;
 
-  // 根據 DataType 讀取對應資料
-  case DataType of
-    1: begin  // 32-bit 整數
-         Move(Ptr^, IntData, SizeOf(IntData));
-         OutputText := '32-bit Integer: ' + IntToStr(IntData);
-       end;
-    2: begin  // 64-bit 整數
-         Move(Ptr^, QwordData, SizeOf(QwordData));
-         OutputText := '64-bit Integer: ' + IntToStr(QwordData);
-       end;
-    3: begin  // 單精度浮點數
-         Move(Ptr^, FloatData, SizeOf(FloatData));
-         OutputText := 'Single Precision Float: ' + FloatToStr(FloatData);
-       end;
-    4: begin  // 雙精度浮點數
-         Move(Ptr^, DoubleData, SizeOf(DoubleData));
-         OutputText := 'Double Precision Float: ' + FloatToStr(DoubleData);
-       end;
-    5: begin  // 字串
-         FillChar(StrData, SizeOf(StrData), 0);
-         Move(Ptr^, StrData, SizeOf(StrData) - 1);
-         OutputText := 'String: ' + string(StrData);
-       end;
-    6: begin  // 新資料型態: 64-bit 位址 + 32-bit 整數值
-         Offset := 0;
-         AddressList := TList.Create;
-         try
-           VLEditor1.Strings.BeginUpdate;  // 暫停 UI 更新
+  IntData := -999998;
+  QwordData := -999998;
+  FloatData := -999998;
+  DoubleData := -999998;
+  StrData := '';
+
+  VLEditor1.Strings.BeginUpdate;
+  try
+    Offset := 0;
+    OutputText := '';
+    case DataType of
+      1: begin  // 32-bit 整數
+           Move(Ptr^, IntData, SizeOf(IntData));
+           OutputText := '32-bit Integer: ' + IntToStr(IntData);
+         end;
+      2: begin  // 64-bit 整數
+           Move(Ptr^, QwordData, SizeOf(QwordData));
+           OutputText := '64-bit Integer: ' + IntToStr(QwordData);
+         end;
+      3: begin  // 單精度浮點數
+           Move(Ptr^, FloatData, SizeOf(FloatData));
+           OutputText := 'Single Precision Float: ' + FloatToStr(FloatData);
+         end;
+      4: begin  // 雙精度浮點數
+           Move(Ptr^, DoubleData, SizeOf(DoubleData));
+           OutputText := 'Double Precision Float: ' + FloatToStr(DoubleData);
+         end;
+      5: begin  // 字串
+           FillChar(StrData, SizeOf(StrData), 0);
+           Move(Ptr^, StrData, SizeOf(StrData) - 1);
+           OutputText := 'String: ' + string(StrData);
+         end;
+      6: begin  // 64-bit 位址 + 32-bit 整數值
            while Offset < SharedMemorySize do
            begin
-             Address := PInt64(PByte(Ptr) + Offset)^;  // 讀取 64-bit 位址
-             Value := PInteger(PByte(Ptr) + Offset + 8)^;  // 讀取 32-bit 整數值
-             if Address = 0 then Break;  // 位址為 0 表示結束
+             Address := PInt64(PByte(Ptr) + Offset)^;
+             ValueInt := PInteger(PByte(Ptr) + Offset + 8)^;
+             if Address = 0 then Break;
 
-             // 將地址轉為十六進位字串，並填補前導零至 16 位數
-             AddressStr := IntToHex(Address, 12);
-             AddressStr := '0x' + AddressStr;  // 添加 "0x" 前綴
-
-             // 將新資料插入 VLEditor1
+             AddressStr := '0x' + IntToHex(Address, 12);
              if VLEditor1.Strings.IndexOfName(AddressStr) = -1 then
-               VLEditor1.InsertRow(AddressStr, IntToStr(Value), True)  // 位址不存在時新增
+               VLEditor1.InsertRow(AddressStr, IntToStr(ValueInt), True)
              else
-               VLEditor1.Values[AddressStr] := IntToStr(Value);  // 位址存在時更新資料
-
-             Offset := Offset + 12;  // 移動到下一筆 12-byte 結構
+               VLEditor1.Values[AddressStr] := IntToStr(ValueInt);
+             Offset := Offset + 12;
            end;
+           AppendSysOutputWithTimestamp('Address-Int pairs displayed in block data tab.');
 
-           // 排序 VLEditor1 中的所有項目
-           VLEditor1.Strings.Sort;
-           OutputText := 'New data type (Address-Value pairs) displayed and sorted in VLEditor1.';
-         finally
-           VLEditor1.Strings.EndUpdate;  // 恢復 UI 更新
-           for i := 0 to AddressList.Count - 1 do
-             Dispose(PAddressPair(AddressList[i]));
-           AddressList.Free;
          end;
-       end;
-  else
-    asm
-      nop
+      7: begin  // 64-bit 位址 + 單精度浮點數
+           while Offset < SharedMemorySize do
+           begin
+             Address := PInt64(PByte(Ptr) + Offset)^;
+             ValueFloat := PSingle(PByte(Ptr) + Offset + 8)^;
+             if Address = 0 then Break;
+
+             AddressStr := '0x' + IntToHex(Address, 12);
+             if VLEditor1.Strings.IndexOfName(AddressStr) = -1 then
+               VLEditor1.InsertRow(AddressStr, FloatToStr(ValueFloat), True)
+             else
+               VLEditor1.Values[AddressStr] := FloatToStr(ValueFloat);
+             Offset := Offset + 12;
+           end;
+           AppendSysOutputWithTimestamp('Address-Int pairs displayed in block data tab.');
+         end;
+      8: begin  // 64-bit 位址 + 64-bit 整數值
+           while Offset < SharedMemorySize do
+           begin
+             Address := PInt64(PByte(Ptr) + Offset)^;
+             ValueQword := PInt64(PByte(Ptr) + Offset + 8)^;
+             if Address = 0 then Break;
+
+             AddressStr := '0x' + IntToHex(Address, 12);
+             if VLEditor1.Strings.IndexOfName(AddressStr) = -1 then
+               VLEditor1.InsertRow(AddressStr, IntToStr(ValueQword), True)
+             else
+               VLEditor1.Values[AddressStr] := IntToStr(ValueQword);
+             Offset := Offset + 16;
+           end;
+           AppendSysOutputWithTimestamp('Address-Int pairs displayed in block data tab.');
+         end;
+    else
+      //AppendSysOutputWithTimestamp('Unsupported data type or empty shared memory.');
+      asm
+        nop
+      end;
     end;
+
+    // 使用 VLEditor1 內建排序功能
+    VLEditor1.Strings.Sort;
+
+  finally
+    VLEditor1.Strings.EndUpdate;
   end;
 
   // 清除共享記憶體並重設操作狀態
   ClearSharedMemory;
-  PInteger(StatePtr)^ := 0;  // 重設操作狀態為空閒
-  PInteger(PByte(StatePtr) + 4)^ := 0;  // 重設 DataType
+  PInteger(StatePtr)^ := 0;
+  PInteger(PByte(StatePtr) + 4)^ := 0;
   SetOperationState(0);
   UnmapViewOfFile(StatePtr);
   UnmapViewOfFile(Ptr);
@@ -368,6 +616,25 @@ begin
   // 顯示結果於輸出視窗
   if Length(OutputText) > 0 then
     AppendOutputWithTimestamp(OutputText);
+end;
+
+
+// 獲取目前操作狀態
+function TMainForm.GetOperationState: Integer;
+var
+  StatePtr: PInteger;
+begin
+  StatePtr := MapViewOfFile(SharedMemoryStateHandle, FILE_MAP_READ, 0, 0, SizeOf(Integer));
+  if StatePtr <> nil then
+  begin
+    Result := StatePtr^;
+    UnmapViewOfFile(StatePtr);
+  end
+  else
+  begin
+    AppendSysOutputWithTimestamp('Failed to retrieve operation state.');
+    Result := 0;
+  end;
 end;
 
 
@@ -398,6 +665,11 @@ begin
   finally
     CSVData.Free;  // 釋放記憶體
   end;
+end;
+
+procedure TMainForm.btnClearClick(Sender: TObject);
+begin
+  VLEditor1.Strings.Clear;
 end;
 
 
@@ -435,25 +707,33 @@ var
   DoubleData: Double;
   StrData: AnsiString;
 begin
-  //btnWrite.Tag := btnWrite.Tag + 1;
-  //AppendSysOutputWithTimestamp(IntToStr(btnWrite.Tag));
-  if SharedMemoryHandle = 0 then Exit;
+  if SharedMemoryHandle = 0 then
+  begin
+    AppendSysOutputWithTimestamp('Shared memory handle is not initialized.');
+    Exit;
+  end;
 
-  waitForIdleState;  // 等待共享記憶體空閒
-  setOperationState(-1);  // 將操作狀態設為寫入中 (-1)
+  // 確保共享記憶體空閒
+  if getOperationState <> 0 then
+  begin
+    AppendSysOutputWithTimestamp('Shared memory is busy. Write operation aborted.');
+    Exit;
+  end;
+
+  SetOperationState(-1);  // 設定為寫入中 (-1)
 
   // 鎖定共享記憶體
   Ptr := MapViewOfFile(SharedMemoryHandle, FILE_MAP_WRITE, 0, 0, SharedMemorySize);
   if Ptr = nil then
   begin
     AppendSysOutputWithTimestamp('Unable to map shared memory for writing.');
-    setOperationState(0);  // 將狀態設為空閒
+    SetOperationState(0);  // 設定為空閒
     Exit;
   end;
 
   // 根據 ComboBox 中選擇的資料類型寫入對應的數據
   DataType := cboDataType.ItemIndex + 1;  // 假設 cboDataType 的項目從 1 開始對應
-  setDataType(DataType);  // 設定資料類型
+  SetDataType(DataType);  // 設定資料類型
 
   case DataType of
     1:  // 32-bit 整數
@@ -486,10 +766,11 @@ begin
   end;
 
   UnmapViewOfFile(Ptr);  // 解鎖共享記憶體
-  setOperationState(0);  // 重設狀態為空閒
 
-  AppendSysOutputWithTimestamp('Data written to shared memory.');
+  SetOperationState(-3);  // 設定為寫入完成 (-3)
+  AppendSysOutputWithTimestamp('Data written to shared memory and state set to -3 (write complete).');
 end;
+
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
@@ -509,9 +790,5 @@ end;
 
 
 end.
-
-
-
-
 
 
