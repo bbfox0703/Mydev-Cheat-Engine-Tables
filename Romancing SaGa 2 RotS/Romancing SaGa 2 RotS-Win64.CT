@@ -15,6 +15,108 @@ LuaCall(cycleFullCompact(nil,false))
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
+      <ID>66</ID>
+      <Description>"Battle end: restore overdrive to high watermark"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Romancing SaGa 2 RotS-Win64.exe
+  Version: 
+  Date   : 2024-11-07
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_BATT_OD,$process,89 01 48 8B F9 48 83 C1 08 48 83 C2 08 E8 8F) // should be unique
+alloc(newmem,$1000,INJECT_SET_BATT_OD)
+
+label(code)
+label(return)
+label(i_od_watermark)
+
+newmem:
+  cmp dword ptr[rcx+10], 0
+  je chk_update
+
+  cmp [i_od_watermark], eax
+  jb save_data
+  ja update_value
+  jmp code
+
+chk_update:
+  cmp [i_od_watermark], eax
+  ja update_value
+  jmp code
+
+save_data:
+  mov [i_od_watermark], eax
+  jmp code
+
+update_value:
+  mov eax, [i_od_watermark]
+
+code:
+  mov [rcx],eax
+  mov rdi,rcx
+  jmp return
+align 10 cc
+  i_od_watermark:
+  dd 64
+
+INJECT_SET_BATT_OD:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_BATT_OD)
+registersymbol(i_od_watermark)
+
+[DISABLE]
+
+INJECT_SET_BATT_OD:
+  db 89 01 48 8B F9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Romancing SaGa 2 RotS-Win64.exe+1512C3F
+
+Romancing SaGa 2 RotS-Win64.exe+1512C2B: 5D                    - pop rbp
+Romancing SaGa 2 RotS-Win64.exe+1512C2C: C3                    - ret 
+Romancing SaGa 2 RotS-Win64.exe+1512C2D: CC                    - int 3 
+Romancing SaGa 2 RotS-Win64.exe+1512C2E: CC                    - int 3 
+Romancing SaGa 2 RotS-Win64.exe+1512C2F: CC                    - int 3 
+Romancing SaGa 2 RotS-Win64.exe+1512C30: 48 89 5C 24 08        - mov [rsp+08],rbx
+Romancing SaGa 2 RotS-Win64.exe+1512C35: 57                    - push rdi
+Romancing SaGa 2 RotS-Win64.exe+1512C36: 48 83 EC 20           - sub rsp,20
+Romancing SaGa 2 RotS-Win64.exe+1512C3A: 8B 02                 - mov eax,[rdx]
+Romancing SaGa 2 RotS-Win64.exe+1512C3C: 48 8B DA              - mov rbx,rdx
+// ---------- INJECTING HERE ----------
+Romancing SaGa 2 RotS-Win64.exe+1512C3F: 89 01                 - mov [rcx],eax
+// ---------- DONE INJECTING  ----------
+Romancing SaGa 2 RotS-Win64.exe+1512C41: 48 8B F9              - mov rdi,rcx
+Romancing SaGa 2 RotS-Win64.exe+1512C44: 48 83 C1 08           - add rcx,08
+Romancing SaGa 2 RotS-Win64.exe+1512C48: 48 83 C2 08           - add rdx,08
+Romancing SaGa 2 RotS-Win64.exe+1512C4C: E8 8F F2 68 FF        - call "Romancing SaGa 2 RotS-Win64.exe"+BA1EE0
+Romancing SaGa 2 RotS-Win64.exe+1512C51: 48 8D 53 58           - lea rdx,[rbx+58]
+Romancing SaGa 2 RotS-Win64.exe+1512C55: 48 8D 4F 58           - lea rcx,[rdi+58]
+Romancing SaGa 2 RotS-Win64.exe+1512C59: E8 82 F2 68 FF        - call "Romancing SaGa 2 RotS-Win64.exe"+BA1EE0
+Romancing SaGa 2 RotS-Win64.exe+1512C5E: 48 8D 93 A8 00 00 00  - lea rdx,[rbx+000000A8]
+Romancing SaGa 2 RotS-Win64.exe+1512C65: 48 8D 8F A8 00 00 00  - lea rcx,[rdi+000000A8]
+Romancing SaGa 2 RotS-Win64.exe+1512C6C: E8 6F F2 68 FF        - call "Romancing SaGa 2 RotS-Win64.exe"+BA1EE0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>67</ID>
+          <Description>"Watermark"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_od_watermark</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>5</ID>
       <Description>"Battle control"</Description>
       <Options moHideChildren="1"/>
@@ -742,7 +844,7 @@ getLuaEngine().Close()
 [ENABLE]
 
 aobscanmodule(INJECT_SET_ITEM_CNT_SAVE,$process,49 63 46 18 48 8D 0C 40 4C 8D 3C) // should be unique
-alloc(newmem,$4000,INJECT_SET_ITEM_CNT_SAVE)
+alloc(newmem,$8000,INJECT_SET_ITEM_CNT_SAVE)
 
 label(code)
 label(return)
@@ -750,6 +852,7 @@ label(i_base_items_cnt_addr)
 label(i_base_items_cnt_addr_data)
 label(i_item_loadsave_mode)
 label(i_restore_GE_than)
+label(i_records_total)
 
 newmem:
   cmp dword ptr [i_item_loadsave_mode], 1
@@ -767,19 +870,20 @@ to_record:
 loops:
   mov rcx, i_base_items_cnt_addr
   lea rcx, [rcx+rax*8]
-  cmp qword ptr [rcx], 0
-  je save_data
 
   cmp qword ptr [rcx], r14
   je endp
+
+  cmp qword ptr [rcx], 0
+  je save_data
 
   jmp to_next
 
 save_data:
   push r14
 
-  lea r14, [r14+18]
   mov [rcx], r14
+  lea r14, [r14+18]
 
   push rcx
   mov rcx, i_base_items_cnt_addr_data
@@ -795,12 +899,13 @@ save_data:
 
 to_next:
   inc eax
-  cmp eax, #600
+  cmp eax, #1200
   je endp
   jmp loops
 
 endp:
   //pop r12
+  mov [i_records_total], eax
 
   pop rax
   pop rcx
@@ -822,6 +927,8 @@ loops_1:
   je endp1
 
   mov r14, [rcx]
+  lea r14, [r14+18]
+
   mov rcx, i_base_items_cnt_addr_data
   lea rcx, [rcx+rax*4]
   mov ecx, [rcx]
@@ -833,7 +940,7 @@ loops_1:
 
 @@:
   inc eax
-  cmp eax, #600
+  cmp eax, #1200
   jbe loops_1
 
 endp1:
@@ -852,8 +959,54 @@ align 10 cc
   dd 0
   i_restore_GE_than:
   dd 1
+  i_records_total:
+  dd -1
   i_base_items_cnt_addr:
   dq 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
   align 100 0
   db 0
   align 100 0
@@ -928,6 +1081,25 @@ align 10 cc
   db 0
   align 100 0
   db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
 
 INJECT_SET_ITEM_CNT_SAVE:
   jmp newmem
@@ -938,6 +1110,8 @@ registersymbol(i_base_items_cnt_addr)
 registersymbol(i_base_items_cnt_addr_data)
 registersymbol(i_item_loadsave_mode)
 registersymbol(i_restore_GE_than)
+registersymbol(i_records_total)
+
 [DISABLE]
 
 INJECT_SET_ITEM_CNT_SAVE:
@@ -1023,6 +1197,14 @@ Romancing SaGa 2 RotS-Win64.exe+14466B4: 3B 46 0C                 - cmp eax,[rsi
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_restore_GE_than</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>64</ID>
+              <Description>"Total records -1 (max 1200)"</Description>
+              <ShowAsSigned>1</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_records_total</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>58</ID>
