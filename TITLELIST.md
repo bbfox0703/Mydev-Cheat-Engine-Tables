@@ -254,6 +254,11 @@ ja-JP: ペルソナ５ ザ・ロイヤル
 ## Rise of Industry  
 [Rise of Industry (Steam)](https://store.steampowered.com/app/671440/Rise_of_Industry/)  
 
+## Romancing SaGa 2 RotS 
+[Romancing SaGa 2: Revenge of the Seven (Steam)](https://store.steampowered.com/app/2455640/2/)  
+ja-JP: ロマンシング サガ2 リベンジオブザセブン  
+zh-TW: 復活邪神2 七英雄的復仇  
+
 ## Romancing Saga 3  
 [Romancing Saga 3 (Steam)](https://store.steampowered.com/app/952540/Romancing_SaGa_3/)  
 ja-JP: ロマンシング サガ3  
