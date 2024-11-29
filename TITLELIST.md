@@ -29,6 +29,11 @@ ja-JP: アサシン クリード オデッセイ
 zh-TW: 刺客教條：維京紀元  
 ja-JP: アサシンクリードヴァルハラ  
 
+## Atelier Ayesha DX  
+[Atelier Ayesha: The Alchemist of Dusk DX - non-English ver. (Steam)](https://store.steampowered.com/app/1152300/__DX/)  
+zh-TW: 愛夏的鍊金工房 ～黃昏大地之鍊金術士～ DX  
+ja-JP: アーシャのアトリエ ～黄昏の大地の錬金術士～ DX  
+
 ## Atelier Firis DX  
 [Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)](https://store.steampowered.com/app/1502980/__DX/)  
 zh-TW: 菲莉絲的鍊金工房 ～不可思議旅的鍊金術士～ DX  
