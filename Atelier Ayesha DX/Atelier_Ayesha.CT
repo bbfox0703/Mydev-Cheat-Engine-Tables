@@ -63,7 +63,10 @@ end
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
+local memoryRecord = getAddressList().getMemoryRecordByID(178)
+memoryRecord.Description = "Year:? Month:?? Day:??"
 getLuaEngine().Close()
+
 {$asm}
 unregistersymbol(TARGET_QUALITY)
 dealloc(newmem, 100)
@@ -71,8 +74,45 @@ dealloc(newmem, 100)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>180</ID>
+          <Description>"いくつかのスクリプトを切り替える / Toggle some scripts"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+
+local enableBattleScripts = {149, 152, 161, 160, 163, 168, 156, 176, 170, 174, 154, 102, 0}
+local addressList = getAddressList()
+
+for _, id in ipairs(enableBattleScripts) do
+  addressList.getMemoryRecordByID(id).Active = true
+end
+
+print("Scripts ON; Total " .. #enableBattleScripts .. " items.")
+getLuaEngine().Close()
+
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+
+local disableBattleScripts = {179, 150, 137, 144, 103, 118, 92,       149, 152, 161, 160, 163, 166, 168, 156, 176, 170, 174, 154, 102, 0}
+local addressList = getAddressList()
+
+for _, id in ipairs(disableBattleScripts) do
+  addressList.getMemoryRecordByID(id).Active = false
+end
+
+print("Scripts OFF.")
+getLuaEngine().Close()
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>149</ID>
-          <Description>"Static addr. values "</Description>
+          <Description>"静的アドレス値（非英語版のみ） / Static addr. values  (non-English version only)"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
@@ -164,6 +204,67 @@ end
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>141B5CA04</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>179</ID>
+                  <Description>"日付を取得 / Get current date"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+-- 定義計時器
+local timer = createTimer(nil, false)
+timer.Interval = 2000
+
+-- Memory Record ID 為 178 的對象
+local memoryRecord = getAddressList().getMemoryRecordByID(178)
+
+-- 日期memory地址
+local dateAddress = getAddress("Atelier_Ayesha.exe+1B5CA00")
+
+-- 定義更新日期的函數
+function updateDate()
+    -- 讀取32位整數字節的前日期值
+    local currentDateValue = readInteger(dateAddress)
+
+    if currentDateValue then
+        local year = math.floor(currentDateValue / 360) + 1
+        local dayOfYear = currentDateValue % 360
+        local month = math.floor(dayOfYear / 30) + 1
+        local day = (dayOfYear % 30) + 1
+
+        -- 設置 MemoryRecord 對象的描述
+        memoryRecord.Description = string.format("Year:%d Month:%02d Day:%02d", year, month, day)
+    end
+end
+
+-- 啟動計時器並綁定更新日期函數
+timer.OnTimer = updateDate
+timer.Enabled = true
+getLuaEngine().Close()
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+-- 停用計時器
+if timer then
+    timer.destroy()
+    timer = nil
+end
+local memoryRecord = getAddressList().getMemoryRecordByID(178)
+memoryRecord.Description = "Year:? Month:?? Day:??"
+getLuaEngine().Close()
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>178</ID>
+                      <Description>"Year:1 Month:04 Day:27"</Description>
+                      <Color>808080</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -434,7 +535,7 @@ code:
   jmp return
 align 10 cc
   i_min_asst_gauge:
-  dd C8
+  dd #210
 
 INJECT_SET_ASSIST_GAUGE:
   jmp newmem
@@ -767,6 +868,93 @@ Atelier_Ayesha.exe+171B7A: 74 16                    - je Atelier_Ayesha.exe+171B
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>176</ID>
+          <Description>"バトル：経験値獲得倍率 / EXP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ayesha.exe
+  Version: 
+  Date   : 2024-11-29
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ADV_EXP_MULTI,$process,89 4F 28 41 8D 48 02) // should be unique
+alloc(newmem,$1000,INJECT_ADV_EXP_MULTI)
+
+label(code)
+label(return)
+label(vf_adv_xp_multi)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, ecx
+  vmovss xmm14, [vf_adv_xp_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si ecx, xmm15
+
+code:
+  mov [rdi+28],ecx
+  lea ecx,[r8+02]
+  jmp return
+align 10 cc
+  vf_adv_xp_multi:
+  dd (float)1.333333333
+
+INJECT_ADV_EXP_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_ADV_EXP_MULTI)
+registersymbol(vf_adv_xp_multi)
+[DISABLE]
+
+INJECT_ADV_EXP_MULTI:
+  db 89 4F 28 41 8D 48 02
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ayesha.exe+168A10
+
+Atelier_Ayesha.exe+1689E3: C7 47 14 19 00 00 00  - mov [rdi+14],00000019
+Atelier_Ayesha.exe+1689EA: 48 8B 01              - mov rax,[rcx]
+Atelier_Ayesha.exe+1689ED: 48 83 C4 20           - add rsp,20
+Atelier_Ayesha.exe+1689F1: 5F                    - pop rdi
+Atelier_Ayesha.exe+1689F2: 48 FF A0 C8 00 00 00  - jmp qword ptr [rax+000000C8]
+Atelier_Ayesha.exe+1689F9: 48 8B 47 08           - mov rax,[rdi+08]
+Atelier_Ayesha.exe+1689FD: 45 33 C0              - xor r8d,r8d
+Atelier_Ayesha.exe+168A00: BA 83 00 00 00        - mov edx,00000083
+Atelier_Ayesha.exe+168A05: 48 89 5C 24 30        - mov [rsp+30],rbx
+Atelier_Ayesha.exe+168A0A: 8B 88 A0 0A 00 00     - mov ecx,[rax+00000AA0]
+// ---------- INJECTING HERE ----------
+Atelier_Ayesha.exe+168A10: 89 4F 28              - mov [rdi+28],ecx
+// ---------- DONE INJECTING  ----------
+Atelier_Ayesha.exe+168A13: 41 8D 48 02           - lea ecx,[r8+02]
+Atelier_Ayesha.exe+168A17: E8 9A FB EA FF        - call Atelier_Ayesha.exe+185B6
+Atelier_Ayesha.exe+168A1C: 33 C9                 - xor ecx,ecx
+Atelier_Ayesha.exe+168A1E: 8B D8                 - mov ebx,eax
+Atelier_Ayesha.exe+168A20: E8 F8 AE E9 FF        - call Atelier_Ayesha.exe+391D
+Atelier_Ayesha.exe+168A25: 8B 57 28              - mov edx,[rdi+28]
+Atelier_Ayesha.exe+168A28: 8D 48 64              - lea ecx,[rax+64]
+Atelier_Ayesha.exe+168A2B: B8 1F 85 EB 51        - mov eax,51EB851F
+Atelier_Ayesha.exe+168A30: 03 CB                 - add ecx,ebx
+Atelier_Ayesha.exe+168A32: 48 8B 5F 08           - mov rbx,[rdi+08]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>177</ID>
+              <Description>"乗数 / multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_adv_xp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>170</ID>
           <Description>"錬金術経験値の倍率 / Alchemy EXP multiplier"</Description>
           <Options moHideChildren="1"/>
@@ -845,7 +1033,7 @@ Atelier_Ayesha.exe+388C95: CC                       - int 3
           <CheatEntries>
             <CheatEntry>
               <ID>171</ID>
-              <Description>"multiplier"</Description>
+              <Description>"乗数 / multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
@@ -854,9 +1042,94 @@ Atelier_Ayesha.exe+388C95: CC                       - int 3
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>174</ID>
+          <Description>"友情獲得倍率 / Friendship multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ayesha.exe
+  Version: 
+  Date   : 2024-11-29
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FRIENDSHIP_MULTI,$process,F3 0F 58 0A C7 44 24 10 00 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FRIENDSHIP_MULTI)
+
+label(code)
+label(return)
+label(vf_frie_multi)
+
+newmem:
+  vmovss xmm14, [vf_frie_multi]
+  vmulss xmm1, xmm1, xmm14
+
+code:
+  addss xmm1,[rdx]
+  mov [rsp+10],00000000
+  jmp return
+align 10 cc
+  vf_frie_multi:
+  dd (float)1.666666
+
+INJECT_FRIENDSHIP_MULTI:
+  jmp newmem
+  nop 7
+return:
+registersymbol(INJECT_FRIENDSHIP_MULTI)
+registersymbol(vf_frie_multi)
+[DISABLE]
+
+INJECT_FRIENDSHIP_MULTI:
+  db F3 0F 58 0A C7 44 24 10 00 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ayesha.exe+235CEF
+
+Atelier_Ayesha.exe+235CD8: CC                       - int 3 
+Atelier_Ayesha.exe+235CD9: CC                       - int 3 
+Atelier_Ayesha.exe+235CDA: CC                       - int 3 
+Atelier_Ayesha.exe+235CDB: CC                       - int 3 
+Atelier_Ayesha.exe+235CDC: CC                       - int 3 
+Atelier_Ayesha.exe+235CDD: CC                       - int 3 
+Atelier_Ayesha.exe+235CDE: CC                       - int 3 
+Atelier_Ayesha.exe+235CDF: CC                       - int 3 
+Atelier_Ayesha.exe+235CE0: F3 0F 10 05 B0 61 78 00  - movss xmm0,[Atelier_Ayesha.exe+9BBE98]
+Atelier_Ayesha.exe+235CE8: 48 8D 91 7C 02 00 00     - lea rdx,[rcx+0000027C]
+// ---------- INJECTING HERE ----------
+Atelier_Ayesha.exe+235CEF: F3 0F 58 0A              - addss xmm1,[rdx]
+// ---------- DONE INJECTING  ----------
+Atelier_Ayesha.exe+235CF3: C7 44 24 10 00 00 00 00  - mov [rsp+10],00000000
+Atelier_Ayesha.exe+235CFB: 48 8D 4C 24 10           - lea rcx,[rsp+10]
+Atelier_Ayesha.exe+235D00: 0F 57 D2                 - xorps xmm2,xmm2
+Atelier_Ayesha.exe+235D03: 48 8D 05 32 E0 A3 00     - lea rax,[Atelier_Ayesha.exe+C73D3C]
+Atelier_Ayesha.exe+235D0A: F3 0F 11 0A              - movss [rdx],xmm1
+Atelier_Ayesha.exe+235D0E: 0F 2F CA                 - comiss xmm1,xmm2
+Atelier_Ayesha.exe+235D11: 48 0F 47 CA              - cmova rcx,rdx
+Atelier_Ayesha.exe+235D15: 0F 2F 01                 - comiss xmm0,[rcx]
+Atelier_Ayesha.exe+235D18: 48 0F 47 C1              - cmova rax,rcx
+Atelier_Ayesha.exe+235D1C: 8B 00                    - mov eax,[rax]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>175</ID>
+              <Description>"乗数 / multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_frie_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>154</ID>
           <Description>"コンテナ&amp;カゴ / Container &amp; basket"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
@@ -1121,11 +1394,13 @@ else
           -- 4-7: Quality
           -- 8-31: others
           -- Duplicate item data to new slots
-          previousItemID = previousItemID + 1
-          writeSmallInteger(currentQualityAddress, previousItemID) -- Serial
+
+          ----
+          ----previousItemID = previousItemID + 1
+          ----writeSmallInteger(currentQualityAddress, previousItemID) -- Serial
 
           -- Copy rest of the data (offset 4~31)
-          for offset = 2, ItemRecordSize - 1 do
+          for offset = 0, ItemRecordSize - 1 do
             local byteValue = readBytes(srcQualityAddress + offset, 1, false)
             writeBytes(currentQualityAddress + offset, byteValue)
           end
@@ -1221,7 +1496,13 @@ end
 0011:確率安定50％
 001B:HP+25
 001E:MP+25
+0021:攻撃力+8
+0024:速度+12
 0027:全能力+6
+002A:物理耐性+12
+002D:炎耐性+25
+0030:氷耐性+25
+0033:雷耐性+25
 0036:状態耐性+50
 003C:スキル消費-25%
 003F:*スキル強化Lv3
@@ -1370,6 +1651,8 @@ FFFF:N/A
                 <CheatEntry>
                   <ID>117</ID>
                   <Description>"数量"</Description>
+                  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">50:50
+</DropDownList>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>Byte</VariableType>
@@ -2390,61 +2673,6 @@ end
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <CheatCodes>
-    <CodeEntry>
-      <Description>Code :sub [rdi+00000094],eax</Description>
-      <AddressString>Atelier_Ayesha.exe+171B5A</AddressString>
-      <Before>
-        <Byte>5C</Byte>
-        <Byte>24</Byte>
-        <Byte>40</Byte>
-        <Byte>8B</Byte>
-        <Byte>06</Byte>
-      </Before>
-      <Actual>
-        <Byte>29</Byte>
-        <Byte>87</Byte>
-        <Byte>94</Byte>
-        <Byte>00</Byte>
-        <Byte>00</Byte>
-        <Byte>00</Byte>
-      </Actual>
-      <After>
-        <Byte>E8</Byte>
-        <Byte>2B</Byte>
-        <Byte>D2</Byte>
-        <Byte>E9</Byte>
-        <Byte>FF</Byte>
-      </After>
-    </CodeEntry>
-    <CodeEntry>
-      <Description>Code :mov eax,[rcx+rax*4+00000090]</Description>
-      <AddressString>Atelier_Ayesha.exe+175B63</AddressString>
-      <Before>
-        <Byte>CC</Byte>
-        <Byte>CC</Byte>
-        <Byte>48</Byte>
-        <Byte>63</Byte>
-        <Byte>C2</Byte>
-      </Before>
-      <Actual>
-        <Byte>8B</Byte>
-        <Byte>84</Byte>
-        <Byte>81</Byte>
-        <Byte>90</Byte>
-        <Byte>00</Byte>
-        <Byte>00</Byte>
-        <Byte>00</Byte>
-      </Actual>
-      <After>
-        <Byte>C3</Byte>
-        <Byte>CC</Byte>
-        <Byte>CC</Byte>
-        <Byte>CC</Byte>
-        <Byte>CC</Byte>
-      </After>
-    </CodeEntry>
-  </CheatCodes>
   <UserdefinedSymbols/>
   <LuaScript>MaxContainerCount = 1999
 MaxBasketCount = 120
