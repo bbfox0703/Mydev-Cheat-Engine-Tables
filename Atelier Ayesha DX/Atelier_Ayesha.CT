@@ -27,12 +27,20 @@ LuaCall(cycleFullCompact(nil,false))
 {$asm}
 alloc(newmem, 100, $process)
 label(TARGET_QUALITY)
+label(TARGET_QUANTITY)
+label(TARGET_QUANTITY_MIN)
+
 newmem:
   TARGET_QUALITY:
   dd (float)120
+  TARGET_QUANTITY:
+  db 50
+  TARGET_QUANTITY_MIN:
+  db 3
 
 registersymbol(TARGET_QUALITY)
-
+registersymbol(TARGET_QUANTITY)
+registersymbol(TARGET_QUANTITY_MIN)
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
@@ -69,6 +77,8 @@ getLuaEngine().Close()
 
 {$asm}
 unregistersymbol(TARGET_QUALITY)
+unregistersymbol(TARGET_QUANTITY)
+unregistersymbol(TARGET_QUANTITY_MIN)
 dealloc(newmem, 100)
 
 </AssemblerScript>
@@ -98,7 +108,7 @@ getLuaEngine().Close()
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
 
-local disableBattleScripts = {179, 150, 137, 144, 103, 118, 92,       149, 152, 161, 160, 163, 166, 168, 156, 176, 170, 174, 154, 102, 0}
+local disableBattleScripts = {179, 150, 137, 144, 103, 118, 92, 184,       182, 183, 149, 152, 161, 160, 163, 166, 168, 156, 176, 170, 174, 154, 102, 0}
 local addressList = getAddressList()
 
 for _, id in ipairs(disableBattleScripts) do
@@ -260,7 +270,7 @@ getLuaEngine().Close()
                   <CheatEntries>
                     <CheatEntry>
                       <ID>178</ID>
-                      <Description>"Year:1 Month:04 Day:27"</Description>
+                      <Description>"Year:1 Month:07 Day:03"</Description>
                       <Color>808080</Color>
                       <GroupHeader>1</GroupHeader>
                     </CheatEntry>
@@ -1197,6 +1207,83 @@ getLuaEngine().Close()
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
+              <ID>184</ID>
+              <Description>"コンテナ内アイテムの数量を設定する / Set container items quantity to.."</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>185</ID>
+                  <Description>"值 / value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>TARGET_QUANTITY</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>187</ID>
+                  <Description>"トリガー値 / trigger value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>TARGET_QUANTITY_MIN</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>186</ID>
+                  <Description>"Go!"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+print("Start")
+
+local tQty = readByte("TARGET_QUANTITY")
+local tQtymin = readByte("TARGET_QUANTITY_MIN")
+local curQty = 0
+
+local containerBaseAddress = 0
+local currentQualityAddress = 0
+
+-- Check if the process is selected
+if getAddressSafe(process) == nil then
+  print("Please select process first")
+  getLuaEngine().Close()
+  return
+end
+
+containerBaseAddress = getAddressSafe(process) + BaseContainerOffset
+currentQualityAddress = containerBaseAddress
+
+for i = 1, MaxContainerCount, 1 do
+  local currentID = readSmallInteger(currentQualityAddress)
+
+  if currentID &gt;= 0xFFFF then
+    break
+  end
+
+  curQty = readByte(currentQualityAddress + 0x1C)
+  if curQty &gt;= tQtymin then
+    writeByte(currentQualityAddress + 0x1C, tQty)
+    if currentID % 25 == 0 then
+      print("NO: " .. i .. ", ID " .. currentID .. ", (addr: " .. string.format("%08X", currentQualityAddress) .. ") set quality to " .. tQ)
+    end
+  end
+
+  currentQualityAddress = currentQualityAddress + ItemRecordSize
+end
+
+print("Done.")
+getLuaEngine().Close()
+{$asm}
+[DISABLE]
+
+</AssemblerScript>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
               <ID>144</ID>
               <Description>"カゴのアイテム品質を設定する / Set basket items quality to.."</Description>
               <Options moHideChildren="1"/>
@@ -1261,6 +1348,145 @@ getLuaEngine().Close()
               </CheatEntries>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>182</ID>
+          <Description>"インフィニティCP - マテリアル / inf. CP - materials"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ayesha.exe
+  Version: 
+  Date   : 2024-11-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_CP,$process,44 29 4B 10 0F 99 C0) // should be unique
+alloc(newmem,$1000,INJECT_INF_CP)
+
+label(code)
+label(return)
+
+newmem:
+  xor r9d, r9d
+  mov [rsp+70], r9d
+
+code:
+  sub [rbx+10],r9d
+  setns al
+  jmp return
+
+INJECT_INF_CP:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INF_CP)
+
+[DISABLE]
+
+INJECT_INF_CP:
+  db 44 29 4B 10 0F 99 C0
+
+unregistersymbol(INJECT_INF_CP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ayesha.exe+38FE72
+
+Atelier_Ayesha.exe+38FE47: F3 0F 59 C8              - mulss xmm1,xmm0
+Atelier_Ayesha.exe+38FE4B: F3 0F 5E 0D 45 C0 62 00  - divss xmm1,[Atelier_Ayesha.exe+9BBE98]
+Atelier_Ayesha.exe+38FE53: 44 8B 4C 24 70           - mov r9d,[rsp+70]
+Atelier_Ayesha.exe+38FE58: 66 41 0F 6E C1           - movd xmm0,r9d
+Atelier_Ayesha.exe+38FE5D: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+Atelier_Ayesha.exe+38FE60: F3 0F 59 C8              - mulss xmm1,xmm0
+Atelier_Ayesha.exe+38FE64: F3 0F 2C C1              - cvttss2si eax,xmm1
+Atelier_Ayesha.exe+38FE68: 44 03 C8                 - add r9d,eax
+Atelier_Ayesha.exe+38FE6B: EB 05                    - jmp Atelier_Ayesha.exe+38FE72
+Atelier_Ayesha.exe+38FE6D: 44 8B 4C 24 70           - mov r9d,[rsp+70]
+// ---------- INJECTING HERE ----------
+Atelier_Ayesha.exe+38FE72: 44 29 4B 10              - sub [rbx+10],r9d
+// ---------- DONE INJECTING  ----------
+Atelier_Ayesha.exe+38FE76: 0F 99 C0                 - setns al
+Atelier_Ayesha.exe+38FE79: 88 83 44 01 00 00        - mov [rbx+00000144],al
+Atelier_Ayesha.exe+38FE7F: 84 C0                    - test al,al
+Atelier_Ayesha.exe+38FE81: 0F 84 82 00 00 00        - je Atelier_Ayesha.exe+38FF09
+Atelier_Ayesha.exe+38FE87: 4C 8B C6                 - mov r8,rsi
+Atelier_Ayesha.exe+38FE8A: 48 8B D3                 - mov rdx,rbx
+Atelier_Ayesha.exe+38FE8D: 48 8B CF                 - mov rcx,rdi
+Atelier_Ayesha.exe+38FE90: E8 53 D8 C7 FF           - call Atelier_Ayesha.exe+D6E8
+Atelier_Ayesha.exe+38FE95: 0F 57 C0                 - xorps xmm0,xmm0
+Atelier_Ayesha.exe+38FE98: F3 0F 7F 44 24 38        - movdqu [rsp+38],xmm0
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>183</ID>
+          <Description>"インフィニティCP - スキル / inf. CP - skills"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ayesha.exe
+  Version: 
+  Date   : 2024-11-30
+  Author : bbox@https://opencheattabels.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_CP_SKILL,$process,29 47 10 B0 01) // should be unique
+alloc(newmem,$1000,INJECT_INF_CP_SKILL)
+
+label(code)
+label(return)
+
+newmem:
+  xor eax, eax
+  mov [rdi+rcx*4+000000A0], eax
+
+code:
+  sub [rdi+10],eax
+  mov al,01
+  jmp return
+
+INJECT_INF_CP_SKILL:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_CP_SKILL)
+
+[DISABLE]
+
+INJECT_INF_CP_SKILL:
+  db 29 47 10 B0 01
+
+unregistersymbol(INJECT_INF_CP_SKILL)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ayesha.exe+3900BC
+
+Atelier_Ayesha.exe+390086: 49 89 4A 40                    - mov [r10+40],rcx
+Atelier_Ayesha.exe+39008A: 48 8D 0C 76                    - lea rcx,[rsi+rsi*2]
+Atelier_Ayesha.exe+39008E: FF 47 04                       - inc [rdi+04]
+Atelier_Ayesha.exe+390091: 48 8B 74 24 40                 - mov rsi,[rsp+40]
+Atelier_Ayesha.exe+390096: 89 2F                          - mov [rdi],ebp
+Atelier_Ayesha.exe+390098: 48 8B 6C 24 38                 - mov rbp,[rsp+38]
+Atelier_Ayesha.exe+39009D: C7 47 1C 01 00 00 00           - mov [rdi+1C],00000001
+Atelier_Ayesha.exe+3900A4: C7 87 20 01 00 00 00 00 00 00  - mov [rdi+00000120],00000000
+Atelier_Ayesha.exe+3900AE: C6 87 46 01 00 00 00           - mov byte ptr [rdi+00000146],00
+Atelier_Ayesha.exe+3900B5: 8B 84 8F A0 00 00 00           - mov eax,[rdi+rcx*4+000000A0]
+// ---------- INJECTING HERE ----------
+Atelier_Ayesha.exe+3900BC: 29 47 10                       - sub [rdi+10],eax
+// ---------- DONE INJECTING  ----------
+Atelier_Ayesha.exe+3900BF: B0 01                          - mov al,01
+Atelier_Ayesha.exe+3900C1: C6 87 44 01 00 00 01           - mov byte ptr [rdi+00000144],01
+Atelier_Ayesha.exe+3900C8: 48 83 C4 20                    - add rsp,20
+Atelier_Ayesha.exe+3900CC: 5F                             - pop rdi
+Atelier_Ayesha.exe+3900CD: C3                             - ret 
+Atelier_Ayesha.exe+3900CE: CC                             - int 3 
+Atelier_Ayesha.exe+3900CF: CC                             - int 3 
+Atelier_Ayesha.exe+3900D0: CC                             - int 3 
+Atelier_Ayesha.exe+3900D1: CC                             - int 3 
+Atelier_Ayesha.exe+3900D2: CC                             - int 3 
+}
+</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>102</ID>
