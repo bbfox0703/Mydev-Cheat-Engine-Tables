@@ -34,6 +34,11 @@ ja-JP: アサシンクリードヴァルハラ
 zh-TW: 愛夏的鍊金工房 ～黃昏大地之鍊金術士～ DX  
 ja-JP: アーシャのアトリエ ～黄昏の大地の錬金術士～ DX  
 
+## Atelier Escha and Logy DX  
+[Atelier Escha & Logy: Alchemists of the Dusk Sky DX - non-English ver. (Steam)](https://store.steampowered.com/app/1152310/__DX/)  
+zh-TW: 愛絲卡＆羅吉的鍊金工房 ～黃昏天空之鍊金術士～ DX  
+ja-JP: エスカ＆ロジーのアトリエ ～黄昏の空の錬金術士～ DX  
+
 ## Atelier Firis DX  
 [Atelier Firis: The Alchemist and the Mysterious Journey DX (Steam)](https://store.steampowered.com/app/1502980/__DX/)  
 zh-TW: 菲莉絲的鍊金工房 ～不可思議旅的鍊金術士～ DX  
