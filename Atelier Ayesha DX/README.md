@@ -1,5 +1,5 @@
 # Atelier Ayesha: The Alchemist of Dusk DX (non-English ver.) Cheat Engine table  
-Atelier Meruru - The Apprentice of Arland~ DX (Steam)  
+Atelier Ayesha: The Alchemist of Dusk DX (Steam)  
 
 zh-TW: 愛夏的鍊金工房 ～黃昏大地之鍊金術士～ DX  
 ja-JP: アーシャのアトリエ ～黄昏の大地の錬金術士～ DX  
