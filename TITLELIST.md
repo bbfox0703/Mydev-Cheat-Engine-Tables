@@ -397,6 +397,9 @@ ja-JP: 添丁の伝説
 ## The Planet Crafter  
 [(The Planet Crafter (Steam)](https://store.steampowered.com/app/1284190/The_Planet_Crafter/)  
 
+## Tower of Mask  
+[Tower of Mask (Steam)](https://store.steampowered.com/app/2918410/Tower_of_Mask/)  
+
 ## Tower of Time  
 [Tower of Time (Steam)](https://store.steampowered.com/app/617480/Tower_of_Time/)  
 
@@ -419,6 +422,3 @@ ja-JP: 無双OROCHI２ Ultimate
 
 ## Warpips  
 [Warpips (Steam)](https://store.steampowered.com/app/1291010/__Warpips/)  
-
-
-	
