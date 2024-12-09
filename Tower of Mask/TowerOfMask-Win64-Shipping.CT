@@ -498,6 +498,139 @@ TowerOfMask-Win64-Shipping.exe+27EABA3: 48 8B 0D AE D3 07 02     - mov rcx,[GEng
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
+              <ID>26450</ID>
+              <Description>"Generate dynamic inventory data"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+-- 符號名稱
+local symbolName = "i_base_player_ctrl_ptr"
+
+-- 指標鏈偏移
+local offset1 = 0x228
+local offset2 = 0x328
+local offset3 = 0xB0
+local inv_offset3 = 0xB8
+
+-- 每個格子的偏移量
+local itemSize = 0x10
+
+-- 父記憶體記錄 ID
+local parentMemoryRecordID = 26449
+
+-- 動態生成的記憶體記錄清單
+if not dynamicRecords then
+  dynamicRecords = {}
+end
+
+-- 獲取符號地址
+local baseAddress = getAddressSafe(symbolName)
+if not baseAddress then
+  print("Symbol not found: " .. symbolName)
+  return
+end
+
+-- 獲取父記憶體記錄
+local parentRecord = getAddressList().getMemoryRecordByID(parentMemoryRecordID)
+if not parentRecord then
+  print("Parent MemoryRecord not found: " .. tostring(parentMemoryRecordID))
+  return
+end
+
+-- 指標鏈
+local ptr1 = readPointer(baseAddress)
+if not ptr1 then error("Invalid pointer at base") end
+
+local ptr2 = readPointer(ptr1 + offset1)
+if not ptr2 then error("Invalid pointer at offset1") end
+
+local ptr3 = readPointer(ptr2 + offset2)
+if not ptr3 then error("Invalid pointer at offset2") end
+
+local slotCount = readInteger(ptr3 + inv_offset3)
+
+local finalBasePtr = readPointer(ptr3 + offset3)
+if not finalBasePtr then error("Invalid pointer at offset3") end
+
+-- 動態生成 MemoryRecords
+local addressList = getAddressList()
+for i = 0, slotCount - 1 do
+  local currentAddress = finalBasePtr + (i * itemSize)
+
+  -- [i] Item ID
+  local itemID = addressList.createMemoryRecord()
+  itemID.Description = string.format("[%d] Item ID", i)
+  itemID.Address = string.format("0x%X", currentAddress)
+  itemID.Type = vtByte
+  itemID.Parent = parentRecord
+  table.insert(dynamicRecords, itemID)
+
+  -- [i] Amount
+  local amount = addressList.createMemoryRecord()
+  amount.Description = string.format("[%d] Amount", i)
+  amount.Address = string.format("0x%X", currentAddress + 0x4)
+  amount.Type = vtDword
+  amount.ShowAsSigned = true -- 設定為顯示有符號
+  amount.Parent = parentRecord
+  table.insert(dynamicRecords, amount)
+
+  -- [i] Durability
+  local durability = addressList.createMemoryRecord()
+  durability.Description = string.format("[%d] Durability", i)
+  durability.Address = string.format("0x%X", currentAddress + 0x8)
+  durability.Type = vtSingle
+  durability.Parent = parentRecord
+  table.insert(dynamicRecords, durability)
+
+  -- [i] ChargedBallets
+  local chargedBallets = addressList.createMemoryRecord()
+  chargedBallets.Description = string.format("[%d] ChargedBallets", i)
+  chargedBallets.Address = string.format("0x%X", currentAddress + 0xC)
+  chargedBallets.Type = vtDword
+  chargedBallets.ShowAsSigned = true -- 設定為顯示有符號
+  chargedBallets.Parent = parentRecord
+  table.insert(dynamicRecords, chargedBallets)
+end
+
+print(string.format("Successfully created %d slots under MemoryRecord ID %d", slotCount, parentMemoryRecordID))
+getLuaEngine().Close()
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+-- 刪除動態生成的 MemoryRecords
+if dynamicRecords then
+  for _, record in ipairs(dynamicRecords) do
+    if record and not record.isDestroyed then
+      record.destroy()
+    end
+  end
+  dynamicRecords = nil
+  print("All dynamically generated MemoryRecords have been deleted.")
+else
+  print("No dynamically generated MemoryRecords found to delete.")
+end
+getLuaEngine().Close()
+{$asm}
+
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>26449</ID>
+                  <Description>"+Item Data (do not delete this one)"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
               <ID>26307</ID>
               <Description>"base"</Description>
               <ShowAsHex>1</ShowAsHex>
@@ -955,8 +1088,66 @@ TowerOfMask-Win64-Shipping.exe+27EABA3: 48 8B 0D AE D3 07 02     - mov rcx,[GEng
     <CheatEntry>
       <ID>26316</ID>
       <Description>"Tower of Mask  /  https://opencheattables.com"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>26448</ID>
+          <Description>"Get inventory size"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+-- 定義符號名稱
+local symbolName = "i_base_player_ctrl_ptr"
+
+-- 獲取符號地址
+local baseAddress = getAddressSafe(symbolName)
+if not baseAddress then
+  print("Symbol not found: " .. symbolName)
+  return
+end
+
+-- 指標鏈偏移
+local offset1 = 0x228
+local offset2 = 0x328
+local offset3 = 0xB8
+
+-- 遍歷指標鏈
+local ptr1 = readPointer(baseAddress)
+if not ptr1 then
+  print("Invalid pointer at base")
+  return
+end
+
+local ptr2 = readPointer(ptr1 + offset1)
+if not ptr2 then
+  print("Invalid pointer at offset1")
+  return
+end
+
+local ptr3 = readPointer(ptr2 + offset2)
+if not ptr3 then
+  print("Invalid pointer at offset2")
+  return
+end
+
+local finalValue = readInteger(ptr3 + offset3)
+if finalValue then
+  print(string.format("Final value at pointer chain: %d", finalValue))
+else
+  print("Failed to read the final value")
+end
+{$asm}
+
+[DISABLE]
+
+
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
