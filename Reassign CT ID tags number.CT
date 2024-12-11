@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Re-assign .CT &lt;ID&gt;&lt;/ID&gt; serial"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+// Define Lua Script for reassigning IDs and creating backups
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+local function reassignIDs()
+  -- Open file dialog
+  local dialog = createOpenDialog()
+  dialog.Title = "Select a .CT file"
+  dialog.Filter = "Cheat Table Files (*.ct)|*.ct"
+
+  if not dialog:execute() then
+    print("No file selected, operation cancelled.")
+    return
+  end
+
+  local filePath = dialog.FileName
+  print("Selected file: " .. filePath)
+
+  -- Create a backup of the original .CT file
+  local backupPath = filePath .. ".bak"
+  local originalFile = io.open(filePath, "r")
+  if not originalFile then
+    print("Failed to open the original file: " .. filePath)
+    return
+  end
+
+  local originalContent = originalFile:read("*all")
+  originalFile:close()
+
+  local backupFile = io.open(backupPath, "w")
+  if not backupFile then
+    print("Failed to create backup file: " .. backupPath)
+    return
+  end
+
+  backupFile:write(originalContent)
+  backupFile:close()
+  print("Backup created: " .. backupPath)
+
+  -- Open original file for editing
+  local idCounter = 0
+  local newContent = originalContent:gsub("&lt;ID&gt;%d+&lt;/ID&gt;", function(match)
+    local newID = string.format("&lt;ID&gt;%d&lt;/ID&gt;", idCounter)
+    idCounter = idCounter + 1
+    return newID
+  end)
+
+  -- Write modified content back to the original file
+  local modifiedFile = io.open(filePath, "w")
+  if not modifiedFile then
+    print("Failed to write to the original file: " .. filePath)
+    return
+  end
+
+  modifiedFile:write(newContent)
+  modifiedFile:close()
+  print("IDs have been successfully reassigned and saved!")
+end
+
+-- Execute the reassign IDs function
+reassignIDs()
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+
+</LuaScript>
+</CheatTable>
