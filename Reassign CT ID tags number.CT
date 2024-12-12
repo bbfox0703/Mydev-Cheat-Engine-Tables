@@ -3,7 +3,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
-      <Description>"Reassign .CT &lt;ID&gt;&lt;/ID&gt; serial"</Description>
+      <Description>"Reassign &lt;ID&gt;&lt;/ID&gt; serial number in .CT file"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 // Define Lua Script for reassigning IDs and creating backups
@@ -64,9 +64,9 @@ local function reassignIDs()
   modifiedFile:write(newContent)
   modifiedFile:close()
   print("IDs have been successfully reassigned and saved!")
+  print("Total IDs: " .. idCounter-1)
 end
 
--- Execute the reassign IDs function
 reassignIDs()
 {$asm}
 
@@ -75,6 +75,89 @@ reassignIDs()
 if syntaxcheck then return end
 
 
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"List ID-Description pairs in .CT file"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+// Define Lua Script to process &lt;CheatEntry&gt; with proper handling for tabs and spaces
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+if memrec then print(memrec.Description) end
+getLuaEngine().menuItem5.doClick()
+-- Lua Script for Cheat Engine to parse .CT file and display ID-Description pairs
+
+function parseAndDisplayCT()
+    -- User-defined base indentation to subtract
+    local baseIndentation = 6
+
+    -- Open a file dialog to select the .CT file
+    local dialog = createOpenDialog()
+    dialog.Filter = "Cheat Table files (*.CT)|*.CT"
+    dialog.Title = "Select a Cheat Table file"
+
+    if not dialog:execute() then
+        print("No file selected.")
+        return
+    end
+
+    local fileName = dialog.FileName
+
+    -- Read file content
+    local file = io.open(fileName, "r")
+    if not file then
+        print("Failed to open the file.")
+        return
+    end
+    local xmlText = file:read("*all")
+    file:close()
+
+    -- Function to decode HTML entities
+    local function decodeHTMLEntities(text)
+        local entities = {
+            ["&amp;lt;"] = "&lt;",
+            ["&amp;gt;"] = "&gt;",
+            ["&amp;amp;"] = "&amp;",
+            ["&amp;quot;"] = "\"",
+            ["&amp;apos;"] = "'"
+        }
+        return (text:gsub("&amp;.-;", entities))
+    end
+
+    -- Function to parse XML and calculate depth based on leading whitespace
+    local function parseXMLByIndentation(xml)
+        local entries = {}
+        local pattern = "([ \t]*)&lt;ID&gt;(.-)&lt;/ID&gt;%s*&lt;Description&gt;(.-)&lt;/Description&gt;"
+
+        for indent, id, description in xml:gmatch(pattern) do
+            local rawDepth = #indent / 2  -- Assume 2 spaces or 1 tab equals one level
+            local adjustedDepth = math.max(0, math.floor(rawDepth) - baseIndentation)  -- Adjust depth
+            id = decodeHTMLEntities(id)
+            description = decodeHTMLEntities(description)
+            table.insert(entries, {id = id, description = description, depth = adjustedDepth})
+        end
+
+        return entries
+    end
+
+    -- Parse the XML content
+    local entries = parseXMLByIndentation(xmlText)
+
+    -- Display formatted output
+    print("Parsed ID-Description pairs:")
+    for _, entry in ipairs(entries) do
+        local indent = string.rep("  ", entry.depth)
+        print(indent .. entry.id .. ": " .. entry.description)
+    end
+end
+
+parseAndDisplayCT()
+
+[DISABLE]
+{$asm}
 </AssemblerScript>
     </CheatEntry>
   </CheatEntries>
