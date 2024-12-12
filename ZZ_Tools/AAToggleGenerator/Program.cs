@@ -24,6 +24,9 @@ namespace AAToggleGenerator
             public bool HasOptionsWithMoHideChildren { get; set; }
         }
 
+        private static bool isUpdatingTreeView = false; // 防止遞迴觸發
+        private static bool delayActive = false; // 延遲避免快速點擊
+
         [STAThread]
         static void Main()
         {
@@ -65,6 +68,9 @@ namespace AAToggleGenerator
 
             // Add event to handle checking/unchecking logic
             treeView.AfterCheck += TreeView_AfterCheck;
+            //treeView.NodeMouseDoubleClick += (sender, e) => e.Node.Checked = !e.Node.Checked; // Ignore double click effects
+            treeView.NodeMouseDoubleClick += (sender, e) => { /* Do nothing */ };
+
 
             // Build hierarchical TreeView nodes
             foreach (var entry in entries)
@@ -233,13 +239,37 @@ namespace AAToggleGenerator
 
         private static void TreeView_AfterCheck(object sender, TreeViewEventArgs e)
         {
-            // Ensure child nodes follow parent check state
-            if (e.Node.Nodes.Count > 0)
+            if (isUpdatingTreeView || delayActive) return; // 防止遞迴觸發或快速點擊
+
+            try
             {
-                foreach (TreeNode child in e.Node.Nodes)
+                isUpdatingTreeView = true;
+                delayActive = true;
+
+                // 使用 BeginInvoke 確保事件順序執行
+                ((TreeView)sender).BeginInvoke(new Action(() =>
                 {
-                    child.Checked = e.Node.Checked;
-                }
+                    UpdateChildNodeCheckedState(e.Node, e.Node.Checked);
+                }));
+
+                // 延遲 100 毫秒以防止快速多次點擊
+                System.Threading.Tasks.Task.Delay(100).ContinueWith(_ =>
+                {
+                    delayActive = false;
+                });
+            }
+            finally
+            {
+                isUpdatingTreeView = false;
+            }
+        }
+
+        private static void UpdateChildNodeCheckedState(TreeNode node, bool isChecked)
+        {
+            foreach (TreeNode child in node.Nodes)
+            {
+                child.Checked = isChecked;
+                UpdateChildNodeCheckedState(child, isChecked); // 遞迴處理子節點
             }
         }
 
