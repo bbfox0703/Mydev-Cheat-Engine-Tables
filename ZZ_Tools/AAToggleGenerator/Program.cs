@@ -87,15 +87,8 @@ namespace AAToggleGenerator
                 collection.Add(currentNode);
             }
 
-            // Expand first two levels of TreeView
-            foreach (TreeNode node in treeView.Nodes)
-            {
-                node.Expand();
-                foreach (TreeNode childNode in node.Nodes)
-                {
-                    childNode.Expand();
-                }
-            }
+            // Expand first two levels of TreeView by default
+            ExpandTreeView(treeView, 2);
 
             // Create TreeView selection form
             Form treeForm = new Form
@@ -106,6 +99,28 @@ namespace AAToggleGenerator
                 StartPosition = FormStartPosition.CenterScreen
             };
 
+            Label depthLabel = new Label
+            {
+                Text = "Expand Depth:",
+                Dock = DockStyle.Top,
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+            };
+
+            NumericUpDown depthSelector = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 10,
+                Value = 2,
+                Dock = DockStyle.Top,
+                Increment = 1
+            };
+
+            depthSelector.ValueChanged += (sender, e) =>
+            {
+                int depth = (int)depthSelector.Value;
+                ExpandTreeView(treeView, depth);
+            };
+
             Button confirmButton = new Button
             {
                 Text = "Confirm",
@@ -114,6 +129,8 @@ namespace AAToggleGenerator
             };
 
             treeForm.Controls.Add(treeView);
+            treeForm.Controls.Add(depthSelector);
+            treeForm.Controls.Add(depthLabel);
             treeForm.Controls.Add(confirmButton);
 
             treeForm.Shown += (sender, e) => SetForegroundWindow(treeForm.Handle); // Ensure the form is brought to foreground
@@ -178,7 +195,7 @@ namespace AAToggleGenerator
             foreach (var entry in entries)
             {
                 string indent = new string(' ', entry.Depth * 2);
-                scriptBuilder.AppendLine($"{indent}-- ID: {entry.Id}, Description: {entry.Description}, Depth: {entry.Depth}");
+                scriptBuilder.AppendLine($"-- {indent}ID: {entry.Id}, Description: {entry.Description}, Depth: {entry.Depth}");
             }
 
             // Show script in a Scintilla editor window
@@ -221,6 +238,30 @@ namespace AAToggleGenerator
                 {
                     child.Checked = e.Node.Checked;
                 }
+            }
+        }
+
+        private static void ExpandTreeView(TreeView treeView, int depth)
+        {
+            foreach (TreeNode node in treeView.Nodes)
+            {
+                ExpandNode(node, depth, 0);
+            }
+        }
+
+        private static void ExpandNode(TreeNode node, int maxDepth, int currentDepth)
+        {
+            if (currentDepth < maxDepth)
+            {
+                node.Expand();
+                foreach (TreeNode child in node.Nodes)
+                {
+                    ExpandNode(child, maxDepth, currentDepth + 1);
+                }
+            }
+            else
+            {
+                node.Collapse();
             }
         }
 
