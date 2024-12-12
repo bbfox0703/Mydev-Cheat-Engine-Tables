@@ -155,6 +155,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("if (syntaxcheck) then return end");
             scriptBuilder.AppendLine("if memrec then print(memrec.Description) end");
             scriptBuilder.AppendLine("getLuaEngine().menuItem5.doClick()");
+            scriptBuilder.AppendLine("getLuaEngine().Close()\n");
             scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
 
             // Use only selected entries for Enable
@@ -175,6 +176,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("if (syntaxcheck) then return end");
             scriptBuilder.AppendLine("if memrec then print(memrec.Description) end");
             scriptBuilder.AppendLine("getLuaEngine().menuItem5.doClick()");
+            scriptBuilder.AppendLine("getLuaEngine().Close()\n");
             scriptBuilder.AppendLine("\nlocal disableBattleScripts = {");
 
             // Use all entries for Disable
