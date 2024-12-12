@@ -1,0 +1,1 @@
+A Tool generate Cheat Engine AA lua script that can enable/disable multiple scripts in one click.
