@@ -1,5 +1,8 @@
 # Changelog
 
+## 2024/12/13  
+1. Revised for 3.14.15926  
+
 ## 2024/09/20  
 1. Revised for 3.13.0  
 
