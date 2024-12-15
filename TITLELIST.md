@@ -235,6 +235,11 @@ ja-JP:モンスターハンターライズ
 [Nayuta no Kiseki: KAI (Steam)](https://store.steampowered.com/app/1732390/_/)  
 zh-TW: 那由多之軌跡：改  
 
+## Octopath Traveler  
+[OCTOPATH TRAVELER™(Steam)](https://store.steampowered.com/app/921570/_/)  
+zh-TW: 歧路旅人  
+ja-JP: オクトパストラベラー  
+
 ## Old World  
 [Old World (Steam)](https://store.steampowered.com/app/597180/_Old_World/)  
 zh-TW: 舊世界 Old World  
