@@ -1,51 +1,43 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using System.Xml.Linq;
 
 namespace AAToggleGenerator
 {
     public class CTFileIDProcessor
     {
         /// <summary>
-        /// Renumber <ID> nodes in the .CT file starting from zero.
+        /// Renumber <ID> nodes in the .CT file using regex for efficiency.
         /// </summary>
         /// <param name="filePath">The path to the .CT file to process.</param>
         public static void RenumberIDs(string filePath)
         {
             try
             {
-                // Load the XML file
-                var xml = XDocument.Load(filePath);
+                // Read the original file content
+                string originalContent = File.ReadAllText(filePath);
 
-                // Iterate through all <ID> nodes and renumber them
-                int idCounter = 0;
-                var idElements = xml.Descendants("ID");
-                foreach (var idElement in idElements)
-                {
-                    idElement.Value = idCounter.ToString();
-                    idCounter++;
-                }
-
-                // Create backup file name
+                // Create a backup of the original file
                 string backupFilePath = $"{filePath}.bak.{DateTime.Now:yyyyMMddHHmmss}";
+                File.WriteAllText(backupFilePath, originalContent);
+                MessageBox.Show($"Backup created: {backupFilePath}", "Backup Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // Save the backup
-                File.Copy(filePath, backupFilePath, overwrite: true);
+                // Perform regex replacement to renumber <ID> nodes
+                int idCounter = 0;
+                string modifiedContent = Regex.Replace(originalContent, @"<ID>\d+</ID>", match =>
+                {
+                    return $"<ID>{idCounter++}</ID>";
+                });
 
-                // Save the modified file
-                xml.Save(filePath);
-
-                // Display success message
-                MessageBox.Show($"File renumbered and saved successfully.\nBackup created: {backupFilePath}",
-                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Write the modified content back to the original file
+                File.WriteAllText(filePath, modifiedContent);
+                MessageBox.Show($"IDs successfully renumbered and saved!\nTotal IDs: {idCounter}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                // Handle any exceptions and display an error message
-                MessageBox.Show($"An error occurred while renumbering IDs: {ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Handle exceptions and display an error message
+                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
