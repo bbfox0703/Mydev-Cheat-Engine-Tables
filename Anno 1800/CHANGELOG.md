@@ -1,7 +1,7 @@
 # Changelog
 
 ## 2023/08/22
-1. Only version number changed
+1. Only version number changed 
 
 ## 2023/05/23
 1. fixed coin not detected in hard more or more
