@@ -1,0 +1,1145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Toggle scripts"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+getLuaEngine().Close()
+
+local enableBattleScripts = {
+  0, -- "Compact Mode"
+  10, -- "Battle: inf. item use"
+  11, -- "Menu: Set consumable item stock to:"
+  14, -- "Get stats"
+  2, -- "Battle: set HP limit when hit"
+  6, -- "Battle: inf. MP"
+  8, -- "Battle: inf. AP"
+  40, -- "Calculate readable time format"
+}
+local addressList = getAddressList()
+for _, id in ipairs(enableBattleScripts) do
+  addressList.getMemoryRecordByID(id).Active = true
+end
+getLuaEngine().Close()
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+getLuaEngine().Close()
+
+local disableBattleScripts = {
+  40, -- "Calculate readable time format"
+  8, -- "Battle: inf. AP"
+  6, -- "Battle: inf. MP"
+  2, -- "Battle: set HP limit when hit"
+  14, -- "Get stats"
+  11, -- "Menu: Set consumable item stock to:"
+  10, -- "Battle: inf. item use"
+  0, -- "Compact Mode"
+}
+local addressList = getAddressList()
+for _, id in ipairs(disableBattleScripts) do
+  addressList.getMemoryRecordByID(id).Active = false
+end
+getLuaEngine().Close()
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Battle: set HP limit when hit"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_DAMAGE_CTRL,$process,89 87 E8 01 00 00 41) // should be unique
+alloc(newmem,$1000,INJECT_BATT_DAMAGE_CTRL)
+
+label(code)
+label(return)
+label(vf_player_min_hpp vf_enemy_max_hpp i_base_player_bhp_addr)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, eax
+  vshufps xmm15, xmm15, xmm15, 0
+  movaps xmm14, [vf_player_min_hpp]
+  vcvtsi2ss xmm13, xmm13, [rdi+000001EC]
+  vshufps xmm13, xmm13, xmm13, 0
+  vmulps xmm13, xmm13, xmm14
+
+  cmp dword ptr [rdi+000001E4], 1
+  je to_enemy
+to_player:
+  mov [i_base_player_bhp_addr], rdi
+  vucomiss xmm15, xmm13
+  jae code
+  vcvtss2si eax, xmm13
+
+  jmp code
+
+to_enemy:
+  vshufps xmm13, xmm13, xmm13, 5
+  vucomiss xmm15, xmm13
+  jbe code
+  vcvtss2si eax, xmm13
+
+code:
+  mov [rdi+000001E8],eax
+  jmp return
+align 10 cc
+  vf_player_min_hpp:
+  dd (float)0.5
+  vf_enemy_max_hpp:
+  dd (float)0.8
+  dd 0 0
+  i_base_player_bhp_addr:
+  dq 0
+
+INJECT_BATT_DAMAGE_CTRL:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATT_DAMAGE_CTRL)
+registersymbol(vf_player_min_hpp vf_enemy_max_hpp i_base_player_bhp_addr)
+
+[DISABLE]
+
+INJECT_BATT_DAMAGE_CTRL:
+  db 89 87 E8 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+1384460
+
+CCFF7R-Win64-Shipping.exe+1384434: C7 44 24 38 0F 27 00 00  - mov [rsp+38],0000270F
+CCFF7R-Win64-Shipping.exe+138443C: 80 E1 01                 - and cl,01
+CCFF7R-Win64-Shipping.exe+138443F: 89 44 24 30              - mov [rsp+30],eax
+CCFF7R-Win64-Shipping.exe+1384443: 41 C1 E8 17              - shr r8d,17
+CCFF7R-Win64-Shipping.exe+1384447: 44 89 64 24 28           - mov [rsp+28],r12d
+CCFF7R-Win64-Shipping.exe+138444C: 41 80 E0 01              - and r8b,01
+CCFF7R-Win64-Shipping.exe+1384450: 89 54 24 20              - mov [rsp+20],edx
+CCFF7R-Win64-Shipping.exe+1384454: 0F B6 D1                 - movzx edx,cl
+CCFF7R-Win64-Shipping.exe+1384457: 41 0F B6 CF              - movzx ecx,r15b
+CCFF7R-Win64-Shipping.exe+138445B: E8 60 04 FE FF           - call CCFF7R-Win64-Shipping.exe+13648C0
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+1384460: 89 87 E8 01 00 00        - mov [rdi+000001E8],eax
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+1384466: 41 FF C6                 - inc r14d
+CCFF7R-Win64-Shipping.exe+1384469: 41 83 FE 04              - cmp r14d,04
+CCFF7R-Win64-Shipping.exe+138446D: 0F 8C B3 FC FF FF        - jl CCFF7R-Win64-Shipping.exe+1384126
+CCFF7R-Win64-Shipping.exe+1384473: 8B 87 88 00 00 00        - mov eax,[rdi+00000088]
+CCFF7R-Win64-Shipping.exe+1384479: 3D CE 10 00 00           - cmp eax,000010CE
+CCFF7R-Win64-Shipping.exe+138447E: 75 05                    - jne CCFF7R-Win64-Shipping.exe+1384485
+CCFF7R-Win64-Shipping.exe+1384480: 8D 48 BA                 - lea ecx,[rax-46]
+CCFF7R-Win64-Shipping.exe+1384483: EB 0A                    - jmp CCFF7R-Win64-Shipping.exe+138448F
+CCFF7R-Win64-Shipping.exe+1384485: 3D 88 10 00 00           - cmp eax,00001088
+CCFF7R-Win64-Shipping.exe+138448A: 75 1B                    - jne CCFF7R-Win64-Shipping.exe+13844A7
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_player_bhp_addr</Address>
+          <Offsets>
+            <Offset>1E8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"Player min HP%"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_player_min_hpp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Enemy max HP%"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_enemy_max_hpp</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"Battle: inf. MP"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_MP,$process,89 87 F0 01 00 00 EB) // should be unique
+alloc(newmem,$1000,INJECT_INF_MP)
+
+aobscanmodule(INJECT_INF_MP2,$process,89 83 F0 01 00 00 0F B6 46) // should be unique
+alloc(newmem2,$1000,INJECT_INF_MP2)
+
+
+label(code)
+label(return)
+label(i_base_pmp_addr)
+
+label(code2)
+label(return2)
+
+newmem:
+  cmp dword ptr [rdi+000001E4], 0
+  jne code
+  mov [i_base_pmp_addr], rdi
+  mov eax, [rdi+000001F4]
+
+code:
+  mov [rdi+000001F0],eax
+  jmp return
+align 10 cc
+  i_base_pmp_addr:
+  dq 0
+
+INJECT_INF_MP:
+  jmp newmem
+  nop
+return:
+
+//=========================
+
+newmem2:
+  cmp dword ptr [rbx+000001E4], 0
+  jne code2
+  mov [i_base_pmp_addr], rbx
+  mov eax, [rbx+000001F4]
+
+code2:
+  mov [rbx+000001F0],eax
+  jmp return2
+
+INJECT_INF_MP2:
+  jmp newmem2
+  nop
+return2:
+
+registersymbol(INJECT_INF_MP)
+registersymbol(i_base_pmp_addr)
+registersymbol(INJECT_INF_MP2)
+[DISABLE]
+
+INJECT_INF_MP:
+  db 89 87 F0 01 00 00
+
+INJECT_INF_MP2:
+  db 89 83 F0 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+unregistersymbol(INJECT_INF_MP2)
+dealloc(newmem2)
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+1384408
+
+CCFF7R-Win64-Shipping.exe+13843DC: C7 44 24 38 E7 03 00 00  - mov [rsp+38],000003E7
+CCFF7R-Win64-Shipping.exe+13843E4: 80 E1 01                 - and cl,01
+CCFF7R-Win64-Shipping.exe+13843E7: 89 44 24 30              - mov [rsp+30],eax
+CCFF7R-Win64-Shipping.exe+13843EB: 41 C1 E8 17              - shr r8d,17
+CCFF7R-Win64-Shipping.exe+13843EF: 44 89 64 24 28           - mov [rsp+28],r12d
+CCFF7R-Win64-Shipping.exe+13843F4: 41 80 E0 01              - and r8b,01
+CCFF7R-Win64-Shipping.exe+13843F8: 89 54 24 20              - mov [rsp+20],edx
+CCFF7R-Win64-Shipping.exe+13843FC: 0F B6 D1                 - movzx edx,cl
+CCFF7R-Win64-Shipping.exe+13843FF: 41 0F B6 CF              - movzx ecx,r15b
+CCFF7R-Win64-Shipping.exe+1384403: E8 B8 04 FE FF           - call CCFF7R-Win64-Shipping.exe+13648C0
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+1384408: 89 87 F0 01 00 00        - mov [rdi+000001F0],eax
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+138440E: EB 56                    - jmp CCFF7R-Win64-Shipping.exe+1384466
+CCFF7R-Win64-Shipping.exe+1384410: 8B 4C 24 60              - mov ecx,[rsp+60]
+CCFF7R-Win64-Shipping.exe+1384414: 8B 16                    - mov edx,[rsi]
+CCFF7R-Win64-Shipping.exe+1384416: 8B 87 EC 01 00 00        - mov eax,[rdi+000001EC]
+CCFF7R-Win64-Shipping.exe+138441C: F7 DA                    - neg edx
+CCFF7R-Win64-Shipping.exe+138441E: 44 8B 44 24 60           - mov r8d,[rsp+60]
+CCFF7R-Win64-Shipping.exe+1384423: 44 8B 8F E8 01 00 00     - mov r9d,[rdi+000001E8]
+CCFF7R-Win64-Shipping.exe+138442A: C7 44 24 40 9F 86 01 00  - mov [rsp+40],0001869F
+CCFF7R-Win64-Shipping.exe+1384432: D1 E9                    - shr ecx,1
+CCFF7R-Win64-Shipping.exe+1384434: C7 44 24 38 0F 27 00 00  - mov [rsp+38],0000270F
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_pmp_addr</Address>
+          <Offsets>
+            <Offset>1F0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"Battle: inf. AP"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_INF_AP,$process,89 87 F8 01 00 00 E9) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_INF_AP)
+
+label(code)
+label(return i_base_player_bap_addr)
+
+aobscanmodule(INJECT_BATTLE_INF_AP2,$process,89 83 F8 01 00 00 48 8B 1D) // should be unique
+alloc(newmem2,$1000,INJECT_BATTLE_INF_AP2)
+
+label(code2)
+label(return2)
+
+newmem:
+  cmp dword ptr [rdi+000001E4], 0
+  jne code
+  mov [i_base_player_bap_addr], rdi
+  mov eax, [rdi+000001FC]
+
+code:
+  mov [rdi+000001F8],eax
+  jmp return
+align 10 cc
+  i_base_player_bap_addr:
+  dq 0
+
+INJECT_BATTLE_INF_AP:
+  jmp newmem
+  nop
+return:
+
+newmem2:
+  cmp dword ptr [rbx+000001E4], 0
+  jne code2
+  mov [i_base_player_bap_addr], rbx
+
+  mov eax, [rbx+000001FC]
+code2:
+  mov [rbx+000001F8],eax
+  jmp return2
+
+INJECT_BATTLE_INF_AP2:
+  jmp newmem2
+  nop
+return2:
+registersymbol(INJECT_BATTLE_INF_AP2)
+
+registersymbol(INJECT_BATTLE_INF_AP i_base_player_bap_addr)
+
+[DISABLE]
+
+INJECT_BATTLE_INF_AP:
+  db 89 87 F8 01 00 00
+
+INJECT_BATTLE_INF_AP2:
+  db 89 83 F8 01 00 00
+
+unregistersymbol(INJECT_BATTLE_INF_AP i_base_player_bap_addr)
+dealloc(newmem)
+unregistersymbol(INJECT_BATTLE_INF_AP2)
+dealloc(newmem2)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+13843AB
+
+CCFF7R-Win64-Shipping.exe+138437F: C7 44 24 38 E7 03 00 00  - mov [rsp+38],000003E7
+CCFF7R-Win64-Shipping.exe+1384387: 80 E1 01                 - and cl,01
+CCFF7R-Win64-Shipping.exe+138438A: 89 44 24 30              - mov [rsp+30],eax
+CCFF7R-Win64-Shipping.exe+138438E: 41 C1 E8 17              - shr r8d,17
+CCFF7R-Win64-Shipping.exe+1384392: 44 89 64 24 28           - mov [rsp+28],r12d
+CCFF7R-Win64-Shipping.exe+1384397: 41 80 E0 01              - and r8b,01
+CCFF7R-Win64-Shipping.exe+138439B: 89 54 24 20              - mov [rsp+20],edx
+CCFF7R-Win64-Shipping.exe+138439F: 0F B6 D1                 - movzx edx,cl
+CCFF7R-Win64-Shipping.exe+13843A2: 41 0F B6 CF              - movzx ecx,r15b
+CCFF7R-Win64-Shipping.exe+13843A6: E8 15 05 FE FF           - call CCFF7R-Win64-Shipping.exe+13648C0
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+13843AB: 89 87 F8 01 00 00        - mov [rdi+000001F8],eax
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+13843B1: E9 B0 00 00 00           - jmp CCFF7R-Win64-Shipping.exe+1384466
+CCFF7R-Win64-Shipping.exe+13843B6: 8B 4C 24 60              - mov ecx,[rsp+60]
+CCFF7R-Win64-Shipping.exe+13843BA: 8B 56 04                 - mov edx,[rsi+04]
+CCFF7R-Win64-Shipping.exe+13843BD: 8B 87 F4 01 00 00        - mov eax,[rdi+000001F4]
+CCFF7R-Win64-Shipping.exe+13843C3: F7 DA                    - neg edx
+CCFF7R-Win64-Shipping.exe+13843C5: 44 8B 44 24 60           - mov r8d,[rsp+60]
+CCFF7R-Win64-Shipping.exe+13843CA: 44 8B 8F F0 01 00 00     - mov r9d,[rdi+000001F0]
+CCFF7R-Win64-Shipping.exe+13843D1: C7 44 24 40 0F 27 00 00  - mov [rsp+40],0000270F
+CCFF7R-Win64-Shipping.exe+13843D9: C1 E9 02                 - shr ecx,02
+CCFF7R-Win64-Shipping.exe+13843DC: C7 44 24 38 E7 03 00 00  - mov [rsp+38],000003E7
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"AP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_player_bap_addr</Address>
+          <Offsets>
+            <Offset>1F8</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Battle: inf. item use"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_INF_ITEM,$process,66 89 47 02 8B F0) // should be unique
+alloc(newmem,$1000,INJECT_BATT_INF_ITEM)
+
+label(code)
+label(return)
+
+newmem:
+  cmp ax, [rdi+02]
+  jae code
+  movzx eax, word ptr [rdi+02]
+
+code:
+  mov [rdi+02],ax
+  mov esi,eax
+  jmp return
+
+INJECT_BATT_INF_ITEM:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATT_INF_ITEM)
+
+[DISABLE]
+
+INJECT_BATT_INF_ITEM:
+  db 66 89 47 02 8B F0
+
+unregistersymbol(INJECT_BATT_INF_ITEM)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+116F94D
+
+CCFF7R-Win64-Shipping.exe+116F92C: 41 03 CE        - add ecx,r14d
+CCFF7R-Win64-Shipping.exe+116F92F: 41 3B 49 34     - cmp ecx,[r9+34]
+CCFF7R-Win64-Shipping.exe+116F933: 7D 0F           - jnl CCFF7R-Win64-Shipping.exe+116F944
+CCFF7R-Win64-Shipping.exe+116F935: 66 89 37        - mov [rdi],si
+CCFF7R-Win64-Shipping.exe+116F938: 66 89 77 04     - mov [rdi+04],si
+CCFF7R-Win64-Shipping.exe+116F93C: 40 88 77 06     - mov [rdi+06],sil
+CCFF7R-Win64-Shipping.exe+116F940: 41 8B 49 34     - mov ecx,[r9+34]
+CCFF7R-Win64-Shipping.exe+116F944: 41 8B 41 38     - mov eax,[r9+38]
+CCFF7R-Win64-Shipping.exe+116F948: 3B C8           - cmp ecx,eax
+CCFF7R-Win64-Shipping.exe+116F94A: 0F 4E C1        - cmovle eax,ecx
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+116F94D: 66 89 47 02     - mov [rdi+02],ax
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+116F951: 8B F0           - mov esi,eax
+CCFF7R-Win64-Shipping.exe+116F953: 48 8B 7C 24 18  - mov rdi,[rsp+18]
+CCFF7R-Win64-Shipping.exe+116F958: 48 8B 6C 24 30  - mov rbp,[rsp+30]
+CCFF7R-Win64-Shipping.exe+116F95D: 2B F3           - sub esi,ebx
+CCFF7R-Win64-Shipping.exe+116F95F: 48 8B 5C 24 28  - mov rbx,[rsp+28]
+CCFF7R-Win64-Shipping.exe+116F964: 8B C6           - mov eax,esi
+CCFF7R-Win64-Shipping.exe+116F966: 99              - cdq 
+CCFF7R-Win64-Shipping.exe+116F967: 33 C2           - xor eax,edx
+CCFF7R-Win64-Shipping.exe+116F969: 2B C2           - sub eax,edx
+CCFF7R-Win64-Shipping.exe+116F96B: 41 5E           - pop r14
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"Menu: Set consumable item stock to:"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_ITEM_CNT,$process,41 0F B7 56 02) // should be unique
+alloc(newmem,$1000,INJECT_SET_ITEM_CNT)
+
+label(code)
+label(return)
+label(i_min_item_threshold i_set_item_cnt_to)
+
+newmem:
+  mov dx, [i_min_item_threshold]
+  cmp word ptr [r14+02], dx
+  jb code
+  mov dx, [i_set_item_cnt_to]
+  cmp word ptr [r14+02], dx
+  jae code
+  mov word ptr [r14+02], dx
+
+
+code:
+  movzx edx,word ptr [r14+02]
+  jmp return
+align 10 cc
+  i_min_item_threshold:
+  dw 2
+  i_set_item_cnt_to:
+  dw 32
+
+INJECT_SET_ITEM_CNT:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_ITEM_CNT)
+registersymbol(i_min_item_threshold i_set_item_cnt_to)
+[DISABLE]
+
+INJECT_SET_ITEM_CNT:
+  db 41 0F B7 56 02
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+1283480
+
+CCFF7R-Win64-Shipping.exe+128344A: 49 83 C6 20              - add r14,20
+CCFF7R-Win64-Shipping.exe+128344E: 45 3B BD F0 02 00 00     - cmp r15d,[r13+000002F0]
+CCFF7R-Win64-Shipping.exe+1283455: 7C 99                    - jl CCFF7R-Win64-Shipping.exe+12833F0
+CCFF7R-Win64-Shipping.exe+1283457: 4C 8B 35 EA 79 F2 05     - mov r14,[CCFF7R-Win64-Shipping.exe+71AAE48]
+CCFF7R-Win64-Shipping.exe+128345E: BE 00 F0 00 00           - mov esi,0000F000
+CCFF7R-Win64-Shipping.exe+1283463: 48 C7 45 48 00 01 00 00  - mov qword ptr [rbp+48],00000100
+CCFF7R-Win64-Shipping.exe+128346B: 4C 89 A4 24 B0 00 00 00  - mov [rsp+000000B0],r12
+CCFF7R-Win64-Shipping.exe+1283473: 41 0F B7 0E              - movzx ecx,word ptr [r14]
+CCFF7R-Win64-Shipping.exe+1283477: 66 85 C9                 - test cx,cx
+CCFF7R-Win64-Shipping.exe+128347A: 0F 84 06 04 00 00        - je CCFF7R-Win64-Shipping.exe+1283886
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+1283480: 41 0F B7 56 02           - movzx edx,word ptr [r14+02]
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+1283485: 66 85 D2                 - test dx,dx
+CCFF7R-Win64-Shipping.exe+1283488: 0F 84 F8 03 00 00        - je CCFF7R-Win64-Shipping.exe+1283886
+CCFF7R-Win64-Shipping.exe+128348E: 0F B7 C1                 - movzx eax,cx
+CCFF7R-Win64-Shipping.exe+1283491: 4C 8B E3                 - mov r12,rbx
+CCFF7R-Win64-Shipping.exe+1283494: 89 45 D0                 - mov [rbp-30],eax
+CCFF7R-Win64-Shipping.exe+1283497: 0F B7 C2                 - movzx eax,dx
+CCFF7R-Win64-Shipping.exe+128349A: 89 45 D4                 - mov [rbp-2C],eax
+CCFF7R-Win64-Shipping.exe+128349D: 48 89 5D C0              - mov [rbp-40],rbx
+CCFF7R-Win64-Shipping.exe+12834A1: 48 C7 45 C8 00 00 00 00  - mov qword ptr [rbp-38],00000000
+CCFF7R-Win64-Shipping.exe+12834A9: 48 89 5D E0              - mov [rbp-20],rbx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"Cur. item stock must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_min_item_threshold</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"Set to"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_set_item_cnt_to</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Get stats"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author :
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_STATS,$process,8B 81 B0 00 00 00 C3 33) // should be unique
+alloc(newmem,$1000,INJECT_GET_STATS)
+
+label(code)
+label(return)
+label(i_base_stat_addr)
+
+newmem:
+  mov [i_base_stat_addr], rcx
+
+code:
+  mov eax,[rcx+000000B0]
+  jmp return
+align 10 cc
+  i_base_stat_addr:
+  dq 0
+
+INJECT_GET_STATS:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_STATS)
+registersymbol(i_base_stat_addr)
+
+[DISABLE]
+
+INJECT_GET_STATS:
+  db 8B 81 B0 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+13ADCEA
+
+CCFF7R-Win64-Shipping.exe+13ADCCD: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCCE: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCCF: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCD0: 85 C9                 - test ecx,ecx
+CCFF7R-Win64-Shipping.exe+13ADCD2: 75 1D                 - jne CCFF7R-Win64-Shipping.exe+13ADCF1
+CCFF7R-Win64-Shipping.exe+13ADCD4: 48 63 C1              - movsxd  rax,ecx
+CCFF7R-Win64-Shipping.exe+13ADCD7: 48 69 C8 50 02 00 00  - imul rcx,rax,00000250
+CCFF7R-Win64-Shipping.exe+13ADCDE: 48 8D 05 1B 62 E0 05  - lea rax,[CCFF7R-Win64-Shipping.exe+71B3F00]
+CCFF7R-Win64-Shipping.exe+13ADCE5: 48 03 C8              - add rcx,rax
+CCFF7R-Win64-Shipping.exe+13ADCE8: 74 07                 - je CCFF7R-Win64-Shipping.exe+13ADCF1
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+13ADCEA: 8B 81 B0 00 00 00     - mov eax,[rcx+000000B0]
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+13ADCF0: C3                    - ret 
+CCFF7R-Win64-Shipping.exe+13ADCF1: 33 C0                 - xor eax,eax
+CCFF7R-Win64-Shipping.exe+13ADCF3: C3                    - ret 
+CCFF7R-Win64-Shipping.exe+13ADCF4: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCF5: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCF6: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCF7: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCF8: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCF9: CC                    - int 3 
+CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"SP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"Base max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>18</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>1C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Max MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>20</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Base max MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>24</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"AP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>28</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"Max AP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Base max AP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>25</ID>
+          <Description>"Level"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>36</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"Str"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>37</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"Vit"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>38</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"Int"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>39</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"Spi"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>3A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"Lck"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>3B</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>3C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"Base Str"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>3D</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>33</ID>
+          <Description>"Base Vit"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>3E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"Base Int"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>3F</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>35</ID>
+          <Description>"Base Spi"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>36</ID>
+          <Description>"Base Lck"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>41</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>37</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>AC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>38</ID>
+          <Description>"Gil"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>B0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"Playing time, seconds*60"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>B8</Offset>
+          </Offsets>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>40</ID>
+              <Description>"Calculate readable time format"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_PLAY_SECONDS,$process,F2 0F 11 81 B8 00 00 00 C3) // should be unique
+alloc(newmem,$1000,INJECT_GET_PLAY_SECONDS)
+
+label(code)
+label(return)
+label(vf_p_hours vf_p_minutes vf_p_seconds)
+
+newmem:
+  movsd xmm12, xmm0
+  movsd xmm13, [const_60]
+  divsd xmm12, xmm13  // xmm12 = seconds
+  movsd xmm13, [const_3600]
+  vdivsd xmm14, xmm12, xmm13
+  roundsd xmm14, xmm14, 1
+  movsd [vf_p_hours], xmm14
+
+  mulsd xmm14, xmm13
+  subsd xmm12, xmm14
+  movsd xmm13, [const_60]
+  divsd xmm12, xmm13
+  roundsd xmm12, xmm12, 1
+  movsd [vf_p_minutes], xmm12
+
+  movsd xmm12, xmm0
+  movsd xmm13, [const_216000]
+  divsd xmm12, xmm13
+
+  roundsd xmm14, xmm12, 0
+  subsd xmm12, xmm14
+  movsd xmm13, [const_60]
+  mulsd xmm12, xmm13
+  roundsd xmm14, xmm12, 1
+  subsd xmm12, xmm14
+  mulsd xmm12, xmm13
+
+  movsd [vf_p_seconds], xmm12
+
+code:
+  movsd [rcx+000000B8],xmm0
+  jmp return
+align 10 cc
+  vf_p_seconds:
+  dq 0
+  vf_p_minutes:
+  dq 0
+  vf_p_hours:
+  dq 0
+  const_3600:
+  dq (double)3600
+  const_60:
+  dq (double)60
+  const_216000:
+  dq (double)216000
+  db EB 3B 54
+  db 68 69 73 20 74 61 62 6C 65
+  db 20 63 6F 6D
+  db 65 73 20 66 72 6F 6D 20
+  db 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61
+  db 74 74 61 62
+  db 6C 65
+  db 73 2E
+  db 63 6F 6D 20
+  db 2F
+  db 20
+  db 43 45 20 37
+  db 2E 34 2B
+INJECT_GET_PLAY_SECONDS:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_PLAY_SECONDS)
+registersymbol(vf_p_hours vf_p_minutes vf_p_seconds)
+
+[DISABLE]
+
+INJECT_GET_PLAY_SECONDS:
+  db F2 0F 11 81 B8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+13AD8CE
+
+CCFF7R-Win64-Shipping.exe+13AD8A0: 85 D2                    - test edx,edx
+CCFF7R-Win64-Shipping.exe+13AD8A2: 75 33                    - jne CCFF7R-Win64-Shipping.exe+13AD8D7
+CCFF7R-Win64-Shipping.exe+13AD8A4: 48 63 C2                 - movsxd  rax,edx
+CCFF7R-Win64-Shipping.exe+13AD8A7: 48 69 C8 50 02 00 00     - imul rcx,rax,00000250
+CCFF7R-Win64-Shipping.exe+13AD8AE: 48 8D 05 4B 66 E0 05     - lea rax,[CCFF7R-Win64-Shipping.exe+71B3F00]
+CCFF7R-Win64-Shipping.exe+13AD8B5: 48 03 C8                 - add rcx,rax
+CCFF7R-Win64-Shipping.exe+13AD8B8: 74 1D                    - je CCFF7R-Win64-Shipping.exe+13AD8D7
+CCFF7R-Win64-Shipping.exe+13AD8BA: F3 0F 5A C0              - cvtss2sd xmm0,xmm0
+CCFF7R-Win64-Shipping.exe+13AD8BE: F2 0F 58 81 B8 00 00 00  - addsd xmm0,[rcx+000000B8]
+CCFF7R-Win64-Shipping.exe+13AD8C6: F2 0F 5D 05 0A E6 C0 02  - minsd xmm0,[CCFF7R-Win64-Shipping.exe+3FBBED8]
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+13AD8CE: F2 0F 11 81 B8 00 00 00  - movsd [rcx+000000B8],xmm0
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+13AD8D6: C3                       - ret 
+CCFF7R-Win64-Shipping.exe+13AD8D7: 0F 57 C0                 - xorps xmm0,xmm0
+CCFF7R-Win64-Shipping.exe+13AD8DA: C3                       - ret 
+CCFF7R-Win64-Shipping.exe+13AD8DB: CC                       - int 3 
+CCFF7R-Win64-Shipping.exe+13AD8DC: CC                       - int 3 
+CCFF7R-Win64-Shipping.exe+13AD8DD: CC                       - int 3 
+CCFF7R-Win64-Shipping.exe+13AD8DE: CC                       - int 3 
+CCFF7R-Win64-Shipping.exe+13AD8DF: CC                       - int 3 
+CCFF7R-Win64-Shipping.exe+13AD8E0: 45 33 C9                 - xor r9d,r9d
+CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>41</ID>
+                  <Description>"Hours"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Double</VariableType>
+                  <Address>vf_p_hours</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>42</ID>
+                  <Description>"Minutes"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Double</VariableType>
+                  <Address>vf_p_minutes</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>43</ID>
+                  <Description>"Seconds"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>Double</VariableType>
+                  <Address>vf_p_seconds</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>44</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>228</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>45</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>230</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>46</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>238</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>47</ID>
+      <Description>"CRISIS CORE –FINAL FANTASY VII– REUNION  /  https://opencheattables.com"</Description>
+      <Color>00AA00</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
