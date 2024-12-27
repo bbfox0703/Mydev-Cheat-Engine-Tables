@@ -28,12 +28,11 @@ getLuaEngine().Close()
 local enableBattleScripts = {
   0, -- "Compact Mode"
   10, -- "Battle: inf. item use"
-  11, -- "Menu: Set consumable item stock to:"
-  14, -- "Get stats"
+  11, -- "Battle: Set D.M.W. after changed"
+  13, -- "Menu: Set consumable item stock to:"
   2, -- "Battle: set HP limit when hit"
   6, -- "Battle: inf. MP"
   8, -- "Battle: inf. AP"
-  40, -- "Calculate readable time format"
 }
 local addressList = getAddressList()
 for _, id in ipairs(enableBattleScripts) do
@@ -47,12 +46,13 @@ getLuaEngine().menuItem5.doClick()
 getLuaEngine().Close()
 
 local disableBattleScripts = {
-  40, -- "Calculate readable time format"
+  45, -- "Calculate readable time format"
   8, -- "Battle: inf. AP"
   6, -- "Battle: inf. MP"
   2, -- "Battle: set HP limit when hit"
-  14, -- "Get stats"
-  11, -- "Menu: Set consumable item stock to:"
+  16, -- "Get stats"
+  13, -- "Menu: Set consumable item stock to:"
+  11, -- "Battle: Set D.M.W. after changed"
   10, -- "Battle: inf. item use"
   0, -- "Compact Mode"
 }
@@ -61,6 +61,7 @@ for _, id in ipairs(disableBattleScripts) do
   addressList.getMemoryRecordByID(id).Active = false
 end
 getLuaEngine().Close()
+
 
 </AssemblerScript>
     </CheatEntry>
@@ -501,6 +502,96 @@ CCFF7R-Win64-Shipping.exe+116F96B: 41 5E           - pop r14
     </CheatEntry>
     <CheatEntry>
       <ID>11</ID>
+      <Description>"Battle: Set D.M.W. after changed"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2024-12-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_DMW_HIGH,$process,44 88 41 7A 2B C2) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_DMW_HIGH)
+
+label(code)
+label(return ib_dmw_value)
+
+newmem:
+  //db 41 b0 04  //mov r8b,0x4
+  cmp r8b, [ib_dmw_value]
+  jae @F
+  mov r8b, [ib_dmw_value]
+
+@@:
+  xor eax, eax
+
+code:
+  mov [rcx+7A],r8b
+  sub eax,edx
+  jmp return
+align 10 cc
+  ib_dmw_value:
+  db 3
+
+INJECT_BATTLE_DMW_HIGH:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_DMW_HIGH ib_dmw_value)
+
+[DISABLE]
+
+INJECT_BATTLE_DMW_HIGH:
+  db 44 88 41 7A 2B C2
+
+unregistersymbol(INJECT_BATTLE_DMW_HIGH ib_dmw_value)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+13ADA7F
+
+CCFF7R-Win64-Shipping.exe+13ADA5E: 74 26              - je CCFF7R-Win64-Shipping.exe+13ADA86
+CCFF7R-Win64-Shipping.exe+13ADA60: 0F B6 51 7A        - movzx edx,byte ptr [rcx+7A]
+CCFF7R-Win64-Shipping.exe+13ADA64: 42 8D 04 0A        - lea eax,[rdx+r9]
+CCFF7R-Win64-Shipping.exe+13ADA68: 85 C0              - test eax,eax
+CCFF7R-Win64-Shipping.exe+13ADA6A: 78 10              - js CCFF7R-Win64-Shipping.exe+13ADA7C
+CCFF7R-Win64-Shipping.exe+13ADA6C: 41 B9 04 00 00 00  - mov r9d,00000004
+CCFF7R-Win64-Shipping.exe+13ADA72: 44 8B C0           - mov r8d,eax
+CCFF7R-Win64-Shipping.exe+13ADA75: 41 3B C1           - cmp eax,r9d
+CCFF7R-Win64-Shipping.exe+13ADA78: 45 0F 4F C1        - cmovg r8d,r9d
+CCFF7R-Win64-Shipping.exe+13ADA7C: 41 8B C0           - mov eax,r8d
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+13ADA7F: 44 88 41 7A        - mov [rcx+7A],r8b
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+13ADA83: 2B C2              - sub eax,edx
+CCFF7R-Win64-Shipping.exe+13ADA85: C3                 - ret 
+CCFF7R-Win64-Shipping.exe+13ADA86: 41 8B C0           - mov eax,r8d
+CCFF7R-Win64-Shipping.exe+13ADA89: C3                 - ret 
+CCFF7R-Win64-Shipping.exe+13ADA8A: CC                 - int 3 
+CCFF7R-Win64-Shipping.exe+13ADA8B: CC                 - int 3 
+CCFF7R-Win64-Shipping.exe+13ADA8C: CC                 - int 3 
+CCFF7R-Win64-Shipping.exe+13ADA8D: CC                 - int 3 
+CCFF7R-Win64-Shipping.exe+13ADA8E: CC                 - int 3 
+CCFF7R-Win64-Shipping.exe+13ADA8F: CC                 - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"D.M.W. (1-4)"</Description>
+          <DropDownListLink>D.M.W Limit</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_dmw_value</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
       <Description>"Menu: Set consumable item stock to:"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -581,7 +672,7 @@ CCFF7R-Win64-Shipping.exe+12834A9: 48 89 5D E0              - mov [rbp-20],rbx
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>12</ID>
+          <ID>14</ID>
           <Description>"Cur. item stock must &gt;="</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -589,7 +680,7 @@ CCFF7R-Win64-Shipping.exe+12834A9: 48 89 5D E0              - mov [rbp-20],rbx
           <Address>i_min_item_threshold</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>13</ID>
+          <ID>15</ID>
           <Description>"Set to"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -599,7 +690,7 @@ CCFF7R-Win64-Shipping.exe+12834A9: 48 89 5D E0              - mov [rbp-20],rbx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>14</ID>
+      <ID>16</ID>
       <Description>"Get stats"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -673,7 +764,45 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>15</ID>
+          <ID>17</ID>
+          <Description>"D.M.W Limit"</Description>
+          <DropDownList DisplayValueAsItem="1">1:Normal
+2:High
+3:Skyhigh
+4:Heavenly
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>7A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
           <Description>"SP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -684,7 +813,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>16</ID>
+          <ID>21</ID>
           <Description>"HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -695,7 +824,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>17</ID>
+          <ID>22</ID>
           <Description>"Max HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -706,7 +835,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>18</ID>
+          <ID>23</ID>
           <Description>"Base max HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -717,7 +846,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>19</ID>
+          <ID>24</ID>
           <Description>"MP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -728,7 +857,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>20</ID>
+          <ID>25</ID>
           <Description>"Max MP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -739,7 +868,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>21</ID>
+          <ID>26</ID>
           <Description>"Base max MP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -750,7 +879,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>22</ID>
+          <ID>27</ID>
           <Description>"AP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -761,7 +890,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>23</ID>
+          <ID>28</ID>
           <Description>"Max AP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -772,7 +901,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>24</ID>
+          <ID>29</ID>
           <Description>"Base max AP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -783,7 +912,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>25</ID>
+          <ID>30</ID>
           <Description>"Level"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -794,7 +923,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>26</ID>
+          <ID>31</ID>
           <Description>"Str"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -805,7 +934,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>27</ID>
+          <ID>32</ID>
           <Description>"Vit"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -816,7 +945,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>28</ID>
+          <ID>33</ID>
           <Description>"Int"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -827,7 +956,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>29</ID>
+          <ID>34</ID>
           <Description>"Spi"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -838,7 +967,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>30</ID>
+          <ID>35</ID>
           <Description>"Lck"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -849,7 +978,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>31</ID>
+          <ID>36</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -860,7 +989,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>32</ID>
+          <ID>37</ID>
           <Description>"Base Str"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -871,7 +1000,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>33</ID>
+          <ID>38</ID>
           <Description>"Base Vit"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -882,7 +1011,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>34</ID>
+          <ID>39</ID>
           <Description>"Base Int"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -893,7 +1022,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>35</ID>
+          <ID>40</ID>
           <Description>"Base Spi"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -904,7 +1033,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>36</ID>
+          <ID>41</ID>
           <Description>"Base Lck"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -915,7 +1044,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>37</ID>
+          <ID>42</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -926,7 +1055,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>38</ID>
+          <ID>43</ID>
           <Description>"Gil"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -937,7 +1066,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>39</ID>
+          <ID>44</ID>
           <Description>"Playing time, seconds*60"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -948,7 +1077,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
           <CheatEntries>
             <CheatEntry>
-              <ID>40</ID>
+              <ID>45</ID>
               <Description>"Calculate readable time format"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1072,7 +1201,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>41</ID>
+                  <ID>46</ID>
                   <Description>"Hours"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -1080,7 +1209,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   <Address>vf_p_hours</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>42</ID>
+                  <ID>47</ID>
                   <Description>"Minutes"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -1088,7 +1217,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   <Address>vf_p_minutes</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>43</ID>
+                  <ID>48</ID>
                   <Description>"Seconds"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -1100,7 +1229,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>44</ID>
+          <ID>49</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1111,7 +1240,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>45</ID>
+          <ID>50</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1122,7 +1251,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>46</ID>
+          <ID>51</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1132,10 +1261,343 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
             <Offset>238</Offset>
           </Offsets>
         </CheatEntry>
+        <CheatEntry>
+          <ID>52</ID>
+          <Description>"Equipped"</Description>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>53</ID>
+              <Description>"Command?"</Description>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>54</ID>
+                  <Description>"Command ID #1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_stat_addr</Address>
+                  <Offsets>
+                    <Offset>44</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>55</ID>
+                      <Description>"Command Available #1"</Description>
+                      <DropDownList DisplayValueAsItem="1">0:No
+112:Yes
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>47</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>56</ID>
+                  <Description>"Command ID #2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_stat_addr</Address>
+                  <Offsets>
+                    <Offset>46</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>57</ID>
+                      <Description>"Command Available #2"</Description>
+                      <DropDownList DisplayValueAsItem="1">0:No
+112:Yes
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>49</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>58</ID>
+                  <Description>"Command ID #3"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_stat_addr</Address>
+                  <Offsets>
+                    <Offset>48</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>59</ID>
+                      <Description>"Command Available #3"</Description>
+                      <DropDownList DisplayValueAsItem="1">0:No
+112:Yes
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>4B</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>60</ID>
+                  <Description>"Command ID #4"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_stat_addr</Address>
+                  <Offsets>
+                    <Offset>4A</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>61</ID>
+                      <Description>"Command Available #4"</Description>
+                      <DropDownList DisplayValueAsItem="1">0:No
+112:Yes
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>4D</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>62</ID>
+              <Description>"Materia"</Description>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>63</ID>
+                  <Description>"#1"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>64</ID>
+                      <Description>"Lv"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>53</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>65</ID>
+                      <Description>"Using #th materia"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>5A</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>66</ID>
+                          <Description>"Equipped?"</Description>
+                          <DropDownList DisplayValueAsItem="1">0:No
+224:Yes
+</DropDownList>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>i_base_stat_addr</Address>
+                          <Offsets>
+                            <Offset>5B</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>67</ID>
+                  <Description>"#2"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>68</ID>
+                      <Description>"Lv"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>54</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>69</ID>
+                      <Description>"Using #th materia"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>5C</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>70</ID>
+                          <Description>"Equipped?"</Description>
+                          <DropDownList DisplayValueAsItem="1">0:No
+224:Yes
+</DropDownList>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>i_base_stat_addr</Address>
+                          <Offsets>
+                            <Offset>5D</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>71</ID>
+                  <Description>"#3"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>72</ID>
+                      <Description>"Lv"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>55</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>73</ID>
+                      <Description>"Using #th materia"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>5E</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>74</ID>
+                          <Description>"Equipped?"</Description>
+                          <DropDownList DisplayValueAsItem="1">0:No
+224:Yes
+</DropDownList>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>i_base_stat_addr</Address>
+                          <Offsets>
+                            <Offset>5F</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>75</ID>
+                  <Description>"#4"</Description>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>76</ID>
+                      <Description>"Lv"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>56</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>77</ID>
+                      <Description>"Using #th materia"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>Byte</VariableType>
+                      <Address>i_base_stat_addr</Address>
+                      <Offsets>
+                        <Offset>60</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>78</ID>
+                          <Description>"Equipped?"</Description>
+                          <DropDownList DisplayValueAsItem="1">0:No
+224:Yes
+</DropDownList>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>i_base_stat_addr</Address>
+                          <Offsets>
+                            <Offset>61</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>79</ID>
+              <Description>"Equip accessories #1"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>i_base_stat_addr</Address>
+              <Offsets>
+                <Offset>72</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>80</ID>
+              <Description>"Equip accessories #2"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>i_base_stat_addr</Address>
+              <Offsets>
+                <Offset>74</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>47</ID>
+      <ID>81</ID>
       <Description>"CRISIS CORE –FINAL FANTASY VII– REUNION  /  https://opencheattables.com"</Description>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
