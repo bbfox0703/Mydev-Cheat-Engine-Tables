@@ -30,9 +30,12 @@ local enableBattleScripts = {
   10, -- "Battle: inf. item use"
   11, -- "Battle: Set D.M.W. after changed"
   13, -- "Menu: Set consumable item stock to:"
+  16, -- "Materia scripts"
   2, -- "Battle: set HP limit when hit"
+  32, -- "Get stats"
   6, -- "Battle: inf. MP"
   8, -- "Battle: inf. AP"
+  62, -- "Calculate readable time format"
 }
 local addressList = getAddressList()
 for _, id in ipairs(enableBattleScripts) do
@@ -46,14 +49,22 @@ getLuaEngine().menuItem5.doClick()
 getLuaEngine().Close()
 
 local disableBattleScripts = {
-  45, -- "Calculate readable time format"
-  83, -- "Mini game: Materia pick up: easy goal"
+  62, -- "Calculate readable time format"
+  24, -- "Materia view in Materia Fusion"
+  23, -- "Set all materia star level to 5"
+  22, -- "Set Materia bonus value to 1, if current value = 100"
+  21, -- "Set Materia bonus value to max, if current value &lt;=3"
+  20, -- "Replace first "base" Cure (ケアル) materia to Sky drain (スカイドレイン)"
+  19, -- "Replace first "base" Cure (ケアル) materia to Moogle Power (ラッキースター)"
+  17, -- "Replace first "base" Cure (ケアル) materia to Moogle Power (モーグリパワー)"
   8, -- "Battle: inf. AP"
   6, -- "Battle: inf. MP"
+  32, -- "Get stats"
   2, -- "Battle: set HP limit when hit"
-  16, -- "Get stats"
+  16, -- "Materia scripts"
   13, -- "Menu: Set consumable item stock to:"
   11, -- "Battle: Set D.M.W. after changed"
+  100, -- "Mini game: Materia pick up: easy goal"
   10, -- "Battle: inf. item use"
   0, -- "Compact Mode"
 }
@@ -62,7 +73,6 @@ for _, id in ipairs(disableBattleScripts) do
   addressList.getMemoryRecordByID(id).Active = false
 end
 getLuaEngine().Close()
-
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -691,6 +701,534 @@ CCFF7R-Win64-Shipping.exe+12834A9: 48 89 5D E0              - mov [rbp-20],rbx
     </CheatEntry>
     <CheatEntry>
       <ID>16</ID>
+      <Description>"Materia scripts"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Replace first "base" Cure (ケアル) materia to Moogle Power (モーグリパワー)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+-- NO_ACTIVATE
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+
+-- 參數設定
+local baseAddress = getAddress(process) + 0x71AC220 -- 起始位址
+local dataLength = 16                                -- 每筆資料長度
+local maxEntries = 999                               -- 最多檢查筆數
+-- 使用 nil 作為通配符
+local searchPattern = {0x09, 0x40, 0x01, 0x00, nil, nil, 0x00, 0x01, 0x0E, 0x70, 0x01, 0xFF, 0x06, 0x00, 0x01, 0x00}
+local replacePattern = {0x8D, 0x40, 0x01, 0x00, nil, nil, 0x00, 0x06, 0x10, 0x60, 0x05, 0xFF, 0x04, 0x00, 0x3C, 0x00}
+
+-- Helper function: Check if memory matches the pattern
+local function matchesPattern(address, pattern)
+    for i = 1, #pattern do
+        if pattern[i] ~= nil then
+            -- Compare non-nil bytes
+            if readBytes(address + i - 1, 1, false) ~= pattern[i] then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+-- Helper function: Apply replace pattern
+local function applyReplacePattern(address, pattern, randomBytes)
+    for i = 1, #pattern do
+        if pattern[i] == nil then
+            -- Replace the 5th and 6th bytes with random values
+            writeBytes(address + i - 1, randomBytes[i - 4])
+        else
+            -- Replace other bytes with specified values
+            writeBytes(address + i - 1, pattern[i])
+        end
+    end
+end
+
+-- Start Search and Replace
+for i = 0, maxEntries - 1 do
+    local entryAddress = baseAddress + i * dataLength
+    local firstByte = readBytes(entryAddress, 1, false)
+
+    -- Check end condition
+    if firstByte == 0 then
+        print(string.format("Search stopped at record %d: End of data.", i))
+        break
+    end
+
+    -- Match pattern
+    if matchesPattern(entryAddress, searchPattern) then
+        -- Read the random values for wildcard positions
+        local randomBytes = {readBytes(entryAddress + 4, 1, false), readBytes(entryAddress + 5, 1, false)}
+
+        -- Apply the replacement pattern
+        applyReplacePattern(entryAddress, replacePattern, randomBytes)
+        print(string.format("Replaced data at address: 0x%X", entryAddress))
+        break
+    end
+end
+
+print("Processing complete.")
+getLuaEngine().Close()
+
+[DISABLE]
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"Notice: Can buy cure materia from shop"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"Replace first "base" Cure (ケアル) materia to Moogle Power (ラッキースター)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+-- NO_ACTIVATE
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+
+-- Parameters
+local baseAddress = getAddress(process) + 0x71AC220 -- Starting address
+local dataLength = 16                                -- Length of each record
+local maxEntries = 999                               -- Maximum number of records
+-- Search and Replace patterns
+local searchPattern = {0x09, 0x40, 0x01, 0x00, nil, nil, 0x00, 0x01, 0x0E, 0x70, 0x01, 0xFF, 0x06, 0x00, 0x01, 0x00}
+local replacePattern = {0x82, 0x40, 0x01, 0x00, nil, nil, 0x00, 0x06, 0x10, 0x60, 0x05, 0xFF, 0x06, 0x00, 0x64, 0x00}
+
+-- Helper function: Check if memory matches the pattern
+local function matchesPattern(address, pattern)
+    for i = 1, #pattern do
+        if pattern[i] ~= nil then
+            -- Compare non-nil bytes
+            if readBytes(address + i - 1, 1, false) ~= pattern[i] then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+-- Helper function: Apply replace pattern
+local function applyReplacePattern(address, pattern, randomBytes)
+    for i = 1, #pattern do
+        if pattern[i] == nil then
+            -- Replace the 5th and 6th bytes with random values
+            writeBytes(address + i - 1, randomBytes[i - 4])
+        else
+            -- Replace other bytes with specified values
+            writeBytes(address + i - 1, pattern[i])
+        end
+    end
+end
+
+-- Start Search and Replace
+for i = 0, maxEntries - 1 do
+    local entryAddress = baseAddress + i * dataLength
+    local firstByte = readBytes(entryAddress, 1, false)
+
+    -- Check end condition
+    if firstByte == 0 then
+        print(string.format("Search stopped at record %d: End of data.", i))
+        break
+    end
+
+    -- Match pattern
+    if matchesPattern(entryAddress, searchPattern) then
+        -- Read the random values for wildcard positions
+        local randomBytes = {readBytes(entryAddress + 4, 1, false), readBytes(entryAddress + 5, 1, false)}
+
+        -- Apply the replacement pattern
+        applyReplacePattern(entryAddress, replacePattern, randomBytes)
+        print(string.format("Replaced data at address: 0x%X", entryAddress))
+        break
+    end
+end
+
+print("Processing complete.")
+getLuaEngine().Close()
+
+[DISABLE]
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Replace first "base" Cure (ケアル) materia to Sky drain (スカイドレイン)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+-- NO_ACTIVATE
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+
+-- Parameters
+local baseAddress = getAddress(process) + 0x71AC220 -- Starting address
+local dataLength = 16                                -- Length of each record
+local maxEntries = 999                               -- Maximum number of records
+-- Search and Replace patterns
+local searchPattern = {0x09, 0x40, 0x01, 0x00, nil, nil, 0x00, 0x01, 0x0E, 0x70, 0x01, 0xFF, 0x06, 0x00, 0x01, 0x00}
+local replacePattern = {0x50, 0x40, 0x01, 0x00, nil, nil, 0x00, 0x03, 0x55, 0x70, 0x05, 0xFF, 0x07, 0x00, 0x64, 0x00}
+
+-- Helper function: Check if memory matches the pattern
+local function matchesPattern(address, pattern)
+    for i = 1, #pattern do
+        if pattern[i] ~= nil then
+            -- Compare non-nil bytes
+            if readBytes(address + i - 1, 1, false) ~= pattern[i] then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+-- Helper function: Apply replace pattern
+local function applyReplacePattern(address, pattern, randomBytes)
+    for i = 1, #pattern do
+        if pattern[i] == nil then
+            -- Replace the 5th and 6th bytes with random values
+            writeBytes(address + i - 1, randomBytes[i - 4])
+        else
+            -- Replace other bytes with specified values
+            writeBytes(address + i - 1, pattern[i])
+        end
+    end
+end
+
+-- Start Search and Replace
+for i = 0, maxEntries - 1 do
+    local entryAddress = baseAddress + i * dataLength
+    local firstByte = readBytes(entryAddress, 1, false)
+
+    -- Check end condition
+    if firstByte == 0 then
+        print(string.format("Search stopped at record %d: End of data.", i))
+        break
+    end
+
+    -- Match pattern
+    if matchesPattern(entryAddress, searchPattern) then
+        -- Read the random values for wildcard positions
+        local randomBytes = {readBytes(entryAddress + 4, 1, false), readBytes(entryAddress + 5, 1, false)}
+
+        -- Apply the replacement pattern
+        applyReplacePattern(entryAddress, replacePattern, randomBytes)
+        print(string.format("Replaced data at address: 0x%X", entryAddress))
+        break
+    end
+end
+
+print("Processing complete.")
+getLuaEngine().Close()
+
+[DISABLE]
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Set Materia bonus value to max, if current value &lt;=3"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+local baseAddress = getAddress(process)+0x71AC220   -- 起始位址
+local dataLength = 16                               -- 每筆資料長度
+local maxEntries = 999                              -- 最多筆數
+
+for i = 0, maxEntries - 1 do
+    local entryAddress = baseAddress + i * dataLength
+    local firstByte = readBytes(entryAddress, 1, false)
+    local secondByte = readBytes(entryAddress + 1, 1, false)
+
+    -- 檢查結尾條件 (0-1 byte 為 0 表示結尾)
+    if firstByte == 0 and secondByte == 0 then
+        print(string.format("Processing stopped at entry %d: end of data.", i))
+        break
+    end
+
+    -- 讀取 xx 和 yy 的值 (第 12 byte 和第 14 byte)
+    -- xx: Bonus type, yy: Bonus value
+    local xx = readBytes(entryAddress + 12, 1, false)
+    local yy = readBytes(entryAddress + 14, 1, false)
+
+    -- 處理條件：當 yy &lt;= 3 時，調整 yy 的值
+    if yy &lt;= 3 then
+        if xx &gt;= 0 and xx &lt;= 2 then
+            writeBytes(entryAddress + 14, 100) -- yy 設為 100
+        elseif xx &gt;= 3 and xx &lt;= 7 then
+            writeBytes(entryAddress + 14, 100) -- yy 設為 100
+        end
+        print(string.format("Modified entry %d (address: 0x%X): bonus type = %d, bonus value = %d", i, entryAddress, xx, yy))
+    end
+end
+
+print("Complete!")
+
+getLuaEngine().Close()
+[DISABLE]
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Set Materia bonus value to 1, if current value = 100"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+local baseAddress = getAddress(process)+0x71AC220   -- 起始位址
+local dataLength = 16                               -- 每筆資料長度
+local maxEntries = 999                              -- 最多筆數
+
+for i = 0, maxEntries - 1 do
+    local entryAddress = baseAddress + i * dataLength
+    local firstByte = readBytes(entryAddress, 1, false)
+    local secondByte = readBytes(entryAddress + 1, 1, false)
+
+    -- 檢查結尾條件 (0-1 byte 為 0 表示結尾)
+    if firstByte == 0 and secondByte == 0 then
+        print(string.format("Processing stopped at entry %d: end of data.", i))
+        break
+    end
+
+    -- 讀取 xx 和 yy 的值 (第 12 byte 和第 14 byte)
+    -- xx: Bonus type, yy: Bonus value
+    local xx = readBytes(entryAddress + 12, 1, false)
+    local yy = readBytes(entryAddress + 14, 1, false)
+
+    if yy &gt;= 100 then
+        if xx &gt;= 0 and xx &lt;= 2 then
+            writeBytes(entryAddress + 14, 1)
+        elseif xx &gt;= 3 and xx &lt;= 7 then
+            writeBytes(entryAddress + 14, 1)
+        end
+        print(string.format("Modified entry %d (address: 0x%X): bonus type = %d, bonus value = %d", i, entryAddress, xx, yy))
+    end
+end
+
+print("Complete!")
+
+getLuaEngine().Close()
+[DISABLE]
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"Set all materia star level to 5"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+-- 設定參數
+local baseAddress = getAddress(process)+0x71AC220   -- 起始位址
+local dataLength = 16                               -- 每筆資料長度
+local maxEntries = 999                              -- 最多筆數
+
+for i = 0, maxEntries - 1 do
+    local entryAddress = baseAddress + i * dataLength
+    local firstByte = readBytes(entryAddress, 1, false)
+    local secondByte = readBytes(entryAddress + 1, 1, false)
+
+    if firstByte == 0 and secondByte == 0 then
+        print(string.format("Processing stopped at entry %d: end of data.", i))
+        break
+    end
+
+    local xx = readBytes(entryAddress + 10, 1, false)
+
+    if xx &lt; 5 then
+        writeBytes(entryAddress + 10, 5) -- 將 xx 設為 5
+        print(string.format("Modified entry %d (address: 0x%X): Star level was %d, now set to 5", i, entryAddress, xx))
+    end
+end
+
+print("Complete!")
+etLuaEngine().Close()
+[DISABLE]
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Materia view in Materia Fusion"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-01-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MATERIA_EDITOR,$process,8B 42 14 48 83 C2 18 89) // should be unique
+alloc(newmem,$1000,INJECT_MATERIA_EDITOR)
+
+label(code)
+label(return i_base_materia_editor_addr)
+
+newmem:
+  mov [i_base_materia_editor_addr], rdx
+
+code:
+  mov eax,[rdx+14]
+  add rdx,18
+  jmp return
+align 10 cc
+  i_base_materia_editor_addr:
+  dq 0
+
+INJECT_MATERIA_EDITOR:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MATERIA_EDITOR i_base_materia_editor_addr)
+
+[DISABLE]
+
+INJECT_MATERIA_EDITOR:
+  db 8B 42 14 48 83 C2 18
+
+unregistersymbol(INJECT_MATERIA_EDITOR i_base_materia_editor_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CCFF7R-Win64-Shipping.exe+12974AC
+
+CCFF7R-Win64-Shipping.exe+129748F: 89 01           - mov [rcx],eax
+CCFF7R-Win64-Shipping.exe+1297491: 48 8B F9        - mov rdi,rcx
+CCFF7R-Win64-Shipping.exe+1297494: 8B 42 04        - mov eax,[rdx+04]
+CCFF7R-Win64-Shipping.exe+1297497: 89 41 04        - mov [rcx+04],eax
+CCFF7R-Win64-Shipping.exe+129749A: 8B 42 08        - mov eax,[rdx+08]
+CCFF7R-Win64-Shipping.exe+129749D: 89 41 08        - mov [rcx+08],eax
+CCFF7R-Win64-Shipping.exe+12974A0: 8B 42 0C        - mov eax,[rdx+0C]
+CCFF7R-Win64-Shipping.exe+12974A3: 89 41 0C        - mov [rcx+0C],eax
+CCFF7R-Win64-Shipping.exe+12974A6: 8B 42 10        - mov eax,[rdx+10]
+CCFF7R-Win64-Shipping.exe+12974A9: 89 41 10        - mov [rcx+10],eax
+// ---------- INJECTING HERE ----------
+CCFF7R-Win64-Shipping.exe+12974AC: 8B 42 14        - mov eax,[rdx+14]
+// ---------- DONE INJECTING  ----------
+CCFF7R-Win64-Shipping.exe+12974AF: 48 83 C2 18     - add rdx,18
+CCFF7R-Win64-Shipping.exe+12974B3: 89 41 14        - mov [rcx+14],eax
+CCFF7R-Win64-Shipping.exe+12974B6: 48 83 C1 18     - add rcx,18
+CCFF7R-Win64-Shipping.exe+12974BA: E8 31 00 8D FF  - call CCFF7R-Win64-Shipping.exe+B674F0
+CCFF7R-Win64-Shipping.exe+12974BF: 0F B6 43 28     - movzx eax,byte ptr [rbx+28]
+CCFF7R-Win64-Shipping.exe+12974C3: 88 47 28        - mov [rdi+28],al
+CCFF7R-Win64-Shipping.exe+12974C6: 8B 43 2C        - mov eax,[rbx+2C]
+CCFF7R-Win64-Shipping.exe+12974C9: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+CCFF7R-Win64-Shipping.exe+12974CE: 89 47 2C        - mov [rdi+2C],eax
+CCFF7R-Win64-Shipping.exe+12974D1: 48 8B C7        - mov rax,rdi
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"Notice: Temporary data"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>26</ID>
+              <Description>"ID"</Description>
+              <DropDownList DisplayValueAsItem="1">0000408D:モーグリパワー
+</DropDownList>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_materia_editor_addr</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>27</ID>
+              <Description>"Serial"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_materia_editor_addr</Address>
+              <Offsets>
+                <Offset>4</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28</ID>
+              <Description>"Star Level"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_materia_editor_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>29</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_materia_editor_addr</Address>
+              <Offsets>
+                <Offset>C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>30</ID>
+              <Description>"Bonus type"</Description>
+              <DropDownList DisplayValueAsItem="1">0:+HP%
+1:+MP%
+2:+AP%
+3:Str/力
+4:Sta/体力
+5:Mag/魔力
+6:Spi/精神
+7:Lck/運
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_materia_editor_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>31</ID>
+              <Description>"Level"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_materia_editor_addr</Address>
+              <Offsets>
+                <Offset>14</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>32</ID>
       <Description>"Get stats"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -764,7 +1302,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>17</ID>
+          <ID>33</ID>
           <Description>"D.M.W Limit"</Description>
           <DropDownList DisplayValueAsItem="1">1:Normal
 2:High
@@ -780,7 +1318,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>18</ID>
+          <ID>34</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -791,7 +1329,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>19</ID>
+          <ID>35</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -802,7 +1340,18 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>20</ID>
+          <ID>36</ID>
+          <Description>"Chap. 5 Squats count"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stat_addr</Address>
+          <Offsets>
+            <Offset>1164</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>37</ID>
           <Description>"SP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -813,7 +1362,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>21</ID>
+          <ID>38</ID>
           <Description>"HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -824,7 +1373,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>22</ID>
+          <ID>39</ID>
           <Description>"Max HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -835,7 +1384,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>23</ID>
+          <ID>40</ID>
           <Description>"Base max HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -846,7 +1395,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>24</ID>
+          <ID>41</ID>
           <Description>"MP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -857,7 +1406,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>25</ID>
+          <ID>42</ID>
           <Description>"Max MP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -868,7 +1417,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>26</ID>
+          <ID>43</ID>
           <Description>"Base max MP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -879,7 +1428,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>27</ID>
+          <ID>44</ID>
           <Description>"AP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -890,7 +1439,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>28</ID>
+          <ID>45</ID>
           <Description>"Max AP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -901,7 +1450,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>29</ID>
+          <ID>46</ID>
           <Description>"Base max AP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -912,7 +1461,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>30</ID>
+          <ID>47</ID>
           <Description>"Level"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -923,7 +1472,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>31</ID>
+          <ID>48</ID>
           <Description>"Str"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -934,7 +1483,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>32</ID>
+          <ID>49</ID>
           <Description>"Vit"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -945,7 +1494,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>33</ID>
+          <ID>50</ID>
           <Description>"Int"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -956,7 +1505,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>34</ID>
+          <ID>51</ID>
           <Description>"Spi"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -967,7 +1516,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>35</ID>
+          <ID>52</ID>
           <Description>"Lck"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -978,7 +1527,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>36</ID>
+          <ID>53</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -989,7 +1538,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>37</ID>
+          <ID>54</ID>
           <Description>"Base Str"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1000,7 +1549,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>38</ID>
+          <ID>55</ID>
           <Description>"Base Vit"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1011,7 +1560,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>39</ID>
+          <ID>56</ID>
           <Description>"Base Int"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1022,7 +1571,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>40</ID>
+          <ID>57</ID>
           <Description>"Base Spi"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1033,7 +1582,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>41</ID>
+          <ID>58</ID>
           <Description>"Base Lck"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1044,7 +1593,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>42</ID>
+          <ID>59</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1055,7 +1604,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>43</ID>
+          <ID>60</ID>
           <Description>"Gil"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1066,7 +1615,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>44</ID>
+          <ID>61</ID>
           <Description>"Playing time, seconds*60"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1077,7 +1626,7 @@ CCFF7R-Win64-Shipping.exe+13ADCFA: CC                    - int 3
           </Offsets>
           <CheatEntries>
             <CheatEntry>
-              <ID>45</ID>
+              <ID>62</ID>
               <Description>"Calculate readable time format"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1201,7 +1750,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>46</ID>
+                  <ID>63</ID>
                   <Description>"Hours"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -1209,7 +1758,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   <Address>vf_p_hours</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>47</ID>
+                  <ID>64</ID>
                   <Description>"Minutes"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -1217,7 +1766,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   <Address>vf_p_minutes</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>48</ID>
+                  <ID>65</ID>
                   <Description>"Seconds"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -1229,7 +1778,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>49</ID>
+          <ID>66</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1240,7 +1789,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>50</ID>
+          <ID>67</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1251,7 +1800,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>51</ID>
+          <ID>68</ID>
           <Description>"??"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -1262,17 +1811,34 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>52</ID>
+          <ID>69</ID>
+          <Description>"Materia data start address"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>$process+71AC220 </Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>70</ID>
+          <Description>"First item address"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>$process+71ABA1C </Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
           <Description>"Equipped"</Description>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>53</ID>
+              <ID>72</ID>
               <Description>"Command?"</Description>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>54</ID>
+                  <ID>73</ID>
                   <Description>"Command ID #1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -1283,7 +1849,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </Offsets>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>55</ID>
+                      <ID>74</ID>
                       <Description>"Command Available #1"</Description>
                       <DropDownList DisplayValueAsItem="1">0:No
 112:Yes
@@ -1299,7 +1865,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>56</ID>
+                  <ID>75</ID>
                   <Description>"Command ID #2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -1310,7 +1876,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </Offsets>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>57</ID>
+                      <ID>76</ID>
                       <Description>"Command Available #2"</Description>
                       <DropDownList DisplayValueAsItem="1">0:No
 112:Yes
@@ -1326,7 +1892,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>58</ID>
+                  <ID>77</ID>
                   <Description>"Command ID #3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -1337,7 +1903,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </Offsets>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>59</ID>
+                      <ID>78</ID>
                       <Description>"Command Available #3"</Description>
                       <DropDownList DisplayValueAsItem="1">0:No
 112:Yes
@@ -1353,7 +1919,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>60</ID>
+                  <ID>79</ID>
                   <Description>"Command ID #4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -1364,7 +1930,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </Offsets>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>61</ID>
+                      <ID>80</ID>
                       <Description>"Command Available #4"</Description>
                       <DropDownList DisplayValueAsItem="1">0:No
 112:Yes
@@ -1382,17 +1948,17 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>62</ID>
+              <ID>81</ID>
               <Description>"Materia"</Description>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>63</ID>
+                  <ID>82</ID>
                   <Description>"#1"</Description>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>64</ID>
+                      <ID>83</ID>
                       <Description>"Lv"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1403,7 +1969,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>65</ID>
+                      <ID>84</ID>
                       <Description>"Using #th materia"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1414,7 +1980,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                       <CheatEntries>
                         <CheatEntry>
-                          <ID>66</ID>
+                          <ID>85</ID>
                           <Description>"Equipped?"</Description>
                           <DropDownList DisplayValueAsItem="1">0:No
 224:Yes
@@ -1432,12 +1998,12 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>67</ID>
+                  <ID>86</ID>
                   <Description>"#2"</Description>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>68</ID>
+                      <ID>87</ID>
                       <Description>"Lv"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1448,7 +2014,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>69</ID>
+                      <ID>88</ID>
                       <Description>"Using #th materia"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1459,7 +2025,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                       <CheatEntries>
                         <CheatEntry>
-                          <ID>70</ID>
+                          <ID>89</ID>
                           <Description>"Equipped?"</Description>
                           <DropDownList DisplayValueAsItem="1">0:No
 224:Yes
@@ -1477,12 +2043,12 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>71</ID>
+                  <ID>90</ID>
                   <Description>"#3"</Description>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>72</ID>
+                      <ID>91</ID>
                       <Description>"Lv"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1493,7 +2059,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>73</ID>
+                      <ID>92</ID>
                       <Description>"Using #th materia"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1504,7 +2070,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                       <CheatEntries>
                         <CheatEntry>
-                          <ID>74</ID>
+                          <ID>93</ID>
                           <Description>"Equipped?"</Description>
                           <DropDownList DisplayValueAsItem="1">0:No
 224:Yes
@@ -1522,12 +2088,12 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                   </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>75</ID>
+                  <ID>94</ID>
                   <Description>"#4"</Description>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>76</ID>
+                      <ID>95</ID>
                       <Description>"Lv"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1538,7 +2104,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>77</ID>
+                      <ID>96</ID>
                       <Description>"Using #th materia"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -1549,7 +2115,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
                       </Offsets>
                       <CheatEntries>
                         <CheatEntry>
-                          <ID>78</ID>
+                          <ID>97</ID>
                           <Description>"Equipped?"</Description>
                           <DropDownList DisplayValueAsItem="1">0:No
 224:Yes
@@ -1569,7 +2135,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>79</ID>
+              <ID>98</ID>
               <Description>"Equip accessories #1"</Description>
               <ShowAsHex>1</ShowAsHex>
               <ShowAsSigned>0</ShowAsSigned>
@@ -1581,7 +2147,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>80</ID>
+              <ID>99</ID>
               <Description>"Equip accessories #2"</Description>
               <ShowAsHex>1</ShowAsHex>
               <ShowAsSigned>0</ShowAsSigned>
@@ -1597,7 +2163,7 @@ CCFF7R-Win64-Shipping.exe+13AD8E3: 85 C9                    - test ecx,ecx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>83</ID>
+      <ID>100</ID>
       <Description>"Mini game: Materia pick up: easy goal"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : CCFF7R-Win64-Shipping.exe
@@ -1669,11 +2235,19 @@ CCFF7R-Win64-Shipping.exe+12DC349: 48 8B 8B 30 03 00 00     - mov rcx,[rbx+00000
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>81</ID>
+      <ID>101</ID>
       <Description>"CRISIS CORE –FINAL FANTASY VII– REUNION  /  https://opencheattables.com"</Description>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
+  <LuaScript>--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
+function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+
+</LuaScript>
 </CheatTable>
