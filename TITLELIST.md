@@ -266,6 +266,11 @@ ja-JP: ペルソナ３ リロード
 zh-TW: 女神異聞錄5皇家版  
 ja-JP: ペルソナ５ ザ・ロイヤル  
 
+## Pocky & Rocky Reshrined
+[Pocky & Rocky Reshrined (Steam)](https://store.steampowered.com/app/2200580/_/)  
+ja-JP: 奇々怪界 黒マントの謎  
+zh-TW: 奇々怪界 黒マントの謎  
+
 ## Port Royal 3
 [Port Royal 3 (Steam)](https://store.steampowered.com/app/205610/Port_Royale_3/)
 
