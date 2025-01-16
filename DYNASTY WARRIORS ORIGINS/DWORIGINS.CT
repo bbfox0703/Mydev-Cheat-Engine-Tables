@@ -1,0 +1,828 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"Compact Mode"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+--https://forum.cheatengine.org/viewtopic.php?t=570055
+LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+
+[DISABLE]
+LuaCall(cycleFullCompact(nil,false))
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>25</ID>
+      <Description>"Toggle Scripts"</Description>
+      <Color>0080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+getLuaEngine().Close()
+
+local enableBattleScripts = {
+  0, -- "Battle: when get hit: try to keep HP / min musou gauge"
+  13, -- "Battle: inf. Pork Bun / Baozi"
+  14, -- "Battle: skill pt (戰功) multiplier"
+  16, -- "Battle: weapon EXP multiplier"
+  18, -- "Get money"
+  24, -- "Compact Mode"
+  11, -- "Skill gauge multiplier"
+  9, -- "Musou gauge multiplier"
+}
+local addressList = getAddressList()
+for _, id in ipairs(enableBattleScripts) do
+  addressList.getMemoryRecordByID(id).Active = true
+end
+getLuaEngine().Close()
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+getLuaEngine().menuItem5.doClick()
+getLuaEngine().Close()
+
+local disableBattleScripts = {
+  9, -- "Musou gauge multiplier"
+  11, -- "Skill gauge multiplier"
+  24, -- "Compact Mode"
+  18, -- "Get money"
+  16, -- "Battle: weapon EXP multiplier"
+  14, -- "Battle: skill pt (戰功) multiplier"
+  13, -- "Battle: inf. Pork Bun / Baozi"
+  0, -- "Battle: when get hit: try to keep HP / min musou gauge"
+}
+local addressList = getAddressList()
+for _, id in ipairs(disableBattleScripts) do
+  addressList.getMemoryRecordByID(id).Active = false
+end
+getLuaEngine().Close()
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Battle: when get hit: try to keep HP / min musou gauge"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_HP,$process,F3 0F 10 51 38 0F 2F E2) // should be unique
+alloc(newmem,$1000,INJECT_INF_HP)
+
+label(code)
+label(return)
+label(vf_hp_ratio i_base_hp_addr vf_min_musou)
+
+newmem:
+  cmp qword ptr [rcx+10], 0
+  je code
+  push rax
+  mov rax, [rcx+10]
+  test rax, rax
+  jz endp
+  cmp dword ptr [rax+2C], 0
+  jne to_non_player
+
+to_player:
+  mov [i_base_hp_addr], rcx
+  movss xmm15, [rcx+34]
+  vmovss xmm14, [vf_hp_ratio]
+  vmulss xmm15, xmm14, xmm15
+  vucomiss xmm15, [rcx+38]
+  jbe @F
+  movss [rcx+38], xmm15
+
+@@:
+  movss xmm15, [vf_min_musou]
+  vucomiss xmm15, [rcx+44]
+  jbe endp
+  movss [rcx+44], xmm15
+
+  jmp endp
+
+to_non_player:
+  cmp dword ptr [rax+38], 0
+  jne to_enemy
+
+
+  jmp endp
+to_enemy:
+  db EB 3B 54
+  db 68 69 73 20 74 61 62 6C 65
+  db 20 63 6F 6D
+  db 65 73 20 66 72 6F 6D 20
+  db 68 74 74 70
+  db 73 3A 2F 2F 6F 70 65 6E 63 68 65 61
+  db 74 74 61 62
+  db 6C 65
+  db 73 2E
+  db 63 6F 6D 20
+  db 2F
+  db 20
+  db 43 45 20 37
+  db 2E 34 2B
+endp:
+  pop rax
+
+code:
+  movss xmm2,[rcx+38]
+  jmp return
+align 10 cc
+  vf_400:
+  dd (float)100
+  vf_hp_ratio:
+  dd (float)0.25
+  i_base_hp_addr:
+  dq 0
+  vf_min_musou:
+  dd (float)300
+
+INJECT_INF_HP:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_HP)
+registersymbol(vf_hp_ratio i_base_hp_addr vf_min_musou)
+
+[DISABLE]
+
+INJECT_INF_HP:
+  db F3 0F 10 51 38
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+10B7C3
+
+DWORIGINS.exe+10B7A9: 89 41 34              - mov [rcx+34],eax
+DWORIGINS.exe+10B7AC: C3                    - ret 
+DWORIGINS.exe+10B7AD: CC                    - int 3 
+DWORIGINS.exe+10B7AE: CC                    - int 3 
+DWORIGINS.exe+10B7AF: CC                    - int 3 
+DWORIGINS.exe+10B7B0: 48 83 EC 28           - sub rsp,28
+DWORIGINS.exe+10B7B4: 0F 57 E4              - xorps xmm4,xmm4
+DWORIGINS.exe+10B7B7: 48 8B D1              - mov rdx,rcx
+DWORIGINS.exe+10B7BA: 0F 2F E1              - comiss xmm4,xmm1
+DWORIGINS.exe+10B7BD: 0F 87 B8 00 00 00     - ja DWORIGINS.exe+10B87B
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+10B7C3: F3 0F 10 51 38        - movss xmm2,[rcx+38]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+10B7C8: 0F 2F E2              - comiss xmm4,xmm2
+DWORIGINS.exe+10B7CB: 0F 87 AA 00 00 00     - ja DWORIGINS.exe+10B87B
+DWORIGINS.exe+10B7D1: 8B 41 18              - mov eax,[rcx+18]
+DWORIGINS.exe+10B7D4: 48 A9 00 00 00 20     - test rax,20000000
+DWORIGINS.exe+10B7DA: 0F 87 9B 00 00 00     - ja DWORIGINS.exe+10B87B
+DWORIGINS.exe+10B7E0: 48 8B 41 10           - mov rax,[rcx+10]
+DWORIGINS.exe+10B7E4: 0F 57 C0              - xorps xmm0,xmm0
+DWORIGINS.exe+10B7E7: F3 0F 10 59 34        - movss xmm3,[rcx+34]
+DWORIGINS.exe+10B7EC: F6 80 00 02 00 00 02  - test byte ptr [rax+00000200],02
+DWORIGINS.exe+10B7F3: 74 16                 - je DWORIGINS.exe+10B80B
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1</ID>
+          <Description>"HP Ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_hp_ratio</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"min. musou"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_musou</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_hp_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_hp_addr</Address>
+          <Offsets>
+            <Offset>38</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Max musou"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_hp_addr</Address>
+          <Offsets>
+            <Offset>40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>6</ID>
+          <Description>"Musou"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_hp_addr</Address>
+          <Offsets>
+            <Offset>44</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"Max skill"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_hp_addr</Address>
+          <Offsets>
+            <Offset>6C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"Skill"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_hp_addr</Address>
+          <Offsets>
+            <Offset>70</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Musou gauge multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MUSOU_MULTI,$process,F3 0F 58 CE 0F 2F CA 72 05) // should be unique
+alloc(newmem,$1000,INJECT_MUSOU_MULTI)
+
+label(code)
+label(return vf_musou_multi)
+
+newmem:
+  cmp rbx, [i_base_hp_addr]
+  jne code
+  vmovss xmm15, [vf_musou_multi]
+  vmulss xmm6, xmm6, xmm15
+
+code:
+  addss xmm1,xmm6
+  comiss xmm1,xmm2
+  jmp return
+align 10 cc
+  vf_musou_multi:
+  dd (float)3.33333
+
+INJECT_MUSOU_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MUSOU_MULTI vf_musou_multi)
+
+[DISABLE]
+
+INJECT_MUSOU_MULTI:
+  db F3 0F 58 CE 0F 2F CA
+
+unregistersymbol(INJECT_MUSOU_MULTI vf_musou_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+10BD51
+
+DWORIGINS.exe+10BD2B: 76 15              - jna DWORIGINS.exe+10BD42
+DWORIGINS.exe+10BD2D: E8 BE 60 96 00     - call DWORIGINS.exe+A71DF0
+DWORIGINS.exe+10BD32: 85 C0              - test eax,eax
+DWORIGINS.exe+10BD34: 75 0C              - jne DWORIGINS.exe+10BD42
+DWORIGINS.exe+10BD36: 8D 48 6C           - lea ecx,[rax+6C]
+DWORIGINS.exe+10BD39: E8 12 4E FA FF     - call DWORIGINS.exe+B0B50
+DWORIGINS.exe+10BD3E: F3 0F 59 F0        - mulss xmm6,xmm0
+DWORIGINS.exe+10BD42: F3 44 0F 10 4B 44  - movss xmm9,[rbx+44]
+DWORIGINS.exe+10BD48: F3 0F 10 53 40     - movss xmm2,[rbx+40]
+DWORIGINS.exe+10BD4D: 41 0F 28 C9        - movaps xmm1,xmm9
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+10BD51: F3 0F 58 CE        - addss xmm1,xmm6
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+10BD55: 0F 2F CA           - comiss xmm1,xmm2
+DWORIGINS.exe+10BD58: 72 05              - jb DWORIGINS.exe+10BD5F
+DWORIGINS.exe+10BD5A: 0F 28 C2           - movaps xmm0,xmm2
+DWORIGINS.exe+10BD5D: EB 07              - jmp DWORIGINS.exe+10BD66
+DWORIGINS.exe+10BD5F: 0F 57 C0           - xorps xmm0,xmm0
+DWORIGINS.exe+10BD62: F3 0F 5F C1        - maxss xmm0,xmm1
+DWORIGINS.exe+10BD66: 0F 2E C2           - ucomiss xmm0,xmm2
+DWORIGINS.exe+10BD69: F3 0F 11 43 44     - movss [rbx+44],xmm0
+DWORIGINS.exe+10BD6E: 0F 8A 83 01 00 00  - jp DWORIGINS.exe+10BEF7
+DWORIGINS.exe+10BD74: 0F 85 7D 01 00 00  - jne DWORIGINS.exe+10BEF7
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_musou_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"Skill gauge multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SKILL_MULTI,$process,F3 41 0F 58 4A 70) // should be unique
+alloc(newmem,$1000,INJECT_SKILL_MULTI)
+
+label(code)
+label(return vf_skill_multi)
+
+newmem:
+  cmp r10, [i_base_hp_addr]
+  jne code
+  vmovss xmm15, [vf_skill_multi]
+  vmulss xmm1, xmm1, xmm15
+
+code:
+  addss xmm1,[r10+70]
+  jmp return
+align 10 cc
+  vf_skill_multi:
+  dd (float)3.5
+
+
+INJECT_SKILL_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SKILL_MULTI vf_skill_multi)
+
+[DISABLE]
+
+INJECT_SKILL_MULTI:
+  db F3 41 0F 58 4A 70
+
+unregistersymbol(INJECT_SKILL_MULTI vf_skill_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+10C0A6
+
+DWORIGINS.exe+10C081: F6 82 00 02 00 00 04  - test byte ptr [rdx+00000200],04
+DWORIGINS.exe+10C088: 74 1C                 - je DWORIGINS.exe+10C0A6
+DWORIGINS.exe+10C08A: 0F 2F CB              - comiss xmm1,xmm3
+DWORIGINS.exe+10C08D: 76 17                 - jna DWORIGINS.exe+10C0A6
+DWORIGINS.exe+10C08F: E8 5C 5D 96 00        - call DWORIGINS.exe+A71DF0
+DWORIGINS.exe+10C094: 85 C0                 - test eax,eax
+DWORIGINS.exe+10C096: 75 0E                 - jne DWORIGINS.exe+10C0A6
+DWORIGINS.exe+10C098: B9 86 00 00 00        - mov ecx,00000086
+DWORIGINS.exe+10C09D: E8 AE 4A FA FF        - call DWORIGINS.exe+B0B50
+DWORIGINS.exe+10C0A2: F3 0F 59 C8           - mulss xmm1,xmm0
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+10C0A6: F3 41 0F 58 4A 70     - addss xmm1,[r10+70]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+10C0AC: F3 41 0F 10 42 6C     - movss xmm0,[r10+6C]
+DWORIGINS.exe+10C0B2: 0F 2F C8              - comiss xmm1,xmm0
+DWORIGINS.exe+10C0B5: 73 07                 - jae DWORIGINS.exe+10C0BE
+DWORIGINS.exe+10C0B7: 0F 28 C3              - movaps xmm0,xmm3
+DWORIGINS.exe+10C0BA: F3 0F 5F C1           - maxss xmm0,xmm1
+DWORIGINS.exe+10C0BE: F3 41 0F 11 42 70     - movss [r10+70],xmm0
+DWORIGINS.exe+10C0C4: 48 83 C4 28           - add rsp,28
+DWORIGINS.exe+10C0C8: C3                    - ret 
+DWORIGINS.exe+10C0C9: CC                    - int 3 
+DWORIGINS.exe+10C0CA: CC                    - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_skill_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
+      <Description>"Battle: inf. Pork Bun / Baozi"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_DUMPLING,$process,66 83 BF 98 09 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_DUMPLING)
+
+label(code)
+label(return)
+
+newmem:
+  cmp word ptr [rdi+00000998],3
+  jae code
+  mov word ptr [rdi+00000998],3
+
+code:
+  cmp word ptr [rdi+00000998],00
+  jmp return
+
+INJECT_INF_DUMPLING:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_INF_DUMPLING)
+
+[DISABLE]
+
+INJECT_INF_DUMPLING:
+  db 66 83 BF 98 09 00 00 00
+
+unregistersymbol(INJECT_INF_DUMPLING)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+182BC9
+
+DWORIGINS.exe+182BA3: 48 8B 81 B8 45 00 00     - mov rax,[rcx+000045B8]
+DWORIGINS.exe+182BAA: 48 85 C0                 - test rax,rax
+DWORIGINS.exe+182BAD: 74 59                    - je DWORIGINS.exe+182C08
+DWORIGINS.exe+182BAF: F6 80 00 02 00 00 04     - test byte ptr [rax+00000200],04
+DWORIGINS.exe+182BB6: 75 07                    - jne DWORIGINS.exe+182BBF
+DWORIGINS.exe+182BB8: 48 8B 81 C8 45 00 00     - mov rax,[rcx+000045C8]
+DWORIGINS.exe+182BBF: 48 85 C0                 - test rax,rax
+DWORIGINS.exe+182BC2: 74 44                    - je DWORIGINS.exe+182C08
+DWORIGINS.exe+182BC4: 48 85 FF                 - test rdi,rdi
+DWORIGINS.exe+182BC7: 74 3F                    - je DWORIGINS.exe+182C08
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+182BC9: 66 83 BF 98 09 00 00 00  - cmp word ptr [rdi+00000998],00
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+182BD1: 74 2B                    - je DWORIGINS.exe+182BFE
+DWORIGINS.exe+182BD3: 48 8B 88 00 03 00 00     - mov rcx,[rax+00000300]
+DWORIGINS.exe+182BDA: 48 85 C9                 - test rcx,rcx
+DWORIGINS.exe+182BDD: 74 0C                    - je DWORIGINS.exe+182BEB
+DWORIGINS.exe+182BDF: F3 0F 10 41 34           - movss xmm0,[rcx+34]
+DWORIGINS.exe+182BE4: F3 0F 10 49 38           - movss xmm1,[rcx+38]
+DWORIGINS.exe+182BE9: EB 06                    - jmp DWORIGINS.exe+182BF1
+DWORIGINS.exe+182BEB: 0F 57 C0                 - xorps xmm0,xmm0
+DWORIGINS.exe+182BEE: 0F 57 C9                 - xorps xmm1,xmm1
+DWORIGINS.exe+182BF1: F3 0F 5C 05 1F 9C 22 03  - subss xmm0,[DWORIGINS.exe+33AC818]
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Battle: skill pt (戰功) multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SKILL_PT_MULTI,$process,66 41 03 C9 66 3B C8 73 0C 66 85 C9 66 44 0F 45 C1 41 0F B7 C0 66 89 82 58) // should be unique
+alloc(newmem,$1000,INJECT_SKILL_PT_MULTI)
+
+label(code)
+label(return vf_skill_pt_multi)
+
+newmem:
+  //push rcx
+  //and ecx, 0000FFFF
+  vcvtsi2ss xmm15, xmm15, ecx
+  vmovss xmm14, [vf_skill_pt_multi]
+  vmulss xmm15, xmm15, xmm14
+  vmovss xmm14, [vf_999]
+  vucomiss xmm15, xmm14
+  jbe @F
+  vmovss xmm15, [vf_999]
+@@:
+  vcvtss2si ecx, xmm15
+  //pop rcx
+
+code:
+  add cx,r9w
+  cmp cx,ax
+  jmp return
+align 10 cc
+  vf_skill_pt_multi:
+  dd (float)2.5
+  vf_999:
+  dd (float)999
+
+INJECT_SKILL_PT_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SKILL_PT_MULTI vf_skill_pt_multi)
+
+[DISABLE]
+
+INJECT_SKILL_PT_MULTI:
+  db 66 41 03 C9 66 3B C8
+
+unregistersymbol(INJECT_SKILL_PT_MULTI vf_skill_pt_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+A7613E
+
+DWORIGINS.exe+A76116: 44 0F B7 92 58 04 00 00  - movzx r10d,word ptr [rdx+00000458]
+DWORIGINS.exe+A7611E: B8 E7 03 00 00           - mov eax,000003E7
+DWORIGINS.exe+A76123: 45 33 C0                 - xor r8d,r8d
+DWORIGINS.exe+A76126: 66 44 3B D0              - cmp r10w,ax
+DWORIGINS.exe+A7612A: 72 06                    - jb DWORIGINS.exe+A76132
+DWORIGINS.exe+A7612C: 44 0F B7 C8              - movzx r9d,ax
+DWORIGINS.exe+A76130: EB 0C                    - jmp DWORIGINS.exe+A7613E
+DWORIGINS.exe+A76132: 66 45 85 D2              - test r10w,r10w
+DWORIGINS.exe+A76136: 45 8B C8                 - mov r9d,r8d
+DWORIGINS.exe+A76139: 66 45 0F 45 CA           - cmovne r9w,r10w
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+A7613E: 66 41 03 C9              - add cx,r9w
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+A76142: 66 3B C8                 - cmp cx,ax
+DWORIGINS.exe+A76145: 73 0C                    - jae DWORIGINS.exe+A76153
+DWORIGINS.exe+A76147: 66 85 C9                 - test cx,cx
+DWORIGINS.exe+A7614A: 66 44 0F 45 C1           - cmovne r8w,cx
+DWORIGINS.exe+A7614F: 41 0F B7 C0              - movzx eax,r8w
+DWORIGINS.exe+A76153: 66 89 82 58 04 00 00     - mov [rdx+00000458],ax
+DWORIGINS.exe+A7615A: C3                       - ret 
+DWORIGINS.exe+A7615B: CC                       - int 3 
+DWORIGINS.exe+A7615C: CC                       - int 3 
+DWORIGINS.exe+A7615D: CC                       - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_skill_pt_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"Battle: weapon EXP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_WEAPON_EXP_MULTI,$process,F3 0F 58 94 BD AC 09 00 00) // should be unique
+alloc(newmem,$1000,INJECT_WEAPON_EXP_MULTI)
+
+label(code)
+label(return vf_weapon_exp_multi)
+
+newmem:
+  vmovss xmm15, [vf_weapon_exp_multi]
+  vmulss xmm2, xmm2, xmm15
+
+code:
+  addss xmm2,[rbp+rdi*4+000009AC]
+  jmp return
+align 10 cc
+  vf_weapon_exp_multi:
+  dd (float)3.33333
+
+
+INJECT_WEAPON_EXP_MULTI:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_WEAPON_EXP_MULTI vf_weapon_exp_multi)
+
+[DISABLE]
+
+INJECT_WEAPON_EXP_MULTI:
+  db F3 0F 58 94 BD AC 09 00 00
+
+unregistersymbol(INJECT_WEAPON_EXP_MULTI vf_weapon_exp_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+384299
+
+DWORIGINS.exe+384275: 48 3B C8                       - cmp rcx,rax
+DWORIGINS.exe+384278: 73 0A                          - jae DWORIGINS.exe+384284
+DWORIGINS.exe+38427A: 48 85 C9                       - test rcx,rcx
+DWORIGINS.exe+38427D: 48 8B C1                       - mov rax,rcx
+DWORIGINS.exe+384280: 48 0F 44 C6                    - cmove rax,rsi
+DWORIGINS.exe+384284: 8B C0                          - mov eax,eax
+DWORIGINS.exe+384286: 0F 57 C0                       - xorps xmm0,xmm0
+DWORIGINS.exe+384289: F3 48 0F 2A C0                 - cvtsi2ss xmm0,rax
+DWORIGINS.exe+38428E: F3 0F 11 84 BD D4 09 00 00     - movss [rbp+rdi*4+000009D4],xmm0
+DWORIGINS.exe+384297: EB 53                          - jmp DWORIGINS.exe+3842EC
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+384299: F3 0F 58 94 BD AC 09 00 00     - addss xmm2,[rbp+rdi*4+000009AC]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+3842A2: 0F 2F D0                       - comiss xmm2,xmm0
+DWORIGINS.exe+3842A5: 72 16                          - jb DWORIGINS.exe+3842BD
+DWORIGINS.exe+3842A7: F3 0F 5C D0                    - subss xmm2,xmm0
+DWORIGINS.exe+3842AB: 0F 2F D0                       - comiss xmm2,xmm0
+DWORIGINS.exe+3842AE: 73 0D                          - jae DWORIGINS.exe+3842BD
+DWORIGINS.exe+3842B0: 48 B8 00 00 00 00 00 00 00 80  - mov rax,8000000000000000
+DWORIGINS.exe+3842BA: 48 03 D0                       - add rdx,rax
+DWORIGINS.exe+3842BD: F3 48 0F 2C CA                 - cvttss2si rcx,xmm2
+DWORIGINS.exe+3842C2: B8 3F 42 0F 00                 - mov eax,000F423F
+DWORIGINS.exe+3842C7: 48 03 CA                       - add rcx,rdx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_weapon_exp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>18</ID>
+      <Description>"Get money"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_MONEY,$process,8B 89 84 03 00 00 3B) // should be unique
+alloc(newmem,$1000,INJECT_GET_MONEY)
+
+label(code)
+label(return i_base_money_addr)
+
+newmem:
+  mov [i_base_money_addr], rcx
+
+code:
+  mov ecx,[rcx+00000384]
+  jmp return
+align 10 cc
+  i_base_money_addr:
+  dq 0
+
+INJECT_GET_MONEY:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_MONEY i_base_money_addr)
+
+[DISABLE]
+
+INJECT_GET_MONEY:
+  db 8B 89 84 03 00 00
+
+unregistersymbol(INJECT_GET_MONEY i_base_money_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+13D6615
+
+DWORIGINS.exe+13D65F7: 49 8B 40 08           - mov rax,[r8+08]
+DWORIGINS.exe+13D65FB: 48 8B 40 08           - mov rax,[rax+08]
+DWORIGINS.exe+13D65FF: 48 85 C0              - test rax,rax
+DWORIGINS.exe+13D6602: 74 28                 - je DWORIGINS.exe+13D662C
+DWORIGINS.exe+13D6604: 48 39 78 08           - cmp [rax+08],rdi
+DWORIGINS.exe+13D6608: 76 22                 - jna DWORIGINS.exe+13D662C
+DWORIGINS.exe+13D660A: 48 8B 00              - mov rax,[rax]
+DWORIGINS.exe+13D660D: 48 8B 08              - mov rcx,[rax]
+DWORIGINS.exe+13D6610: 48 85 C9              - test rcx,rcx
+DWORIGINS.exe+13D6613: 74 17                 - je DWORIGINS.exe+13D662C
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+13D6615: 8B 89 84 03 00 00     - mov ecx,[rcx+00000384]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+13D661B: 3B CB                 - cmp ecx,ebx
+DWORIGINS.exe+13D661D: 72 04                 - jb DWORIGINS.exe+13D6623
+DWORIGINS.exe+13D661F: 8B C3                 - mov eax,ebx
+DWORIGINS.exe+13D6621: EB 0B                 - jmp DWORIGINS.exe+13D662E
+DWORIGINS.exe+13D6623: 85 C9                 - test ecx,ecx
+DWORIGINS.exe+13D6625: 8B C7                 - mov eax,edi
+DWORIGINS.exe+13D6627: 0F 45 C1              - cmovne eax,ecx
+DWORIGINS.exe+13D662A: EB 02                 - jmp DWORIGINS.exe+13D662E
+DWORIGINS.exe+13D662C: 8B C7                 - mov eax,edi
+DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"money"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>384</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Skill Points / 武功"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>458</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Pyroxene / 輝石"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>4BE</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Old Coins? / 古銭?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>7E4</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS  /  https://opencheattables.com"</Description>
+      <Color>00A800</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
