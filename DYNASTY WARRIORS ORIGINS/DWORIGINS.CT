@@ -33,6 +33,7 @@ local enableBattleScripts = {
   16, -- "Battle: weapon EXP multiplier"
   18, -- "Get money"
   24, -- "Compact Mode"
+  30,
   11, -- "Skill gauge multiplier"
   9, -- "Musou gauge multiplier"
 }
@@ -50,6 +51,7 @@ getLuaEngine().Close()
 local disableBattleScripts = {
   9, -- "Musou gauge multiplier"
   11, -- "Skill gauge multiplier"
+  30,
   24, -- "Compact Mode"
   18, -- "Get money"
   16, -- "Battle: weapon EXP multiplier"
@@ -383,6 +385,9 @@ label(return vf_skill_multi)
 newmem:
   cmp r10, [i_base_hp_addr]
   jne code
+  vxorps xmm15, xmm15, xmm15
+  vucomiss xmm1, xmm15
+  jbe code
   vmovss xmm15, [vf_skill_multi]
   vmulss xmm1, xmm1, xmm15
 
@@ -392,6 +397,8 @@ code:
 align 10 cc
   vf_skill_multi:
   dd (float)3.5
+  vf_0:
+  dd (float)0
 
 
 INJECT_SKILL_MULTI:
@@ -612,6 +619,92 @@ DWORIGINS.exe+A7615D: CC                       - int 3
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
           <Address>vf_skill_pt_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>30</ID>
+      <Description>"Battle: Skill XP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SKILL_EXP_MULTI,$process,41 03 8C 80 00 0A 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SKILL_EXP_MULTI)
+
+label(code)
+label(return vf_skill_xp_multi)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, ecx
+  vmovss xmm14, [vf_skill_xp_multi]
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si ecx, xmm15
+
+
+code:
+  add ecx,[r8+rax*4+00000A00]
+  jmp return
+align 10 cc
+  vf_skill_xp_multi:
+  dd (float)3
+
+INJECT_SKILL_EXP_MULTI:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SKILL_EXP_MULTI vf_skill_xp_multi)
+
+[DISABLE]
+
+INJECT_SKILL_EXP_MULTI:
+  db 41 03 8C 80 00 0A 00 00
+
+unregistersymbol(INJECT_SKILL_EXP_MULTI vf_skill_xp_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+13D110F
+
+DWORIGINS.exe+13D10ED: 73 0D                    - jae DWORIGINS.exe+13D10FC
+DWORIGINS.exe+13D10EF: 66 85 C0                 - test ax,ax
+DWORIGINS.exe+13D10F2: 44 0F B7 F8              - movzx r15d,ax
+DWORIGINS.exe+13D10F6: 75 04                    - jne DWORIGINS.exe+13D10FC
+DWORIGINS.exe+13D10F8: 44 0F B7 FE              - movzx r15d,si
+DWORIGINS.exe+13D10FC: 41 0F B7 CF              - movzx ecx,r15w
+DWORIGINS.exe+13D1100: 4C 8B 05 81 07 5F 02     - mov r8,[DWORIGINS.exe+39C1888]
+DWORIGINS.exe+13D1107: 4D 85 C0                 - test r8,r8
+DWORIGINS.exe+13D110A: 74 0B                    - je DWORIGINS.exe+13D1117
+DWORIGINS.exe+13D110C: 48 63 C2                 - movsxd  rax,edx
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+13D110F: 41 03 8C 80 00 0A 00 00  - add ecx,[r8+rax*4+00000A00]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+13D1117: 48 8B 05 62 08 5F 02     - mov rax,[DWORIGINS.exe+39C1980]
+DWORIGINS.exe+13D111E: 4C 8B 80 70 01 00 00     - mov r8,[rax+00000170]
+DWORIGINS.exe+13D1125: 49 8B 40 30              - mov rax,[r8+30]
+DWORIGINS.exe+13D1129: 48 85 C0                 - test rax,rax
+DWORIGINS.exe+13D112C: 74 10                    - je DWORIGINS.exe+13D113E
+DWORIGINS.exe+13D112E: 41 3B 50 38              - cmp edx,[r8+38]
+DWORIGINS.exe+13D1132: 73 0A                    - jae DWORIGINS.exe+13D113E
+DWORIGINS.exe+13D1134: 4C 8B F2                 - mov r14,rdx
+DWORIGINS.exe+13D1137: 49 C1 E6 04              - shl r14,04
+DWORIGINS.exe+13D113B: 4C 03 F0                 - add r14,rax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_skill_xp_multi</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
