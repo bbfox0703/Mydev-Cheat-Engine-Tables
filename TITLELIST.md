@@ -123,6 +123,11 @@ zh-TW: 超時空之鑰
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (Steam)](https://store.steampowered.com/app/1295510/XI_S___Definitive_Edition/)
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (XBox Games)](https://www.xbox.com/en-US/games/dragon-quest-xi-s-echoes-of-an-elusive-age)
 
+## DYNASTY WARRIORS ORIGINS  
+[DYNASTY WARRIORS: ORIGINS (Steam)](https://store.steampowered.com/app/2384580/_/)  
+ja-JP: 真・三國無双 ORIGINS
+zh-TW: 真・三國無雙 起源
+
 ## Elin  
 [Elin (Steam)](https://store.steampowered.com/app/2135150/Elin/)  
 
