@@ -33,8 +33,12 @@ local enableBattleScripts = {
   20, -- "Battle: skill pt (戰功) multiplier"
   22, -- "Battle: skill XP multiplier"
   24, -- "Battle: weapon EXP multiplier"
-  29, -- "Battle: Get gained skill exp"
-  36, -- "Get money"
+  29, -- "Battle: K.O. count multiplier"
+  31, -- "Battle: Get gained skill exp"
+  38, -- "Level of Peace (太平値) multiplier"
+  41, -- "Get last value of Level of Peace"
+  43, -- "Get all level of peace value"
+  54, -- "Get money"
   14, -- "Musou gauge multiplier"
   16, -- "Skill gauge multiplier"
 }
@@ -52,8 +56,12 @@ getLuaEngine().Close()
 local disableBattleScripts = {
   16, -- "Skill gauge multiplier"
   14, -- "Musou gauge multiplier"
-  36, -- "Get money"
-  29, -- "Battle: Get gained skill exp"
+  54, -- "Get money"
+  43, -- "Get all level of peace value"
+  41, -- "Get last value of Level of Peace"
+  38, -- "Level of Peace (太平値) multiplier"
+  31, -- "Battle: Get gained skill exp"
+  29, -- "Battle: K.O. count multiplier"
   24, -- "Battle: weapon EXP multiplier"
   22, -- "Battle: skill XP multiplier"
   20, -- "Battle: skill pt (戰功) multiplier"
@@ -66,6 +74,7 @@ for _, id in ipairs(disableBattleScripts) do
   addressList.getMemoryRecordByID(id).Active = false
 end
 getLuaEngine().Close()
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -164,7 +173,7 @@ align 10 cc
   vf_min_musou:
   dd (float)300
   vf_frndly_hp_ratio:
-  dd (float)0.9
+  dd (float)0
   vf_m1:
   dd (float)-1
   vf_trash_mob_hp_threshold:
@@ -899,6 +908,92 @@ DWORIGINS.exe+3842C7: 48 03 CA                       - add rcx,rdx
     </CheatEntry>
     <CheatEntry>
       <ID>29</ID>
+      <Description>"Battle: K.O. count multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_KOCNT_MULTI,$process,8B F9 42 8D 04 39) // should be unique
+alloc(newmem,$1000,INJECT_KOCNT_MULTI)
+
+label(code)
+label(return vf_ko_cnt_multi)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, r15
+  vmovss xmm14, [vf_ko_cnt_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si r15, xmm15
+
+code:
+  mov edi,ecx
+  lea eax,[rcx+r15]
+  jmp return
+align 10 cc
+  vf_ko_cnt_multi:
+  dd (float)2
+
+INJECT_KOCNT_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_KOCNT_MULTI vf_ko_cnt_multi)
+
+[DISABLE]
+
+INJECT_KOCNT_MULTI:
+  db 8B F9 42 8D 04 39
+
+unregistersymbol(INJECT_KOCNT_MULTI vf_ko_cnt_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+22A3D6
+
+DWORIGINS.exe+22A3AF: 4C 89 60 20           - mov [rax+20],r12
+DWORIGINS.exe+22A3B3: 4C 89 70 E8           - mov [rax-18],r14
+DWORIGINS.exe+22A3B7: E8 94 A7 04 00        - call DWORIGINS.exe+274B50
+DWORIGINS.exe+22A3BC: 45 33 E4              - xor r12d,r12d
+DWORIGINS.exe+22A3BF: 48 85 C0              - test rax,rax
+DWORIGINS.exe+22A3C2: 74 09                 - je DWORIGINS.exe+22A3CD
+DWORIGINS.exe+22A3C4: 44 8B B0 D0 01 00 00  - mov r14d,[rax+000001D0]
+DWORIGINS.exe+22A3CB: EB 03                 - jmp DWORIGINS.exe+22A3D0
+DWORIGINS.exe+22A3CD: 45 8B F4              - mov r14d,r12d
+DWORIGINS.exe+22A3D0: 8B 8B D0 01 00 00     - mov ecx,[rbx+000001D0]
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+22A3D6: 8B F9                 - mov edi,ecx
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+22A3D8: 42 8D 04 39           - lea eax,[rcx+r15]
+DWORIGINS.exe+22A3DC: 3D 9F 86 01 00        - cmp eax,0001869F
+DWORIGINS.exe+22A3E1: 77 08                 - ja DWORIGINS.exe+22A3EB
+DWORIGINS.exe+22A3E3: 89 83 D0 01 00 00     - mov [rbx+000001D0],eax
+DWORIGINS.exe+22A3E9: 8B F8                 - mov edi,eax
+DWORIGINS.exe+22A3EB: 2B F9                 - sub edi,ecx
+DWORIGINS.exe+22A3ED: 48 8B 8B A0 3D 00 00  - mov rcx,[rbx+00003DA0]
+DWORIGINS.exe+22A3F4: E8 57 A7 04 00        - call DWORIGINS.exe+274B50
+DWORIGINS.exe+22A3F9: 48 85 C0              - test rax,rax
+DWORIGINS.exe+22A3FC: 74 08                 - je DWORIGINS.exe+22A406
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_ko_cnt_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>31</ID>
       <Description>"Battle: Get gained skill exp"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -927,7 +1022,7 @@ loop_1:
   mov r14, i_base_skill_xp_addr1
   lea r14, [r14+r13*8]
   cmp qword ptr [r14], r15
-  je endp
+  je endp_pre
   cmp qword ptr [r14], 0
   je write_new_data
   jmp check_next
@@ -954,6 +1049,9 @@ check_next:
   cmp r13, 4
   je overwrite_data
   jmp loop_1
+
+endp_pre:
+  //mov [i_idx], r13
 
 endp:
   pop r13
@@ -1017,19 +1115,19 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>30</ID>
+          <ID>32</ID>
           <Description>"Usage: open menu"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>31</ID>
+          <ID>33</ID>
           <Description>"Re-enable when get into new battle zone"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>32</ID>
+          <ID>34</ID>
           <Description>"#1"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1040,7 +1138,7 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>33</ID>
+          <ID>35</ID>
           <Description>"#2"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1051,7 +1149,7 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>34</ID>
+          <ID>36</ID>
           <Description>"#3"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1062,7 +1160,7 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>35</ID>
+          <ID>37</ID>
           <Description>"#4"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1075,7 +1173,393 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>36</ID>
+      <ID>38</ID>
+      <Description>"Level of Peace (太平値) multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_PEACE_LV_MULTI,$process,0F B7 D0 41 03 D1) // should be unique
+alloc(newmem,$1000,INJECT_PEACE_LV_MULTI)
+
+label(code)
+label(return vf_peace_lv_multi)
+
+newmem:
+  vmovss xmm14, [vf_peace_lv_multi]
+  vcvtsi2ss xmm15, xmm15, r9d
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si r9d, xmm15
+
+code:
+  movzx edx,ax
+  add edx,r9d
+  jmp return
+align 10 cc
+  vf_peace_lv_multi:
+  dd (float)2
+
+INJECT_PEACE_LV_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_PEACE_LV_MULTI vf_peace_lv_multi)
+
+[DISABLE]
+
+INJECT_PEACE_LV_MULTI:
+  db 0F B7 D0 41 03 D1
+
+unregistersymbol(INJECT_PEACE_LV_MULTI vf_peace_lv_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+389A61
+
+DWORIGINS.exe+389A0D - 49 8B 82 B8000000     - mov rax,[r10+000000B8]
+DWORIGINS.exe+389A14 - B9 10270000           - mov ecx,00002710
+DWORIGINS.exe+389A19 - 4C 8B 40 08           - mov r8,[rax+08]
+DWORIGINS.exe+389A1D - 4D 85 C0              - test r8,r8
+DWORIGINS.exe+389A20 - 74 3B                 - je DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A22 - 4D 39 78 08           - cmp [r8+08],r15
+DWORIGINS.exe+389A26 - 76 35                 - jna DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A28 - 49 8B 00              - mov rax,[r8]
+DWORIGINS.exe+389A2B - 48 8B 10              - mov rdx,[rax]
+DWORIGINS.exe+389A2E - 48 85 D2              - test rdx,rdx
+DWORIGINS.exe+389A31 - 74 2A                 - je DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A33 - 41 83 FC 0D           - cmp r12d,0D
+DWORIGINS.exe+389A37 - 73 24                 - jae DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A39 - 41 8B C4              - mov eax,r12d
+DWORIGINS.exe+389A3C - 0FB7 94 42 76090000   - movzx edx,word ptr [rdx+rax*2+00000976]
+DWORIGINS.exe+389A44 - 66 3B D1              - cmp dx,cx
+DWORIGINS.exe+389A47: 72 05           - jb DWORIGINS.exe+389A4E
+DWORIGINS.exe+389A49: 0F B7 C1        - movzx eax,cx
+DWORIGINS.exe+389A4C: EB 13           - jmp DWORIGINS.exe+389A61
+DWORIGINS.exe+389A4E: 66 85 D2        - test dx,dx
+DWORIGINS.exe+389A51: 75 05           - jne DWORIGINS.exe+389A58
+DWORIGINS.exe+389A53: 41 8B C7        - mov eax,r15d
+DWORIGINS.exe+389A56: EB 09           - jmp DWORIGINS.exe+389A61
+DWORIGINS.exe+389A58: 0F B7 C2        - movzx eax,dx
+DWORIGINS.exe+389A5B: EB 04           - jmp DWORIGINS.exe+389A61
+DWORIGINS.exe+389A5D: 41 0F B7 C7     - movzx eax,r15w
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+389A61: 0F B7 D0        - movzx edx,ax
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+389A64: 41 03 D1        - add edx,r9d
+DWORIGINS.exe+389A67: 3B D1           - cmp edx,ecx
+DWORIGINS.exe+389A69: 72 05           - jb DWORIGINS.exe+389A70
+DWORIGINS.exe+389A6B: 0F B7 D1        - movzx edx,cx
+DWORIGINS.exe+389A6E: EB 07           - jmp DWORIGINS.exe+389A77
+DWORIGINS.exe+389A70: 85 D2           - test edx,edx
+DWORIGINS.exe+389A72: 66 41 0F 44 D7  - cmove dx,r15w
+DWORIGINS.exe+389A77: 4D 85 C0        - test r8,r8
+DWORIGINS.exe+389A7A: 74 35           - je DWORIGINS.exe+389AB1
+DWORIGINS.exe+389A7C: 4D 39 78 08     - cmp [r8+08],r15
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"Notice: This value is only 2-byte (65535)"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_peace_lv_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>41</ID>
+      <Description>"Get last value of Level of Peace"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_LAST_PEACE_VAL,$process,0F B7 94 42 76 09 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_LAST_PEACE_VAL)
+
+label(code)
+label(return i_base_last_peace_val_addr)
+
+newmem:
+  push r15
+  lea r15, [rdx+rax*2]
+  mov [i_base_last_peace_val_addr], r15
+  pop r15
+
+code:
+  movzx edx,word ptr [rdx+rax*2+00000976]
+  jmp return
+align 10 cc
+  i_base_last_peace_val_addr:
+  dq 0
+
+INJECT_GET_LAST_PEACE_VAL:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_LAST_PEACE_VAL i_base_last_peace_val_addr)
+
+[DISABLE]
+
+INJECT_GET_LAST_PEACE_VAL:
+  db 0F B7 94 42 76 09 00 00
+
+unregistersymbol(INJECT_GET_LAST_PEACE_VAL i_base_last_peace_val_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+389A3C
+
+DWORIGINS.exe+389A20: 74 3B                    - je DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A22: 4D 39 78 08              - cmp [r8+08],r15
+DWORIGINS.exe+389A26: 76 35                    - jna DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A28: 49 8B 00                 - mov rax,[r8]
+DWORIGINS.exe+389A2B: 48 8B 10                 - mov rdx,[rax]
+DWORIGINS.exe+389A2E: 48 85 D2                 - test rdx,rdx
+DWORIGINS.exe+389A31: 74 2A                    - je DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A33: 41 83 FC 0D              - cmp r12d,0D
+DWORIGINS.exe+389A37: 73 24                    - jae DWORIGINS.exe+389A5D
+DWORIGINS.exe+389A39: 41 8B C4                 - mov eax,r12d
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+389A3C: 0F B7 94 42 76 09 00 00  - movzx edx,word ptr [rdx+rax*2+00000976]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+389A44: 66 3B D1                 - cmp dx,cx
+DWORIGINS.exe+389A47: 72 05                    - jb DWORIGINS.exe+389A4E
+DWORIGINS.exe+389A49: 0F B7 C1                 - movzx eax,cx
+DWORIGINS.exe+389A4C: EB 13                    - jmp INJECT_PEACE_LV_MULTI
+DWORIGINS.exe+389A4E: 66 85 D2                 - test dx,dx
+DWORIGINS.exe+389A51: 75 05                    - jne DWORIGINS.exe+389A58
+DWORIGINS.exe+389A53: 41 8B C7                 - mov eax,r15d
+DWORIGINS.exe+389A56: EB 09                    - jmp INJECT_PEACE_LV_MULTI
+DWORIGINS.exe+389A58: 0F B7 C2                 - movzx eax,dx
+DWORIGINS.exe+389A5B: EB 04                    - jmp INJECT_PEACE_LV_MULTI
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>42</ID>
+          <Description>"Last changed value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_last_peace_val_addr</Address>
+          <Offsets>
+            <Offset>976</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>43</ID>
+      <Description>"Get all level of peace value"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_ALL_PEACE_VAL,$process,0F B7 8C 42 76 09 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_ALL_PEACE_VAL)
+
+label(code)
+label(return i_base_peace_val_addr)
+
+newmem:
+  cmp qword ptr [i_base_peace_val_addr], 0
+  jne code
+  push r15
+  lea r15, [rdx+00000976]
+  mov [i_base_peace_val_addr], r15
+  pop r15
+
+
+code:
+  movzx ecx,word ptr [rdx+rax*2+00000976]
+  jmp return
+align 10 cc
+  i_base_peace_val_addr:
+  dq 0
+
+INJECT_GET_ALL_PEACE_VAL:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_ALL_PEACE_VAL i_base_peace_val_addr)
+
+[DISABLE]
+
+INJECT_GET_ALL_PEACE_VAL:
+  db 0F B7 8C 42 76 09 00 00
+
+unregistersymbol(INJECT_GET_ALL_PEACE_VAL i_base_peace_val_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+A6C0FA
+
+DWORIGINS.exe+A6C0DF: 74 38                    - je DWORIGINS.exe+A6C119
+DWORIGINS.exe+A6C0E1: 48 83 78 08 00           - cmp qword ptr [rax+08],00
+DWORIGINS.exe+A6C0E6: 76 31                    - jna DWORIGINS.exe+A6C119
+DWORIGINS.exe+A6C0E8: 48 8B 00                 - mov rax,[rax]
+DWORIGINS.exe+A6C0EB: 48 8B 10                 - mov rdx,[rax]
+DWORIGINS.exe+A6C0EE: 48 85 D2                 - test rdx,rdx
+DWORIGINS.exe+A6C0F1: 74 26                    - je DWORIGINS.exe+A6C119
+DWORIGINS.exe+A6C0F3: 83 F9 0D                 - cmp ecx,0D
+DWORIGINS.exe+A6C0F6: 73 21                    - jae DWORIGINS.exe+A6C119
+DWORIGINS.exe+A6C0F8: 8B C1                    - mov eax,ecx
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+A6C0FA: 0F B7 8C 42 76 09 00 00  - movzx ecx,word ptr [rdx+rax*2+00000976]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+A6C102: B8 10 27 00 00           - mov eax,00002710
+DWORIGINS.exe+A6C107: 66 3B C8                 - cmp cx,ax
+DWORIGINS.exe+A6C10A: 73 0F                    - jae DWORIGINS.exe+A6C11B
+DWORIGINS.exe+A6C10C: 33 C0                    - xor eax,eax
+DWORIGINS.exe+A6C10E: 66 85 C9                 - test cx,cx
+DWORIGINS.exe+A6C111: 66 0F 45 C1              - cmovne ax,cx
+DWORIGINS.exe+A6C115: 0F B7 C0                 - movzx eax,ax
+DWORIGINS.exe+A6C118: C3                       - ret 
+DWORIGINS.exe+A6C119: 33 C0                    - xor eax,eax
+DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>44</ID>
+          <Description>"#1"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>45</ID>
+          <Description>"#2 / 豫"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>2</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>46</ID>
+          <Description>"#3 / 冀"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>47</ID>
+          <Description>"#4 / 兗"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>6</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>48</ID>
+          <Description>"#5"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>49</ID>
+          <Description>"#6"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>50</ID>
+          <Description>"#7 / 荊"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>51</ID>
+          <Description>"#8"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>52</ID>
+          <Description>"#9 / 幽"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>16</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>53</ID>
+          <Description>"#10"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_peace_val_addr</Address>
+          <Offsets>
+            <Offset>12</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>54</ID>
       <Description>"Get money"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -1147,7 +1631,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>37</ID>
+          <ID>55</ID>
           <Description>"money"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1158,7 +1642,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>38</ID>
+          <ID>56</ID>
           <Description>"Skill Points / 武功"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1169,8 +1653,8 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>39</ID>
-          <Description>"Old Coins? / 古銭?"</Description>
+          <ID>57</ID>
+          <Description>"Old Coins / 古銭"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>2 Bytes</VariableType>
@@ -1180,7 +1664,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>40</ID>
+          <ID>58</ID>
           <Description>"Pyroxene / 輝石"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1193,7 +1677,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>41</ID>
+      <ID>59</ID>
       <Description>"DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS  /  https://opencheattables.com"</Description>
       <Color>00A800</Color>
       <GroupHeader>1</GroupHeader>
