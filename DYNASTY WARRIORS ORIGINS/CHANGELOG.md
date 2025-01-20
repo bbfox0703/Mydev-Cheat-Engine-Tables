@@ -1,5 +1,9 @@
 # Change log
 
+## 2025/01/20
+1. added more HP check logic
+1. added guards HP options
+
 ## 2025/01/18
 1. added horse scripts
 1. Tuning for musou scripts
