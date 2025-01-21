@@ -1,5 +1,9 @@
 # Change log
 
+## 2025/01/21
+1. added Battle: Trainings count multiplier
+1. added Get bonds level in Shui Jing Retreat (水鏡庵)
+
 ## 2025/01/20
 1. added more HP check logic
 1. added guards HP options
