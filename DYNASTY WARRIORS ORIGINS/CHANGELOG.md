@@ -1,5 +1,9 @@
 # Change log
 
+## 2025/01/22
+1. added Get weapon data
+1. added HP option: Can set enemy HP (non-trash mobs)
+
 ## 2025/01/21
 1. added Battle: Trainings count multiplier
 1. added Get bonds level in Shui Jing Retreat (水鏡庵)
