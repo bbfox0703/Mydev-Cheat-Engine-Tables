@@ -38,11 +38,11 @@ local enableBattleScripts = {
   42, -- "Battle: Horse EXP multiplier"
   44, -- "Battle: infinite item usage except for meat buns"
   45, -- "Battle: Trainings count multiplier"
-  47, -- "Battle: Get gained skill exp"
   54, -- "Level of Peace (太平値) multiplier"
   97, -- "Get money"
   26, -- "Musou gauge multiplier"
   28, -- "Skill gauge multiplier"
+  80, -- "Get weapon data"
   3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
   6, -- "Guards / 護衛兵 (affects nearby units only)"
 }
@@ -243,7 +243,7 @@ align 10 cc
   vf_min_musou_ratio:
   dd (float)0.8
   vf_frndly_hp_ratio:
-  dd (float)0
+  dd (float)0.175
   vf_m1:
   dd (float)-1
   vf_trash_mob_hp_threshold:
@@ -251,7 +251,7 @@ align 10 cc
   vf_min_skill_ratio:
   dd (float)0.8
   vf_max_enemy_hp_ratio:
-  dd (float)1
+  dd (float)0.95
 
 
 INJECT_INF_HP:
@@ -450,9 +450,9 @@ align 10 cc
   is_full_hp:
   dd 1
   is_guard_full_hp:
-  dd 0
+  dd 1
   i_guard_cnt:
-  dd 28
+  dd 32
   is_keep_skill_pt2:
   dd 1
 
@@ -1588,8 +1588,7 @@ DWORIGINS.exe+38952C: 8B C8           - mov ecx,eax
 
 aobscanmodule(INJECT_INF_ITEM_USE,$process,C7 84 9F 9C 09 00 00 FF FF FF FF) // should be unique
 INJECT_INF_ITEM_USE:
-  nop 5
-  nop 6
+  nop B
 return:
 registersymbol(INJECT_INF_ITEM_USE)
 
@@ -3022,82 +3021,6 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           <VariableType>4 Bytes</VariableType>
           <Address/>
         </CheatEntry>
-        <CheatEntry>
-          <ID>105</ID>
-          <Description>"Auto Assemble script"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : DWORIGINS.exe
-  Version: 
-  Date   : 2025-01-23
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_INF_HP_CHK2,$process,00 F3 0F 59 C1 F3 0F 10 49 34 F3 0F 58 41 38) // should be unique
-alloc(newmem,$1000,INJECT_INF_HP_CHK2)
-
-label(code)
-label(return)
-
-newmem:
-  cmp [i_base_hp_addr], rcx
-  jne code
-  vxorps xmm15, xmm15, xmm15
-  pushfq
-  vucomiss xmm0, xmm15
-  ja @F
-  movss xmm1,[rcx+34]
-
-@@:
-  popfq
-
-code:
-  addss xmm0,[rcx+38]
-  jmp return
-
-INJECT_INF_HP_CHK2+0A:
-  jmp newmem
-return:
-registersymbol(INJECT_INF_HP_CHK2)
-
-[DISABLE]
-
-INJECT_INF_HP_CHK2+0A:
-  db F3 0F 58 41 38
-
-unregistersymbol(INJECT_INF_HP_CHK2)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+1144B0
-
-DWORIGINS.exe+114488: 74 07                 - je DWORIGINS.exe+114491
-DWORIGINS.exe+11448A: F3 0F 10 41 34        - movss xmm0,[rcx+34]
-DWORIGINS.exe+11448F: EB 03                 - jmp DWORIGINS.exe+114494
-DWORIGINS.exe+114491: 0F 57 C0              - xorps xmm0,xmm0
-DWORIGINS.exe+114494: 49 8B 80 98 00 00 00  - mov rax,[r8+00000098]
-DWORIGINS.exe+11449B: 48 C1 E8 31           - shr rax,31
-DWORIGINS.exe+11449F: A8 01                 - test al,01
-DWORIGINS.exe+1144A1: 0F 85 FA 01 00 00     - jne DWORIGINS.exe+1146A1
-DWORIGINS.exe+1144A7: F3 0F 59 C1           - mulss xmm0,xmm1
-DWORIGINS.exe+1144AB: F3 0F 10 49 34        - movss xmm1,[rcx+34]
-// ---------- INJECTING HERE ----------
-DWORIGINS.exe+1144B0: F3 0F 58 41 38        - addss xmm0,[rcx+38]
-// ---------- DONE INJECTING  ----------
-DWORIGINS.exe+1144B5: 0F 2F C1              - comiss xmm0,xmm1
-DWORIGINS.exe+1144B8: 73 07                 - jae DWORIGINS.exe+1144C1
-DWORIGINS.exe+1144BA: 0F 57 C9              - xorps xmm1,xmm1
-DWORIGINS.exe+1144BD: F3 0F 5F C8           - maxss xmm1,xmm0
-DWORIGINS.exe+1144C1: F3 0F 11 49 38        - movss [rcx+38],xmm1
-DWORIGINS.exe+1144C6: BA F0 02 00 00        - mov edx,000002F0
-DWORIGINS.exe+1144CB: 49 8B C8              - mov rcx,r8
-DWORIGINS.exe+1144CE: E8 AD 2E 0B 00        - call DWORIGINS.exe+1C7380
-DWORIGINS.exe+1144D3: E9 C9 01 00 00        - jmp DWORIGINS.exe+1146A1
-DWORIGINS.exe+1144D8: 48 8B 4B 08           - mov rcx,[rbx+08]
-}
-</AssemblerScript>
-        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
@@ -3110,8 +3033,7 @@ DWORIGINS.exe,48 89 5E 38 48 89 5E 40 33
 DWORIGINS.exe+1B784A: 48 89 5E 38
 Guards skill counter
 DWORIGINS.exe,F3 0F 11 40 34 8B 40 30 83 E0 CF 83 C8 08 89 41 30 E9 31
-DWORIGINS.exe+FC2CA9
-</Comments>
+DWORIGINS.exe+FC2CA9</Comments>
   <LuaScript>IDs = {103,     }
 
 function contains(table, val)
