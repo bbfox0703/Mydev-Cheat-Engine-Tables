@@ -38,11 +38,12 @@ local enableBattleScripts = {
   42, -- "Battle: Horse EXP multiplier"
   44, -- "Battle: infinite item usage except for meat buns"
   45, -- "Battle: Trainings count multiplier"
-  54, -- "Level of Peace (太平値) multiplier"
-  97, -- "Get money"
+  54, -- "Battle: Guard skill timer multiplier"
+  56, -- "Level of Peace (太平値) multiplier"
+  82, -- "Get weapon data"
+  99, -- "Get money"
   26, -- "Musou gauge multiplier"
   28, -- "Skill gauge multiplier"
-  80, -- "Get weapon data"
   3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
   6, -- "Guards / 護衛兵 (affects nearby units only)"
 }
@@ -62,14 +63,15 @@ local disableBattleScripts = {
   3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
   28, -- "Skill gauge multiplier"
   26, -- "Musou gauge multiplier"
-  97, -- "Get money"
-  80, -- "Get weapon data"
-  77, -- "Get bonds level in Shui Jing Retreat (水鏡庵)"
-  73, -- "Set the stock of consumable items"
-  70, -- "Get horse EXP"
-  59, -- "Get all level of peace value"
-  57, -- "Get last value of Level of Peace"
-  54, -- "Level of Peace (太平値) multiplier"
+  99, -- "Get money"
+  82, -- "Get weapon data"
+  79, -- "Get bonds level in Shui Jing Retreat (水鏡庵)"
+  75, -- "Set the stock of consumable items"
+  72, -- "Get horse EXP"
+  61, -- "Get all level of peace value"
+  59, -- "Get last value of Level of Peace"
+  56, -- "Level of Peace (太平値) multiplier"
+  54, -- "Battle: Guard skill timer multiplier"
   47, -- "Battle: Get gained skill exp"
   45, -- "Battle: Trainings count multiplier"
   44, -- "Battle: infinite item usage except for meat buns"
@@ -1897,6 +1899,90 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
     </CheatEntry>
     <CheatEntry>
       <ID>54</ID>
+      <Description>"Battle: Guard skill timer multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DWORIGINS.exe
+  Version: 
+  Date   : 2025-01-27
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GUARD_SKILL_TIMER_MULTI,$process,F3 0F 5C C1 0F 2F C6 F3 41 0F 11 44) // should be unique
+alloc(newmem,$1000,INJECT_GUARD_SKILL_TIMER_MULTI)
+
+label(code)
+label(return vf_guard_skill_t_multi)
+
+newmem:
+  vmovss xmm14, [vf_guard_skill_t_multi]
+  vmulss xmm1, xmm14, xmm1
+
+code:
+  subss xmm0,xmm1
+  comiss xmm0,xmm6
+  jmp return
+align 10 cc
+  vf_guard_skill_t_multi:
+  dd (float)6.666666666
+
+INJECT_GUARD_SKILL_TIMER_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GUARD_SKILL_TIMER_MULTI vf_guard_skill_t_multi)
+
+[DISABLE]
+
+INJECT_GUARD_SKILL_TIMER_MULTI:
+  db F3 0F 5C C1 0F 2F C6
+
+unregistersymbol(INJECT_GUARD_SKILL_TIMER_MULTI vf_guard_skill_t_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+194B85
+
+DWORIGINS.exe+194B5B: 0F 2F C7                             - comiss xmm0,xmm7
+DWORIGINS.exe+194B5E: 76 04                                - jna DWORIGINS.exe+194B64
+DWORIGINS.exe+194B60: F3 0F 59 C8                          - mulss xmm1,xmm0
+DWORIGINS.exe+194B64: E8 37 14 8D 00                       - call DWORIGINS.exe+A65FA0
+DWORIGINS.exe+194B69: 3D F4 01 00 00                       - cmp eax,000001F4
+DWORIGINS.exe+194B6E: 75 0E                                - jne DWORIGINS.exe+194B7E
+DWORIGINS.exe+194B70: B9 7D 02 00 00                       - mov ecx,0000027D
+DWORIGINS.exe+194B75: E8 36 BF F1 FF                       - call DWORIGINS.exe+B0AB0
+DWORIGINS.exe+194B7A: F3 0F 59 C8                          - mulss xmm1,xmm0
+DWORIGINS.exe+194B7E: F3 41 0F 10 44 DE 24                 - movss xmm0,[r14+rbx*8+24]
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+194B85: F3 0F 5C C1                          - subss xmm0,xmm1
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+194B89: 0F 2F C6                             - comiss xmm0,xmm6
+DWORIGINS.exe+194B8C: F3 41 0F 11 44 DE 24                 - movss [r14+rbx*8+24],xmm0
+DWORIGINS.exe+194B93: 73 22                                - jae DWORIGINS.exe+194BB7
+DWORIGINS.exe+194B95: 4D 89 64 DE 20                       - mov [r14+rbx*8+20],r12
+DWORIGINS.exe+194B9A: 4D 85 ED                             - test r13,r13
+DWORIGINS.exe+194B9D: 74 18                                - je DWORIGINS.exe+194BB7
+DWORIGINS.exe+194B9F: B8 02 00 00 00                       - mov eax,00000002
+DWORIGINS.exe+194BA4: 48 3B F8                             - cmp rdi,rax
+DWORIGINS.exe+194BA7: 48 0F 46 C7                          - cmovbe rax,rdi
+DWORIGINS.exe+194BAB: 41 C7 84 85 40 01 00 00 00 00 80 BF  - mov [r13+rax*4+00000140],BF800000
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_guard_skill_t_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>56</ID>
       <Description>"Level of Peace (太平値) multiplier"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -1992,13 +2078,13 @@ DWORIGINS.exe+389A7C: 4D 39 78 08     - cmp [r8+08],r15
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>55</ID>
+          <ID>57</ID>
           <Description>"Notice: This value is a 2-byte integer (maximum 65535 or 32767)"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>56</ID>
+          <ID>58</ID>
           <Description>"multiplier"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -2008,7 +2094,7 @@ DWORIGINS.exe+389A7C: 4D 39 78 08     - cmp [r8+08],r15
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>57</ID>
+      <ID>59</ID>
       <Description>"Get last value of Level of Peace"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2083,7 +2169,7 @@ DWORIGINS.exe+389A5B: EB 04                    - jmp INJECT_PEACE_LV_MULTI
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>58</ID>
+          <ID>60</ID>
           <Description>"Last changed value"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2096,7 +2182,7 @@ DWORIGINS.exe+389A5B: EB 04                    - jmp INJECT_PEACE_LV_MULTI
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>59</ID>
+      <ID>61</ID>
       <Description>"Get all level of peace value"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2174,7 +2260,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>60</ID>
+          <ID>62</ID>
           <Description>"#1 / 司隸 / Sili"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2185,7 +2271,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>61</ID>
+          <ID>63</ID>
           <Description>"#2 / 豫 / Yu"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2196,7 +2282,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>62</ID>
+          <ID>64</ID>
           <Description>"#3 / 冀 / Ji"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2207,7 +2293,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>63</ID>
+          <ID>65</ID>
           <Description>"#4 / 兗 / Yan"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2218,7 +2304,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>64</ID>
+          <ID>66</ID>
           <Description>"#5 / 徐 / Xu"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2229,7 +2315,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>65</ID>
+          <ID>67</ID>
           <Description>"#6 / 青 Qing"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2240,7 +2326,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>66</ID>
+          <ID>68</ID>
           <Description>"#7 / 荊 / Jing"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2251,7 +2337,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>67</ID>
+          <ID>69</ID>
           <Description>"#8 / 揚 / Yang"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2262,7 +2348,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>68</ID>
+          <ID>70</ID>
           <Description>"#9 / 幽 / You"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2273,7 +2359,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>69</ID>
+          <ID>71</ID>
           <Description>"#10 / 涼 / Liang"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2286,7 +2372,7 @@ DWORIGINS.exe+A6C11B: 0F B7 C0                 - movzx eax,ax
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>70</ID>
+      <ID>72</ID>
       <Description>"Get horse EXP"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2359,13 +2445,13 @@ DWORIGINS.exe+13E7D9C: 41 8B CE           - mov ecx,r14d
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>71</ID>
+          <ID>73</ID>
           <Description>"Usage: Equip-&gt;Horse"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>72</ID>
+          <ID>74</ID>
           <Description>"EXP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2378,7 +2464,7 @@ DWORIGINS.exe+13E7D9C: 41 8B CE           - mov ecx,r14d
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>73</ID>
+      <ID>75</ID>
       <Description>"Set the stock of consumable items"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2461,13 +2547,13 @@ DWORIGINS.exe+A82934: C3           - ret
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>74</ID>
+          <ID>76</ID>
           <Description>"Usage: Equip-&gt; Consumables"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>75</ID>
+          <ID>77</ID>
           <Description>"item stock must &gt;="</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -2475,7 +2561,7 @@ DWORIGINS.exe+A82934: C3           - ret
           <Address>i_min_item_cnt_threshold</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>76</ID>
+          <ID>78</ID>
           <Description>"Set item stock to"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -2485,7 +2571,7 @@ DWORIGINS.exe+A82934: C3           - ret
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>77</ID>
+      <ID>79</ID>
       <Description>"Get bonds level in Shui Jing Retreat (水鏡庵)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2558,13 +2644,13 @@ DWORIGINS.exe+125CD35: 32 C0        - xor al,al
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>78</ID>
+          <ID>80</ID>
           <Description>"Only for acquaintance"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>79</ID>
+          <ID>81</ID>
           <Description>"Value"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2577,7 +2663,7 @@ DWORIGINS.exe+125CD35: 32 C0        - xor al,al
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>80</ID>
+      <ID>82</ID>
       <Description>"Get weapon data"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2650,13 +2736,13 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>81</ID>
+          <ID>83</ID>
           <Description>"Usage: Equip-&gt;Weapon"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>82</ID>
+          <ID>84</ID>
           <Description>"??"</Description>
           <ShowAsHex>1</ShowAsHex>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2668,7 +2754,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>83</ID>
+          <ID>85</ID>
           <Description>"Weapon ID"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2679,7 +2765,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>84</ID>
+          <ID>86</ID>
           <Description>"+ Value"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2690,7 +2776,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>85</ID>
+          <ID>87</ID>
           <Description>"Skill 1"</Description>
           <Options moDeactivateChildrenAsWell="1"/>
           <DropDownListLink>skill-id</DropDownListLink>
@@ -2703,7 +2789,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>86</ID>
+          <ID>88</ID>
           <Description>"Skill 1 Lv"</Description>
           <DropDownList DisplayValueAsItem="1">0:N/A
 </DropDownList>
@@ -2716,7 +2802,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>87</ID>
+          <ID>89</ID>
           <Description>"Skill 2"</Description>
           <Options moDeactivateChildrenAsWell="1"/>
           <DropDownListLink>skill-id</DropDownListLink>
@@ -2729,7 +2815,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>88</ID>
+          <ID>90</ID>
           <Description>"Skill 2 Lv"</Description>
           <DropDownListLink>Skill 1 Lv</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2741,7 +2827,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>89</ID>
+          <ID>91</ID>
           <Description>"Skill 3"</Description>
           <Options moDeactivateChildrenAsWell="1"/>
           <DropDownListLink>skill-id</DropDownListLink>
@@ -2754,7 +2840,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>90</ID>
+          <ID>92</ID>
           <Description>"Skill 3 Lv"</Description>
           <DropDownListLink>Skill 1 Lv</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2766,7 +2852,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>91</ID>
+          <ID>93</ID>
           <Description>"Skill 4"</Description>
           <Options moDeactivateChildrenAsWell="1"/>
           <DropDownListLink>skill-id</DropDownListLink>
@@ -2779,7 +2865,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>92</ID>
+          <ID>94</ID>
           <Description>"Skill 4 Lv"</Description>
           <DropDownListLink>Skill 1 Lv</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2791,7 +2877,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>93</ID>
+          <ID>95</ID>
           <Description>"Skill 5"</Description>
           <Options moDeactivateChildrenAsWell="1"/>
           <DropDownListLink>skill-id</DropDownListLink>
@@ -2804,7 +2890,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>94</ID>
+          <ID>96</ID>
           <Description>"Skill 5 Lv"</Description>
           <DropDownListLink>Skill 1 Lv</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2816,7 +2902,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>95</ID>
+          <ID>97</ID>
           <Description>"Skill 6"</Description>
           <Options moDeactivateChildrenAsWell="1"/>
           <DropDownListLink>skill-id</DropDownListLink>
@@ -2829,7 +2915,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>96</ID>
+          <ID>98</ID>
           <Description>"Skill 6 Lv"</Description>
           <DropDownListLink>Skill 1 Lv</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2843,7 +2929,7 @@ DWORIGINS.exe+13F17CE: 33 C9              - xor ecx,ecx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>97</ID>
+      <ID>99</ID>
       <Description>"Get money"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2915,7 +3001,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>98</ID>
+          <ID>100</ID>
           <Description>"money"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2926,7 +3012,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>99</ID>
+          <ID>101</ID>
           <Description>"Skill Points / 武功"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2937,7 +3023,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>100</ID>
+          <ID>102</ID>
           <Description>"Old Coins / 古銭"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2948,7 +3034,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>101</ID>
+          <ID>103</ID>
           <Description>"Pyroxene / 輝石"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2959,7 +3045,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>102</ID>
+          <ID>104</ID>
           <Description>"Moongrass / 月香草"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2972,14 +3058,14 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>103</ID>
+      <ID>105</ID>
       <Description>"DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS 1.0.0.3  /  https://opencheattables.com"</Description>
       <Options moHideChildren="1"/>
       <Color>00A800</Color>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
-          <ID>104</ID>
+          <ID>106</ID>
           <Description>"skill-id"</Description>
           <DropDownList DisplayValueAsItem="1">0:Boosts normal atk strength by % (gray)
 1:Boosts normal atk strength by % (soft brown)
@@ -3033,7 +3119,8 @@ DWORIGINS.exe,48 89 5E 38 48 89 5E 40 33
 DWORIGINS.exe+1B784A: 48 89 5E 38
 Guards skill counter
 DWORIGINS.exe,F3 0F 11 40 34 8B 40 30 83 E0 CF 83 C8 08 89 41 30 E9 31
-DWORIGINS.exe+FC2CA9</Comments>
+DWORIGINS.exe+FC2CA9
+</Comments>
   <LuaScript>IDs = {103,     }
 
 function contains(table, val)

@@ -1,5 +1,8 @@
 # Change log
 
+## 2025/01/27
+1. added Battle: Guard skill timer multiplier
+
 ## 2025/01/22
 1. added Get weapon data
 1. added HP option: Can set enemy HP (non-trash mobs)
