@@ -359,10 +359,15 @@ ja-JP: アイドルマスター スターリットシーズン
 [The Legend of Heroes: Ao no Kiseki KAI (Steam)](https://store.steampowered.com/app/1461920/_/)  
 zh-TW: 英雄傳說 零之軌跡：改  
 
-## THE LEGEND OF HEROES: HAJIMARI NO KISEKI  
-TTHE LEGEND OF HEROES: HAJIMARI NO KISEKI (Steam)  
+## THE LEGEND OF HEROES HAJIMARI NO KISEKI  
+THE LEGEND OF HEROES: HAJIMARI NO KISEKI (Steam)  
 [zh-TW: 英雄傳說 創之軌跡 (Steam)](https://store.steampowered.com/app/1562940/_/)  
 ja-JP: 英雄伝説 創の軌跡  
+
+## The Legend of Heroes Kai no Kiseki -Farewell, O Zemuria-  
+The Legend of Heroes: Kai no Kiseki -Farewell, O Zemuria-  (Steam)  
+[zh-TW: 英雄傳說 界之軌跡 -告別塞姆利亞- (Steam)](https://store.steampowered.com/app/3319980/_/)  
+ja-JP: 英雄伝説 界の軌跡 -Farewell, O Zemuria-  
 
 ## The Legend of Heroes Kuro no Kiseki
 [The Legend of Heroes: Kuro no Kiseki (Steam)](https://store.steampowered.com/app/1811950/_/)
