@@ -7,6 +7,8 @@
 1. added 角色狀態檢視 / Char. viewer
 1. added 自製料理 / Cookling list
 1. added 更新道具數量：整頁更新 / Update item stock for whole sheet
+1. added 釣果記錄 / Get fishing data
+1. added 強制開啟釣果全記錄 / Force enable all fishing records
 1. added 服裝更換：啟用紳士視角 / Costume: enable Ecchi perspective
 1. minor script tuning
 
