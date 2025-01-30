@@ -2,7 +2,9 @@
 
 ## 2025/01/30  
 1. added Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier
-1. added 取得目前連結度 / Get current connect value 
+1. added 取得目前連結度 / Get current connect value
+1. added Connect至少為1 / keep connect at least 1
+1. minor script tuning
 
 ## 2025/01/29
 1. added 快速釣魚 / fast fishing
