@@ -29,19 +29,21 @@ local enableBattleScripts = {
   0, -- "精簡模式 / Compact mode"
   2, -- "啟用 / Enable"
   10, -- "空洞核心EXP倍率 / Battle: Quatrz XP multiplier"
-  113, -- "取得LGC資料 / Get LGC Data"
+  115, -- "Connect至少為1 / keep connect at least 1"
+  116, -- "取得LGC資料 / Get LGC Data"
   12, -- "EXP倍率 / Battle: EXP multiplier"
   14, -- "暈眩量表倍率 / Battle: Break multiplier"
   16, -- "額外連段數 / Battle: extra chain"
   18, -- "晶片增幅量表增加倍率 / Battle: S-Boost inc. multiplier"
   24, -- "蓄力量表倍率 / Battle: Charge multiplier"
   27, -- "取得或設定選擇中道具的數量 / Get or set forcused item count"
-  36, -- "取得所有結晶迴路、設定最少50個 / Get all quartz"
+  35, -- "使用及裝備道具時數量不減 / Item use or equip: stock no decrease"
   41, -- "快速釣魚 / fast fishing"
-  42, -- "駭入時停止計時 / Stop hacking timer"
-  43, -- "取得米拉和耀石資訊 / get mira"
+  42, -- "Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier"
+  44, -- "駭入時停止計時 / Stop hacking timer"
+  45, -- "取得米拉和耀石資訊 / get mira"
   5, -- "傷害倍率 / Battle: damage multiplier"
-  57, -- "取得目前連結(親蜜度) / Get current connect value"
+  59, -- "取得目前連結度 / Get current connect value"
   9, -- "EP/CP全滿 / Battle: EP/CP full"
   22, -- "晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"
 }
@@ -57,14 +59,15 @@ getLuaEngine().menuItem5.doClick()
 getLuaEngine().Close()
 
 local disableBattleScripts = {
-  62, -- "取得資料 / Get data; max 50"
+  64, -- "取得資料 / Get data; max 50"
   22, -- "晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"
   9, -- "EP/CP全滿 / Battle: EP/CP full"
-  59, -- "取得進行中的成就 / Get in-progress achievement"
-  57, -- "取得目前連結(親蜜度) / Get current connect value"
+  61, -- "取得進行中的成就 / Get in-progress achievement"
+  59, -- "取得目前連結度 / Get current connect value"
   5, -- "傷害倍率 / Battle: damage multiplier"
-  43, -- "取得米拉和耀石資訊 / get mira"
-  42, -- "駭入時停止計時 / Stop hacking timer"
+  45, -- "取得米拉和耀石資訊 / get mira"
+  44, -- "駭入時停止計時 / Stop hacking timer"
+  42, -- "Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier"
   41, -- "快速釣魚 / fast fishing"
   38, -- "取得空洞核心資料 / Get quartz data"
   36, -- "取得所有結晶迴路、設定最少50個 / Get all quartz"
@@ -75,7 +78,8 @@ local disableBattleScripts = {
   16, -- "額外連段數 / Battle: extra chain"
   14, -- "暈眩量表倍率 / Battle: Break multiplier"
   12, -- "EXP倍率 / Battle: EXP multiplier"
-  113, -- "取得LGC資料 / Get LGC Data"
+  116, -- "取得LGC資料 / Get LGC Data"
+  115, -- "Connect至少為1 / keep connect at least 1"
   10, -- "空洞核心EXP倍率 / Battle: Quatrz XP multiplier"
   2, -- "啟用 / Enable"
   0, -- "精簡模式 / Compact mode"
@@ -1633,6 +1637,90 @@ ed9.exe+463E38: 48 63 87 FC 00 00 00        - movsxd  rax,dword ptr [rdi+000000F
         </CheatEntry>
         <CheatEntry>
           <ID>42</ID>
+          <Description>"Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2025-01-30
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ZOC_MULTI,$process,F3 0F 58 C1 F3 41 0F 5D C4) // should be unique
+alloc(newmem,$1000,INJECT_ZOC_MULTI)
+
+label(code)
+label(return vf_zoc_multi)
+
+newmem:
+  vmovss xmm14, [vf_zoc_multi]
+  vmulss xmm0, xmm0, xmm14
+
+code:
+  addss xmm0,xmm1
+  minss xmm0,xmm12
+  jmp return
+align 10 cc
+  vf_zoc_multi:
+  dd (float)10.5
+
+INJECT_ZOC_MULTI:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_ZOC_MULTI vf_zoc_multi)
+
+[DISABLE]
+
+INJECT_ZOC_MULTI:
+  db F3 0F 58 C1 F3 41 0F 5D C4
+
+unregistersymbol(INJECT_ZOC_MULTI vf_zoc_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+32782D
+
+ed9.exe+3277F9: 0F 2F 81 2C 02 00 00     - comiss xmm0,[rcx+0000022C]
+ed9.exe+327800: 72 3C                    - jb ed9.exe+32783E
+ed9.exe+327802: F3 0F 10 81 18 02 00 00  - movss xmm0,[rcx+00000218]
+ed9.exe+32780A: 0F 2F 81 14 02 00 00     - comiss xmm0,[rcx+00000214]
+ed9.exe+327811: 72 2B                    - jb ed9.exe+32783E
+ed9.exe+327813: F3 0F 10 8F 8C 04 00 00  - movss xmm1,[rdi+0000048C]
+ed9.exe+32781B: 44 0F 2F E1              - comiss xmm12,xmm1
+ed9.exe+32781F: 76 1D                    - jna ed9.exe+32783E
+ed9.exe+327821: 41 0F 28 C3              - movaps xmm0,xmm11
+ed9.exe+327825: F3 0F 5E 05 67 20 72 00  - divss xmm0,[ed9.exe+A49894]
+// ---------- INJECTING HERE ----------
+ed9.exe+32782D: F3 0F 58 C1              - addss xmm0,xmm1
+// ---------- DONE INJECTING  ----------
+ed9.exe+327831: F3 41 0F 5D C4           - minss xmm0,xmm12
+ed9.exe+327836: F3 0F 11 87 8C 04 00 00  - movss [rdi+0000048C],xmm0
+ed9.exe+32783E: 48 8B 05 F3 C0 8B 00     - mov rax,[ed9.exe+BE3938]
+ed9.exe+327845: F6 80 1F 01 00 00 08     - test byte ptr [rax+0000011F],08
+ed9.exe+32784C: 74 72                    - je ed9.exe+3278C0
+ed9.exe+32784E: 48 8B 05 2B 7B 88 00     - mov rax,[ed9.exe+BAF380]
+ed9.exe+327855: F3 0F 10 35 83 1F 72 00  - movss xmm6,[ed9.exe+A497E0]
+ed9.exe+32785D: C6 87 BF 04 00 00 01     - mov byte ptr [rdi+000004BF],01
+ed9.exe+327864: 0F 28 CE                 - movaps xmm1,xmm6
+ed9.exe+327867: 48 8B 88 88 3A 00 00     - mov rcx,[rax+00003A88]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>43</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_zoc_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>44</ID>
           <Description>"駭入時停止計時 / Stop hacking timer"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : ed9.exe
@@ -1683,7 +1771,7 @@ ed9.exe+653EE7: F3 44 0F 10 15 B4 53 3F 00  - movss xmm10,[ed9.exe+A492A4]
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>43</ID>
+          <ID>45</ID>
           <Description>"取得米拉和耀石資訊 / get mira"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -1781,13 +1869,13 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>44</ID>
+              <ID>46</ID>
               <Description>"開啟選單 / Usage: menu"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>45</ID>
+              <ID>47</ID>
               <Description>"地 / Earth"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1798,7 +1886,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>46</ID>
+              <ID>48</ID>
               <Description>"水 / Water"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1809,7 +1897,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>47</ID>
+              <ID>49</ID>
               <Description>"火 / Fire"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1820,7 +1908,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>48</ID>
+              <ID>50</ID>
               <Description>"風 / Wind"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1831,7 +1919,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>49</ID>
+              <ID>51</ID>
               <Description>"時 / Time"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1842,7 +1930,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>50</ID>
+              <ID>52</ID>
               <Description>"空 / Space"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1853,7 +1941,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>51</ID>
+              <ID>53</ID>
               <Description>"幻 / Mirage"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1864,7 +1952,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>52</ID>
+              <ID>54</ID>
               <Description>"耀金石塊 /  Exchange"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1875,7 +1963,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>53</ID>
+              <ID>55</ID>
               <Description>"米拉 / Mira"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1886,7 +1974,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>54</ID>
+              <ID>56</ID>
               <Description>"G-Token"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1897,7 +1985,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>55</ID>
+              <ID>57</ID>
               <Description>"美食點數 / Gourmet pt"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1908,7 +1996,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>56</ID>
+              <ID>58</ID>
               <Description>"遊戲時間 / Playing time"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1921,8 +2009,8 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>126</ID>
-          <Description>"取得目前連結(親蜜度) / Get current connect value"</Description>
+          <ID>59</ID>
+          <Description>"取得目前連結度 / Get current connect value"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : ed9.exe
@@ -2006,7 +2094,7 @@ ed9.exe+51213D: CC                       - int 3
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>127</ID>
+              <ID>60</ID>
               <Description>"value"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2019,7 +2107,7 @@ ed9.exe+51213D: CC                       - int 3
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>57</ID>
+          <ID>61</ID>
           <Description>"取得進行中的成就 / Get in-progress achievement"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -2074,19 +2162,19 @@ end
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>58</ID>
+              <ID>62</ID>
               <Description>"開啟成就選單 / Open achievement menu"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>59</ID>
+              <ID>63</ID>
               <Description>"修改數值可能影響成就取得 / Edit with caution"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>60</ID>
+              <ID>64</ID>
               <Description>"取得資料 / Get data; max 50"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -2213,7 +2301,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>61</ID>
+                  <ID>65</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2225,7 +2313,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>62</ID>
+                  <ID>66</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2237,7 +2325,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>63</ID>
+                  <ID>67</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2249,7 +2337,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>64</ID>
+                  <ID>68</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2261,7 +2349,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>65</ID>
+                  <ID>69</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2273,7 +2361,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>66</ID>
+                  <ID>70</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2285,7 +2373,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>67</ID>
+                  <ID>71</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2297,7 +2385,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>68</ID>
+                  <ID>72</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2309,7 +2397,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>69</ID>
+                  <ID>73</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2321,7 +2409,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>70</ID>
+                  <ID>74</ID>
                   <Description>"#10"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2333,7 +2421,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>71</ID>
+                  <ID>75</ID>
                   <Description>"#11"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2345,7 +2433,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>72</ID>
+                  <ID>76</ID>
                   <Description>"#12"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2357,7 +2445,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>73</ID>
+                  <ID>77</ID>
                   <Description>"#13"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2369,7 +2457,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>74</ID>
+                  <ID>78</ID>
                   <Description>"#14"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2381,7 +2469,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>75</ID>
+                  <ID>79</ID>
                   <Description>"#15"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2393,7 +2481,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>76</ID>
+                  <ID>80</ID>
                   <Description>"#16"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2405,7 +2493,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>77</ID>
+                  <ID>81</ID>
                   <Description>"#17"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2417,7 +2505,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>78</ID>
+                  <ID>82</ID>
                   <Description>"#18"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2429,7 +2517,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>79</ID>
+                  <ID>83</ID>
                   <Description>"#19"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2441,7 +2529,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>80</ID>
+                  <ID>84</ID>
                   <Description>"#20"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2453,7 +2541,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>81</ID>
+                  <ID>85</ID>
                   <Description>"#21"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2465,7 +2553,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>82</ID>
+                  <ID>86</ID>
                   <Description>"#22"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2477,7 +2565,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>83</ID>
+                  <ID>87</ID>
                   <Description>"#23"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2489,7 +2577,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>84</ID>
+                  <ID>88</ID>
                   <Description>"#24"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2501,7 +2589,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>85</ID>
+                  <ID>89</ID>
                   <Description>"#25"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2513,7 +2601,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>86</ID>
+                  <ID>90</ID>
                   <Description>"#26"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2525,7 +2613,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>87</ID>
+                  <ID>91</ID>
                   <Description>"#27"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2537,7 +2625,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>88</ID>
+                  <ID>92</ID>
                   <Description>"#28"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2549,7 +2637,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>89</ID>
+                  <ID>93</ID>
                   <Description>"#29"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2561,7 +2649,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>90</ID>
+                  <ID>94</ID>
                   <Description>"#30"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2573,7 +2661,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>91</ID>
+                  <ID>95</ID>
                   <Description>"#31"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2585,7 +2673,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>92</ID>
+                  <ID>96</ID>
                   <Description>"#32"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2597,7 +2685,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>93</ID>
+                  <ID>97</ID>
                   <Description>"#33"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2609,7 +2697,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>94</ID>
+                  <ID>98</ID>
                   <Description>"#34"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2621,7 +2709,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>95</ID>
+                  <ID>99</ID>
                   <Description>"#35"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2633,7 +2721,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>96</ID>
+                  <ID>100</ID>
                   <Description>"#36"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2645,7 +2733,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>97</ID>
+                  <ID>101</ID>
                   <Description>"#37"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2657,7 +2745,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>98</ID>
+                  <ID>102</ID>
                   <Description>"#38"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2669,7 +2757,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>99</ID>
+                  <ID>103</ID>
                   <Description>"#39"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2681,7 +2769,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>100</ID>
+                  <ID>104</ID>
                   <Description>"#40"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2693,7 +2781,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>116</ID>
+                  <ID>105</ID>
                   <Description>"#41"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2705,7 +2793,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>117</ID>
+                  <ID>106</ID>
                   <Description>"#42"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2717,7 +2805,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>118</ID>
+                  <ID>107</ID>
                   <Description>"#43"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2729,7 +2817,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>119</ID>
+                  <ID>108</ID>
                   <Description>"#44"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2741,7 +2829,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>120</ID>
+                  <ID>109</ID>
                   <Description>"#45"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2753,7 +2841,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>121</ID>
+                  <ID>110</ID>
                   <Description>"#46"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2765,7 +2853,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>122</ID>
+                  <ID>111</ID>
                   <Description>"#47"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2777,7 +2865,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>123</ID>
+                  <ID>112</ID>
                   <Description>"#48"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2789,7 +2877,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>124</ID>
+                  <ID>113</ID>
                   <Description>"#49"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2801,7 +2889,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>125</ID>
+                  <ID>114</ID>
                   <Description>"#50"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2817,7 +2905,82 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>101</ID>
+          <ID>115</ID>
+          <Description>"Connect至少為1 / keep connect at least 1"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ed9.exe
+  Version: 
+  Date   : 2025-01-29
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_CONNECT,$process,43 FF 25 FF FF FF 3F) // should be unique
+alloc(newmem,$1000,INJECT_INF_CONNECT)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  and eax,3FFFFFFF
+  //
+  pushfq
+  cmp eax, 1
+  jae endp
+  mov eax, 1
+
+endp:
+  popfq
+  //
+  jmp return
+
+INJECT_INF_CONNECT+02:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_CONNECT)
+
+[DISABLE]
+
+INJECT_INF_CONNECT+02:
+  db 25 FF FF FF 3F
+
+unregistersymbol(INJECT_INF_CONNECT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+40E731
+
+ed9.exe+40E70C: 75 0C                 - jne ed9.exe+40E71A
+ed9.exe+40E70E: 8D 1C 85 00 00 00 00  - lea ebx,[rax*4+00000000]
+ed9.exe+40E715: C1 FB 02              - sar ebx,02
+ed9.exe+40E718: EB 14                 - jmp ed9.exe+40E72E
+ed9.exe+40E71A: 83 F9 02              - cmp ecx,02
+ed9.exe+40E71D: 75 0F                 - jne ed9.exe+40E72E
+ed9.exe+40E71F: 8D 04 85 00 00 00 00  - lea eax,[rax*4+00000000]
+ed9.exe+40E726: 66 0F 6E C0           - movd xmm0,eax
+ed9.exe+40E72A: F3 0F 2C D8           - cvttss2si ebx,xmm0
+ed9.exe+40E72E: 8D 43 FF              - lea eax,[rbx-01]
+// ---------- INJECTING HERE ----------
+ed9.exe+40E731: 25 FF FF FF 3F        - and eax,3FFFFFFF
+// ---------- DONE INJECTING  ----------
+ed9.exe+40E736: 0F BA E8 1E           - bts eax,1E
+ed9.exe+40E73A: 89 82 54 21 01 00     - mov [rdx+00012154],eax
+ed9.exe+40E740: 4C 8B 8F C8 00 00 00  - mov r9,[rdi+000000C8]
+ed9.exe+40E747: 4D 85 C9              - test r9,r9
+ed9.exe+40E74A: 74 1E                 - je ed9.exe+40E76A
+ed9.exe+40E74C: 48 63 87 BC 00 00 00  - movsxd  rax,dword ptr [rdi+000000BC]
+ed9.exe+40E753: 48 8D 14 40           - lea rdx,[rax+rax*2]
+ed9.exe+40E757: 41 B8 0D 00 00 00     - mov r8d,0000000D
+ed9.exe+40E75D: 8B 94 97 88 00 00 00  - mov edx,[rdi+rdx*4+00000088]
+ed9.exe+40E764: 48 8B 0F              - mov rcx,[rdi]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>116</ID>
           <Description>"取得LGC資料 / Get LGC Data"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -2890,13 +3053,13 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>102</ID>
+              <ID>117</ID>
               <Description>"開啟選單 / Usage: menu [LT]+[RT]"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>103</ID>
+              <ID>118</ID>
               <Description>"Law"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2908,7 +3071,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>104</ID>
+              <ID>119</ID>
               <Description>"Gray"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2920,7 +3083,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>105</ID>
+              <ID>120</ID>
               <Description>"Chaos"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2932,7 +3095,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>106</ID>
+              <ID>121</ID>
               <Description>"Connect"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2944,7 +3107,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>107</ID>
+              <ID>122</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2956,7 +3119,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>108</ID>
+              <ID>123</ID>
               <Description>"Year?"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2968,7 +3131,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>109</ID>
+              <ID>124</ID>
               <Description>"Month?"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2980,7 +3143,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>110</ID>
+              <ID>125</ID>
               <Description>"Day?"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2992,7 +3155,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>111</ID>
+              <ID>126</ID>
               <Description>"Day of week?"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3004,7 +3167,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>112</ID>
+              <ID>127</ID>
               <Description>"SP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3016,7 +3179,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>113</ID>
+              <ID>128</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3032,14 +3195,8 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>114</ID>
+      <ID>129</ID>
       <Description>"英雄傳說 界之軌跡 -告別塞姆利亞-  /  https://opencheattables.com"</Description>
-      <Color>00AA00</Color>
-      <GroupHeader>1</GroupHeader>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>115</ID>
-      <Description>"The Legend of Heroes: Kai no Kiseki -Farewell, O Zemuria-  /  https://opencheattables.com"</Description>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
