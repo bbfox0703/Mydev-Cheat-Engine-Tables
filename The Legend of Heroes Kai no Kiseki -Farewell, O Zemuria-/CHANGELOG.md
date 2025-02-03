@@ -1,5 +1,9 @@
 # Change log
 
+## 2025/02/02
+1. added 駭入．防壁解除時間無限 / inf. barrier cracking time
+1. fixed 空洞核心EXP倍率 / Battle: master quatrz XP multiplier
+
 ## 2025/01/31
 1. added 取得目前遊戲時數 / Get readable game time
 1. added 任務中進行追蹤不易被發現 / more undetected tracking (found) during quests
