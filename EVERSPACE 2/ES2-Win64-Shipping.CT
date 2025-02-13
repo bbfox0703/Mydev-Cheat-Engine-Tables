@@ -36,8 +36,9 @@ local enableBattleScripts = {
   114, -- "browse item &amp; set some attributes"
   116, -- "Get focused attribute value (Firepower/utility/resistance...)"
   120, -- "Get Mainframe Expansions"
-  150, -- "Toggle scripts"
+  154, -- "inf. cloak field timer"
   157, -- "dismantled item: keep material amount at least 10"
+  187, -- "Fast device cooldown"
 }
 local addressList = getAddressList()
 for _, id in ipairs(enableBattleScripts) do
@@ -61,6 +62,7 @@ local disableBattleScripts = {
   10, -- "Attributes+"
   137, -- "UE5 init."
   124, -- "Get renown"
+  187, -- "Fast device cooldown"
   157, -- "dismantled item: keep material amount at least 10"
   154, -- "inf. cloak field timer"
   136, -- "_debug"
@@ -1779,6 +1781,17 @@ ES2-Win64-Shipping.exe+4A9911A: CC                    - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>155</ID>
+          <Description>"Device upgrades"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+B30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>186</ID>
           <Description>"Renown"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2159,9 +2172,9 @@ newmem:
   vmovss xmm15, [vf_15]
   vucomiss xmm1, xmm15
   je no_dec
-  //vmovss xmm15, [vf_8]
-  //vucomiss xmm1, xmm15
-  //ja no_dec
+  vmovss xmm15, [vf_8]
+  vucomiss xmm1, xmm15
+  ja no_dec
   jmp code
 
 no_dec:
@@ -2236,6 +2249,81 @@ ES2-Win64-Shipping.exe+4986BAD: 79 C2                       - jns ES2-Win64-Ship
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>187</ID>
+      <Description>"Fast device cooldown"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-02-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_COOLDOWN,$process,F3 0F 11 00 48 8B 0E 0F) // should be unique
+alloc(newmem,$1000,INJECT_FAST_COOLDOWN)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm15, [vf_05]
+  vucomiss xmm0, xmm15
+  jbe code
+  movss xmm0, xmm15
+
+code:
+  movss [rax],xmm0
+  mov rcx,[rsi]
+  jmp return
+align 10 cc
+  vf_05:
+  dd (float)0.5
+
+INJECT_FAST_COOLDOWN:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_COOLDOWN)
+
+[DISABLE]
+
+INJECT_FAST_COOLDOWN:
+  db F3 0F 11 00 48 8B 0E
+
+unregistersymbol(INJECT_FAST_COOLDOWN)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4A0BF55
+
+ES2-Win64-Shipping.exe+4A0BF25: E8 D6 95 FF FF           - call ES2-Win64-Shipping.exe+4A05500
+ES2-Win64-Shipping.exe+4A0BF2A: 83 BB E0 04 00 00 00     - cmp dword ptr [rbx+000004E0],00
+ES2-Win64-Shipping.exe+4A0BF31: 7E 7B                    - jle ES2-Win64-Shipping.exe+4A0BFAE
+ES2-Win64-Shipping.exe+4A0BF33: 48 89 74 24 58           - mov [rsp+58],rsi
+ES2-Win64-Shipping.exe+4A0BF38: 0F 28 CF                 - movaps xmm1,xmm7
+ES2-Win64-Shipping.exe+4A0BF3B: F3 0F 59 8B 70 04 00 00  - mulss xmm1,[rbx+00000470]
+ES2-Win64-Shipping.exe+4A0BF43: 48 8D B3 D8 04 00 00     - lea rsi,[rbx+000004D8]
+ES2-Win64-Shipping.exe+4A0BF4A: 48 8B 06                 - mov rax,[rsi]
+ES2-Win64-Shipping.exe+4A0BF4D: F3 0F 10 00              - movss xmm0,[rax]
+ES2-Win64-Shipping.exe+4A0BF51: F3 0F 5C C1              - subss xmm0,xmm1
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+4A0BF55: F3 0F 11 00              - movss [rax],xmm0
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+4A0BF59: 48 8B 0E                 - mov rcx,[rsi]
+ES2-Win64-Shipping.exe+4A0BF5C: 0F 2F 31                 - comiss xmm6,[rcx]
+ES2-Win64-Shipping.exe+4A0BF5F: 72 48                    - jb ES2-Win64-Shipping.exe+4A0BFA9
+ES2-Win64-Shipping.exe+4A0BF61: 8B 46 08                 - mov eax,[rsi+08]
+ES2-Win64-Shipping.exe+4A0BF64: 83 E8 01                 - sub eax,01
+ES2-Win64-Shipping.exe+4A0BF67: 74 10                    - je ES2-Win64-Shipping.exe+4A0BF79
+ES2-Win64-Shipping.exe+4A0BF69: 4C 63 C0                 - movsxd  r8,eax
+ES2-Win64-Shipping.exe+4A0BF6C: 48 8D 51 04              - lea rdx,[rcx+04]
+ES2-Win64-Shipping.exe+4A0BF70: 49 C1 E0 02              - shl r8,02
+ES2-Win64-Shipping.exe+4A0BF74: E8 A3 15 27 02           - call ES2-Win64-Shipping.exe+6C7D51C
+}
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>157</ID>
