@@ -19,7 +19,7 @@ LuaCall(cycleFullCompact(nil,false))
       <Description>"Toggle scripts"</Description>
       <Color>4080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
 getLuaEngine().menuItem5.doClick()
@@ -27,14 +27,17 @@ getLuaEngine().Close()
 
 local enableBattleScripts = {
   0, -- "Compact mode"
-  105, -- "Get credits &amp; level"
+  105, -- "Get credits, level &amp; stats (not achievement)"
   109, -- "inf. sub weapon"
   110, -- "inf. thruster"
   111, -- "inf. main weapon EN"
   112, -- "inf. consumable usage in slots"
   113, -- "inf material when crafting"
+  114, -- "browse item &amp; set some attributes"
   116, -- "Get focused attribute value (Firepower/utility/resistance...)"
   120, -- "Get Mainframe Expansions"
+  150, -- "Toggle scripts"
+  157, -- "dismantled item: keep material amount at least 10"
 }
 local addressList = getAddressList()
 for _, id in ipairs(enableBattleScripts) do
@@ -53,11 +56,13 @@ local disableBattleScripts = {
   33, -- "11~"
   12, -- "1~10"
   61, -- "Attributes+"
+  167, -- "Get AESPawn"
   143, -- "init. 2"
   10, -- "Attributes+"
   137, -- "UE5 init."
-  127, -- "Set some attributes (range, shield capacitry..)"
   124, -- "Get renown"
+  157, -- "dismantled item: keep material amount at least 10"
+  154, -- "inf. cloak field timer"
   136, -- "_debug"
   123, -- "_not working"
   120, -- "Get Mainframe Expansions"
@@ -68,7 +73,7 @@ local disableBattleScripts = {
   111, -- "inf. main weapon EN"
   110, -- "inf. thruster"
   109, -- "inf. sub weapon"
-  105, -- "Get credits &amp; level"
+  105, -- "Get credits, level &amp; stats (not achievement)"
   1, -- "Get last 2 items level &amp; count"
   0, -- "Compact mode"
 }
@@ -78,7 +83,6 @@ for _, id in ipairs(disableBattleScripts) do
 end
 getLuaEngine().Close()
 
-
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -86,7 +90,7 @@ getLuaEngine().Close()
       <Description>"Get last 2 items level &amp; count"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1443,10 +1447,10 @@ ES2-Win64-Shipping.exe+4BA8CE9: 41 B0 01                 - mov r8b,01
     </CheatEntry>
     <CheatEntry>
       <ID>105</ID>
-      <Description>"Get credits &amp; level"</Description>
+      <Description>"Get credits, level &amp; stats (not achievement)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1454,34 +1458,53 @@ ES2-Win64-Shipping.exe+4BA8CE9: 41 B0 01                 - mov r8b,01
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_CREDITS,$process,39 8A 20 01 00 00 0F 9D C0 C3) // should be unique
+aobscanmodule(INJECT_GET_CREDITS,$process,39 8A ?? ?? 00 00 0F 9D) // should be unique
 alloc(newmem,$1000,INJECT_GET_CREDITS)
 
+alloc(INJECT_GET_CREDITSo, 6)
+
 label(code)
-label(return i_base_money_addr)
+label(return i_base_money_addr i_base_money_offset)
+
+INJECT_GET_CREDITSo:
+  readmem(INJECT_GET_CREDITS, 6)
 
 newmem:
   mov [i_base_money_addr], rdx
+
+  push r15
+  db 49 c7 c7
+  readmem(INJECT_GET_CREDITS+2, 4)
+  mov [i_base_money_offset], r15
+
+@@:
+  pop r15
+
 code:
   cmp [rdx+00000120],ecx
   jmp return
 align 10 cc
   i_base_money_addr:
   dq 0
+  i_base_money_offset:
+  dq 0
 
 INJECT_GET_CREDITS:
   jmp newmem
   nop
 return:
-registersymbol(INJECT_GET_CREDITS i_base_money_addr)
-
+registersymbol(INJECT_GET_CREDITS i_base_money_addr i_base_money_offset)
+registersymbol(INJECT_GET_CREDITSo)
 [DISABLE]
 
 INJECT_GET_CREDITS:
-  db 39 8A 20 01 00 00
+  //db 39 8A 20 01 00 00
+  readmem(INJECT_GET_CREDITSo, 6)
 
-unregistersymbol(INJECT_GET_CREDITS i_base_money_addr)
+unregistersymbol(INJECT_GET_CREDITS i_base_money_addr i_base_money_offset)
 dealloc(newmem)
+unregistersymbol(INJECT_GET_CREDITSo)
+dealloc(INJECT_GET_CREDITSo)
 
 {
 // ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4A99108
@@ -1520,7 +1543,7 @@ ES2-Win64-Shipping.exe+4A9911A: CC                    - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_base_money_addr</Address>
           <Offsets>
-            <Offset>120</Offset>
+            <Offset>[i_base_money_offset]</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -1531,7 +1554,7 @@ ES2-Win64-Shipping.exe+4A9911A: CC                    - int 3
           <VariableType>4 Bytes</VariableType>
           <Address>i_base_money_addr</Address>
           <Offsets>
-            <Offset>124</Offset>
+            <Offset>[i_base_money_offset]+4</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -1542,7 +1565,227 @@ ES2-Win64-Shipping.exe+4A9911A: CC                    - int 3
           <VariableType>Float</VariableType>
           <Address>i_base_money_addr</Address>
           <Offsets>
-            <Offset>128</Offset>
+            <Offset>[i_base_money_offset]+8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>182</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+8EC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>181</ID>
+          <Description>"Items collected"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+900</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>159</ID>
+          <Description>"Resource mined"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+8FC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>160</ID>
+          <Description>"Items bought"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+904</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>161</ID>
+          <Description>"Items sold"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+908</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>162</ID>
+          <Description>"Items dismantled"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+90C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>163</ID>
+          <Description>"Items crafted"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+910</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>164</ID>
+          <Description>"Items upgraded"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+924</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>170</ID>
+          <Description>"Level restrictions removed"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+928</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>171</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+92C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>172</ID>
+          <Description>"Jobs completed"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+930</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>173</ID>
+          <Description>"Missions: Main"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+934</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>174</ID>
+          <Description>"Missions: side"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+938</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>175</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+93C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>176</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+940</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>177</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+944</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>178</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+948</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>179</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+94C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>180</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+950</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>155</ID>
+          <Description>"Renown"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>[i_base_money_offset]+F88</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -1551,7 +1794,7 @@ ES2-Win64-Shipping.exe+4A9911A: CC                    - int 3
       <ID>109</ID>
       <Description>"inf. sub weapon"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1609,7 +1852,7 @@ ES2-Win64-Shipping.exe+499B4F0: E8 3B 3D A3 FE        - call ES2-Win64-Shipping.
       <ID>110</ID>
       <Description>"inf. thruster"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1678,7 +1921,7 @@ ES2-Win64-Shipping.exe+49B5D27: 0F 82 61 01 00 00        - jb ES2-Win64-Shipping
       <ID>111</ID>
       <Description>"inf. main weapon EN"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1757,7 +2000,7 @@ ES2-Win64-Shipping.exe+49C4AFD: 48 8B 8B 40 01 00 00           - mov rcx,[rbx+00
       <ID>112</ID>
       <Description>"inf. consumable usage in slots"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1823,7 +2066,7 @@ ES2-Win64-Shipping.exe+498E79A: 48 8B 4F 10           - mov rcx,[rdi+10]
       <ID>113</ID>
       <Description>"inf material when crafting"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1894,11 +2137,208 @@ ES2-Win64-Shipping.exe+4CBB16A: 48 8B CE                 - mov rcx,rsi
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
+      <ID>154</ID>
+      <Description>"inf. cloak field timer"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-02-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_EN_SPHERE_TIMER,$process,F3 0F 5C C8 F3 0F 11 0C 06) // should be unique
+alloc(newmem,$1000,INJECT_INF_EN_SPHERE_TIMER)
+
+label(code)
+label(return)
+
+newmem:
+  vmovss xmm15, [vf_15]
+  vucomiss xmm1, xmm15
+  je no_dec
+  //vmovss xmm15, [vf_8]
+  //vucomiss xmm1, xmm15
+  //ja no_dec
+  jmp code
+
+no_dec:
+  vxorps xmm0, xmm0, xmm0
+  //movss xmm0, [vf_60]
+  //movss [rsi+rax], xmm0
+  //vxorps xmm0, xmm0, xmm0
+  //movaps [rsp+00000140], xmm0
+  //movaps [rsp+00000150], xmm0
+  //movaps [rsp+00000160], xmm0
+
+
+code:
+  subss xmm1,xmm0
+  movss [rsi+rax],xmm1
+  jmp return
+align 10 cc
+  vf_60:
+  dd (float)60
+  vf_15:
+  dd (float)15
+  vf_8:
+  dd (float)8
+
+INJECT_INF_EN_SPHERE_TIMER:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_INF_EN_SPHERE_TIMER)
+
+[DISABLE]
+
+INJECT_INF_EN_SPHERE_TIMER:
+  db F3 0F 5C C8 F3 0F 11 0C 06
+
+unregistersymbol(INJECT_INF_EN_SPHERE_TIMER)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4986B8A
+
+ES2-Win64-Shipping.exe+4986B59: F3 0F 10 35 0F B4 4D 02     - movss xmm6,[ES2-Win64-Shipping.exe+6E61F70]
+ES2-Win64-Shipping.exe+4986B61: F3 44 0F 10 05 3E B3 4D 02  - movss xmm8,[ES2-Win64-Shipping.exe+6E61EA8]
+ES2-Win64-Shipping.exe+4986B6A: 48 63 C7                    - movsxd  rax,edi
+ES2-Win64-Shipping.exe+4986B6D: 48 6B F0 1C                 - imul rsi,rax,1C
+ES2-Win64-Shipping.exe+4986B71: 48 8B 83 48 01 00 00        - mov rax,[rbx+00000148]
+ES2-Win64-Shipping.exe+4986B78: F3 0F 10 0C 06              - movss xmm1,[rsi+rax]
+ES2-Win64-Shipping.exe+4986B7D: 0F 2F CF                    - comiss xmm1,xmm7
+ES2-Win64-Shipping.exe+4986B80: 72 24                       - jb ES2-Win64-Shipping.exe+4986BA6
+ES2-Win64-Shipping.exe+4986B82: 0F 28 C1                    - movaps xmm0,xmm1
+ES2-Win64-Shipping.exe+4986B85: F3 41 0F 5D C2              - minss xmm0,xmm10
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+4986B8A: F3 0F 5C C8                 - subss xmm1,xmm0
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+4986B8E: F3 0F 11 0C 06              - movss [rsi+rax],xmm1
+ES2-Win64-Shipping.exe+4986B93: 0F 54 CE                    - andps xmm1,xmm6
+ES2-Win64-Shipping.exe+4986B96: 41 0F 2F C8                 - comiss xmm1,xmm8
+ES2-Win64-Shipping.exe+4986B9A: 77 0A                       - ja ES2-Win64-Shipping.exe+4986BA6
+ES2-Win64-Shipping.exe+4986B9C: 8B D7                       - mov edx,edi
+ES2-Win64-Shipping.exe+4986B9E: 48 8B CB                    - mov rcx,rbx
+ES2-Win64-Shipping.exe+4986BA1: E8 1A 6E FF FF              - call ES2-Win64-Shipping.exe+497D9C0
+ES2-Win64-Shipping.exe+4986BA6: 48 83 EE 1C                 - sub rsi,1C
+ES2-Win64-Shipping.exe+4986BAA: 83 EF 01                    - sub edi,01
+ES2-Win64-Shipping.exe+4986BAD: 79 C2                       - jns ES2-Win64-Shipping.exe+4986B71
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>183</ID>
+          <Description>"Caution: affects other counters but not working on them "</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>157</ID>
+      <Description>"dismantled item: keep material amount at least 10"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-02-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_DESTRUCT_ITEM,$process,01 91 ?? ?? 00 00 29 96) // should be unique
+alloc(newmem,$1000,INJECT_DESTRUCT_ITEM)
+
+alloc(INJECT_DESTRUCT_ITEMo, 6)
+
+label(code)
+label(return)
+
+INJECT_DESTRUCT_ITEMo:
+  readmem(INJECT_DESTRUCT_ITEM, 6)
+
+newmem:
+  push r15
+  db 4c 8d b9
+  readmem(INJECT_DESTRUCT_ITEM+2, 4)
+  cmp dword ptr [r15], A
+  jae @F
+  mov dword ptr [r15], A
+
+@@:
+  pop r15
+
+code:
+  //add [rcx+0000019C],edx
+  readmem(INJECT_DESTRUCT_ITEM, 6)
+  jmp return
+align 10 cc
+
+
+INJECT_DESTRUCT_ITEM:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_DESTRUCT_ITEM)
+registersymbol(INJECT_DESTRUCT_ITEMo)
+
+[DISABLE]
+
+INJECT_DESTRUCT_ITEM:
+  //db 01 91 9C 01 00 00
+  readmem(INJECT_DESTRUCT_ITEMo, 6)
+
+unregistersymbol(INJECT_DESTRUCT_ITEM)
+dealloc(newmem)
+unregistersymbol(INJECT_DESTRUCT_ITEMo)
+dealloc(INJECT_DESTRUCT_ITEMo)
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4C4146C
+
+ES2-Win64-Shipping.exe+4C41448: 8B 81 0C 02 00 00  - mov eax,[rcx+0000020C]
+ES2-Win64-Shipping.exe+4C4144E: 89 86 0C 02 00 00  - mov [rsi+0000020C],eax
+ES2-Win64-Shipping.exe+4C41454: 41 8B C1           - mov eax,r9d
+ES2-Win64-Shipping.exe+4C41457: 2B C2              - sub eax,edx
+ES2-Win64-Shipping.exe+4C41459: 41 8B D2           - mov edx,r10d
+ES2-Win64-Shipping.exe+4C4145C: 41 3B C2           - cmp eax,r10d
+ES2-Win64-Shipping.exe+4C4145F: 0F 4C D0           - cmovl edx,eax
+ES2-Win64-Shipping.exe+4C41462: 49 8B 06           - mov rax,[r14]
+ES2-Win64-Shipping.exe+4C41465: 44 03 FA           - add r15d,edx
+ES2-Win64-Shipping.exe+4C41468: 4A 8B 0C C0        - mov rcx,[rax+r8*8]
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+4C4146C: 01 91 9C 01 00 00  - add [rcx+0000019C],edx
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+4C41472: 29 96 9C 01 00 00  - sub [rsi+0000019C],edx
+ES2-Win64-Shipping.exe+4C41478: 44 2B D2           - sub r10d,edx
+ES2-Win64-Shipping.exe+4C4147B: 74 0F              - je ES2-Win64-Shipping.exe+4C4148C
+ES2-Win64-Shipping.exe+4C4147D: FF C5              - inc ebp
+ES2-Win64-Shipping.exe+4C4147F: 49 FF C0           - inc r8
+ES2-Win64-Shipping.exe+4C41482: 41 3B 6E 08        - cmp ebp,[r14+08]
+ES2-Win64-Shipping.exe+4C41486: 0F 8C 74 FF FF FF  - jl ES2-Win64-Shipping.exe+4C41400
+ES2-Win64-Shipping.exe+4C4148C: 45 85 FF           - test r15d,r15d
+ES2-Win64-Shipping.exe+4C4148F: 0F 8F 42 01 00 00  - jg ES2-Win64-Shipping.exe+4C415D7
+ES2-Win64-Shipping.exe+4C41495: 80 7C 24 70 00     - cmp byte ptr [rsp+70],00
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>165</ID>
+          <Description>"material must be exist (non-zero)"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>114</ID>
       <Description>"browse item &amp; set some attributes"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -1915,6 +2355,13 @@ label(return)
 newmem:
   push r15
   mov r15d, [rcx+68]
+
+  cmp r15d, #47674
+  je set_core_base
+  cmp r15d, #47704
+  je set_core_base
+  cmp r15d, #47733
+  je set_core_base
 
   cmp r15d, #52789
   je set_core_base
@@ -1934,8 +2381,6 @@ newmem:
   je set_misc
   cmp r15d, #53071
   je set_misc
-  cmp r15d, #53065
-  je set_misc
   cmp r15d, #53342
   je set_cargo
   cmp r15d, #54400
@@ -1946,9 +2391,15 @@ newmem:
   // shield
   cmp r15d, #53034
   je set_shield_base1
+  cmp r15d, #47835  //shield recharge delay
+  je set_shield_base1
+  cmp r15d, #47861  //shield shutdown duration
+  je set_shield_base1
   cmp r15d, #52904
   je set_shield_base2
   cmp r15d, #52924
+  je set_booster3
+  cmp r15d, #47809 //X shield recharge speed
   je set_booster3
   cmp r15d, #53024
   je set_shield_base2
@@ -1981,6 +2432,12 @@ newmem:
   je set_weapon1
   cmp r15d, #53420
   je set_weapon1
+
+  cmp r15d, #53445
+  je set_fire_range
+  cmp r15d, #48330
+  je set_fire_range
+
 
 
   jmp endp
@@ -2052,6 +2509,9 @@ set_misc3:
   mov [rcx+70], (float)760000
   jmp endp
 
+set_fire_range:  // weapon range
+  mov [rcx+70], (float)1020000
+  jmp endp
 
 endp:
   pop r15
@@ -2118,7 +2578,7 @@ ES2-Win64-Shipping.exe+4C4B5BA: 80 7B 34 00           - cmp byte ptr [rbx+34],00
       <Description>"Get focused attribute value (Firepower/utility/resistance...)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -2237,7 +2697,7 @@ ES2-Win64-Shipping.exe+4A58A04: E8 47 FF FF FF  - call ES2-Win64-Shipping.exe+4A
       <Description>"Get Mainframe Expansions"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+      <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
   Date   : 2025-02-11
   Author : bbfox@https://opencheattables.com
@@ -2440,265 +2900,6 @@ ES2-Win64-Shipping.exe+13CD200: 4C 23 C0              - and r8,rax
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
-        <CheatEntry>
-          <ID>127</ID>
-          <Description>"Set some attributes (range, shield capacitry..)"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
-  Version: 
-  Date   : 2023-04-24
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_SET_SOME_ATTRS,$process,0F 2E 81 90 00 00 00 74 05 E8 F1) // should be unique
-alloc(newmem,$1000,INJECT_SET_SOME_ATTRS)
-
-label(code)
-label(return)
-label(vf_min_range)
-label(vf_min_capacity)
-label(vf_repair_per_kill)
-label(vf_rehcarge_delay)
-label(vf_shutdown_duration)
-label(vf_min_armor)
-
-newmem:
-  push rax
-  // 0001596E: Range
-  // 00015751: Capacity (from shield)
-  // 000157C9: Armor (from plating)
-  // 000157D3: Repair per kill (from plating)
-  // 0001577F: recharge delay
-  // 00015799: Shutdown duration
-  // 00015CD0: repair ??% (nanobots)
-  // 00015CF0: over ? seconds (nanobots)
-
-  mov eax, [rcx+00000088]
-  cmp eax, 0001596E
-  jne chk_2
-  vmovss xmm15, [rcx+00000090]
-  vmovss xmm14, [vf_min_range]
-  vucomiss xmm15, xmm14
-  jae chk_2
-  vmovss [rcx+00000090], xmm14
-  vmovss [rcx+000000C0], xmm14
-  vmovss [rcx+000000C8], xmm14
-  vmovss [rcx+000000FC], xmm14
-  vmovss [rcx+00000100], xmm14
-  vmovaps xmm0, xmm14
-
-chk_2:
-  mov eax, [rcx+00000088]
-  cmp eax, 00015751
-  jne chk_3
-  vmovss xmm15, [rcx+00000090]
-  vmovss xmm14, [vf_min_capacity]
-  vucomiss xmm15, xmm14
-  jae chk_3
-  vmovss [rcx+00000090], xmm14
-  vmovss [rcx+000000C0], xmm14
-  vmovss [rcx+000000C8], xmm14
-  vmovss [rcx+000000FC], xmm14
-  vmovss [rcx+00000100], xmm14
-  vmovaps xmm0, xmm14
-
-chk_3:
-  mov eax, [rcx+00000088]
-  cmp eax, 000157C9
-  jne chk_4
-  vmovss xmm15, [rcx+00000090]
-  vmovss xmm14, [vf_min_armor]
-  vucomiss xmm15, xmm14
-  jae chk_4
-  vmovss [rcx+00000090], xmm14
-  vmovss [rcx+000000C0], xmm14
-  vmovss [rcx+000000C8], xmm14
-  vmovss [rcx+000000FC], xmm14
-  vmovss [rcx+00000100], xmm14
-  vmovaps xmm0, xmm14
-
-chk_4:
-  mov eax, [rcx+00000088]
-  cmp eax, 000157D3
-  jne chk_5
-  vmovss xmm15, [rcx+00000090]
-  vmovss xmm14, [vf_repair_per_kill]
-  vucomiss xmm15, xmm14
-  jae chk_5
-  vmovss [rcx+00000090], xmm14
-  vmovss [rcx+000000C0], xmm14
-  vmovss [rcx+000000C8], xmm14
-  vmovss [rcx+000000FC], xmm14
-  vmovss [rcx+00000100], xmm14
-  vmovaps xmm0, xmm14
-
-chk_5:
-  mov eax, [rcx+00000088]
-  cmp eax, 0001577F
-  jne chk_6
-  vmovss xmm15, [rcx+00000090]
-  vmovss xmm14, [vf_rehcarge_delay]
-  vucomiss xmm15, xmm14
-  je chk_6
-  vmovss [rcx+00000090], xmm14
-  vmovss [rcx+000000C0], xmm14
-  vmovss [rcx+000000C8], xmm14
-  vmovss [rcx+000000FC], xmm14
-  vmovss [rcx+00000100], xmm14
-  vmovaps xmm0, xmm14
-
-chk_6:
-  mov eax, [rcx+00000088]
-  cmp eax, 00015799
-  jne chk_7
-  vmovss xmm15, [rcx+00000090]
-  vmovss xmm14, [vf_shutdown_duration]
-  vucomiss xmm15, xmm14
-  je chk_7
-  vmovss [rcx+00000090], xmm14
-  vmovss [rcx+000000C0], xmm14
-  vmovss [rcx+000000C8], xmm14
-  vmovss [rcx+000000FC], xmm14
-  vmovss [rcx+00000100], xmm14
-  vmovaps xmm0, xmm14
-
-chk_7:
-
-
-endp:
-  pop rax
-
-code:
-  ucomiss xmm0,[rcx+00000090]
-  jmp return
-align 10 cc
-  vf_min_range:
-  dd (float)861000
-  vf_min_capacity:
-  dd (float)531998
-  vf_min_armor:
-  dd (float)333998
-  vf_repair_per_kill:
-  dd (float)0.5
-  vf_rehcarge_delay:
-  dd (float)0.5
-  vf_shutdown_duration:
-  dd (float)1
-
-
-INJECT_SET_SOME_ATTRS:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_SET_SOME_ATTRS)
-registersymbol(vf_min_range)
-registersymbol(vf_min_capacity)
-registersymbol(vf_repair_per_kill)
-registersymbol(vf_rehcarge_delay)
-registersymbol(vf_shutdown_duration)
-registersymbol(vf_min_armor)
-[DISABLE]
-
-INJECT_SET_SOME_ATTRS:
-  db 0F 2E 81 90 00 00 00
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+17992D1
-
-ES2-Win64-Shipping.exe+17992AE: CC                       - int 3 
-ES2-Win64-Shipping.exe+17992AF: CC                       - int 3 
-ES2-Win64-Shipping.exe+17992B0: 48 89 5C 24 08           - mov [rsp+08],rbx
-ES2-Win64-Shipping.exe+17992B5: 57                       - push rdi
-ES2-Win64-Shipping.exe+17992B6: 48 83 EC 20              - sub rsp,20
-ES2-Win64-Shipping.exe+17992BA: 80 B9 C4 00 00 00 00     - cmp byte ptr [rcx+000000C4],00
-ES2-Win64-Shipping.exe+17992C1: 48 8B FA                 - mov rdi,rdx
-ES2-Win64-Shipping.exe+17992C4: 48 8B D9                 - mov rbx,rcx
-ES2-Win64-Shipping.exe+17992C7: 75 11                    - jne ES2-Win64-Shipping.exe+17992DA
-ES2-Win64-Shipping.exe+17992C9: F3 0F 10 81 C8 00 00 00  - movss xmm0,[rcx+000000C8]
-// ---------- INJECTING HERE ----------
-ES2-Win64-Shipping.exe+17992D1: 0F 2E 81 90 00 00 00     - ucomiss xmm0,[rcx+00000090]
-// ---------- DONE INJECTING  ----------
-ES2-Win64-Shipping.exe+17992D8: 74 05                    - je ES2-Win64-Shipping.exe+17992DF
-ES2-Win64-Shipping.exe+17992DA: E8 F1 A0 05 00           - call ES2-Win64-Shipping.exe+17F33D0
-ES2-Win64-Shipping.exe+17992DF: 48 8B 43 28              - mov rax,[rbx+28]
-ES2-Win64-Shipping.exe+17992E3: 48 89 07                 - mov [rdi],rax
-ES2-Win64-Shipping.exe+17992E6: 48 8B 43 30              - mov rax,[rbx+30]
-ES2-Win64-Shipping.exe+17992EA: 48 89 47 08              - mov [rdi+08],rax
-ES2-Win64-Shipping.exe+17992EE: 48 85 C0                 - test rax,rax
-ES2-Win64-Shipping.exe+17992F1: 74 04                    - je ES2-Win64-Shipping.exe+17992F7
-ES2-Win64-Shipping.exe+17992F3: F0 FF 40 08              - lock inc [rax+08]
-ES2-Win64-Shipping.exe+17992F7: 8B 43 38                 - mov eax,[rbx+38]
-}
-</AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>128</ID>
-              <Description>"Usage: browse item"</Description>
-              <Color>8000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>129</ID>
-              <Description>"Weapon: min. range"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_min_range</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>130</ID>
-              <Description>"***Not sure if working: Shield, Plating***"</Description>
-              <Color>8000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>131</ID>
-              <Description>"Plating: min armor"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_min_armor</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>132</ID>
-              <Description>"Plating: repair per kill (1=100%)"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_repair_per_kill</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>133</ID>
-              <Description>"Shield: min. capacity"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_min_capacity</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>134</ID>
-              <Description>"Shield: max recharge delay"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_rehcarge_delay</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>135</ID>
-              <Description>"Shield: max shutdown duration"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_shutdown_duration</Address>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
@@ -2833,6 +3034,104 @@ ES2-Win64-Shipping.exe+3C22EAE: E8 0D D0 D9 FF           - call ES2-Win64-Shippi
               <Color>808080</Color>
               <VariableType>8 Bytes</VariableType>
               <Address>ES2-Win64-Shipping.exe+7855DB8</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>167</ID>
+              <Description>"Get AESPawn"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-02-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_AESPAWN,ES2-Win64-Shipping.exe,49 8B 4E 10 48 83 C0 30 48 63 50 08 3B 51 38 7F ?? 48 8B 49 30 48 39 04 D1 75 ?? 49 8B 86 ?? 0? 00 00 48 89 44 24 78) // should be unique
+alloc(newmem,$1000,INJECT_GET_AESPAWN)
+
+label(code)
+label(return i_base_aespawn_addr)
+
+newmem:
+  mov [i_base_aespawn_addr], r14
+
+code:
+  mov rcx,[r14+10]
+  add rax,30
+  jmp return
+align 10 cc
+  i_base_aespawn_addr:
+  dq 0
+
+INJECT_GET_AESPAWN:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_AESPAWN i_base_aespawn_addr)
+
+[DISABLE]
+
+INJECT_GET_AESPAWN:
+  db 49 8B 4E 10 48 83 C0 30
+
+unregistersymbol(INJECT_GET_AESPAWN i_base_aespawn_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4A39A63
+
+ES2-Win64-Shipping.exe+4A39A3B: B9 08 00 00 00        - mov ecx,00000008
+ES2-Win64-Shipping.exe+4A39A40: F3 0F 11 45 78        - movss [rbp+78],xmm0
+ES2-Win64-Shipping.exe+4A39A45: E8 66 3A F6 FF        - call ES2-Win64-Shipping.exe+499D4B0
+ES2-Win64-Shipping.exe+4A39A4A: 49 8B CF              - mov rcx,r15
+ES2-Win64-Shipping.exe+4A39A4D: 48 89 45 70           - mov [rbp+70],rax
+ES2-Win64-Shipping.exe+4A39A51: E8 4A 0C E9 FE        - call ES2-Win64-Shipping.exe+38CA6A0
+ES2-Win64-Shipping.exe+4A39A56: 4C 8B F0              - mov r14,rax
+ES2-Win64-Shipping.exe+4A39A59: 48 85 C0              - test rax,rax
+ES2-Win64-Shipping.exe+4A39A5C: 74 3F                 - je ES2-Win64-Shipping.exe+4A39A9D
+ES2-Win64-Shipping.exe+4A39A5E: E8 9D 03 E5 FF        - call ES2-Win64-Shipping.exe+4889E00
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+4A39A63: 49 8B 4E 10           - mov rcx,[r14+10]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+4A39A67: 48 83 C0 30           - add rax,30
+ES2-Win64-Shipping.exe+4A39A6B: 48 63 50 08           - movsxd  rdx,dword ptr [rax+08]
+ES2-Win64-Shipping.exe+4A39A6F: 3B 51 38              - cmp edx,[rcx+38]
+ES2-Win64-Shipping.exe+4A39A72: 7F 29                 - jg ES2-Win64-Shipping.exe+4A39A9D
+ES2-Win64-Shipping.exe+4A39A74: 48 8B 49 30           - mov rcx,[rcx+30]
+ES2-Win64-Shipping.exe+4A39A78: 48 39 04 D1           - cmp [rcx+rdx*8],rax
+ES2-Win64-Shipping.exe+4A39A7C: 75 1F                 - jne ES2-Win64-Shipping.exe+4A39A9D
+ES2-Win64-Shipping.exe+4A39A7E: 49 8B 86 70 03 00 00  - mov rax,[r14+00000370]
+ES2-Win64-Shipping.exe+4A39A85: 48 89 44 24 78        - mov [rsp+78],rax
+ES2-Win64-Shipping.exe+4A39A8A: 48 85 C0              - test rax,rax
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>168</ID>
+                  <Description>"addr"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_base_aespawn_addr</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>169</ID>
+                  <Description>"Pawn.CanBeDamaged"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Binary</VariableType>
+                  <BitStart>2</BitStart>
+                  <BitLength>1</BitLength>
+                  <ShowAsBinary>0</ShowAsBinary>
+                  <Address>i_base_aespawn_addr</Address>
+                  <Offsets>
+                    <Offset>5A</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>143</ID>
