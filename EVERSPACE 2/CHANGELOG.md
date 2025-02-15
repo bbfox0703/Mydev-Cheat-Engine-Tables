@@ -1,5 +1,8 @@
 # Changelog
 
+## 2023/02/15
+1. added Fast device cooldown
+
 ## 2023/02/13
 1. revised scripts
 
