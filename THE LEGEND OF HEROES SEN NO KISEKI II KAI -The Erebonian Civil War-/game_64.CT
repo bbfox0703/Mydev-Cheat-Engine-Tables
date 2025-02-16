@@ -412,26 +412,36 @@ game_64.exe+30379F: 0F 28 B4 24 30 01 00 00     - movaps xmm6,[rsp+00000130]
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : game_64.exe
   Version: 
-  Date   : 2024-07-06
+  Date   : 2025-02-16
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_LINK_MULTI2,$process,12 1E 00 41 89 84 9E A4 6E 00 00) // should be unique
+//aobscanmodule(INJECT_LINK_MULTI2,$process,12 1E 00 41 89 84 9E A4 6E 00 00) // should be unique
+aobscanmodule(INJECT_LINK_MULTI2,$process,41 89 84 9E ?? ?? 00 00 48 8B 8F ?? ?? 00 00 48 81 C1 11 5A 00 00 44 0F B7 C6 41 0F B7 D4 E8 ?? ?? ?? ?? 42 88 84 33 ?? ?? 00 00 41 B9 FF FF 00 00) // should be unique
 alloc(newmem,$1000,INJECT_LINK_MULTI2)
+
+alloc(INJECT_LINK_MULTI2o, 8)
 
 label(code)
 label(return)
 label(vf_link_multi)
 label(vf_link_extra_pt)
 
+
+INJECT_LINK_MULTI2o:
+  readmem(INJECT_LINK_MULTI2, 8)
+
 newmem:
-  cmp [r14+rbx*4+00006EA4],eax
+  db 41 39 84 9e
+  readmem(INJECT_LINK_MULTI2+4, 4)
   jae code
 
   cvtsi2ss xmm15, eax
-  cvtsi2ss xmm14, [r14+rbx*4+00006EA4]
+
+  db f3 45 0f 2a b4 9e
+  readmem(INJECT_LINK_MULTI2+4, 4)
 
   subss xmm15, xmm14
   movss xmm13, [vf_link_multi]
@@ -443,7 +453,8 @@ newmem:
   cvtss2si eax, xmm14
 
 code:
-  mov [r14+rbx*4+00006EA4],eax
+  readmem(INJECT_LINK_MULTI2, 8)
+  //mov [r14+rbx*4+00006EA4],eax
   jmp return
 align 10 cc
   vf_link_multi:
@@ -451,48 +462,53 @@ align 10 cc
   vf_link_extra_pt:
   dd (float)2
 
-INJECT_LINK_MULTI2+03:
+INJECT_LINK_MULTI2:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_LINK_MULTI2)
 registersymbol(vf_link_multi)
 registersymbol(vf_link_extra_pt)
+registersymbol(INJECT_LINK_MULTI2o)
 
 [DISABLE]
 
-INJECT_LINK_MULTI2+03:
-  db 41 89 84 9E A4 6E 00 00
+INJECT_LINK_MULTI2:
+  //db 41 89 84 9E A4 6E 00 00
+  readmem(INJECT_LINK_MULTI2o, 8)
 
-unregistersymbol(*)
+unregistersymbol(INJECT_LINK_MULTI2 vf_link_multi vf_link_extra_pt)
 dealloc(newmem)
+unregistersymbol(INJECT_LINK_MULTI2o)
+dealloc(INJECT_LINK_MULTI2o)
+
 
 {
-// ORIGINAL CODE - INJECTION POINT: game_64.exe+1256E3
+// ORIGINAL CODE - INJECTION POINT: game_64.exe+125753
 
-game_64.exe+1256B0: 48 03 D8                 - add rbx,rax
-game_64.exe+1256B3: 44 0F B7 C6              - movzx r8d,si
-game_64.exe+1256B7: 41 0F B7 D4              - movzx edx,r12w
-game_64.exe+1256BB: 48 8B 8F 18 12 00 00     - mov rcx,[rdi+00001218]
-game_64.exe+1256C2: E8 99 12 1E 00           - call game_64.exe+306960
-game_64.exe+1256C7: 42 88 84 33 A4 53 00 00  - mov [rbx+r14+000053A4],al
-game_64.exe+1256CF: 44 0F B7 C6              - movzx r8d,si
-game_64.exe+1256D3: 41 0F B7 D4              - movzx edx,r12w
-game_64.exe+1256D7: 48 8B 8F 18 12 00 00     - mov rcx,[rdi+00001218]
-game_64.exe+1256DE: E8 1D 12 1E 00           - call game_64.exe+306900
+game_64.exe+125720: 48 03 D8                 - add rbx,rax
+game_64.exe+125723: 44 0F B7 C6              - movzx r8d,si
+game_64.exe+125727: 41 0F B7 D4              - movzx edx,r12w
+game_64.exe+12572B: 48 8B 8F 18 12 00 00     - mov rcx,[rdi+00001218]
+game_64.exe+125732: E8 89 13 1E 00           - call game_64.exe+306AC0
+game_64.exe+125737: 42 88 84 33 A4 53 00 00  - mov [rbx+r14+000053A4],al
+game_64.exe+12573F: 44 0F B7 C6              - movzx r8d,si
+game_64.exe+125743: 41 0F B7 D4              - movzx edx,r12w
+game_64.exe+125747: 48 8B 8F 18 12 00 00     - mov rcx,[rdi+00001218]
+game_64.exe+12574E: E8 0D 13 1E 00           - call game_64.exe+306A60
 // ---------- INJECTING HERE ----------
-game_64.exe+1256E3: 41 89 84 9E A4 6E 00 00  - mov [r14+rbx*4+00006EA4],eax
+game_64.exe+125753: 41 89 84 9E A4 6E 00 00  - mov [r14+rbx*4+00006EA4],eax
 // ---------- DONE INJECTING  ----------
-game_64.exe+1256EB: 48 8B 8F 18 12 00 00     - mov rcx,[rdi+00001218]
-game_64.exe+1256F2: 48 81 C1 11 5A 00 00     - add rcx,00005A11
-game_64.exe+1256F9: 44 0F B7 C6              - movzx r8d,si
-game_64.exe+1256FD: 41 0F B7 D4              - movzx edx,r12w
-game_64.exe+125701: E8 2A 12 1E 00           - call game_64.exe+306930
-game_64.exe+125706: 42 88 84 33 A4 65 00 00  - mov [rbx+r14+000065A4],al
-game_64.exe+12570E: 41 B9 FF FF 00 00        - mov r9d,0000FFFF
-game_64.exe+125714: 41 FF C5                 - inc r13d
-game_64.exe+125717: 8B 87 D8 00 00 00        - mov eax,[rdi+000000D8]
-game_64.exe+12571D: 0F BA F0 1F              - btr eax,1F
+game_64.exe+12575B: 48 8B 8F 18 12 00 00     - mov rcx,[rdi+00001218]
+game_64.exe+125762: 48 81 C1 11 5A 00 00     - add rcx,00005A11
+game_64.exe+125769: 44 0F B7 C6              - movzx r8d,si
+game_64.exe+12576D: 41 0F B7 D4              - movzx edx,r12w
+game_64.exe+125771: E8 1A 13 1E 00           - call game_64.exe+306A90
+game_64.exe+125776: 42 88 84 33 A4 65 00 00  - mov [rbx+r14+000065A4],al
+game_64.exe+12577E: 41 B9 FF FF 00 00        - mov r9d,0000FFFF
+game_64.exe+125784: 41 FF C5                 - inc r13d
+game_64.exe+125787: 8B 87 D8 00 00 00        - mov eax,[rdi+000000D8]
+game_64.exe+12578D: 0F BA F0 1F              - btr eax,1F
 }
 </AssemblerScript>
       <CheatEntries>
