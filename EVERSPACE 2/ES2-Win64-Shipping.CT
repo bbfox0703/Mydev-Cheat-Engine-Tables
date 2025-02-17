@@ -90,7 +90,7 @@ getLuaEngine().Close()
     <CheatEntry>
       <ID>2</ID>
       <Description>"Get last 2 items level &amp; count"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">{ Game   : ES2-Win64-Shipping.exe
   Version: 
@@ -100,14 +100,26 @@ getLuaEngine().Close()
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_ITEM_RAL,$process,41 80 7D 60 05 4C) // should be unique
+aobscanmodule(INJECT_GET_ITEM_RAL,$process,41 80 7D ?? 05 4C) // should be unique
 alloc(newmem,$1000,INJECT_GET_ITEM_RAL)
 
+alloc(INJECT_GET_ITEM_RALo, 5)
+
 label(code)
-label(return i_base_item_r_addr i_base_item_r_addr2)
+label(return i_base_item_r_addr i_base_item_r_addr2 i_i_base_item_r_offset)
+
+INJECT_GET_ITEM_RALo:
+  readmem(INJECT_GET_ITEM_RAL, 5)
 
 newmem:
   pushfq
+
+  push r15
+  db 49 c7 c7
+  readmem(INJECT_GET_ITEM_RAL+3, 1)
+  db 00 00 00
+  mov [i_i_base_item_r_offset], r15
+  pop r15
 
   cmp dword ptr [i_idx], 0
   je set1
@@ -128,12 +140,15 @@ code_pre:
   popfq
 
 code:
-  cmp byte ptr [r13+60],05
+  //cmp byte ptr [r13+60],05
+  readmem(INJECT_GET_ITEM_RAL, 5)
   jmp return
 align 10 cc
   i_base_item_r_addr:
   dq 0
   i_base_item_r_addr2:
+  dq 0
+  i_i_base_item_r_offset:
   dq 0
   i_idx:
   dd 0
@@ -141,15 +156,18 @@ align 10 cc
 INJECT_GET_ITEM_RAL:
   jmp newmem
 return:
-registersymbol(INJECT_GET_ITEM_RAL i_base_item_r_addr i_base_item_r_addr2)
-
+registersymbol(INJECT_GET_ITEM_RAL i_base_item_r_addr i_base_item_r_addr2 i_i_base_item_r_offset)
+registersymbol(INJECT_GET_ITEM_RALo)
 [DISABLE]
 
 INJECT_GET_ITEM_RAL:
-  db 41 80 7D 60 05
+  //db 41 80 7D 60 05
+  readmem(INJECT_GET_ITEM_RALo, 5)
 
-unregistersymbol(INJECT_GET_ITEM_RAL i_base_item_r_addr i_base_item_r_addr2)
+unregistersymbol(INJECT_GET_ITEM_RAL i_base_item_r_addr i_base_item_r_addr2 i_i_base_item_r_offset)
 dealloc(newmem)
+unregistersymbol(INJECT_GET_ITEM_RALo)
+dealloc(INJECT_GET_ITEM_RALo)
 
 {
 // ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4BA8CB4
@@ -1505,7 +1523,8 @@ newmem:
   pop r15
 
 code:
-  cmp [rdx+00000120],ecx
+  readmem(INJECT_GET_CREDITS, 6)
+  //cmp [rdx+00000120],ecx
   jmp return
 align 10 cc
   i_base_money_addr:
@@ -2109,11 +2128,16 @@ ES2-Win64-Shipping.exe+498E79A: 48 8B 4F 10           - mov rcx,[rdi+10]
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_CRAFTING,$process,2B C8 89 8E 9C 01 00 00) // should be unique
+aobscanmodule(INJECT_INF_CRAFTING,$process,2B C8 89 8E ?? ?? 00 00 75) // should be unique
 alloc(newmem,$1000,INJECT_INF_CRAFTING)
+
+alloc(INJECT_INF_CRAFTINGo, 8)
 
 label(code)
 label(return)
+
+INJECT_INF_CRAFTINGo:
+  readmem(INJECT_INF_CRAFTING, 8)
 
 newmem:
   pushfq
@@ -2125,7 +2149,8 @@ newmem:
   popfq
 code:
   sub ecx,eax
-  mov [rsi+0000019C],ecx
+  //mov [rsi+0000019C],ecx
+  readmem(INJECT_INF_CRAFTING+2, 6)
   jmp return
 
 INJECT_INF_CRAFTING:
@@ -2133,15 +2158,17 @@ INJECT_INF_CRAFTING:
   nop 3
 return:
 registersymbol(INJECT_INF_CRAFTING)
-
+registersymbol(INJECT_INF_CRAFTINGo)
 [DISABLE]
 
 INJECT_INF_CRAFTING:
-  db 2B C8 89 8E 9C 01 00 00
+  //db 2B C8 89 8E 9C 01 00 00
+  readmem(INJECT_INF_CRAFTINGo, 8)
 
 unregistersymbol(INJECT_INF_CRAFTING)
 dealloc(newmem)
-
+unregistersymbol(INJECT_INF_CRAFTINGo)
+dealloc(INJECT_INF_CRAFTINGo)
 {
 // ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+4CBB145
 
@@ -2984,7 +3011,11 @@ newmem:
   je set_shield_base1
   cmp r15d, #47835  //shield recharge delay
   je set_shield_base1
+  cmp r15d, #52950  //shield recharge delay
+  je set_shield_base1
   cmp r15d, #47861  //shield shutdown duration
+  je set_shield_base1
+  cmp r15d, #52976  //shield shutdown duration
   je set_shield_base1
   cmp r15d, #52904
   je set_shield_base2
@@ -3047,7 +3078,11 @@ newmem:
   jmp endp
 
 set_core_base:
-  mov [rcx+70], (float)294204000
+  mov r15d, (float)65850000
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_cargo:
@@ -3055,27 +3090,52 @@ set_cargo:
   jmp endp
 
 set_shield_base1:
-  mov [rcx+70], (float)0.6
+  mov r15d, (float)0.5
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jae endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_shield_base2:
-  mov [rcx+70], (float)338400000
+  mov r15d, (float)75000000
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_booster1:
-  mov [rcx+70], (float)0.66
+  mov r15d, (float)0.66
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jae endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_booster2:
-  mov [rcx+70], (float)592117952
+  mov r15d, (float)592117952
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
+
 set_booster3:
-  mov [rcx+70], (float)8.07
+  mov r15d, (float)8.27
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_booster4:
-  mov [rcx+70], (float)3.34
+  mov r15d, (float)3.34
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_booster5:
@@ -3083,15 +3143,24 @@ set_booster5:
   jmp endp
 
 set_booster6:
-  mov [rcx+70], (float)100000
+  mov r15d, (float)100000
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
+
 set_radar1:
-  mov [rcx+70], (float)1714218
+  mov r15d, (float)1754218
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_radar2:
-  mov [rcx+70], (float)520000
+  mov [rcx+70], (float)755000
   jmp endp
 
 set_radar3:
@@ -3099,18 +3168,36 @@ set_radar3:
   jmp endp
 
 set_weapon1:
-  mov [rcx+70], (float)1900000
+  mov r15d, (float)19000000
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
+
 set_misc:
-  mov [rcx+70], (float)4500
+  mov r15d, (float)8500
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
+
 set_misc2:
-  mov [rcx+70], (float)120000
+  mov r15d, (float)120000
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_misc3:
-  mov [rcx+70], (float)760000
+  mov r15d, (float)760000
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_fire_range:  // weapon range
@@ -3118,11 +3205,19 @@ set_fire_range:  // weapon range
   jmp endp
 
 set_debuff2e_value:
-  mov [rcx+70], (float)179.86170197
+  mov r15d, (float)3600
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_debuff2e_range:
-  mov [rcx+70], (float)92345
+  mov r15d, (float)92345
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jbe endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_firespeed:
@@ -3130,18 +3225,22 @@ set_firespeed:
   ucomiss xmm15, dword ptr [rcx+70]
   jbe @F
 
-  vmovss xmm15, [vf_3]
+  vmovss xmm15, [vf_4]
   vmovss [rcx+70], xmm15
 
 @@:
   jmp endp
 
 set_lockontime:
-  mov [rcx+70], (float)0.5
+  mov r15d, (float)0.5
+  movd xmm15, r15d
+  comiss xmm15, [rcx+70]
+  jae endp
+  movss [rcx+70], xmm15
   jmp endp
 
 set_dmg_to_high_enemy:
-  mov [rcx+70], (float)3.0
+  mov [rcx+70], (float)3.5
   jmp endp
 
 endp:
@@ -3157,8 +3256,8 @@ align 10 cc
   dd (float)0.200000003
   vf_1d5:
   dd (float)1.5
-  vf_3:
-  dd (float)3
+  vf_4:
+  dd (float)4
 
 INJECT_SET_SOME_ATTRS:
   jmp newmem
@@ -3322,9 +3421,116 @@ ES2-Win64-Shipping.exe+4C477F3: CC                 - int 3
     <CheatEntry>
       <ID>160</ID>
       <Description>"_not working"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>808080</Color>
       <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>185</ID>
+          <Description>"Try to get racing timer"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-02-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_RACING_FAKE_TIMER,$process,58 44 24 50 0F 28 74 24 20) // should be unique
+alloc(newmem,$1000,INJECT_GET_RACING_FAKE_TIMER)
+
+label(code)
+label(return i_base_rtimer_addr_fake)
+
+newmem:
+  pushfq
+  cmp dword ptr [rdi+8], 0
+  jne endp_p1
+  cmp qword ptr [rdi+10], 0
+  jne endp_p1
+  cmp qword ptr [rdi+30], 0
+  jne endp_p1
+  cmp dword ptr [rdi+C], 0
+  je endp_p1
+  cmp dword ptr [rdi+1C], 0
+  je endp_p1
+  cmp dword ptr [rdi+20], 0
+  je endp_p1
+  cmp dword ptr [rdi+84], 0
+  jne endp_p1
+  cmp dword ptr [rdi+8C], 0
+  jne endp_p1
+
+  mov [i_base_rtimer_addr_fake], rdi
+
+endp_p1:
+  popfq
+
+
+code:
+  movaps xmm6,[rsp+20]
+  jmp return
+align 10 cc
+  i_base_rtimer_addr_fake:
+  dq 0
+
+INJECT_GET_RACING_FAKE_TIMER+04:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_RACING_FAKE_TIMER i_base_rtimer_addr_fake)
+
+[DISABLE]
+
+INJECT_GET_RACING_FAKE_TIMER+04:
+  db 0F 28 74 24 20
+
+unregistersymbol(INJECT_GET_RACING_FAKE_TIMER i_base_rtimer_addr_fake)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.exe+39321DF
+
+ES2-Win64-Shipping.exe+39321AE: 4C 8B 83 88 00 00 00  - mov r8,[rbx+00000088]
+ES2-Win64-Shipping.exe+39321B5: 48 8D 54 24 48        - lea rdx,[rsp+48]
+ES2-Win64-Shipping.exe+39321BA: 49 8B 40 18           - mov rax,[r8+18]
+ES2-Win64-Shipping.exe+39321BE: 48 89 83 88 00 00 00  - mov [rbx+00000088],rax
+ES2-Win64-Shipping.exe+39321C5: E8 F6 B6 B8 FD        - call ES2-Win64-Shipping.exe+14BD8C0
+ES2-Win64-Shipping.exe+39321CA: 48 8B 43 20           - mov rax,[rbx+20]
+ES2-Win64-Shipping.exe+39321CE: 33 C9                 - xor ecx,ecx
+ES2-Win64-Shipping.exe+39321D0: F2 0F 10 44 24 48     - movsd xmm0,[rsp+48]
+ES2-Win64-Shipping.exe+39321D6: 48 85 C0              - test rax,rax
+ES2-Win64-Shipping.exe+39321D9: F2 0F 58 44 24 50     - addsd xmm0,[rsp+50]
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.exe+39321DF: 0F 28 74 24 20        - movaps xmm6,[rsp+20]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.exe+39321E4: 0F 95 C1              - setne cl
+ES2-Win64-Shipping.exe+39321E7: 48 03 C8              - add rcx,rax
+ES2-Win64-Shipping.exe+39321EA: 48 89 4B 20           - mov [rbx+20],rcx
+ES2-Win64-Shipping.exe+39321EE: 48 8B 5C 24 40        - mov rbx,[rsp+40]
+ES2-Win64-Shipping.exe+39321F3: F2 0F 11 07           - movsd [rdi],xmm0
+ES2-Win64-Shipping.exe+39321F7: 48 83 C4 30           - add rsp,30
+ES2-Win64-Shipping.exe+39321FB: 5F                    - pop rdi
+ES2-Win64-Shipping.exe+39321FC: C3                    - ret 
+ES2-Win64-Shipping.exe+39321FD: CC                    - int 3 
+ES2-Win64-Shipping.exe+39321FE: CC                    - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>186</ID>
+              <Description>"time (not real address)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Double</VariableType>
+              <Address>i_base_rtimer_addr_fake</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>161</ID>
@@ -3701,6 +3907,83 @@ ES2-Win64-Shipping.exe+3BF51DE: 48 89 AB 08 04 00 00  - mov [rbx+00000408],rbp
               </Offsets>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>184</ID>
+          <Description>"Auto Assemble script"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ES2-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-02-16
+  Author : Andyc
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT,ES2-Win64-Shipping.exe,90 0F B6 02 41 88 04 11) // should be unique
+alloc(newmem,$1000,INJECT)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  mov r15, 1C8ADDAECD8
+  cmp rdx, r15
+  jne @F
+  mov r15d, 1
+@@:
+  pop r15
+
+code:
+  movzx eax,byte ptr [rdx]
+  mov [r9+rdx],al
+  jmp return
+
+INJECT+01:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT)
+
+[DISABLE]
+
+INJECT+01:
+  db 0F B6 02 41 88 04 11
+
+unregistersymbol(INJECT)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E70
+
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E4F: 0F 2B 54 11 20  - movntps [rcx+rdx+20],xmm2
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E54: 0F 2B 5C 11 30  - movntps [rcx+rdx+30],xmm3
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E59: 48 83 C2 40     - add rdx,40
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E5D: 48 83 E8 01     - sub rax,01
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E61: 75 CD           - jne ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E30
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E63: 41 83 E0 3F     - and r8d,3F
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E67: 4D 85 C0        - test r8,r8
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E6A: 74 15           - je ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E81
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E6C: 4C 2B CA        - sub r9,rdx
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E6F: 90              - nop 
+// ---------- INJECTING HERE ----------
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E70: 0F B6 02        - movzx eax,byte ptr [rdx]
+// ---------- DONE INJECTING  ----------
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E73: 41 88 04 11     - mov [r9+rdx],al
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E77: 48 8D 52 01     - lea rdx,[rdx+01]
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E7B: 49 83 E8 01     - sub r8,01
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E7F: 75 EF           - jne ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E70
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E81: 49 8B C2        - mov rax,r10
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E84: C3              - ret 
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E85: CC              - int 3 
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E86: CC              - int 3 
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E87: CC              - int 3 
+ES2-Win64-Shipping.NVSDK_NGX_VULKAN_Shutdown1+E88: CC              - int 3 
+}
+</AssemblerScript>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
