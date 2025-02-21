@@ -1,5 +1,8 @@
 # Change log
 
+## 2025/02/21
+1. revised for v1.0.0.5
+
 ## 2025/01/27
 1. added Battle: Guard skill timer multiplier
 
