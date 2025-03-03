@@ -1,16 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>159</ID>
       <Description>"Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -56,16 +95,7 @@ g_dynBasketAddress = getAddressSafe("Atelier_Sophie_2.exe")+0x18E632C  --1.08
 
 MaxBasketCount = readSmallInteger(dynBasketAddress)
 
-
---g_importBaseAddress = getAddressSafe("Atelier_Sophie_2.exe")+0x18C2AB0 -- 1.05
-
-
-
-
-getLuaEngine().MenuItem5.doClick()
---aobscanmodule(INJECT_DIFFICULT_AOB,Atelier_Sophie_2.exe,8B 05 ?? ?? ?? ?? 89 45 A4 33 C0)
---aobscanmodule(INJECT_TIME_AOB,Atelier_Sophie_2.exe,48 8B 05 ?? ?? ?? ?? 48 89 01 48 8B C1 C3 CC CC 8B 05 ?? ?? ?? ?? C3 CC) // should be unique
---aobscanmodule(INJECT_RANK,Atelier_Sophie_2.exe,8B 15 ?? ?? ?? ?? 83 CB FF ) // should be unique
+synchronize(function() getLuaEngine().MenuItem5.doClick() end)
 
 local _dbg = true
 if (_dbg) then
@@ -105,9 +135,9 @@ if (_dbg) then
       --print(k1,v1)
     end
     local aob_addr_str = AOBScanModule('Atelier_Sophie_2.exe', a2, '+X-C-W')
-    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local name_addr_str = getAddressSafe(aob_addr_str)+a3
     local name_addr_val = readInteger(name_addr_str)
-    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local aob_addr_val = tonumber(aob_addr_str, 16)
     local final_addr_val = name_addr_val + aob_addr_val + a4
     --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
     registerSymbol(a5, final_addr_val)
@@ -115,10 +145,9 @@ if (_dbg) then
   end
 end
 
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 {$asm}
 
- 
 [DISABLE]
 //code from here till the end of the code will be used to disable the cheat
 {$asm}
@@ -135,163 +164,149 @@ for i = 1, a_len do
   --print(disable_array[i])
   unregisterSymbol(disable_array[i])
 end
-
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
           <ID>6667</ID>
-          <Description>"Turn battle scripts On/Off"</Description>
+          <Description>"Turn scripts On/Off"</Description>
+          <Color>4080FF</Color>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>[ENABLE]
+          <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
-battle_array = {159, 203, 5184, 130, 1385, 128, 202, 5166, 5163, 6676, 9492, 9495, 9518, 13961}
-battle_array_value = {[129] = "4"}
-
-local a_len = #(battle_array)
-
-local i = 0
-
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
-end
-
-
-
---local v_len = #(battle_array_value)
-local m1 = nil
-
-for m_id, m_value in pairs(battle_array_value) do
-  m1 = getAddressList().getMemoryRecordByID(m_id)
-  if (m1) then
-    m1.Value = m_value
+local enableBattleScripts = {
+  130, -- "Recover HP/MP after battle"
+  1385, -- "Unlimited item use"
+  13961, -- "Major gathering spots (大採取) - Good result"
+  2163, -- "Container, Basket &amp; drop item+"
+  5184, -- "Alchemy EXP multiplier"
+  6676, -- "Walk/Run speed hack"
+  6687, -- "Static values+"
+  6703, -- "AP use reduction"
+  7963, -- "Fast party quests / recipe ideas complete"
+  9430, -- "Item Editor (choose one)"
+  9521, -- "Min. hunting certificates"
+  128, -- "Damage control"
+  1386, -- "EXP multiplier"
+  202, -- "MP does not decrease"
+  5163, -- "Cole multiplier"
+  5166, -- "Faster TP grow"
+  5168, -- "Slower TP down"
+  9492, -- "Fast aura break"
+  9495, -- "Fast dual gauge"
+  9518, -- "No weather control item # decrease"
+  5175, -- "#1: Fire, Ice, Lightning (火/冰/雷)"
+  5178, -- "#2: Wind, Light (風 / 光)"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
+    end
+    addressList.refresh()
   end
-end
-
---[[
---159 Compact mode
---203 Battle+
---5184 Alchemy EXP multiplier
---130 Recover HP/MP after battle
---1385 Unlimited item use
---128 Damage control
---202 MP does not decrease
---5166 Faster TP grow
---5168 Slower TP down
---5163 Cole multiplier
---6676 Run speed hack
---9492 Fast aura break
---9495 Fast duel gauge
---9518 No weather control item # decrease
---13961 Major gathering spots (大採取) - Good result
-]]
-
---[[
---129 Damage type to player
-getAddressList().getMemoryRecordByID(129).Value = "4" --4:One fourth / 四分の一
-]]
-
-print("Battle scripts ON; Total " .. a_len .. " items.")
-
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
-local a_len = #(battle_array)
-
-local i = 0
-
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = false
-end
-
-print("Battle scripts OFF.")
-
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>6668</ID>
-          <Description>"All scripts off"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>[ENABLE]
-{$lua}
---NO_ACTIVATE
-if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
-
-
-local disable_array = {9470, 159, 5184, 130, 1385, 203, 128, 202, 5166, 5168, 5163,
-                 184, 6664, 2167, 2163, 2164, 5179, 5175, 5178, 5180, 5187,
-                 6667, 6676, 6687, 6703, 7963, 9430, 9385, 9492, 9495, 11239, 13961,
-                 9518, 9521,
-                 9509, 9512, 9498, 9508, 12732}
-
-local a_len = #(disable_array)
-
-local i = 0
-
-for i = 1, a_len do
-  --print(disable_array[i])
-  getAddressList().getMemoryRecordByID(disable_array[i]).Active = false
-end
-
-
---[[
---9470 3. Auto set (every 10 sec)
---159 Compact mode
---5184 Alchemy EXP multiplier
---130 Recover HP/MP after battle
---1385 Unlimited item use
---203 Battle+
---128 Damage control
---202 MP does not decrease
---5166 Faster TP grow
---5168 Slower TP down
---5163 Cole multiplier
---184 Item editor (to use: open container / equip / basket)
---6664 Set Basket items quality
---2167 Set Container items quality
---2163 Container, Basket &amp; drop item+
---2164 Chars+ (non-battle)
---5179 Synthesis / 調合+ (Caution: not fully tested)
---5175 #1: Fire, Ice, Lightning (火/冰/雷)
---5178 #2: Wind, Light (風 / 光)
---5180 Remove syn. limitation &amp; max level (効果レベル制限解除/レベルマックス)
---5187 Adjust elements level
---6667  Turn battle scripts On/Off
---6676 Run speed hack
---6687 Static values+
---6703 AP use reduction
---7963 Instant party quests complete
---9430 Item Editor (choose one)
---9385 Item editor EN (to use: open container / equip / basket)
---9485 Quest list mark+ (read only)
---9492 Fast aura broken
---9495 Fast duel gauge
---9518 No weather control item # decrease
---9521 Min. hunting certificates
---11239 Item editor / 繁體中文(施工中) (啟用：打開材料箱 / 裝備 / 籃子)
---13961 Major gathering spots (大採取) - Good result
-]]
-
---[[
---9508 _debug
---9509 Get basket size &amp; addr (open basket)
---9512 Get Sophie Alchemy LV value &amp; addr (open menu)
---9498 idea menu
-]]
-
-print("Turn all scripts off. Total: " .. a_len .. " items.")
-[DISABLE]
-
-
+local disableBattleScripts = {
+  9421, -- "Component 4"
+  9417, -- "Component 3"
+  9413, -- "Component 2"
+  9409, -- "Component 1"
+  2213, -- "成分4"
+  2212, -- "成分3"
+  2211, -- "成分2"
+  2210, -- "成分1"
+  11274, -- "鍊金成分4"
+  11270, -- "鍊金成分3"
+  11266, -- "鍊金成分2"
+  11262, -- "鍊金成分1"
+  9470, -- "3. ....or: auto set (v1.08; every 10 sec)"
+  9403, -- "Element / component / link+"
+  9386, -- "Duplicate highlighted item (3x) to container (v1.08 only)"
+  6666, -- "2. Go (v1.08)"
+  5178, -- "#2: Wind, Light (風 / 光)"
+  5175, -- "#1: Fire, Ice, Lightning (火/冰/雷)"
+  2230, -- "属性 / 成分 / リンク+"
+  2169, -- "2. Go (v1.08)"
+  2165, -- "Duplicate highlighted item (3x) to container (v1.08 only)"
+  11256, -- "屬性 / 成分 / 連結+"
+  11240, -- "複製目前選擇的物品 x3 到材料箱 (注意：只限v1.08版)"
+  9518, -- "No weather control item # decrease"
+  9512, -- "Get Sophie Alchemy LV value &amp; addr (open menu)"
+  9509, -- "Get basket size &amp; its addr (open basket)"
+  9498, -- "test: idea menu "
+  9495, -- "Fast dual gauge"
+  9492, -- "Fast aura break"
+  9385, -- "Item editor / English (to use: open container / equip / basket)"
+  6697, -- "AP+"
+  6684, -- "Coords. info. +"
+  6664, -- "Set Basket items quality"
+  5187, -- "Adjust elements level"
+  5180, -- "Remove syn. LV limit &amp; max level"
+  5168, -- "Slower TP down"
+  5166, -- "Faster TP grow"
+  5163, -- "Cole multiplier"
+  3684, -- "Drop item 1st addr"
+  2167, -- "Set Container items quality"
+  2166, -- "Set Container item usage count to 90 (if &gt;=2)(v1.08)"
+  208, -- "Basket 1st item addr"
+  202, -- "MP does not decrease"
+  2, -- "Sophie / ソフィー / 蘇菲"
+  184, -- "Item editor / 日本語 (to use: open container / equip / basket)"
+  158, -- "Container 1st item addr"
+  15629, -- "Get IDs"
+  15625, -- "Get char stat base AOB"
+  15381, -- "Diebold / ディーボルト / 迪伯爾德"
+  15137, -- "Olias / オリアス / 奧利亞斯"
+  14893, -- "Alette / アレット / 阿蕾特"
+  14649, -- "Ramizel / ラミゼル / 拉米潔兒"
+  14405, -- "Plachta / プラフタ/ 普拉芙妲"
+  1386, -- "EXP multiplier"
+  128, -- "Damage control"
+  12732, -- "Get 1st Ability point address (open ability menu)"
+  11239, -- "Item editor / 繁體中文 (啟用：打開材料箱 / 裝備 / 籃子)"
+  9521, -- "Min. hunting certificates"
+  9508, -- "_debug"
+  9430, -- "Item Editor (choose one)"
+  7963, -- "Fast party quests / recipe ideas complete"
+  6703, -- "AP use reduction"
+  6687, -- "Static values+"
+  6676, -- "Walk/Run speed hack"
+  6668, -- "All scripts off"
+  6667, -- "Turn battle scripts On/Off"
+  5184, -- "Alchemy EXP multiplier"
+  5179, -- "Synthesis / 調合+"
+  2164, -- "Chars+ (non-battle)"
+  2163, -- "Container, Basket &amp; drop item+"
+  203, -- "Battle+"
+  13961, -- "Major gathering spots (大採取) - Good result"
+  1385, -- "Unlimited item use"
+  130, -- "Recover HP/MP after battle"
+  159, -- "Compact mode"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 
 </AssemblerScript>
         </CheatEntry>
@@ -13516,17 +13531,12 @@ Offset:
     </CheatEntry>
     <CheatEntry>
       <ID>15626</ID>
-      <Description>"Atelier Sophie 2 v1.08  /  https://opencheattables.com  /  CE 7.5+"</Description>
-      <Color>400080</Color>
+      <Description>"Atelier Sophie 2 v1.08  /  https://opencheattables.com  /  CE 7.6"</Description>
+      <Color>00B900</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>tapmult</Name>
-      <Address>2088B700000</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <Comments>Author : bbfox@ ＯＰＥＮＣＨＥＡＴＴＡＢＬＥＳ.ＯＲＧ
 len=44
 59 00 01 00 F0 01 32 00 32 00 8F 02 8F 02 8F 02 D0 04 12 08 30 08 60 06 04 FF FF FF 01 FF FF FF 00 FF FF FF 01 01 00 00 00 00 00 00
@@ -13583,30 +13593,74 @@ function onMemRecPreExecute(memoryrecord, newstate)
     end
 end
 
-function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
-	--checkArgType(moduleName, 1, 'string')
-	if not signature or not moduleName then return end
-	index = index or 1
-	local modStartAddr = getAddress(moduleName)
-	local modEndAddr = modStartAddr + getModuleSize(moduleName)
-	local ms = createMemScan()
-	if type(signature) == 'table' then
-		local sig = ''
-		for i, byte in ipairs(signature) do
-			sig = sig..string.format('%02X', byte)
-		end
-		signature = sig
-	end
-	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
-				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
-	ms.waitTillDone()
-	local results = createFoundList(ms)
-	results.initialize()
-	ms.destroy()
-	return results
-end
-registerLuaFunctionHighlight('AOBScanModule')
+function AOBScanModule(moduleName, signature, scanOptions)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList = enumModules()
 
+    for _, mod in ipairs(modList) do
+        if string.lower(mod.Name) == string.lower(moduleName) then
+            baseAddr = mod.Address
+            maxAddr = baseAddr + mod.Size
+            break
+        end
+    end
+
+    if not baseAddr then
+        print("❌ Error: Module " .. moduleName .. " not found!")
+        return nil
+    end
+
+    -- Debug:
+    --print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
+    --print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+
+    local ms = createMemScan()
+    ms.firstScan(
+        soExactValue,   -- exact scan
+        vtByteArray,    -- AOB scan: Byte Array
+        nil,            -- RoundingType (no used)
+        signature,      -- AOB String
+        nil,            -- no need by this scanoption
+        baseAddr,       -- start addr
+        maxAddr,        -- stop addr
+        scanOptions or "+X+R", -- memory protectionflags
+        fsmNotAligned,  -- no alignment
+        "1",            -- alignment
+        true,           -- using Hexadecimal
+        true,           -- isNotABinaryString
+        false,          -- isUnicode
+        false           -- isCaseSensitive
+    )
+
+    ms.waitTillDone()
+
+    local results = createFoundList(ms)
+    results.initialize()
+
+    if results.getCount() &gt; 0 then
+        local addr = results[0]
+        --print("🎯 AOB found at: 0x" .. addr)
+        results.destroy()
+        ms.destroy()
+        return addr
+    else
+        --print("❌ AOB not found in " .. moduleName)
+        results.destroy()
+        ms.destroy()
+        return nil
+    end
+end
+
+-- test `AOBScanModule()
+--local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+--if aob_addr_str then
+--    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+--else
+--    print("❌ AOB not found in ???.exe")
+--end
+
+registerLuaFunctionHighlight('AOBScanModule')
 
 
 AddressList.Header.OnSectionClick = nil
