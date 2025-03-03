@@ -145,6 +145,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("    if memRec then");
             scriptBuilder.AppendLine("      memRec.Active = true");
             scriptBuilder.AppendLine("    end");
+            scriptBuilder.AppendLine("    addressList.refresh()");
             scriptBuilder.AppendLine("  end");
             scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
@@ -168,6 +169,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("    if memRec then");
             scriptBuilder.AppendLine("      memRec.Active = false");
             scriptBuilder.AppendLine("    end");
+            scriptBuilder.AppendLine("    addressList.refresh()");
             scriptBuilder.AppendLine("  end");
             scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
