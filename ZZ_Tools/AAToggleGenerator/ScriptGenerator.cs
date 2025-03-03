@@ -204,9 +204,9 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("synchronize(function()");
             scriptBuilder.AppendLine("  for _, id in ipairs(enableBattleScripts) do");
             scriptBuilder.AppendLine("    local memRec = addressList.getMemoryRecordByID(id)");
-            scriptBuilder.AppendLine("    if memRec then");
+            scriptBuilder.AppendLine("    if memRec and not memRec.Active then");
             scriptBuilder.AppendLine("      memRec.Active = true");
-            scriptBuilder.AppendLine("      sleep(50)");
+            scriptBuilder.AppendLine("      sleep(30)");
             scriptBuilder.AppendLine("    end");
             scriptBuilder.AppendLine("    addressList.refresh()");
             scriptBuilder.AppendLine("  end");
@@ -231,9 +231,9 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("synchronize(function()");
             scriptBuilder.AppendLine("  for _, id in ipairs(disableBattleScripts) do");
             scriptBuilder.AppendLine("    local memRec = addressList.getMemoryRecordByID(id)");
-            scriptBuilder.AppendLine("    if memRec then");
+            scriptBuilder.AppendLine("    if memRec and memRec.Active then");
             scriptBuilder.AppendLine("      memRec.Active = false");
-            scriptBuilder.AppendLine("      sleep(50)");
+            scriptBuilder.AppendLine("      sleep(30)");
             scriptBuilder.AppendLine("    end");
             scriptBuilder.AppendLine("    addressList.refresh()");
             scriptBuilder.AppendLine("  end");
