@@ -1,16 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>10</ID>
       <Description>"Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -53,8 +92,7 @@ MaxContainerCount = readSmallInteger(g_containerSizeAddress)
 g_dynBasketAddress = getAddressSafe("Atelier_Ryza.exe")+0x1519FD0 -- 1.09
 MaxBasketCount = readSmallInteger(g_dynBasketAddress)
 
-getLuaEngine().MenuItem5.doClick()
-getLuaEngine().Close()
+closeLuaEngine2()
 
 local _dbg = true
 if (_dbg) then
@@ -94,9 +132,9 @@ if (_dbg) then
       --print(k1,v1)
     end
     local aob_addr_str = AOBScanModule('Atelier_Ryza.exe', a2, '+X-C-W')
-    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local name_addr_str = getAddressSafe(aob_addr_str)+a3
     local name_addr_val = readInteger(name_addr_str)
-    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local aob_addr_val = tonumber(aob_addr_str, 16)
     local final_addr_val = name_addr_val + aob_addr_val + a4
     --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
     registerSymbol(a5, final_addr_val)
@@ -123,7 +161,7 @@ for i = 1, a_len do
   unregisterSymbol(disable_array[i])
 end
 
-getLuaEngine().Close()
+closeLuaEngine()
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
@@ -134,59 +172,111 @@ getLuaEngine().Close()
           <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
-if (getAddressSafe('Atelier_Ryza.exe') == nil)
-then
-  print("Please load Atelier_Ryza.exe first")
-else
-
-  battle_array = {9525, 2217, 39, 637,
-                  609, 34, 0, 14, 573, 17, 22, 31, 43, 37, 2226, 2225, 2223, 9524
-                  }
-  --battle_array_value = {[607] = "0.749"}
-
-  local a_len = #(battle_array)
-
-  local i = 0
-
-  for i = 1, a_len do
-    getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
-  end
-
-
---[[
-  --local v_len = #(battle_array_value)
-  local m1 = nil
-
-  for m_id, m_value in pairs(battle_array_value) do
-    m1 = getAddressList().getMemoryRecordByID(m_id)
-    if (m1) then
-      m1.Value = m_value
+local enableBattleScripts = {
+  10, -- "Compact mode"
+  0, -- "Walk/Run speed hack"
+  14, -- "Recover HP after battle"
+  34, -- "Cole multiplier"
+  39, -- "+Battle scripts"
+  604, -- "Item Editor (choose one)"
+  9525, -- "+Synthesis / 調合"
+  17, -- "Battle: HP/Stun gauge"
+  22, -- "Battle: AP increase multiplier"
+  2225, -- "No CC cost for Consumables"
+  2226, -- "Battle: core charges do not decrease"
+  31, -- "Battle: AP decrease multiplier"
+  37, -- "Battle: EXP multiplier"
+  43, -- "Battle: Damage control"
+  42, -- "Battle: MP does not decrease"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
     end
+    addressList.refresh()
   end
---]]
-  getLuaEngine().menuItem5.doClick()
-  print("Most scripts ON; Total " .. a_len .. " items.")
-  getLuaEngine().Close()
-end
-
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
-local a_len = #(battle_array)
-
-local i = 0
-
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = false
-end
-
-print("Most scripts OFF.")
-getLuaEngine().Close()
+local disableBattleScripts = {
+  9568, -- "將所選的物品複製3份到材料箱 (v1.09 only)"
+  9531, -- "Duplicate highlighted item (3x) to container (v1.09 only)"
+  9527, -- "Duplicate highlighted item (3x) to container (v1.09 only)"
+  9567, -- "調合修改器ー -正體中文 -"
+  9559, -- "+攻防速等加成"
+  9537, -- "將所選的物品複製3份到材料箱 (v1.09 only)"
+  9470, -- "3. ....or: auto set (v1.09; every 10 sec)"
+  6666, -- "2. Go (v1.09)"
+  636, -- "Duplicate highlighted item (3x) to container (v1.09 only)"
+  635, -- "Duplicate highlighted item (3x) to container (v1.09 only)"
+  611, -- "調合アイテムエディター -日本語 -"
+  596, -- "+Equip modifier"
+  570, -- "+Equip modifier"
+  42, -- "Battle: MP does not decrease"
+  28, -- "+Info"
+  2196, -- "Synthesis Item Editor -English-"
+  2169, -- "2. Go (v1.09)"
+  9536, -- "物品修改器 - 正體中文 -"
+  9530, -- "_WIP"
+  9524, -- "Synthesis: Fast unlock connected loops ( マテリアル環接続ロックを解除)"
+  8, -- "Coords"
+  6664, -- "+Set Basket items quality"
+  609, -- "Set min. quality when store the item into container"
+  574, -- "Item Editor - English -"
+  573, -- "Faster party quests"
+  51, -- "アイテムエディター -日本語 -"
+  43, -- "Battle: Damage control"
+  37, -- "Battle: EXP multiplier"
+  31, -- "Battle: AP decrease multiplier"
+  2226, -- "Battle: core charges do not decrease"
+  2225, -- "No CC cost for Consumables"
+  2223, -- "Synthesis: material loop (マテリアル環) multiplier "
+  2220, -- "Synthesis: # of material used"
+  2218, -- "Fastest party quests (may cause bug)"
+  22, -- "Battle: AP increase multiplier"
+  2195, -- "Synthesis Item Editor (Choose one)"
+  2167, -- "+Set Container items quality"
+  208, -- "Basket 1st item addr"
+  17, -- "Battle: HP/Stun gauge"
+  158, -- "Container 1st item addr"
+  11, -- "Get container / basket size &amp; addr (open basket or container)"
+  9525, -- "+Synthesis / 調合"
+  637, -- "+Container, Basket &amp; drop item"
+  604, -- "Item Editor (choose one)"
+  47, -- "Group 7"
+  39, -- "+Battle scripts"
+  34, -- "Cole multiplier"
+  29, -- "_Debug"
+  2234, -- "+Puni stats / ぷに"
+  2233, -- "+Static values"
+  2217, -- "+Party quests (choose one)"
+  14, -- "Recover HP after battle"
+  0, -- "Walk/Run speed hack"
+  41, -- "Atelier Ryza: Ever Darkness &amp; the Secret Hideout 1.09  /  https://opencheattables.com  /  CE 7.6"
+  10, -- "Compact mode"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 
 </AssemblerScript>
           <CheatEntries>
@@ -197,38 +287,6 @@ getLuaEngine().Close()
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
           </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>9521</ID>
-          <Description>"Turn all scripts off"</Description>
-          <Color>0080FF</Color>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript Async="1">[ENABLE]
-{$lua}
---NO_ACTIVATE
-if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
-
-
-local disable_array = {8, 609, 34, 0, 14, 573, 17, 22, 31, 43, 37, 2226, 2225, 2223, 2220, 2234, 11, 2218, 9524, 9536, 9567,
-                       2233, 2217, 39, 637, 604, 2195, 29, 9520, 10, 9525
-                       }
-
-local a_len = #(disable_array)
-
-local i = 0
-
-for i = 1, a_len do
-  --print(disable_array[i])
-  getAddressList().getMemoryRecordByID(disable_array[i]).Active = false
-end
-
-print("Turn all scripts off. Total: " .. a_len .. " items (and its sub-item(s)) checked.")
-[DISABLE]
-
-
-</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>2233</ID>
@@ -3533,7 +3591,7 @@ unregistersymbol(basket_space_left)
 --NO_ACTIVATE
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
-getLuaEngine().MenuItem5.doClick()
+clearLuaLog()
 print("Start")
 
 --getLuaEngine().MenuItem5.doClick()
@@ -5502,9 +5560,9 @@ Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+00
     </CheatEntry>
     <CheatEntry>
       <ID>41</ID>
-      <Description>"Atelier Ryza: Ever Darkness &amp; the Secret Hideout 1.09  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Atelier Ryza: Ever Darkness &amp; the Secret Hideout 1.09  /  https://opencheattables.com  /  CE 7.6"</Description>
       <Options moHideChildren="1"/>
-      <Color>400080</Color>
+      <Color>00B700</Color>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
@@ -10345,12 +10403,6 @@ MaxBasketCount = 100
 
 g_containerBaseAddress = nil
 
---print(MaxBasketCount)
-
---local dynBasketAddress = getAddressSafe("???.exe")+0x?????
---MaxBasketCount = readSmallInteger(dynBasketAddress)
---print(MaxBasketCount)
-
 ItemRecordSize = 66
 
 --lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
@@ -10365,7 +10417,6 @@ IDs = {41, 158, 208,
        }
 
 --determine event trigger sequence
-
 
 function contains(table, val)
    local i = 0
@@ -10386,29 +10437,96 @@ function onMemRecPreExecute(memoryrecord, newstate)
     end
 end
 
-function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
-	--checkArgType(moduleName, 1, 'string')
-	if not signature or not moduleName then return end
-	index = index or 1
-	local modStartAddr = getAddress(moduleName)
-	local modEndAddr = modStartAddr + getModuleSize(moduleName)
-	local ms = createMemScan()
-	if type(signature) == 'table' then
-		local sig = ''
-		for i, byte in ipairs(signature) do
-			sig = sig..string.format('%02X', byte)
-		end
-		signature = sig
-	end
-	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
-				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
-	ms.waitTillDone()
-	local results = createFoundList(ms)
-	results.initialize()
-	ms.destroy()
-	return results
+function AOBScanModule(moduleName, signature, scanOptions)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList = enumModules()
+
+    for _, mod in ipairs(modList) do
+        if string.lower(mod.Name) == string.lower(moduleName) then
+            baseAddr = mod.Address
+            maxAddr = baseAddr + mod.Size
+            break
+        end
+    end
+
+    if not baseAddr then
+        print("❌ Error: Module " .. moduleName .. " not found!")
+        return nil
+    end
+
+    -- Debug:
+    --print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
+    --print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+
+    local ms = createMemScan()
+    ms.firstScan(
+        soExactValue,   -- exact scan
+        vtByteArray,    -- AOB scan: Byte Array
+        nil,            -- RoundingType (no used)
+        signature,      -- AOB String
+        nil,            -- no need by this scanoption
+        baseAddr,       -- start addr
+        maxAddr,        -- stop addr
+        scanOptions or "+X+R", -- memory protectionflags
+        fsmNotAligned,  -- no alignment
+        "1",            -- alignment
+        true,           -- using Hexadecimal
+        true,           -- isNotABinaryString
+        false,          -- isUnicode
+        false           -- isCaseSensitive
+    )
+
+    ms.waitTillDone()
+
+    local results = createFoundList(ms)
+    results.initialize()
+
+    if results.getCount() &gt; 0 then
+        local addr = results[0]
+        --print("🎯 AOB found at: 0x" .. addr)
+        results.destroy()
+        ms.destroy()
+        return addr
+    else
+        --print("❌ AOB not found in " .. moduleName)
+        results.destroy()
+        ms.destroy()
+        return nil
+    end
 end
+
+-- test `AOBScanModule()
+--local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+--if aob_addr_str then
+--    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+--else
+--    print("❌ AOB not found in ???.exe")
+--end
+
 registerLuaFunctionHighlight('AOBScanModule')
+
+function clearLuaLog()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+    end)
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+function closeLuaEngine()
+    synchronize(function()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+function closeLuaEngine2()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
 
 AddressList.Header.OnSectionClick = nil
 </LuaScript>
