@@ -9,40 +9,45 @@
 {$lua}
 if syntaxcheck then return end
 
-if not cycleFullCompact then
-    function cycleFullCompact(sender, force)
-        local state = not (compactmenuitem.Caption == 'Compact View Mode')
-        if force ~= nil then
-            state = not force
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
         end
 
-        compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'
-        synchronize(function() getMainForm().Splitter1.Visible = state end)
-        synchronize(function() getMainForm().Panel4.Visible    = state end)
-        synchronize(function() getMainForm().Panel5.Visible    = state end)
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
     end
 end
 
-if not addCompactMenu then
-    function addCompactMenu()
-        if compactmenualreadyexists then return end
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
 
-        local parent = getMainForm().Menu.Items
-        compactmenuitem = createMenuItem(parent)
-        parent.add(compactmenuitem)
-        compactmenuitem.Caption = 'Compact View Mode'
-        compactmenuitem.OnClick = cycleFullCompact
-        compactmenualreadyexists = 'yes'
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            mainMenu.add(compactViewMenuItem)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+        end)
+
+        isCompactMenuCreated = true
     end
 end
 
-addCompactMenu()
-cycleFullCompact(nil, true)
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
 {$lua}
-if cycleFullCompact then
-    cycleFullCompact(nil, false)
+if toggleCompactView then
+    toggleCompactView(nil, false)
 end
 
 </AssemblerScript>
@@ -60,34 +65,41 @@ synchronize(function() getLuaEngine().Close() end)
 
 local enableBattleScripts = {
   0, -- "精簡模式 / Compact mode"
+  198, -- "英雄傳說 界之軌跡 -告別塞姆利亞- v1.02  /  https://opencheattables.com / CE 7.6"
   2, -- "啟用 / Enable"
-  10, -- "空洞核心EXP倍率 / Battle: master quatrz XP multiplier"
-  12, -- "EXP倍率 / Battle: EXP multiplier"
+  10, -- "EP/CP全滿 / Battle: EP/CP full"
+  11, -- "空洞核心EXP倍率 / Battle: master quatrz XP multiplier"
+  13, -- "EXP倍率 / Battle: EXP multiplier"
   138, -- "Connect至少為1 / keep connect at least 1"
   139, -- "角色狀態檢視 / Char. viewer"
-  14, -- "暈眩量表倍率 / Battle: Break multiplier"
-  16, -- "額外連段數 / Battle: extra chain"
+  15, -- "暈眩量表倍率 / Battle: Break multiplier"
+  17, -- "額外連段數 / Battle: extra chain"
   176, -- "取得LGC資料 / Get LGC Data"
-  18, -- "晶片增幅量表增加倍率 / Battle: S-Boost inc. multiplier"
-  199, -- "服裝更換：啟用紳士視角 / Costume: enable Ecchi perspective"
-  24, -- "蓄力量表倍率 / Battle: Charge multiplier"
-  27, -- "取得或設定選擇中道具的數量 / Get or set focused item count"
-  40, -- "使用及裝備道具時數量不減 / Item use or equip: stock no decrease"
-  47, -- "快速釣魚 / fast fishing"
-  5, -- "傷害倍率 / Battle: damage multiplier"
+  19, -- "晶片增幅量表增加倍率 / Battle: S-Boost inc. multiplier"
+  197, -- "服裝更換：啟用紳士視角 / Costume: enable Ecchi perspective"
+  25, -- "蓄力量表倍率 / Battle: Charge multiplier"
+  28, -- "取得或設定選擇中道具的數量 / Get or set focused item count"
+  3, -- "Must: 快速釣魚 / fast fishing"
+  41, -- "使用及裝備道具時數量不減 / Item use or equip: stock no decrease"
+  48, -- "釣果記錄 / Get fishing data"
   58, -- "Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier"
+  6, -- "傷害倍率 / Battle: damage multiplier"
   60, -- "駭入時停止計時 / Stop hacking timer"
   61, -- "駭入．防壁解除時間無限 / inf. barrier cracking time"
   62, -- "取得米拉和耀石資訊 / get mira"
-  77, -- "取得目前遊戲時數 / Get readable game time"
+  81, -- "取得目前連結度 / Get current connect value"
   83, -- "任務中進行追蹤不易被發現 / more undetected tracking (found) during quests"
-  9, -- "EP/CP全滿 / Battle: EP/CP full"
-  22, -- "晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"
+  23, -- "晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"
 }
 local addressList = getAddressList()
-for _, id in ipairs(enableBattleScripts) do
-  synchronize(function() addressList.getMemoryRecordByID(id).Active = true end)
-end
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
+    end
+  end
+end)
 synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
@@ -98,8 +110,7 @@ synchronize(function() getLuaEngine().Close() end)
 local disableBattleScripts = {
   87, -- "取得資料 / Get data; max 50"
   56, -- "啟用 / Enable"
-  22, -- "晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"
-  9, -- "EP/CP全滿 / Battle: EP/CP full"
+  23, -- "晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"
   84, -- "取得進行中的成就 / Get in-progress achievement"
   83, -- "任務中進行追蹤不易被發現 / more undetected tracking (found) during quests"
   81, -- "取得目前連結度 / Get current connect value"
@@ -107,34 +118,42 @@ local disableBattleScripts = {
   62, -- "取得米拉和耀石資訊 / get mira"
   61, -- "駭入．防壁解除時間無限 / inf. barrier cracking time"
   60, -- "駭入時停止計時 / Stop hacking timer"
+  6, -- "傷害倍率 / Battle: damage multiplier"
   58, -- "Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier"
   53, -- "強制開啟釣果全記錄 / Force enable all fishing records"
-  5, -- "傷害倍率 / Battle: damage multiplier"
   48, -- "釣果記錄 / Get fishing data"
-  47, -- "快速釣魚 / fast fishing"
-  44, -- "取得空洞核心資料 / Get master quartz data"
-  42, -- "取得所有結晶迴路、設定最少50個 / Get all quartz"
-  40, -- "使用及裝備道具時數量不減 / Item use or equip: stock no decrease"
-  36, -- "更新道具數量：整頁更新 / Update item stock for whole sheet"
-  27, -- "取得或設定選擇中道具的數量 / Get or set focused item count"
-  24, -- "蓄力量表倍率 / Battle: Charge multiplier"
-  199, -- "服裝更換：啟用紳士視角 / Costume: enable Ecchi perspective"
-  196, -- "自製料理 / Cooking list"
-  18, -- "晶片增幅量表增加倍率 / Battle: S-Boost inc. multiplier"
+  45, -- "取得空洞核心資料 / Get master quartz data"
+  43, -- "取得所有結晶迴路、設定最少50個 / Get all quartz"
+  41, -- "使用及裝備道具時數量不減 / Item use or equip: stock no decrease"
+  37, -- "更新道具數量：整頁更新 / Update item stock for whole sheet"
+  3, -- "Must: 快速釣魚 / fast fishing"
+  28, -- "取得或設定選擇中道具的數量 / Get or set focused item count"
+  25, -- "蓄力量表倍率 / Battle: Charge multiplier"
+  197, -- "服裝更換：啟用紳士視角 / Costume: enable Ecchi perspective"
+  194, -- "自製料理 / Cooking list"
+  19, -- "晶片增幅量表增加倍率 / Battle: S-Boost inc. multiplier"
   176, -- "取得LGC資料 / Get LGC Data"
-  16, -- "額外連段數 / Battle: extra chain"
-  14, -- "暈眩量表倍率 / Battle: Break multiplier"
+  17, -- "額外連段數 / Battle: extra chain"
+  15, -- "暈眩量表倍率 / Battle: Break multiplier"
   139, -- "角色狀態檢視 / Char. viewer"
   138, -- "Connect至少為1 / keep connect at least 1"
-  12, -- "EXP倍率 / Battle: EXP multiplier"
-  10, -- "空洞核心EXP倍率 / Battle: master quatrz XP multiplier"
+  13, -- "EXP倍率 / Battle: EXP multiplier"
+  11, -- "空洞核心EXP倍率 / Battle: master quatrz XP multiplier"
+  10, -- "EP/CP全滿 / Battle: EP/CP full"
   2, -- "啟用 / Enable"
+  198, -- "英雄傳說 界之軌跡 -告別塞姆利亞- v1.02  /  https://opencheattables.com / CE 7.6"
+  1, -- "一鍵切換預設 / Toggle Scripts"
   0, -- "精簡模式 / Compact mode"
 }
 local addressList = getAddressList()
-for _, id in ipairs(disableBattleScripts) do
-  synchronize(function() addressList.getMemoryRecordByID(id).Active = false end)
-end
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+    end
+  end
+end)
 synchronize(function() getLuaEngine().Close() end)
 
 </AssemblerScript>
@@ -4697,7 +4716,7 @@ ed9.exe+173F74: 48 23 C8                       - and rcx,rax
     </CheatEntry>
     <CheatEntry>
       <ID>198</ID>
-      <Description>"英雄傳說 界之軌跡 -告別塞姆利亞- v1.02  /  https://opencheattables.com"</Description>
+      <Description>"英雄傳說 界之軌跡 -告別塞姆利亞- v1.02  /  https://opencheattables.com / CE 7.6"</Description>
       <Options moHideChildren="1"/>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
