@@ -139,9 +139,14 @@ namespace AAToggleGenerator
             }
             scriptBuilder.AppendLine("}");
             scriptBuilder.AppendLine("local addressList = getAddressList()");
-            scriptBuilder.AppendLine("for _, id in ipairs(enableBattleScripts) do");
-            scriptBuilder.AppendLine("  synchronize(function() addressList.getMemoryRecordByID(id).Active = true end)");
-            scriptBuilder.AppendLine("end");
+            scriptBuilder.AppendLine("synchronize(function()");
+            scriptBuilder.AppendLine("  for _, id in ipairs(enableBattleScripts) do");
+            scriptBuilder.AppendLine("    local memRec = addressList.getMemoryRecordByID(id)");
+            scriptBuilder.AppendLine("    if memRec then");
+            scriptBuilder.AppendLine("      memRec.Active = true");
+            scriptBuilder.AppendLine("    end");
+            scriptBuilder.AppendLine("  end");
+            scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
 
             scriptBuilder.AppendLine("[DISABLE]");
@@ -157,9 +162,14 @@ namespace AAToggleGenerator
             }
             scriptBuilder.AppendLine("}");
             scriptBuilder.AppendLine("local addressList = getAddressList()");
-            scriptBuilder.AppendLine("for _, id in ipairs(disableBattleScripts) do");
-            scriptBuilder.AppendLine("  synchronize(function() addressList.getMemoryRecordByID(id).Active = false end)");
-            scriptBuilder.AppendLine("end");
+            scriptBuilder.AppendLine("synchronize(function()");
+            scriptBuilder.AppendLine("  for _, id in ipairs(disableBattleScripts) do");
+            scriptBuilder.AppendLine("    local memRec = addressList.getMemoryRecordByID(id)");
+            scriptBuilder.AppendLine("    if memRec then");
+            scriptBuilder.AppendLine("      memRec.Active = false");
+            scriptBuilder.AppendLine("    end");
+            scriptBuilder.AppendLine("  end");
+            scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
 
             // Add comments
