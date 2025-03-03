@@ -1,16 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
       <Description>"精簡模式 / Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not cycleFullCompact then
+    function cycleFullCompact(sender, force)
+        local state = not (compactmenuitem.Caption == 'Compact View Mode')
+        if force ~= nil then
+            state = not force
+        end
+
+        compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'
+        synchronize(function() getMainForm().Splitter1.Visible = state end)
+        synchronize(function() getMainForm().Panel4.Visible    = state end)
+        synchronize(function() getMainForm().Panel5.Visible    = state end)
+    end
+end
+
+if not addCompactMenu then
+    function addCompactMenu()
+        if compactmenualreadyexists then return end
+
+        local parent = getMainForm().Menu.Items
+        compactmenuitem = createMenuItem(parent)
+        parent.add(compactmenuitem)
+        compactmenuitem.Caption = 'Compact View Mode'
+        compactmenuitem.OnClick = cycleFullCompact
+        compactmenualreadyexists = 'yes'
+    end
+end
+
+addCompactMenu()
+cycleFullCompact(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if cycleFullCompact then
+    cycleFullCompact(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
@@ -22,8 +55,8 @@ LuaCall(cycleFullCompact(nil,false))
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
 local enableBattleScripts = {
   0, -- "精簡模式 / Compact mode"
@@ -53,14 +86,14 @@ local enableBattleScripts = {
 }
 local addressList = getAddressList()
 for _, id in ipairs(enableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = true
+  synchronize(function() addressList.getMemoryRecordByID(id).Active = true end)
 end
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
 local disableBattleScripts = {
   87, -- "取得資料 / Get data; max 50"
@@ -100,9 +133,9 @@ local disableBattleScripts = {
 }
 local addressList = getAddressList()
 for _, id in ipairs(disableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = false
+  synchronize(function() addressList.getMemoryRecordByID(id).Active = false end)
 end
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 </AssemblerScript>
     </CheatEntry>
@@ -112,50 +145,12 @@ getLuaEngine().Close()
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
-alloc(newmem,$100,$process+D0000)
-label(i_is_player_chk_type)
-label(i_player_chars_id)
-
-newmem:
-  i_is_player_chk_type:
-  dd 0 // 0 = two factor, 1 = 1 factor
-  i_player_chars_id:
-  dw #174 0
-
-registersymbol(i_is_player_chk_type)
-registersymbol(i_player_chars_id)
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
-getLuaEngine().MenuItem5.doClick()
-
-function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
-	--checkArgType(moduleName, 1, 'string')
-	if not signature or not moduleName then return end
-	index = index or 1
-	local modStartAddr = getAddress(moduleName)
-	local modEndAddr = modStartAddr + getModuleSize(moduleName)
-	local ms = createMemScan()
-	if type(signature) == 'table' then
-		local sig = ''
-		for i, byte in ipairs(signature) do
-			sig = sig..string.format('%02X', byte)
-		end
-		signature = sig
-	end
-	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
-				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
-	ms.waitTillDone()
-	local results = createFoundList(ms)
-	results.initialize()
-	ms.destroy()
-	return results
-end
-registerLuaFunctionHighlight('AOBScanModule')
+synchronize(function() getLuaEngine().MenuItem5.doClick() end)
 
 AddressList.Header.OnSectionClick = nil
-
-
 
 if _kuro_2_customInt == nil then
 
@@ -202,8 +197,6 @@ ret
 _kuro_2_customInt = true
 end
 
-
-
 local _dbg = true
 if (_dbg) then
   local AOBs = {
@@ -211,31 +204,28 @@ if (_dbg) then
   }
 
   for _, v in ipairs(AOBs) do
-    local aob_addr_str = AOBScanModule(process, v.aob, "+X-C-W")
+    local aob_addr_str = AOBScanModule("ed9.exe", v.aob, "+X+R")
     if aob_addr_str then
-      local name_addr_str = getAddressSafe(aob_addr_str[0]) + v.pos
-      local name_addr_val = readInteger(name_addr_str)
-      local aob_addr_val = tonumber(aob_addr_str[0], 16)
-      local final_addr_val = name_addr_val + aob_addr_val + v.aoblen
-      registerSymbol(v.symbol, final_addr_val)
+        local aob_addr_val = tonumber(aob_addr_str, 16)
+        if not aob_addr_val then
+            print("❌ AOBScanModule returned invalid address!")
+        else
+            local name_addr_str = getAddressSafe(aob_addr_val + v.pos)
+            local name_addr_val = readInteger(name_addr_str)
+            local final_addr_val = name_addr_val + aob_addr_val + v.aoblen
+            registerSymbol(v.symbol, final_addr_val)
 
-      -- Debug output
-      --print(string.format("%s address: %08X", v.name, final_addr_val))
+            -- Debug output
+            print(string.format("%s address: %08X", v.name, final_addr_val))
+        end
     else
-      print(string.format("AOB scan failed: %s", v.name))
+        print(string.format("AOB scan failed: %s", v.name))
     end
   end
-  getLuaEngine().Close()
+  synchronize(function() getLuaEngine().Close() end)
 end
 
-
-
 [DISABLE]
-{$asm}
-unregistersymbol(i_is_player_chk_type)
-unregistersymbol(i_player_chars_id)
-dealloc(newmem)
-
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
@@ -245,11 +235,99 @@ for _, symbol in ipairs(disable_array) do
   unregisterSymbol(symbol)
 end
 
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
+
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
           <ID>3</ID>
+          <Description>"Must: 快速釣魚 / fast fishing"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : ed9.exe
+  Version: 
+  Date   : 2025-01-29
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_FISHING,ed9.exe,F3 0F 11 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 E8 ?? ?? ?? 00 0F 57) // should be unique
+alloc(newmem,$1000,INJECT_FAST_FISHING)
+
+alloc(INJECT_FAST_FISHINGo, 8)
+
+label(code)
+label(return)
+label(i_is_player_chk_type)
+label(i_player_chars_id)
+INJECT_FAST_FISHINGo:
+  readmem(INJECT_FAST_FISHING, 8)
+
+newmem:
+  vmovss xmm1, [vf_300]
+
+code:
+  //movss [rcx+00000328],xmm1
+  readmem(INJECT_FAST_FISHING, 8)
+  jmp return
+align 10 cc
+  i_is_player_chk_type:
+    dd 0 // 0 = two factor, 1 = 1 factor
+  i_player_chars_id:
+    dw #174 0
+  vf_300:
+  dd (float)300
+
+INJECT_FAST_FISHING:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FAST_FISHING)
+registersymbol(INJECT_FAST_FISHINGo)
+registersymbol(i_is_player_chk_type)
+registersymbol(i_player_chars_id)
+[DISABLE]
+
+INJECT_FAST_FISHING:
+  //db F3 0F 11 89 28 03 00 00
+  readmem(INJECT_FAST_FISHINGo, 8)
+unregistersymbol(i_is_player_chk_type)
+unregistersymbol(i_player_chars_id)
+unregistersymbol(INJECT_FAST_FISHING)
+dealloc(newmem)
+unregistersymbol(INJECT_FAST_FISHINGo)
+dealloc(INJECT_FAST_FISHINGo)
+{
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+463E03
+
+ed9.exe+463DCD: 48 8B F9                    - mov rdi,rcx
+ed9.exe+463DD0: F3 44 0F 10 15 43 51 5E 00  - movss xmm10,[ed9.exe+A48F1C]
+ed9.exe+463DD9: 41 0F 2F C2                 - comiss xmm0,xmm10
+ed9.exe+463DDD: 76 3C                       - jna ed9.exe+463E1B
+ed9.exe+463DDF: 0F 28 C1                    - movaps xmm0,xmm1
+ed9.exe+463DE2: F3 0F 10 89 28 03 00 00     - movss xmm1,[rcx+00000328]
+ed9.exe+463DEA: F3 0F 59 81 38 03 00 00     - mulss xmm0,[rcx+00000338]
+ed9.exe+463DF2: 48 89 99 2C 03 00 00        - mov [rcx+0000032C],rbx
+ed9.exe+463DF9: 89 99 34 03 00 00           - mov [rcx+00000334],ebx
+ed9.exe+463DFF: F3 0F 5C C8                 - subss xmm1,xmm0
+// ---------- INJECTING HERE ----------
+ed9.exe+463E03: F3 0F 11 89 28 03 00 00     - movss [rcx+00000328],xmm1
+// ---------- DONE INJECTING  ----------
+ed9.exe+463E0B: F3 0F 11 89 20 03 00 00     - movss [rcx+00000320],xmm1
+ed9.exe+463E13: F3 0F 11 89 24 03 00 00     - movss [rcx+00000324],xmm1
+ed9.exe+463E1B: E8 40 45 00 00              - call ed9.exe+468360
+ed9.exe+463E20: 0F 57 F6                    - xorps xmm6,xmm6
+ed9.exe+463E23: 0F 2F B7 28 03 00 00        - comiss xmm6,[rdi+00000328]
+ed9.exe+463E2A: 76 47                       - jna ed9.exe+463E73
+ed9.exe+463E2C: 4C 8B 8F 08 01 00 00        - mov r9,[rdi+00000108]
+ed9.exe+463E33: 4D 85 C9                    - test r9,r9
+ed9.exe+463E36: 74 20                       - je ed9.exe+463E58
+ed9.exe+463E38: 48 63 87 FC 00 00 00        - movsxd  rax,dword ptr [rdi+000000FC]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
           <Description>"判別是否玩家方式 / Player check criteria"</Description>
           <DropDownList DisplayValueAsItem="1">0:較嚴 / All
 1:角色ID、太空戰 / Player ID, Space Battle
@@ -260,7 +338,7 @@ getLuaEngine().Close()
           <Address>i_is_player_chk_type</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>4</ID>
+          <ID>5</ID>
           <Description>"玩家角色ID上限值 / Player side char ID limit"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -268,7 +346,7 @@ getLuaEngine().Close()
           <Address>i_player_chars_id</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>5</ID>
+          <ID>6</ID>
           <Description>"傷害倍率 / Battle: damage multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -280,7 +358,7 @@ getLuaEngine().Close()
 
 [ENABLE]
 
-aobscanmodule(INJECT_DAMAGE_CTRL,$process,41 8B 4A 0C 41 8B 42 14) // should be unique
+aobscanmodule(INJECT_DAMAGE_CTRL,ed9.exe,41 8B 4A 0C 41 8B 42 14) // should be unique
 alloc(newmem,$1000,INJECT_DAMAGE_CTRL)
 
 label(code)
@@ -377,7 +455,7 @@ ed9.exe+E16C1: 41 0F 48 C1  - cmovs eax,r9d
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>6</ID>
+              <ID>7</ID>
               <Description>"對玩家倍率 / ratio to player:"</Description>
               <DropDownList DisplayValueAsItem="1">1:Normal
 0.8999999762:90%
@@ -389,7 +467,7 @@ ed9.exe+E16C1: 41 0F 48 C1  - cmovs eax,r9d
               <Address>vf_damage_2_player</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>7</ID>
+              <ID>8</ID>
               <Description>"對敵方倍率 / ratio to enemy:"</Description>
               <DropDownList DisplayValueAsItem="1">1:Normal
 1000:Fast kill
@@ -400,7 +478,7 @@ ed9.exe+E16C1: 41 0F 48 C1  - cmovs eax,r9d
               <Address>vf_damage_2_enemy</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>8</ID>
+              <ID>9</ID>
               <Description>"玩家HP小於此則不計算 / ignore player HP if cur. value &lt;"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -410,11 +488,11 @@ ed9.exe+E16C1: 41 0F 48 C1  - cmovs eax,r9d
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>9</ID>
+          <ID>10</ID>
           <Description>"EP/CP全滿 / Battle: EP/CP full"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-27
   Author : bbfox@https://opencheattables.com
@@ -422,7 +500,7 @@ ed9.exe+E16C1: 41 0F 48 C1  - cmovs eax,r9d
 
 [ENABLE]
 
-aobscanmodule(INJECT_EPCP_FULL,$process,8B 5F 0C E9 36 08 00 00) // should be unique
+aobscanmodule(INJECT_EPCP_FULL,ed9.exe,8B 5F 0C E9 36 08 00 00) // should be unique
 alloc(newmem,$1000,INJECT_EPCP_FULL)
 
 label(code)
@@ -503,19 +581,19 @@ ed9.exe+C557B: 8B F8                 - mov edi,eax
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>10</ID>
+          <ID>11</ID>
           <Description>"空洞核心EXP倍率 / Battle: master quatrz XP multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
-  Date   : 2025-01-28
+  Date   : 2025-03-03
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_QUARTZ_XP_MULTI,$process,03 78 04 48 8B 05 4A CA AB 00) // should be unique
+aobscanmodule(INJECT_QUARTZ_XP_MULTI,ed9.exe,03 78 04 48 8B 05 ?? ?? ?? ?? 48) // should be unique
 alloc(newmem,$1000,INJECT_QUARTZ_XP_MULTI)
 
 alloc(INJECT_QUARTZ_XP_MULTIo, 10)
@@ -553,7 +631,8 @@ registersymbol(INJECT_QUARTZ_XP_MULTIo)
 [DISABLE]
 
 INJECT_QUARTZ_XP_MULTI:
-  db 03 78 04 48 8B 05 4A CA AB 00
+  //db 03 78 04 48 8B 05 4A CA AB 00
+  readmem(INJECT_QUARTZ_XP_MULTIo, 10)
 
 unregistersymbol(INJECT_QUARTZ_XP_MULTI vf_quartz_xp_multi)
 dealloc(newmem)
@@ -562,36 +641,36 @@ unregistersymbol(INJECT_QUARTZ_XP_MULTIo)
 dealloc(INJECT_QUARTZ_XP_MULTIo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: ed9.exe+126E14
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+126DD4
 
-ed9.exe+126DE5: E8 66 3B FB FF        - call ed9.exe+DA950
-ed9.exe+126DEA: 48 85 C0              - test rax,rax
-ed9.exe+126DED: 0F 84 0C 01 00 00     - je ed9.exe+126EFF
-ed9.exe+126DF3: 48 0F BE 48 0D        - movsx rcx,byte ptr [rax+0D]
-ed9.exe+126DF8: 84 C9                 - test cl,cl
-ed9.exe+126DFA: 0F 88 FF 00 00 00     - js ed9.exe+126EFF
-ed9.exe+126E00: 48 8D 83 E0 02 1C 00  - lea rax,[rbx+001C02E0]
-ed9.exe+126E07: 48 8D 04 C8           - lea rax,[rax+rcx*8]
-ed9.exe+126E0B: 48 85 C0              - test rax,rax
-ed9.exe+126E0E: 0F 84 EB 00 00 00     - je ed9.exe+126EFF
+ed9.exe+126DA5: E8 66 3B FB FF        - call ed9.exe+DA910
+ed9.exe+126DAA: 48 85 C0              - test rax,rax
+ed9.exe+126DAD: 0F 84 0C 01 00 00     - je ed9.exe+126EBF
+ed9.exe+126DB3: 48 0F BE 48 0D        - movsx rcx,byte ptr [rax+0D]
+ed9.exe+126DB8: 84 C9                 - test cl,cl
+ed9.exe+126DBA: 0F 88 FF 00 00 00     - js ed9.exe+126EBF
+ed9.exe+126DC0: 48 8D 83 E0 02 1C 00  - lea rax,[rbx+001C02E0]
+ed9.exe+126DC7: 48 8D 04 C8           - lea rax,[rax+rcx*8]
+ed9.exe+126DCB: 48 85 C0              - test rax,rax
+ed9.exe+126DCE: 0F 84 EB 00 00 00     - je ed9.exe+126EBF
 // ---------- INJECTING HERE ----------
-ed9.exe+126E14: 03 78 04              - add edi,[rax+04]
+ed9.exe+126DD4: 03 78 04              - add edi,[rax+04]
 // ---------- DONE INJECTING  ----------
-ed9.exe+126E17: 48 8B 05 4A CA AB 00  - mov rax,[ed9.exe+BE3868]
-ed9.exe+126E1E: 48 8B 88 08 08 00 00  - mov rcx,[rax+00000808]
-ed9.exe+126E25: 41 8B D6              - mov edx,r14d
-ed9.exe+126E28: 48 8B 49 08           - mov rcx,[rcx+08]
-ed9.exe+126E2C: E8 1F 3B FB FF        - call ed9.exe+DA950
-ed9.exe+126E31: 48 85 C0              - test rax,rax
-ed9.exe+126E34: 74 1C                 - je ed9.exe+126E52
-ed9.exe+126E36: 48 0F BE 40 0D        - movsx rax,byte ptr [rax+0D]
-ed9.exe+126E3B: 84 C0                 - test al,al
-ed9.exe+126E3D: 78 13                 - js ed9.exe+126E52
+ed9.exe+126DD7: 48 8B 05 8A DA AB 00  - mov rax,[addr_1_base]
+ed9.exe+126DDE: 48 8B 88 08 08 00 00  - mov rcx,[rax+00000808]
+ed9.exe+126DE5: 41 8B D6              - mov edx,r14d
+ed9.exe+126DE8: 48 8B 49 08           - mov rcx,[rcx+08]
+ed9.exe+126DEC: E8 1F 3B FB FF        - call ed9.exe+DA910
+ed9.exe+126DF1: 48 85 C0              - test rax,rax
+ed9.exe+126DF4: 74 1C                 - je ed9.exe+126E12
+ed9.exe+126DF6: 48 0F BE 40 0D        - movsx rax,byte ptr [rax+0D]
+ed9.exe+126DFB: 84 C0                 - test al,al
+ed9.exe+126DFD: 78 13                 - js ed9.exe+126E12
 }
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>11</ID>
+              <ID>12</ID>
               <Description>"multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -601,11 +680,11 @@ ed9.exe+126E3D: 78 13                 - js ed9.exe+126E52
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>12</ID>
+          <ID>13</ID>
           <Description>"EXP倍率 / Battle: EXP multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-27
   Author : bbfox@https://opencheattables.com
@@ -613,7 +692,7 @@ ed9.exe+126E3D: 78 13                 - js ed9.exe+126E52
 
 [ENABLE]
 
-aobscanmodule(INJECT_EXP_MULTI,$process,03 D3 3B D0 41 B8 96 00 00 00) // should be unique
+aobscanmodule(INJECT_EXP_MULTI,ed9.exe,03 D3 3B D0 41 B8 96 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_EXP_MULTI)
 
 label(code)
@@ -678,7 +757,7 @@ ed9.exe+E232C: 0F 4C C7           - cmovl eax,edi
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>13</ID>
+              <ID>14</ID>
               <Description>"multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -688,11 +767,11 @@ ed9.exe+E232C: 0F 4C C7           - cmovl eax,edi
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>14</ID>
+          <ID>15</ID>
           <Description>"暈眩量表倍率 / Battle: Break multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-27
   Author : bbfox@https://opencheattables.com
@@ -700,7 +779,7 @@ ed9.exe+E232C: 0F 4C C7           - cmovl eax,edi
 
 [ENABLE]
 
-aobscanmodule(INJECT_BREAK_MULTI,$process,F3 0F 58 C6 0F 28 CA) // should be unique
+aobscanmodule(INJECT_BREAK_MULTI,ed9.exe,F3 0F 58 C6 0F 28 CA) // should be unique
 alloc(newmem,$1000,INJECT_BREAK_MULTI)
 
 label(code)
@@ -763,7 +842,7 @@ ed9.exe+CE7AB: 74 11                 - je ed9.exe+CE7BE
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>15</ID>
+              <ID>16</ID>
               <Description>"multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -773,11 +852,11 @@ ed9.exe+CE7AB: 74 11                 - je ed9.exe+CE7BE
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>16</ID>
+          <ID>17</ID>
           <Description>"額外連段數 / Battle: extra chain"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-28
   Author : bbfox@https://opencheattables.com
@@ -785,7 +864,7 @@ ed9.exe+CE7AB: 74 11                 - je ed9.exe+CE7BE
 
 [ENABLE]
 
-aobscanmodule(INJECT_EXTRA_CHAIN,$process,41 03 D4 3B D0) // should be unique
+aobscanmodule(INJECT_EXTRA_CHAIN,ed9.exe,41 03 D4 3B D0) // should be unique
 alloc(newmem,$1000,INJECT_EXTRA_CHAIN)
 
 label(code)
@@ -843,7 +922,7 @@ ed9.exe+12B3FC: 66 0F 7F 44 24 30        - movdqa [rsp+30],xmm0
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>17</ID>
+              <ID>18</ID>
               <Description>"敵我皆適用 / Apply to enemy too"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
@@ -851,11 +930,11 @@ ed9.exe+12B3FC: 66 0F 7F 44 24 30        - movdqa [rsp+30],xmm0
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>18</ID>
+          <ID>19</ID>
           <Description>"晶片增幅量表增加倍率 / Battle: S-Boost inc. multiplier"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-27
   Author : bbfox@https://opencheattables.com
@@ -863,7 +942,7 @@ ed9.exe+12B3FC: 66 0F 7F 44 24 30        - movdqa [rsp+30],xmm0
 
 [ENABLE]
 
-aobscanmodule(INJECT_S_BOOST_MULTI,$process,F3 0F 58 CE F3 0F 5D 8F ?? ?? ?? 00) // should be unique
+aobscanmodule(INJECT_S_BOOST_MULTI,ed9.exe,F3 0F 58 CE F3 0F 5D 8F ?? ?? ?? 00) // should be unique
 alloc(newmem,$1000,INJECT_S_BOOST_MULTI)
 
 alloc(INJECT_S_BOOST_MULTIo, 12)
@@ -951,7 +1030,7 @@ ed9.exe+65F7CF: 80 BF 90 01 00 00 00     - cmp byte ptr [rdi+00000190],00
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>19</ID>
+              <ID>20</ID>
               <Description>"multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -959,7 +1038,7 @@ ed9.exe+65F7CF: 80 BF 90 01 00 00 00     - cmp byte ptr [rdi+00000190],00
               <Address>vf_s_boost_multi</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>20</ID>
+              <ID>21</ID>
               <Description>"min. value"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -967,7 +1046,7 @@ ed9.exe+65F7CF: 80 BF 90 01 00 00 00     - cmp byte ptr [rdi+00000190],00
               <Address>vf_s_boost_min</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>21</ID>
+              <ID>22</ID>
               <Description>"value"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -978,7 +1057,7 @@ ed9.exe+65F7CF: 80 BF 90 01 00 00 00     - cmp byte ptr [rdi+00000190],00
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>22</ID>
+              <ID>23</ID>
               <Description>"晶片增幅量表減少倍率 / Battle: S-Boost dec. multiplier"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -990,7 +1069,7 @@ ed9.exe+65F7CF: 80 BF 90 01 00 00 00     - cmp byte ptr [rdi+00000190],00
 
 [ENABLE]
 
-aobscanmodule(INJECTS_BOOST_DEC_MULTI,$process,F3 0F 5C C8 F3 48 0F 2C D2) // should be unique
+aobscanmodule(INJECTS_BOOST_DEC_MULTI,ed9.exe,F3 0F 5C C8 F3 48 0F 2C D2) // should be unique
 alloc(newmem,$1000,INJECTS_BOOST_DEC_MULTI)
 
 label(code)
@@ -1064,7 +1143,7 @@ ed9.exe+65F883: 77 09                    - ja ed9.exe+65F88E
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>23</ID>
+                  <ID>24</ID>
                   <Description>"multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -1076,11 +1155,11 @@ ed9.exe+65F883: 77 09                    - ja ed9.exe+65F88E
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>24</ID>
+          <ID>25</ID>
           <Description>"蓄力量表倍率 / Battle: Charge multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-27
   Author : bbfox@https://opencheattables.com
@@ -1088,7 +1167,7 @@ ed9.exe+65F883: 77 09                    - ja ed9.exe+65F88E
 
 [ENABLE]
 
-aobscanmodule(INJECT_CHARGE_MULTI,$process,F3 0F 58 83 A0 03 00 00 F3) // should be unique
+aobscanmodule(INJECT_CHARGE_MULTI,ed9.exe,F3 0F 58 83 A0 03 00 00 F3) // should be unique
 alloc(newmem,$1000,INJECT_CHARGE_MULTI)
 
 label(code)
@@ -1158,7 +1237,7 @@ ed9.exe+C6F5D: 89 83 A0 03 00 00        - mov [rbx+000003A0],eax
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>25</ID>
+              <ID>26</ID>
               <Description>"multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1166,7 +1245,7 @@ ed9.exe+C6F5D: 89 83 A0 03 00 00        - mov [rbx+000003A0],eax
               <Address>vf_charge_multi</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>26</ID>
+              <ID>27</ID>
               <Description>"value"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1179,11 +1258,11 @@ ed9.exe+C6F5D: 89 83 A0 03 00 00        - mov [rbx+000003A0],eax
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>27</ID>
+          <ID>28</ID>
           <Description>"取得或設定選擇中道具的數量 / Get or set focused item count"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-28
   Author : bbfox@https://opencheattables.com
@@ -1191,7 +1270,7 @@ ed9.exe+C6F5D: 89 83 A0 03 00 00        - mov [rbx+000003A0],eax
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_ITEM_CNT,$process,0F B7 94 88 ?? ?? ?? 00 85 D2 0F 95 C0 48 83 C4 38 C3 CC) // should be unique
+aobscanmodule(INJECT_GET_ITEM_CNT,ed9.exe,0F B7 94 88 ?? ?? ?? 00 85 D2 0F 95 C0 48 83 C4 38 C3 CC) // should be unique
 alloc(newmem,$1000,INJECT_GET_ITEM_CNT)
 
 alloc(INJECT_GET_ITEM_CNTo,8)
@@ -1293,19 +1372,19 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>28</ID>
+              <ID>29</ID>
               <Description>"開啟道具選單 / Usage: item menu"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>29</ID>
+              <ID>30</ID>
               <Description>"只限未裝備之非重要道具 / Unequipped item &amp; non-important only"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>30</ID>
+              <ID>31</ID>
               <Description>"count"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1316,7 +1395,7 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>31</ID>
+              <ID>32</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1327,12 +1406,12 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>32</ID>
+              <ID>33</ID>
               <Description>"更新道具數量 / Update item stock"</Description>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>33</ID>
+                  <ID>34</ID>
                   <Description>"原本數量要大於等於 / item stock # must &gt;="</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -1340,7 +1419,7 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
                   <Address>i_min_item_threshold</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>34</ID>
+                  <ID>35</ID>
                   <Description>"如果是此數量則強制設定 / Force set to count if current stock="</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -1348,7 +1427,7 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
                   <Address>i_minus_item_cnt</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>35</ID>
+                  <ID>36</ID>
                   <Description>"設定數量為 / Set stock # to"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -1360,11 +1439,11 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>36</ID>
+          <ID>37</ID>
           <Description>"更新道具數量：整頁更新 / Update item stock for whole sheet"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-30
   Author : bbfox@https://opencheattables.com
@@ -1372,7 +1451,7 @@ ed9.exe+181616: 48 83 EC 30              - sub rsp,30
 
 [ENABLE]
 
-aobscanmodule(INJECT_SET_ITEM_CNT_INC_IMP,$process,0F B7 9C 88 ?? ?? ?? 00 48 8B 47 20 48) // should be unique
+aobscanmodule(INJECT_SET_ITEM_CNT_INC_IMP,ed9.exe,0F B7 9C 88 ?? ?? ?? 00 48 8B 47 20 48) // should be unique
 alloc(newmem,$1000,INJECT_SET_ITEM_CNT_INC_IMP)
 
 alloc(INJECT_SET_ITEM_CNT_INC_IMPo, 8)
@@ -1459,13 +1538,13 @@ ed9.exe+6107AE: 0F A3 CA                 - bt edx,ecx
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>37</ID>
+              <ID>38</ID>
               <Description>"注意：重要道具也會影響 / Notice: affects important items"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>38</ID>
+              <ID>39</ID>
               <Description>"原本數量要大於等於 / item stock # must &gt;="</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1473,7 +1552,7 @@ ed9.exe+6107AE: 0F A3 CA                 - bt edx,ecx
               <Address>i_min_item_cnt_page</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>39</ID>
+              <ID>40</ID>
               <Description>"設定數量為 / Set stock # to"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1483,11 +1562,11 @@ ed9.exe+6107AE: 0F A3 CA                 - bt edx,ecx
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>40</ID>
+          <ID>41</ID>
           <Description>"使用及裝備道具時數量不減 / Item use or equip: stock no decrease"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-31
   Author : bbfox@https://opencheattables.com
@@ -1495,7 +1574,7 @@ ed9.exe+6107AE: 0F A3 CA                 - bt edx,ecx
 
 [ENABLE]
 
-aobscanmodule(INJECT_ITEM_USE,$process,2B C6 48 8B 74 24 48) // should be unique
+aobscanmodule(INJECT_ITEM_USE,ed9.exe,2B C6 48 8B 74 24 48) // should be unique
 alloc(newmem,$1000,INJECT_ITEM_USE)
 
 label(code)
@@ -1567,7 +1646,7 @@ ed9.exe+5110AB: CC                    - int 3
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>41</ID>
+              <ID>42</ID>
               <Description>"道具數量需不小於此值才觸發 / original item stock must &gt;="</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1577,11 +1656,11 @@ ed9.exe+5110AB: CC                    - int 3
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>42</ID>
+          <ID>43</ID>
           <Description>"取得所有結晶迴路、設定最少50個 / Get all quartz"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-29
   Author : bbfox@https://opencheattables.com
@@ -1589,7 +1668,7 @@ ed9.exe+5110AB: CC                    - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_ALL_QUARTZ,$process,0F B7 94 88 ?? ?? ?? 00 85 D2 75 08 85 FF 0F 84 ?? ?? ?? ?? 48 8B 0D) // should be unique
+aobscanmodule(INJECT_GET_ALL_QUARTZ,ed9.exe,0F B7 94 88 ?? ?? ?? 00 85 D2 75 08 85 FF 0F 84 ?? ?? ?? ?? 48 8B 0D) // should be unique
 alloc(newmem,$1000,INJECT_GET_ALL_QUARTZ)
 
 alloc(INJECT_GET_ALL_QUARTZo, 8)
@@ -1666,7 +1745,7 @@ ed9.exe+1F0D20: E8 DB 06 4E 00           - call ed9.exe+6D1400
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>43</ID>
+              <ID>44</ID>
               <Description>"於裝備結晶迴路畫面 中選擇結晶 / Usage: change equipped quartz"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
@@ -1674,11 +1753,11 @@ ed9.exe+1F0D20: E8 DB 06 4E 00           - call ed9.exe+6D1400
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>44</ID>
+          <ID>45</ID>
           <Description>"取得空洞核心資料 / Get master quartz data"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-28
   Author : bbfox@https://opencheattables.com
@@ -1686,7 +1765,7 @@ ed9.exe+1F0D20: E8 DB 06 4E 00           - call ed9.exe+6D1400
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_QUARTZ_DATA,$process,8B 59 04 4C 8B 64 24 50) // should be unique
+aobscanmodule(INJECT_GET_QUARTZ_DATA,ed9.exe,8B 59 04 4C 8B 64 24 50) // should be unique
 alloc(newmem,$1000,INJECT_GET_QUARTZ_DATA)
 
 label(code)
@@ -1747,7 +1826,7 @@ ed9.exe+1E58CB: 33 DB                    - xor ebx,ebx
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>45</ID>
+              <ID>46</ID>
               <Description>"Lv"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1758,7 +1837,7 @@ ed9.exe+1E58CB: 33 DB                    - xor ebx,ebx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>46</ID>
+              <ID>47</ID>
               <Description>"EXP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1771,90 +1850,11 @@ ed9.exe+1E58CB: 33 DB                    - xor ebx,ebx
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>47</ID>
-          <Description>"快速釣魚 / fast fishing"</Description>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
-  Version: 
-  Date   : 2025-01-29
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_FAST_FISHING,$process,F3 0F 11 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 E8 ?? ?? ?? 00 0F 57) // should be unique
-alloc(newmem,$1000,INJECT_FAST_FISHING)
-
-alloc(INJECT_FAST_FISHINGo, 8)
-
-label(code)
-label(return)
-
-INJECT_FAST_FISHINGo:
-  readmem(INJECT_FAST_FISHING, 8)
-
-newmem:
-  vmovss xmm1, [vf_300]
-
-code:
-  //movss [rcx+00000328],xmm1
-  readmem(INJECT_FAST_FISHING, 8)
-  jmp return
-align 10 cc
-  vf_300:
-  dd (float)300
-
-INJECT_FAST_FISHING:
-  jmp newmem
-  nop 3
-return:
-registersymbol(INJECT_FAST_FISHING)
-registersymbol(INJECT_FAST_FISHINGo)
-[DISABLE]
-
-INJECT_FAST_FISHING:
-  //db F3 0F 11 89 28 03 00 00
-  readmem(INJECT_FAST_FISHINGo, 8)
-
-unregistersymbol(INJECT_FAST_FISHING)
-dealloc(newmem)
-unregistersymbol(INJECT_FAST_FISHINGo)
-dealloc(INJECT_FAST_FISHINGo)
-{
-// ORIGINAL CODE - INJECTION POINT: ed9.exe+463E03
-
-ed9.exe+463DCD: 48 8B F9                    - mov rdi,rcx
-ed9.exe+463DD0: F3 44 0F 10 15 43 51 5E 00  - movss xmm10,[ed9.exe+A48F1C]
-ed9.exe+463DD9: 41 0F 2F C2                 - comiss xmm0,xmm10
-ed9.exe+463DDD: 76 3C                       - jna ed9.exe+463E1B
-ed9.exe+463DDF: 0F 28 C1                    - movaps xmm0,xmm1
-ed9.exe+463DE2: F3 0F 10 89 28 03 00 00     - movss xmm1,[rcx+00000328]
-ed9.exe+463DEA: F3 0F 59 81 38 03 00 00     - mulss xmm0,[rcx+00000338]
-ed9.exe+463DF2: 48 89 99 2C 03 00 00        - mov [rcx+0000032C],rbx
-ed9.exe+463DF9: 89 99 34 03 00 00           - mov [rcx+00000334],ebx
-ed9.exe+463DFF: F3 0F 5C C8                 - subss xmm1,xmm0
-// ---------- INJECTING HERE ----------
-ed9.exe+463E03: F3 0F 11 89 28 03 00 00     - movss [rcx+00000328],xmm1
-// ---------- DONE INJECTING  ----------
-ed9.exe+463E0B: F3 0F 11 89 20 03 00 00     - movss [rcx+00000320],xmm1
-ed9.exe+463E13: F3 0F 11 89 24 03 00 00     - movss [rcx+00000324],xmm1
-ed9.exe+463E1B: E8 40 45 00 00              - call ed9.exe+468360
-ed9.exe+463E20: 0F 57 F6                    - xorps xmm6,xmm6
-ed9.exe+463E23: 0F 2F B7 28 03 00 00        - comiss xmm6,[rdi+00000328]
-ed9.exe+463E2A: 76 47                       - jna ed9.exe+463E73
-ed9.exe+463E2C: 4C 8B 8F 08 01 00 00        - mov r9,[rdi+00000108]
-ed9.exe+463E33: 4D 85 C9                    - test r9,r9
-ed9.exe+463E36: 74 20                       - je ed9.exe+463E58
-ed9.exe+463E38: 48 63 87 FC 00 00 00        - movsxd  rax,dword ptr [rdi+000000FC]
-}
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
           <ID>48</ID>
           <Description>"釣果記錄 / Get fishing data"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-30
   Author : bbfox@https://opencheattables.com
@@ -1862,7 +1862,7 @@ ed9.exe+463E38: 48 63 87 FC 00 00 00        - movsxd  rax,dword ptr [rdi+000000F
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_FISHING_SUMMARY,$process,74 2A 44 8B 40 04) // should be unique
+aobscanmodule(INJECT_GET_FISHING_SUMMARY,ed9.exe,74 2A 44 8B 40 04) // should be unique
 alloc(newmem,$1000,INJECT_GET_FISHING_SUMMARY)
 
 label(code)
@@ -2001,7 +2001,7 @@ ed9.exe+4C935A: C6 45 C8 00           - mov byte ptr [rbp-38],00
 
 [ENABLE]
 
-aobscanmodule(INJECT_FORCE_OPEN_FISH_RECORD,$process,F6 40 0A 01 74 02) // should be unique
+aobscanmodule(INJECT_FORCE_OPEN_FISH_RECORD,ed9.exe,F6 40 0A 01 74 02) // should be unique
 alloc(newmem,$1000,INJECT_FORCE_OPEN_FISH_RECORD)
 
 label(code)
@@ -2083,7 +2083,7 @@ ed9.exe+4C858E: 8D 55 FF              - lea edx,[rbp-01]
           <Description>"Z.O.C. 恢復速度倍率 / Z.O.C. recover multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-30
   Author : bbfox@https://opencheattables.com
@@ -2091,7 +2091,7 @@ ed9.exe+4C858E: 8D 55 FF              - lea edx,[rbp-01]
 
 [ENABLE]
 
-aobscanmodule(INJECT_ZOC_MULTI,$process,F3 0F 58 C1 F3 41 0F 5D C4) // should be unique
+aobscanmodule(INJECT_ZOC_MULTI,ed9.exe,F3 0F 58 C1 F3 41 0F 5D C4) // should be unique
 alloc(newmem,$1000,INJECT_ZOC_MULTI)
 
 label(code)
@@ -2166,7 +2166,7 @@ ed9.exe+327867: 48 8B 88 88 3A 00 00     - mov rcx,[rax+00003A88]
           <ID>60</ID>
           <Description>"駭入時停止計時 / Stop hacking timer"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-29
   Author : bbfox@https://opencheattables.com
@@ -2174,7 +2174,7 @@ ed9.exe+327867: 48 8B 88 88 3A 00 00     - mov rcx,[rax+00003A88]
 
 [ENABLE]
 
-aobscanmodule(INJECT_TREASURE_GAME_TIMER,$process,F3 0F ?? ?? F3 41 0F ?? ?? F3 0F ?? ?? ?? F3 48) // should be unique
+aobscanmodule(INJECT_TREASURE_GAME_TIMER,ed9.exe,F3 0F ?? ?? F3 41 0F ?? ?? F3 0F ?? ?? ?? F3 48) // should be unique
 
 alloc(INJECT_TREASURE_GAME_TIMERo, 4)
 
@@ -2226,7 +2226,7 @@ ed9.exe+653EE7: F3 44 0F 10 15 B4 53 3F 00  - movss xmm10,[ed9.exe+A492A4]
           <ID>61</ID>
           <Description>"駭入．防壁解除時間無限 / inf. barrier cracking time"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-02-02
   Author : bbfox@https://opencheattables.com
@@ -2234,7 +2234,7 @@ ed9.exe+653EE7: F3 44 0F 10 15 B4 53 3F 00  - movss xmm10,[ed9.exe+A492A4]
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_CRACKING_TIME,$process,F3 0F 5C C1 0F 29 74 24 60) // should be unique
+aobscanmodule(INJECT_INF_CRACKING_TIME,ed9.exe,F3 0F 5C C1 0F 29 74 24 60) // should be unique
 
 
 INJECT_INF_CRACKING_TIME:
@@ -2283,7 +2283,7 @@ ed9.exe+48397C: 41 B8 04 00 00 00        - mov r8d,00000004
           <Description>"取得米拉和耀石資訊 / get mira"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-28
   Author : bbfox@https://opencheattables.com
@@ -2291,7 +2291,7 @@ ed9.exe+48397C: 41 B8 04 00 00 00        - mov r8d,00000004
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_MIRA,$process,8B 90 ?? ?? ?? 00 48 8B 8B ?? ?? ?? 00 48 85 C9 75 38 48 8D ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? B5) // should be unique
+aobscanmodule(INJECT_GET_MIRA,ed9.exe,8B 90 ?? ?? ?? 00 48 8B 8B ?? ?? ?? 00 48 85 C9 75 38 48 8D ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? B9) // should be unique
 alloc(newmem,$1000,INJECT_GET_MIRA)
 
 alloc(INJECT_GET_MIRAo,6)
@@ -2348,31 +2348,33 @@ dealloc(newmem)
 unregistersymbol(INJECT_GET_MIRAo)
 dealloc(INJECT_GET_MIRAo)
 {
-// ORIGINAL CODE - INJECTION POINT: ed9.exe+148EFE
+// ORIGINAL CODE - INJECTION POINT: ed9.exe+148EDE
 
-ed9.exe+148ED2: 48 8D 14 40           - lea rdx,[rax+rax*2]
-ed9.exe+148ED6: 45 33 C0              - xor r8d,r8d
-ed9.exe+148ED9: 41 8B 54 96 50        - mov edx,[r14+rdx*4+50]
-ed9.exe+148EDE: 49 8B 0E              - mov rcx,[r14]
-ed9.exe+148EE1: 41 FF D1              - call r9
-ed9.exe+148EE4: 49 63 86 84 00 00 00  - movsxd  rax,dword ptr [r14+00000084]
-ed9.exe+148EEB: 48 83 C0 07           - add rax,07
-ed9.exe+148EEF: 48 8D 04 40           - lea rax,[rax+rax*2]
-ed9.exe+148EF3: 41 89 34 86           - mov [r14+rax*4],esi
-ed9.exe+148EF7: 48 8B 05 32 AA A9 00  - mov rax,[ed9.exe+BE3930]
+ed9.exe+148EB2: 48 8D 14 40           - lea rdx,[rax+rax*2]
+ed9.exe+148EB6: 45 33 C0              - xor r8d,r8d
+ed9.exe+148EB9: 41 8B 54 96 50        - mov edx,[r14+rdx*4+50]
+ed9.exe+148EBE: 49 8B 0E              - mov rcx,[r14]
+ed9.exe+148EC1: 41 FF D1              - call r9
+ed9.exe+148EC4: 49 63 86 84 00 00 00  - movsxd  rax,dword ptr [r14+00000084]
+ed9.exe+148ECB: 48 83 C0 07           - add rax,07
+ed9.exe+148ECF: 48 8D 04 40           - lea rax,[rax+rax*2]
+ed9.exe+148ED3: 41 89 34 86           - mov [r14+rax*4],esi
+ed9.exe+148ED7: 48 8B 05 4A BA A9 00  - mov rax,[ed9.exe+BE4928]
 // ---------- INJECTING HERE ----------
-ed9.exe+148EFE: 8B 90 90 79 29 00     - mov edx,[rax+00297990]
+ed9.exe+148EDE: 8B 90 90 79 29 00     - mov edx,[rax+00297990]
 // ---------- DONE INJECTING  ----------
-ed9.exe+148F04: 48 8B 8B 08 06 00 00  - mov rcx,[rbx+00000608]
-ed9.exe+148F0B: 48 85 C9              - test rcx,rcx
-ed9.exe+148F0E: 75 38                 - jne ed9.exe+148F48
-ed9.exe+148F10: 48 8D 05 41 5A 8B 00  - lea rax,[ed9.exe+9FE958]
-ed9.exe+148F17: 48 89 44 24 28        - mov [rsp+28],rax
-ed9.exe+148F1C: 48 8D 05 5D 5A 8B 00  - lea rax,[ed9.exe+9FE980]
-ed9.exe+148F23: 48 89 44 24 20        - mov [rsp+20],rax
-ed9.exe+148F28: 4C 8D 0D 71 50 8B 00  - lea r9,[ed9.exe+9FDFA0]
-ed9.exe+148F2F: 41 B8 B5 12 00 00     - mov r8d,000012B5
-ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
+ed9.exe+148EE4: 48 8B 8B 08 06 00 00  - mov rcx,[rbx+00000608]
+ed9.exe+148EEB: 48 85 C9              - test rcx,rcx
+ed9.exe+148EEE: 75 38                 - jne ed9.exe+148F28
+ed9.exe+148EF0: 48 8D 05 A1 6B 8B 00  - lea rax,[ed9.exe+9FFA98]
+ed9.exe+148EF7: 48 89 44 24 28        - mov [rsp+28],rax
+ed9.exe+148EFC: 48 8D 05 BD 6B 8B 00  - lea rax,[ed9.exe+9FFAC0]
+ed9.exe+148F03: 48 89 44 24 20        - mov [rsp+20],rax
+ed9.exe+148F08: 4C 8D 0D 31 62 8B 00  - lea r9,[ed9.exe+9FF140]
+ed9.exe+148F0F: 41 B8 B9 12 00 00     - mov r8d,000012B9
+ed9.exe+148F15: 48 8D 15 8C 64 8B 00  - lea rdx,[ed9.exe+9FF3A8]
+ed9.exe+148F1C - B9 03000000           - mov ecx,00000003
+
 }
 </AssemblerScript>
           <CheatEntries>
@@ -2532,7 +2534,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
           <Description>"取得目前遊戲時數 / Get readable game time"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-31
   Author : bbfox@https://opencheattables.com
@@ -2540,7 +2542,7 @@ ed9.exe+148F35: 48 8D 15 2C 53 8B 00  - lea rdx,[ed9.exe+9FE268]
 
 [ENABLE]
 
-aobscanmodule(INJECT_CALC_GAME_TIME,$process,F2 0F 58 83 ?? ?? ?? 00 F2 0F 11 ?? ?? ?? ?? 00 48) // should be unique
+aobscanmodule(INJECT_CALC_GAME_TIME,ed9.exe,F2 0F 58 83 ?? ?? ?? 00 F2 0F 11 ?? ?? ?? ?? 00 48) // should be unique
 alloc(newmem,$1000,INJECT_CALC_GAME_TIME)
 
 alloc(INJECT_CALC_GAME_TIMEo, 8)
@@ -2695,7 +2697,7 @@ ed9.exe+508228: F3 0F 11 8B E8 B0 7C 00  - movss [rbx+007CB0E8],xmm1
           <Description>"取得目前連結度 / Get current connect value"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-29
   Author : bbfox@https://opencheattables.com
@@ -2703,7 +2705,7 @@ ed9.exe+508228: F3 0F 11 8B E8 B0 7C 00  - movss [rbx+007CB0E8],xmm1
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_RELATIONS,$process,0F B7 84 47 ?? ?? ?? 00 48) // should be unique
+aobscanmodule(INJECT_GET_RELATIONS,ed9.exe,0F B7 84 47 ?? ?? ?? 00 48) // should be unique
 alloc(newmem,$1000,INJECT_GET_RELATIONS)
 
 alloc(INJECT_GET_RELATIONSo, 8)
@@ -2792,7 +2794,7 @@ ed9.exe+51213D: CC                       - int 3
           <ID>83</ID>
           <Description>"任務中進行追蹤不易被發現 / more undetected tracking (found) during quests"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-31
   Author : bbfox@https://opencheattables.com
@@ -2800,7 +2802,7 @@ ed9.exe+51213D: CC                       - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_TRACKING_GAUGE,$process,F3 0F 58 B3 ?? 0? 00 00 F3 41) // should be unique
+aobscanmodule(INJECT_TRACKING_GAUGE,ed9.exe,F3 0F 58 B3 ?? 0? 00 00 F3 41) // should be unique
 alloc(newmem,$1000,INJECT_TRACKING_GAUGE)
 
 alloc(INJECT_TRACKING_GAUGEo, 8)
@@ -2882,7 +2884,7 @@ ed9.exe+5EB326: 5F                          - pop rdi
           <Description>"取得進行中的成就 / Get in-progress achievement"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>[ENABLE]
+          <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if _kuro_2_customInt == nil then
 
@@ -2957,7 +2959,7 @@ end
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_ACHIEVEMENT,$process,8B 93 ?? ?? ?? 00 8B C2 C1) // should be unique
+aobscanmodule(INJECT_GET_ACHIEVEMENT,ed9.exe,8B 93 ?? ?? ?? 00 8B C2 C1) // should be unique
 alloc(newmem,$1000,INJECT_GET_ACHIEVEMENT)
 
 alloc(INJECT_GET_ACHIEVEMENTo, 6)
@@ -3679,7 +3681,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
           <ID>138</ID>
           <Description>"Connect至少為1 / keep connect at least 1"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-29
   Author : bbfox@https://opencheattables.com
@@ -3687,7 +3689,7 @@ ed9.exe+18AD1E: 83 F8 02                 - cmp eax,02
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_CONNECT,$process,43 FF 25 FF FF FF 3F) // should be unique
+aobscanmodule(INJECT_INF_CONNECT,ed9.exe,43 FF 25 FF FF FF 3F) // should be unique
 alloc(newmem,$1000,INJECT_INF_CONNECT)
 
 label(code)
@@ -3755,7 +3757,7 @@ ed9.exe+40E764: 48 8B 0F              - mov rcx,[rdi]
           <Description>"角色狀態檢視 / Char. viewer"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-30
   Author : bbfox@https://opencheattables.com
@@ -3763,7 +3765,7 @@ ed9.exe+40E764: 48 8B 0F              - mov rcx,[rdi]
 
 [ENABLE]
 
-aobscanmodule(INJECT_CHAR_VIEWER,$process,8B 4F 0C 89 4B 04) // should be unique
+aobscanmodule(INJECT_CHAR_VIEWER,ed9.exe,8B 4F 0C 89 4B 04) // should be unique
 alloc(newmem,$1000,INJECT_CHAR_VIEWER)
 
 label(code)
@@ -4227,7 +4229,7 @@ ed9.exe+645D67: 8B 47 24           - mov eax,[rdi+24]
           <Description>"取得LGC資料 / Get LGC Data"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-28
   Author : bbfox@https://opencheattables.com
@@ -4235,7 +4237,7 @@ ed9.exe+645D67: 8B 47 24           - mov eax,[rdi+24]
 
 [ENABLE]
 //41 ?? ?? ?? ?? 01 00 ?? ?? 48 ?? ?? ?? ?? 00 00 C1
-aobscanmodule(INJECT_GET_LGC_DATA,$process,41 8B AF ?? ?? ?? 00 ?? ?? 48) // should be unique
+aobscanmodule(INJECT_GET_LGC_DATA,ed9.exe,41 8B AF ?? ?? ?? 00 ?? ?? 48) // should be unique
 alloc(newmem,$1000,INJECT_GET_LGC_DATA)
 
 alloc(INJECT_GET_LGC_DATAo, 7)
@@ -4403,7 +4405,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>188</ID>
+                  <ID>186</ID>
                   <Description>"Field kills"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4415,7 +4417,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>189</ID>
+                  <ID>187</ID>
                   <Description>"Command kills"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4427,7 +4429,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>190</ID>
+                  <ID>188</ID>
                   <Description>"S-Craft"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4439,7 +4441,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>191</ID>
+                  <ID>189</ID>
                   <Description>"Quick Magic"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4451,7 +4453,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>192</ID>
+                  <ID>190</ID>
                   <Description>"Charged attack"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4463,7 +4465,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>193</ID>
+                  <ID>191</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4475,7 +4477,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>194</ID>
+                  <ID>192</ID>
                   <Description>"Max total damage"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4487,7 +4489,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>195</ID>
+                  <ID>193</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4503,11 +4505,11 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>196</ID>
+          <ID>194</ID>
           <Description>"自製料理 / Cooking list"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-30
   Author : bbfox@https://opencheattables.com
@@ -4515,7 +4517,7 @@ ed9.exe+5ED132: 83 FF 02                 - cmp edi,02
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_COOKING_LIST,$process,0F B7 84 C7 ?? ?? ?? 00 48) // should be unique
+aobscanmodule(INJECT_GET_COOKING_LIST,ed9.exe,0F B7 84 C7 ?? ?? ?? 00 48) // should be unique
 alloc(newmem,$1000,INJECT_GET_COOKING_LIST)
 
 alloc(INJECT_GET_COOKING_LISTo, 8)
@@ -4596,7 +4598,7 @@ ed9.exe+512786: 48 83 EC 20              - sub rsp,20
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>197</ID>
+              <ID>195</ID>
               <Description>"烹飪次數 / Cooking count"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -4607,7 +4609,7 @@ ed9.exe+512786: 48 83 EC 20              - sub rsp,20
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>198</ID>
+              <ID>196</ID>
               <Description>"食用次數 / Times consumed"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -4620,10 +4622,10 @@ ed9.exe+512786: 48 83 EC 20              - sub rsp,20
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>199</ID>
+          <ID>197</ID>
           <Description>"服裝更換：啟用紳士視角 / Costume: enable Ecchi perspective"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : ed9.exe
+          <AssemblerScript Async="1">{ Game   : ed9.exe
   Version: 
   Date   : 2025-01-30
   Author : bbfox@https://opencheattables.com
@@ -4694,14 +4696,14 @@ ed9.exe+173F74: 48 23 C8                       - and rcx,rax
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>200</ID>
-      <Description>"英雄傳說 界之軌跡 -告別塞姆利亞-  /  https://opencheattables.com"</Description>
+      <ID>198</ID>
+      <Description>"英雄傳說 界之軌跡 -告別塞姆利亞- v1.02  /  https://opencheattables.com"</Description>
       <Options moHideChildren="1"/>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
-          <ID>201</ID>
+          <ID>199</ID>
           <Description>"Char-ID"</Description>
           <DropDownList DisplayValueAsItem="1">0:范恩/ Van Arkride
 1:亞妮艾絲 / Agnès Claudel
@@ -4744,7 +4746,7 @@ ed9.exe+173F74: 48 23 C8                       - and rcx,rax
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>202</ID>
+          <ID>200</ID>
           <Description>"Item-ID"</Description>
           <DropDownList DisplayValueAsItem="1">0:Empty
 1037:(armor)時光夾克+
@@ -4762,10 +4764,78 @@ ed9.exe+173F74: 48 23 C8                       - and rcx,rax
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>addr_1_base</Name>
-      <Address>7FF6F7A63868</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
+  <LuaScript>function AOBScanModule(moduleName, signature, scanOptions)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList = enumModules()
+
+    for _, mod in ipairs(modList) do
+        if string.lower(mod.Name) == string.lower(moduleName) then
+            baseAddr = mod.Address
+            maxAddr = baseAddr + mod.Size
+            break
+        end
+    end
+
+    if not baseAddr then
+        print("❌ Error: Module " .. moduleName .. " not found!")
+        return nil
+    end
+
+    -- Debug:
+    --print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
+    --print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+
+    local ms = createMemScan()
+    ms.firstScan(
+        soExactValue,   -- exact scan
+        vtByteArray,    -- AOB scan: Byte Array
+        nil,            -- RoundingType (no used)
+        signature,      -- AOB String
+        nil,            -- no need by this scanoption
+        baseAddr,       -- start addr
+        maxAddr,        -- stop addr
+        scanOptions or "+X+R", -- memory protectionflags
+        fsmNotAligned,  -- no alignment
+        "1",            -- alignment
+        true,           -- using Hexadecimal
+        true,           -- isNotABinaryString
+        false,          -- isUnicode
+        false           -- isCaseSensitive
+    )
+
+    ms.waitTillDone()
+
+    local results = createFoundList(ms)
+    results.initialize()
+
+    if results.getCount() &gt; 0 then
+        local addr = results[0]
+        --print("🎯 AOB found at: 0x" .. addr)
+        results.destroy()
+        ms.destroy()
+        return addr
+    else
+        --print("❌ AOB not found in " .. moduleName)
+        results.destroy()
+        ms.destroy()
+        return nil
+    end
+end
+
+-- test `AOBScanModule()`
+--local aob_addr_str = AOBScanModule("ed9.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+--if aob_addr_str then
+--    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+--else
+--    print("❌ AOB not found in ed9.exe")
+--end
+
+
+
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+</LuaScript>
 </CheatTable>

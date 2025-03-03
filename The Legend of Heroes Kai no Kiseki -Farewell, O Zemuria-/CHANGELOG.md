@@ -1,5 +1,8 @@
 # Change log
 
+## 2025/03/03
+1. revised for v1.02 / CE 7.6
+
 ## 2025/02/02
 1. added 駭入．防壁解除時間無限 / inf. barrier cracking time
 1. fixed 空洞核心EXP倍率 / Battle: master quatrz XP multiplier
