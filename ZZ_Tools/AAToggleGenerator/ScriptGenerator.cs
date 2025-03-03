@@ -34,10 +34,14 @@ namespace AAToggleGenerator
                     Depth = e.Ancestors("CheatEntry").Count(),
                     IsAutoAssembler = e.Element("VariableType")?.Value == "Auto Assembler Script",
                     HasOptionsWithMoHideChildren = e.Element("Options")?.Attributes()
-                        .Any(attr => attr.Name == "moHideChildren" && attr.Value == "1") == true
+                        .Any(attr => attr.Name == "moHideChildren" && attr.Value == "1") == true,
+                    HasChildren = e.Element("CheatEntries") != null,  // 確認是否有子節點
+                    IsGroup = e.Element("GroupHeader")?.Value == "1" &&
+                              !(e.Element("Options")?.Attributes().Any(attr => attr.Name == "moHideChildren" && attr.Value == "1") == true)
                 })
-                .Where(e => (e.IsAutoAssembler || e.HasOptionsWithMoHideChildren) && e.Id != null)
+                .Where(e => (e.IsAutoAssembler || e.HasOptionsWithMoHideChildren || e.HasChildren) && e.Id != null)
                 .ToList();
+
 
             // Create TreeView for user selection
             TreeView treeView = new TreeView { Dock = DockStyle.Fill, CheckBoxes = true };
@@ -46,25 +50,81 @@ namespace AAToggleGenerator
             treeView.AfterCheck += TreeView_AfterCheck;
             treeView.NodeMouseDoubleClick += (sender, e) => e.Node.Checked = !e.Node.Checked;
 
+
+
             // Build TreeView nodes
+            // 存儲每個 Depth 層級的最後一個 TreeNode
+            Dictionary<int, TreeNode> depthLastNode = new Dictionary<int, TreeNode>();
+
             foreach (var entry in entries)
             {
                 TreeNode currentNode = new TreeNode(entry.Description ?? "Unnamed")
                 {
                     Tag = entry,
-                    Checked = true
+                    Checked = entry.IsAutoAssembler, // 只有 Auto Assembler 預設勾選
                 };
 
-                TreeNode parent = null;
-                TreeNodeCollection collection = treeView.Nodes;
-                for (int i = 0; i < entry.Depth; i++)
+                if (entry.IsGroup)
                 {
-                    if (collection.Count > 0)
-                        parent = collection[collection.Count - 1];
-                    collection = parent?.Nodes ?? treeView.Nodes;
+                    // 群組節點（例如 #A, #B），不能被點選
+                    currentNode.NodeFont = new System.Drawing.Font(treeView.Font, System.Drawing.FontStyle.Bold);
+                    currentNode.ForeColor = System.Drawing.Color.Gray; // 視覺上區別
                 }
-                collection.Add(currentNode);
+
+                // 找到正確的父節點
+                if (entry.Depth == 0)
+                {
+                    treeView.Nodes.Add(currentNode);
+                }
+                else
+                {
+                    if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode parentNode))
+                    {
+                        parentNode.Nodes.Add(currentNode);
+                    }
+                    else
+                    {
+                        treeView.Nodes.Add(currentNode);
+                    }
+                }
+
+                // 更新 Depth 層級的最後一個節點
+                depthLastNode[entry.Depth] = currentNode;
             }
+
+            treeView.AfterCheck += (sender, e) =>
+            {
+                CheatEntry entry = e.Node.Tag as CheatEntry;
+                if (entry != null && entry.IsGroup)
+                {
+                    e.Node.Checked = false;  // **強制還原**
+                }
+            };
+
+            treeView.BeforeCheck += (sender, e) =>
+            {
+                CheatEntry entry = e.Node.Tag as CheatEntry;
+                if (entry != null && entry.IsGroup)
+                {
+                    e.Cancel = true; // 阻止勾選
+                }
+            };
+            //treeView.AfterCheck -= TreeView_AfterCheck; // 暫時移除 AfterCheck 事件處理程序
+            treeView.NodeMouseDoubleClick += (sender, e) =>
+            {
+                TreeNode node = e.Node;
+                if (node == null) return;
+
+                CheatEntry entry = node.Tag as CheatEntry;
+                if (entry != null && entry.IsGroup)
+                {
+                    node.Checked = false;  // **確保它仍然是未勾選狀態**
+                    return;  // **不再處理後續切換 Checked**
+                }
+
+                // **僅允許非 Group 節點切換勾選**
+                node.Checked = !node.Checked;
+            };
 
             ExpandTreeView(treeView, 2);
 
@@ -282,5 +342,8 @@ namespace AAToggleGenerator
         public int Depth { get; set; }
         public bool IsAutoAssembler { get; set; }
         public bool HasOptionsWithMoHideChildren { get; set; }
+        // **新增屬性**
+        public bool HasChildren { get; set; }  // 確保是否有子節點
+        public bool IsGroup { get; set; }      // 標記是否為群組節點
     }
 }
