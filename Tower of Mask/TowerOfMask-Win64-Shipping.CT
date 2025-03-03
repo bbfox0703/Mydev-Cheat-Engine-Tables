@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>62</ID>
@@ -9,10 +9,10 @@
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
-
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
 local enableBattleScripts = {
   0, -- "Get HP"
@@ -23,21 +23,24 @@ local enableBattleScripts = {
   51, -- "Attributes"
 }
 local addressList = getAddressList()
-
-for _, id in ipairs(enableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = true
-end
-
-print("Scripts ON; Total " .. #enableBattleScripts .. " items.")
-getLuaEngine().Close()
-
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
+      sleep(50)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
-
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
 local disableBattleScripts = {
   21, -- "+Item Data (do not delete this one)"
@@ -53,13 +56,31 @@ local disableBattleScripts = {
   0, -- "Get HP"
 }
 local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+      sleep(50)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 62, Description: "Turn some scripts on/off", Depth: 0
+-- ID: 0, Description: "Get HP", Depth: 0
+-- ID: 4, Description: "inf. item durability", Depth: 0
+-- ID: 7, Description: "Pointers", Depth: 0
+--   ID: 8, Description: "Get player base data [Dynamic]", Depth: 1
+--   ID: 19, Description: "Get player misc data [Dynamic]", Depth: 1
+--     ID: 20, Description: "Generate inventory data", Depth: 2
+--       ID: 21, Description: "+Item Data (do not delete this one)", Depth: 3
+--     ID: 34, Description: "First 4  inventory..", Depth: 2
+--     ID: 51, Description: "Attributes", Depth: 2
+-- ID: 60, Description: "Tower of Mask  /  https://opencheattables.com", Depth: 0
+--   ID: 61, Description: "Get inventory size", Depth: 1
 
-for _, id in ipairs(disableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = false
-end
-
-print("Scripts OFF.")
-getLuaEngine().Close()
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -580,7 +601,7 @@ TowerOfMask-Win64-Shipping.exe+27EABA3: 48 8B 0D AE D3 07 02     - mov rcx,[GEng
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 -- 符號名稱
 local symbolName = "i_base_player_ctrl_ptr"
 
@@ -632,6 +653,9 @@ if not finalBasePtr then error("Invalid pointer at offset3") end
 
 -- 動態生成 MemoryRecords
 local addressList = getAddressList()
+
+synchronize(function()
+--syn. func start
 for i = 0, slotCount - 1 do
   local currentAddress = finalBasePtr + (i * itemSize)
 
@@ -669,29 +693,33 @@ for i = 0, slotCount - 1 do
   chargedBallets.Parent = parentRecord
   table.insert(dynamicRecords, chargedBallets)
 end
+--syn. func end
+end)
 
 print(string.format("Successfully created %d slots under MemoryRecord ID %d", slotCount, parentMemoryRecordID))
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 {$asm}
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 -- 刪除動態生成的 MemoryRecords
 if dynamicRecords then
-  for _, record in ipairs(dynamicRecords) do
-    if record and not record.isDestroyed then
-      record.destroy()
+  synchronize(function()
+    for _, record in ipairs(dynamicRecords) do
+      if record and not record.isDestroyed then
+        record.destroy()
+      end
     end
-  end
+  end)
   dynamicRecords = nil
   print("All dynamically generated MemoryRecords have been deleted.")
 else
   print("No dynamically generated MemoryRecords found to delete.")
 end
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 {$asm}
 
 </AssemblerScript>
@@ -1161,7 +1189,7 @@ getLuaEngine().Close()
     </CheatEntry>
     <CheatEntry>
       <ID>60</ID>
-      <Description>"Tower of Mask  /  https://opencheattables.com"</Description>
+      <Description>"Tower of Mask  /  https://opencheattables.com  /  CE 7.6"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>00AA00</Color>
       <GroupHeader>1</GroupHeader>
