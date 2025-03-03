@@ -1,16 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
       <Description>"Compact Mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
@@ -22,16 +60,15 @@ LuaCall(cycleFullCompact(nil,false))
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
 local enableBattleScripts = {
   0, -- "Compact Mode"
-  1, -- "Toggle scripts"
   10, -- "Battle: inf. item use"
+  103, -- "Mini game: Materia pick up: easy goal"
   11, -- "Battle: Set D.M.W. after changed"
   13, -- "Menu: Set consumable item stock to:"
-  16, -- "Materia scripts"
   2, -- "Battle: set HP limit when hit"
   34, -- "Get stats"
   6, -- "Battle: inf. MP"
@@ -39,18 +76,40 @@ local enableBattleScripts = {
   65, -- "Calculate readable time format"
 }
 local addressList = getAddressList()
-for _, id in ipairs(enableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = true
-end
-getLuaEngine().Close()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
 local disableBattleScripts = {
+  99, -- "Using #th materia"
+  95, -- "Using #th materia"
+  91, -- "Using #th materia"
+  87, -- "Using #th materia"
+  97, -- "#4"
+  93, -- "#3"
+  89, -- "#2"
+  85, -- "#1"
+  82, -- "Command ID #4"
+  80, -- "Command ID #3"
+  78, -- "Command ID #2"
+  76, -- "Command ID #1"
+  84, -- "Materia"
+  75, -- "Command?"
   65, -- "Calculate readable time format"
+  74, -- "Equipped"
+  64, -- "Playing time, seconds*60"
   26, -- "Materia view in Materia Fusion"
   25, -- "Set all materia star level to 5"
   24, -- "Set Materia bonus value to 1, if current value = 100"
@@ -72,10 +131,16 @@ local disableBattleScripts = {
   0, -- "Compact Mode"
 }
 local addressList = getAddressList()
-for _, id in ipairs(disableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = false
-end
-getLuaEngine().Close()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -725,7 +790,7 @@ CCFF7R-Win64-Shipping.exe+12834A9: 48 89 5D E0              - mov [rbp-20],rbx
 {$lua}
 -- NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 
 -- 參數設定
 local baseAddress = getAddress(process) + 0x71AC220 -- 起始位址
@@ -785,7 +850,7 @@ for i = 0, maxEntries - 1 do
 end
 
 print("Processing complete.")
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 [DISABLE]
 
@@ -807,7 +872,7 @@ getLuaEngine().Close()
 {$lua}
 -- NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 
 -- 參數設定
 local baseAddress = getAddress(process) + 0x71AC220 -- 起始位址
@@ -867,7 +932,7 @@ for i = 0, maxEntries - 1 do
 end
 
 print("Processing complete.")
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 [DISABLE]
 
@@ -881,7 +946,7 @@ getLuaEngine().Close()
 {$lua}
 -- NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 
 -- Parameters
 local baseAddress = getAddress(process) + 0x71AC220 -- Starting address
@@ -941,7 +1006,7 @@ for i = 0, maxEntries - 1 do
 end
 
 print("Processing complete.")
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 [DISABLE]
 
@@ -955,7 +1020,7 @@ getLuaEngine().Close()
 {$lua}
 -- NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 
 -- Parameters
 local baseAddress = getAddress(process) + 0x71AC220 -- Starting address
@@ -1015,7 +1080,7 @@ for i = 0, maxEntries - 1 do
 end
 
 print("Processing complete.")
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 [DISABLE]
 
@@ -1029,7 +1094,7 @@ getLuaEngine().Close()
 {$lua}
 -- NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 
 -- Parameters
 local baseAddress = getAddress(process) + 0x71AC220 -- Starting address
@@ -1089,7 +1154,7 @@ for i = 0, maxEntries - 1 do
 end
 
 print("Processing complete.")
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 [DISABLE]
 
@@ -1103,7 +1168,7 @@ getLuaEngine().Close()
 {$lua}
 --NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 local baseAddress = getAddress(process)+0x71AC220   -- 起始位址
 local dataLength = 16                               -- 每筆資料長度
 local maxEntries = 999                              -- 最多筆數
@@ -1137,7 +1202,7 @@ end
 
 print("Complete!")
 
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 
 </AssemblerScript>
@@ -1150,7 +1215,7 @@ getLuaEngine().Close()
 {$lua}
 --NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 local baseAddress = getAddress(process)+0x71AC220   -- 起始位址
 local dataLength = 16                               -- 每筆資料長度
 local maxEntries = 999                              -- 最多筆數
@@ -1183,7 +1248,7 @@ end
 
 print("Complete!")
 
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 
 </AssemblerScript>
@@ -1196,7 +1261,7 @@ getLuaEngine().Close()
 {$lua}
 --NO_ACTIVATE
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 -- 設定參數
 local baseAddress = getAddress(process)+0x71AC220   -- 起始位址
 local dataLength = 16                               -- 每筆資料長度
@@ -1221,7 +1286,7 @@ for i = 0, maxEntries - 1 do
 end
 
 print("Complete!")
-etLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 </AssemblerScript>
         </CheatEntry>
