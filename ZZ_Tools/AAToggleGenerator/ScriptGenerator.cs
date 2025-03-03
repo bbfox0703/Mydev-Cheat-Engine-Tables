@@ -129,8 +129,8 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("[ENABLE]");
             scriptBuilder.AppendLine("{$lua}");
             scriptBuilder.AppendLine("if (syntaxcheck) then return end");
-            scriptBuilder.AppendLine("getLuaEngine().menuItem5.doClick()");
-            scriptBuilder.AppendLine("getLuaEngine().Close()");
+            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().menuItem5.doClick() end)");
+            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
             scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
 
             foreach (var entry in enableOrder)
@@ -140,15 +140,15 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("}");
             scriptBuilder.AppendLine("local addressList = getAddressList()");
             scriptBuilder.AppendLine("for _, id in ipairs(enableBattleScripts) do");
-            scriptBuilder.AppendLine("  addressList.getMemoryRecordByID(id).Active = true");
+            scriptBuilder.AppendLine("  synchronize(function() addressList.getMemoryRecordByID(id).Active = true end)");
             scriptBuilder.AppendLine("end");
-            scriptBuilder.AppendLine("getLuaEngine().Close()");
+            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
 
             scriptBuilder.AppendLine("[DISABLE]");
             scriptBuilder.AppendLine("{$lua}");
             scriptBuilder.AppendLine("if (syntaxcheck) then return end");
-            scriptBuilder.AppendLine("getLuaEngine().menuItem5.doClick()");
-            scriptBuilder.AppendLine("getLuaEngine().Close()");
+            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().menuItem5.doClick() end)");
+            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
             scriptBuilder.AppendLine("\nlocal disableBattleScripts = {");
 
             foreach (var entry in disableOrder)
@@ -158,9 +158,9 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("}");
             scriptBuilder.AppendLine("local addressList = getAddressList()");
             scriptBuilder.AppendLine("for _, id in ipairs(disableBattleScripts) do");
-            scriptBuilder.AppendLine("  addressList.getMemoryRecordByID(id).Active = false");
+            scriptBuilder.AppendLine("  synchronize(function() addressList.getMemoryRecordByID(id).Active = false end)");
             scriptBuilder.AppendLine("end");
-            scriptBuilder.AppendLine("getLuaEngine().Close()");
+            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
 
             // Add comments
             scriptBuilder.AppendLine("-- Comments:");
