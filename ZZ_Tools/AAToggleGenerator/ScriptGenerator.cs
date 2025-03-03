@@ -189,8 +189,10 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("[ENABLE]");
             scriptBuilder.AppendLine("{$lua}");
             scriptBuilder.AppendLine("if (syntaxcheck) then return end");
-            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().menuItem5.doClick() end)");
-            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
+            scriptBuilder.AppendLine("synchronize(function()");
+            scriptBuilder.AppendLine("  getLuaEngine().menuItem5.doClick()");
+            scriptBuilder.AppendLine("  getLuaEngine().Close()");
+            scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
 
             foreach (var entry in enableOrder)
@@ -204,6 +206,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("    local memRec = addressList.getMemoryRecordByID(id)");
             scriptBuilder.AppendLine("    if memRec then");
             scriptBuilder.AppendLine("      memRec.Active = true");
+            scriptBuilder.AppendLine("      sleep(50)");
             scriptBuilder.AppendLine("    end");
             scriptBuilder.AppendLine("    addressList.refresh()");
             scriptBuilder.AppendLine("  end");
@@ -213,8 +216,10 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("[DISABLE]");
             scriptBuilder.AppendLine("{$lua}");
             scriptBuilder.AppendLine("if (syntaxcheck) then return end");
-            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().menuItem5.doClick() end)");
-            scriptBuilder.AppendLine("synchronize(function() getLuaEngine().Close() end)");
+            scriptBuilder.AppendLine("synchronize(function()");
+            scriptBuilder.AppendLine("  getLuaEngine().menuItem5.doClick()");
+            scriptBuilder.AppendLine("  getLuaEngine().Close()");
+            scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("\nlocal disableBattleScripts = {");
 
             foreach (var entry in disableOrder)
@@ -228,6 +233,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("    local memRec = addressList.getMemoryRecordByID(id)");
             scriptBuilder.AppendLine("    if memRec then");
             scriptBuilder.AppendLine("      memRec.Active = false");
+            scriptBuilder.AppendLine("      sleep(50)");
             scriptBuilder.AppendLine("    end");
             scriptBuilder.AppendLine("    addressList.refresh()");
             scriptBuilder.AppendLine("  end");
@@ -267,7 +273,7 @@ namespace AAToggleGenerator
             scintilla.Styles[Style.Lua.Word].ForeColor = System.Drawing.Color.Blue;
             scintilla.Styles[Style.Lua.Word].Bold = true;
 
-            scintilla.SetKeywords(0, "if then else end function local return for while do in break repeat until and or not");
+            scintilla.SetKeywords(0, "if then else end function local return for while do in break repeat until and or not synchronize");
 
             scriptForm.Controls.Add(scintilla);
             scriptForm.ShowDialog();
