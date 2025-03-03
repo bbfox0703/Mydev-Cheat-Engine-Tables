@@ -1,20 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
-      <ID>10</ID>
+      <ID>0</ID>
       <Description>"Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>633</ID>
+      <ID>1</ID>
       <Description>"Init. (v1.08) &lt;==== Enable after save loaded"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>FF4646</Color>
@@ -94,9 +133,9 @@ if (_dbg) then
       --print(k1,v1)
     end
     local aob_addr_str = AOBScanModule('Atelier_Ryza_2.exe', a2, '+X-C-W')
-    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local name_addr_str = getAddressSafe(aob_addr_str)+a3
     local name_addr_val = readInteger(name_addr_str)
-    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local aob_addr_val = tonumber(aob_addr_str, 16)
     local final_addr_val = name_addr_val + aob_addr_val + a4
     --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
     registerSymbol(a5, final_addr_val)
@@ -127,13 +166,108 @@ getLuaEngine().Close()
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>2233</ID>
+          <ID>124</ID>
+          <Description>"Toggle Scripts"</Description>
+          <Color>4080FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
+
+local enableBattleScripts = {
+  0, -- "Compact mode"
+  12, -- "Walk/Run speed hack"
+  18, -- "Recover HP after battle"
+  19, -- "Item Editor (choose one)"
+  2, -- "+Static values"
+  78, -- "+Battle scripts"
+  87, -- "+Puni stats / ぷに"
+  9, -- "Cole multiplier"
+  91, -- "Container and etc.+"
+  108, -- "Container Quality+"
+  79, -- "Battle: AP decrease multiplier"
+  81, -- "Battle: Damage control"
+  85, -- "Battle: EXP multiplier"
+  92, -- "Gems"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
+
+local disableBattleScripts = {
+  99, -- "Get data by script"
+  68, -- "+Equip modifier"
+  48, -- "Duplicate highlighted item (3x) to container (v1.06 only)"
+  41, -- "+Equip modifier"
+  21, -- "Duplicate highlighted item (3x) to container (v1.06 only)"
+  118, -- "Battle: MP does not decrease"
+  112, -- "min. quality to 999"
+  111, -- "min. quality to 600"
+  110, -- "min. quality to 300"
+  109, -- "min. quality to 125"
+  92, -- "Gems"
+  85, -- "Battle: EXP multiplier"
+  81, -- "Battle: Damage control"
+  79, -- "Battle: AP decrease multiplier"
+  77, -- "Fastest party quests (may cause bug)"
+  76, -- "Faster party quests"
+  47, -- "Item Editor - English -"
+  20, -- "アイテムエディター -日本語 -"
+  14, -- "Coords"
+  117, -- "_WIP"
+  114, -- "Get container / basket size &amp; addr (open basket or container)"
+  108, -- "Container Quality+"
+  91, -- "Container and etc.+"
+  9, -- "Cole multiplier"
+  87, -- "+Puni stats / ぷに"
+  78, -- "+Battle scripts"
+  74, -- "+Party quests (choose one)"
+  2, -- "+Static values"
+  19, -- "Item Editor (choose one)"
+  18, -- "Recover HP after battle"
+  12, -- "Walk/Run speed hack"
+  113, -- "_Debug"
+  120, -- "Atelier Ryza 2 v1.08  /  https://opencheattables.com  /  CE 7.6"
+  0, -- "Compact mode"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2</ID>
           <Description>"+Static values"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>33</ID>
+              <ID>3</ID>
               <Description>"Cole"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -141,7 +275,7 @@ getLuaEngine().Close()
               <Address>cole_base</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>610</ID>
+              <ID>4</ID>
               <Description>"Gold Coins"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -149,7 +283,7 @@ getLuaEngine().Close()
               <Address>cole_base+8</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>9532</ID>
+              <ID>5</ID>
               <Description>"Gems"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -157,7 +291,7 @@ getLuaEngine().Close()
               <Address>gems_base</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>2231</ID>
+              <ID>6</ID>
               <Description>"Alchemy Lv?"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -165,7 +299,7 @@ getLuaEngine().Close()
               <Address>alchemy_lv_base</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>2232</ID>
+              <ID>7</ID>
               <Description>"Alchemy XP?"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -173,7 +307,7 @@ getLuaEngine().Close()
               <Address>alchemy_lv_base+4</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>9529</ID>
+              <ID>8</ID>
               <Description>"Difficult"</Description>
               <DropDownList DisplayValueAsItem="1">0:Easy
 1:Normal
@@ -191,7 +325,7 @@ getLuaEngine().Close()
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>34</ID>
+          <ID>9</ID>
           <Description>"Cole multiplier"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -287,7 +421,7 @@ Atelier_Ryza_2.exe+575C71: B9 09 00 00 00        - mov ecx,00000009
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>35</ID>
+              <ID>10</ID>
               <Description>"Multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -295,7 +429,7 @@ Atelier_Ryza_2.exe+575C71: B9 09 00 00 00        - mov ecx,00000009
               <Address>vf_cole_income_multi</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>2194</ID>
+              <ID>11</ID>
               <Description>"Purchase discount factor"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -305,7 +439,7 @@ Atelier_Ryza_2.exe+575C71: B9 09 00 00 00        - mov ecx,00000009
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>0</ID>
+          <ID>12</ID>
           <Description>"Walk/Run speed hack"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -477,7 +611,7 @@ Atelier_Ryza_2.exe+8CE8B5: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>9</ID>
+              <ID>13</ID>
               <Description>"Speed multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -485,13 +619,13 @@ Atelier_Ryza_2.exe+8CE8B5: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
               <Address>speed_acc_factor</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>8</ID>
+              <ID>14</ID>
               <Description>"Coords"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>5</ID>
+                  <ID>15</ID>
                   <Description>"X"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -499,7 +633,7 @@ Atelier_Ryza_2.exe+8CE8B5: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
                   <Address>x_coords</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>6</ID>
+                  <ID>16</ID>
                   <Description>"Y"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -507,7 +641,7 @@ Atelier_Ryza_2.exe+8CE8B5: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
                   <Address>y_coords</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>7</ID>
+                  <ID>17</ID>
                   <Description>"Z"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -519,7 +653,7 @@ Atelier_Ryza_2.exe+8CE8B5: F3 0F 11 44 24 20        - movss [rsp+20],xmm0
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>14</ID>
+          <ID>18</ID>
           <Description>"Recover HP after battle"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Atelier_Ryza.exe
@@ -591,14 +725,14 @@ Atelier_Ryza_2.exe+501978: 7D 23                 - jnl Atelier_Ryza_2.exe+50199D
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>604</ID>
+          <ID>19</ID>
           <Description>"Item Editor (choose one)"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <Color>FF80FF</Color>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>51</ID>
+              <ID>20</ID>
               <Description>"アイテムエディター -日本語 -"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -673,7 +807,7 @@ Atelier_Ryza_2.exe+4DA493: 0F 11 83 90 01 00 00  - movups [rbx+00000190],xmm0
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>635</ID>
+                  <ID>21</ID>
                   <Description>"Duplicate highlighted item (3x) to container (v1.06 only)"</Description>
                   <Color>FF0080</Color>
                   <VariableType>Auto Assembler Script</VariableType>
@@ -800,7 +934,7 @@ end
 </AssemblerScript>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>52</ID>
+                  <ID>22</ID>
                   <Description>"Base addr."</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -809,7 +943,7 @@ end
                   <Address>container_base_addr</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>53</ID>
+                  <ID>23</ID>
                   <Description>"シリアルナンバー"</Description>
                   <DropDownListLink>-Item ID-Ja</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -821,7 +955,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>54</ID>
+                  <ID>24</ID>
                   <Description>"アイテムID"</Description>
                   <DropDownListLink>-Item-ID-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -833,7 +967,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>56</ID>
+                  <ID>25</ID>
                   <Description>"品質"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>2 Bytes</VariableType>
@@ -843,7 +977,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>59</ID>
+                  <ID>26</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>2 Bytes</VariableType>
@@ -853,7 +987,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>57</ID>
+                  <ID>27</ID>
                   <Description>"LV"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -863,7 +997,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>60</ID>
+                  <ID>28</ID>
                   <Description>"元のLV"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -873,7 +1007,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20704</ID>
+                  <ID>29</ID>
                   <Description>"CC"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -883,7 +1017,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20705</ID>
+                  <ID>30</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>1</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -893,7 +1027,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>58</ID>
+                  <ID>31</ID>
                   <Description>"特性1のレベル (レベルの無い特性は01)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -903,7 +1037,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20706</ID>
+                  <ID>32</ID>
                   <Description>"特性2のレベル (レベルの無い特性は01)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -913,7 +1047,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20707</ID>
+                  <ID>33</ID>
                   <Description>"特性3のレベル (レベルの無い特性は01)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -923,7 +1057,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>68</ID>
+                  <ID>34</ID>
                   <Description>"特性1"</Description>
                   <DropDownListLink>-Traits-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -935,7 +1069,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>69</ID>
+                  <ID>35</ID>
                   <Description>"特性2"</Description>
                   <DropDownListLink>-Traits-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -947,7 +1081,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>70</ID>
+                  <ID>36</ID>
                   <Description>"特性3"</Description>
                   <DropDownListLink>-Traits-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -959,7 +1093,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>63</ID>
+                  <ID>37</ID>
                   <Description>"効果1"</Description>
                   <DropDownListLink>-Effects-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -971,7 +1105,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>64</ID>
+                  <ID>38</ID>
                   <Description>"効果2"</Description>
                   <DropDownListLink>-Effects-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -983,7 +1117,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>65</ID>
+                  <ID>39</ID>
                   <Description>"効果3"</Description>
                   <DropDownListLink>-Effects-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -995,7 +1129,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>66</ID>
+                  <ID>40</ID>
                   <Description>"効果4"</Description>
                   <DropDownListLink>-Effects-Ja</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
@@ -1007,13 +1141,13 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>570</ID>
+                  <ID>41</ID>
                   <Description>"+Equip modifier"</Description>
                   <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>480</ID>
+                      <ID>42</ID>
                       <Description>"HP+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1023,7 +1157,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20712</ID>
+                      <ID>43</ID>
                       <Description>"???"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1033,7 +1167,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>569</ID>
+                      <ID>44</ID>
                       <Description>"ATK+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1043,7 +1177,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>367</ID>
+                      <ID>45</ID>
                       <Description>"Def+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1053,7 +1187,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>368</ID>
+                      <ID>46</ID>
                       <Description>"SPD+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1067,7 +1201,7 @@ end
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>20714</ID>
+              <ID>47</ID>
               <Description>"Item Editor - English -"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1142,7 +1276,7 @@ Atelier_Ryza_2.exe+4DA493: 0F 11 83 90 01 00 00  - movups [rbx+00000190],xmm0
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>20715</ID>
+                  <ID>48</ID>
                   <Description>"Duplicate highlighted item (3x) to container (v1.06 only)"</Description>
                   <Color>FF0080</Color>
                   <VariableType>Auto Assembler Script</VariableType>
@@ -1269,7 +1403,7 @@ end
 </AssemblerScript>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20716</ID>
+                  <ID>49</ID>
                   <Description>"Base addr."</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1278,7 +1412,7 @@ end
                   <Address>container_base_addr</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20717</ID>
+                  <ID>50</ID>
                   <Description>"Sequence"</Description>
                   <DropDownListLink>-Item ID-Ja</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1290,7 +1424,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20718</ID>
+                  <ID>51</ID>
                   <Description>"item D"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1301,7 +1435,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20719</ID>
+                  <ID>52</ID>
                   <Description>"Quality"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>2 Bytes</VariableType>
@@ -1311,7 +1445,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20720</ID>
+                  <ID>53</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>2 Bytes</VariableType>
@@ -1321,7 +1455,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20721</ID>
+                  <ID>54</ID>
                   <Description>"LV"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1331,7 +1465,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20722</ID>
+                  <ID>55</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1341,7 +1475,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20723</ID>
+                  <ID>56</ID>
                   <Description>"CC"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1351,7 +1485,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20724</ID>
+                  <ID>57</ID>
                   <Description>"??"</Description>
                   <ShowAsSigned>1</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1361,7 +1495,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20725</ID>
+                  <ID>58</ID>
                   <Description>"Trait1 LV (1 = none or 1)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1371,7 +1505,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20726</ID>
+                  <ID>59</ID>
                   <Description>"Trait2 LV (1 = none or 1)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1381,7 +1515,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20727</ID>
+                  <ID>60</ID>
                   <Description>"Trait3 LV (1 = none or 1)"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>Byte</VariableType>
@@ -1391,7 +1525,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20728</ID>
+                  <ID>61</ID>
                   <Description>"Trait 1"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1402,7 +1536,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20729</ID>
+                  <ID>62</ID>
                   <Description>"Trait 2"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1413,7 +1547,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20730</ID>
+                  <ID>63</ID>
                   <Description>"Trait 3"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1424,7 +1558,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20731</ID>
+                  <ID>64</ID>
                   <Description>"Effect 1"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1435,7 +1569,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20732</ID>
+                  <ID>65</ID>
                   <Description>"Effect 2"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1446,7 +1580,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20733</ID>
+                  <ID>66</ID>
                   <Description>"Effect 3"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1457,7 +1591,7 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20734</ID>
+                  <ID>67</ID>
                   <Description>"Effect 4"</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1468,13 +1602,13 @@ end
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20735</ID>
+                  <ID>68</ID>
                   <Description>"+Equip modifier"</Description>
                   <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
                   <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>20736</ID>
+                      <ID>69</ID>
                       <Description>"HP+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1484,7 +1618,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20737</ID>
+                      <ID>70</ID>
                       <Description>"???"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1494,7 +1628,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20738</ID>
+                      <ID>71</ID>
                       <Description>"ATK+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1504,7 +1638,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20739</ID>
+                      <ID>72</ID>
                       <Description>"Def+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1514,7 +1648,7 @@ end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20740</ID>
+                      <ID>73</ID>
                       <Description>"SPD+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>2 Bytes</VariableType>
@@ -1530,19 +1664,19 @@ end
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>2217</ID>
+          <ID>74</ID>
           <Description>"+Party quests (choose one)"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>20713</ID>
+              <ID>75</ID>
               <Description>"Not fully tested"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>573</ID>
+              <ID>76</ID>
               <Description>"Faster party quests"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza.exe
@@ -1627,7 +1761,7 @@ Atelier_Ryza_2.exe+42D33E: CC                    - int 3
 </AssemblerScript>
             </CheatEntry>
             <CheatEntry>
-              <ID>2218</ID>
+              <ID>77</ID>
               <Description>"Fastest party quests (may cause bug)"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza.exe
@@ -1700,14 +1834,14 @@ Atelier_Ryza_2.exe+42D33E: CC                    - int 3
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>39</ID>
+          <ID>78</ID>
           <Description>"+Battle scripts"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <Color>008000</Color>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>31</ID>
+              <ID>79</ID>
               <Description>"Battle: AP decrease multiplier"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1786,7 +1920,7 @@ Atelier_Ryza_2.exe+2A7BA: C3                    - ret
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>32</ID>
+                  <ID>80</ID>
                   <Description>"Multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -1796,7 +1930,7 @@ Atelier_Ryza_2.exe+2A7BA: C3                    - ret
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>43</ID>
+              <ID>81</ID>
               <Description>"Battle: Damage control"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1921,7 +2055,7 @@ Atelier_Ryza_2.exe+333C4A: 7D 07                 - jnl Atelier_Ryza_2.exe+333C53
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>44</ID>
+                  <ID>82</ID>
                   <Description>"Damage type to player"</Description>
                   <DropDownList DisplayValueAsItem="1">0:Off
 1:1pt
@@ -1934,7 +2068,7 @@ Atelier_Ryza_2.exe+333C4A: 7D 07                 - jnl Atelier_Ryza_2.exe+333C53
                   <Address>hp_damage_type</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>45</ID>
+                  <ID>83</ID>
                   <Description>"Multiplier to player"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -1942,7 +2076,7 @@ Atelier_Ryza_2.exe+333C4A: 7D 07                 - jnl Atelier_Ryza_2.exe+333C53
                   <Address>hp_fdamage_multi</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>46</ID>
+                  <ID>84</ID>
                   <Description>"Damage multiplier to enemy"</Description>
                   <DropDownList DisplayValueAsItem="1">1:Default
 2:2x
@@ -1958,7 +2092,7 @@ Atelier_Ryza_2.exe+333C4A: 7D 07                 - jnl Atelier_Ryza_2.exe+333C53
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>37</ID>
+              <ID>85</ID>
               <Description>"Battle: EXP multiplier"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -2035,7 +2169,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>38</ID>
+                  <ID>86</ID>
                   <Description>"Multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
@@ -2047,13 +2181,13 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>2234</ID>
+          <ID>87</ID>
           <Description>"+Puni stats / ぷに"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>2235</ID>
+              <ID>88</ID>
               <Description>"Constitution / 体力"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2061,7 +2195,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
               <Address>puni_base</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>2236</ID>
+              <ID>89</ID>
               <Description>"Luster / 色つや"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2069,7 +2203,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
               <Address>puni_base+4</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>2237</ID>
+              <ID>90</ID>
               <Description>"Mood / 機嫌"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2079,20 +2213,20 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>10001</ID>
+          <ID>91</ID>
           <Description>"Container and etc.+"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <Color>FF3C3C</Color>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>20743</ID>
+              <ID>92</ID>
               <Description>"Gems"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>10011</ID>
+                  <ID>93</ID>
                   <Description>"Gem"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2100,7 +2234,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
                   <Address>Atelier_Ryza_2.exe+1784868</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20748</ID>
+                  <ID>94</ID>
                   <Description>"Fire gem"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2108,7 +2242,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
                   <Address>Atelier_Ryza_2.exe+1784870</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10012</ID>
+                  <ID>95</ID>
                   <Description>"Ice gem"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2116,7 +2250,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
                   <Address>Atelier_Ryza_2.exe+1784874</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10013</ID>
+                  <ID>96</ID>
                   <Description>"Thunder gem"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2124,7 +2258,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
                   <Address>Atelier_Ryza_2.exe+1784878</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10014</ID>
+                  <ID>97</ID>
                   <Description>"Wind gem"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2132,7 +2266,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
                   <Address>Atelier_Ryza_2.exe+178487C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10015</ID>
+                  <ID>98</ID>
                   <Description>"Light gem"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2140,7 +2274,7 @@ Atelier_Ryza_2.exe+4FE574: 89 43 08           - mov [rbx+08],eax
                   <Address>Atelier_Ryza_2.exe+1784880</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>20741</ID>
+                  <ID>99</ID>
                   <Description>"Get data by script"</Description>
                   <Options moHideChildren="1"/>
                   <VariableType>Auto Assembler Script</VariableType>
@@ -2220,13 +2354,13 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
 </AssemblerScript>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>20750</ID>
+                      <ID>100</ID>
                       <Description>"Usage: click duplicate gem in forge"</Description>
                       <Color>8000FF</Color>
                       <GroupHeader>1</GroupHeader>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20742</ID>
+                      <ID>101</ID>
                       <Description>"Gem"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -2237,7 +2371,7 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20749</ID>
+                      <ID>102</ID>
                       <Description>"Fire gem"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -2248,7 +2382,7 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20744</ID>
+                      <ID>103</ID>
                       <Description>"Ice gem"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -2259,7 +2393,7 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20745</ID>
+                      <ID>104</ID>
                       <Description>"Thunder gem"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -2270,7 +2404,7 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20746</ID>
+                      <ID>105</ID>
                       <Description>"Wind gem"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -2281,7 +2415,7 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>20747</ID>
+                      <ID>106</ID>
                       <Description>"Light gem"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
@@ -2296,21 +2430,21 @@ Atelier_Ryza_2.exe+580C3E: CC                    - int 3
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>20702</ID>
+              <ID>107</ID>
               <Description>"Container 1st Item addr"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>2 Bytes</VariableType>
               <Address>container_base</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>10002</ID>
+              <ID>108</ID>
               <Description>"Container Quality+"</Description>
               <Options moHideChildren="1"/>
               <Color>FF4D4D</Color>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>10040</ID>
+                  <ID>109</ID>
                   <Description>"min. quality to 125"</Description>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>[ENABLE]
@@ -2358,7 +2492,7 @@ print("Done...")
 </AssemblerScript>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10041</ID>
+                  <ID>110</ID>
                   <Description>"min. quality to 300"</Description>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>[ENABLE]
@@ -2405,7 +2539,7 @@ print("Done...")
 </AssemblerScript>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10042</ID>
+                  <ID>111</ID>
                   <Description>"min. quality to 600"</Description>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>[ENABLE]
@@ -2453,7 +2587,7 @@ print("Done...")
 </AssemblerScript>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>10043</ID>
+                  <ID>112</ID>
                   <Description>"min. quality to 999"</Description>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>[ENABLE]
@@ -2504,13 +2638,13 @@ print("Done.")
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>29</ID>
+          <ID>113</ID>
           <Description>"_Debug"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>11</ID>
+              <ID>114</ID>
               <Description>"Get container / basket size &amp; addr (open basket or container)"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -2585,7 +2719,7 @@ Atelier_Ryza.exe+179910: 48 89 5C 24 08  - mov [rsp+08],rbx
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>12</ID>
+                  <ID>115</ID>
                   <Description>"Addr."</Description>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -2594,7 +2728,7 @@ Atelier_Ryza.exe+179910: 48 89 5C 24 08  - mov [rsp+08],rbx
                   <Address>i_basket_addr</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>13</ID>
+                  <ID>116</ID>
                   <Description>"Size"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>808080</Color>
@@ -2607,13 +2741,13 @@ Atelier_Ryza.exe+179910: 48 89 5C 24 08  - mov [rsp+08],rbx
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>9530</ID>
+              <ID>117</ID>
               <Description>"_WIP"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>42</ID>
+                  <ID>118</ID>
                   <Description>"Battle: MP does not decrease"</Description>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>{ Game   : Atelier_Ryza.exe
@@ -2686,7 +2820,7 @@ Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+00
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>20751</ID>
+      <ID>119</ID>
       <Description>"Game version (should be 1.08)"</Description>
       <ShowAsSigned>0</ShowAsSigned>
       <Color>808080</Color>
@@ -2698,14 +2832,14 @@ Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+00
       <Address>Atelier_Ryza_2.exe+DB7580</Address>
     </CheatEntry>
     <CheatEntry>
-      <ID>20703</ID>
-      <Description>"Atelier Ryza 2 v1.08  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <ID>120</ID>
+      <Description>"Atelier Ryza 2 v1.08  /  https://opencheattables.com  /  CE 7.6"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>00CC00</Color>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
-          <ID>20709</ID>
+          <ID>121</ID>
           <Description>"-Traits-Ja"</Description>
           <DropDownList DisplayValueAsItem="1">0000:品質上昇
 0001:品質上昇＋
@@ -2901,7 +3035,7 @@ Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+00
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>20710</ID>
+          <ID>122</ID>
           <Description>"-Item-ID-Ja"</Description>
           <DropDownList DisplayValueAsItem="1">0000:きれいな水
 0001:植物エキス
@@ -3504,7 +3638,7 @@ Atelier_Ryza.exe+219DF4: FF 90 D0 01 00 00              - call qword ptr [rax+00
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>20711</ID>
+          <ID>123</ID>
           <Description>"-Effects-Ja"</Description>
           <DropDownList DisplayValueAsItem="1">0000:炸裂するうに
 0001:飛散するうに
@@ -5218,29 +5352,75 @@ function onMemRecPreExecute(memoryrecord, newstate)
     end
 end
 
-function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
-	--checkArgType(moduleName, 1, 'string')
-	if not signature or not moduleName then return end
-	index = index or 1
-	local modStartAddr = getAddress(moduleName)
-	local modEndAddr = modStartAddr + getModuleSize(moduleName)
-	local ms = createMemScan()
-	if type(signature) == 'table' then
-		local sig = ''
-		for i, byte in ipairs(signature) do
-			sig = sig..string.format('%02X', byte)
-		end
-		signature = sig
-	end
-	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
-				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
-	ms.waitTillDone()
-	local results = createFoundList(ms)
-	results.initialize()
-	ms.destroy()
-	return results
+function AOBScanModule(moduleName, signature, scanOptions)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList = enumModules()
+
+    for _, mod in ipairs(modList) do
+        if string.lower(mod.Name) == string.lower(moduleName) then
+            baseAddr = mod.Address
+            maxAddr = baseAddr + mod.Size
+            break
+        end
+    end
+
+    if not baseAddr then
+        print("❌ Error: Module " .. moduleName .. " not found!")
+        return nil
+    end
+
+    -- Debug:
+    --print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
+    --print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+
+    local ms = createMemScan()
+    ms.firstScan(
+        soExactValue,   -- exact scan
+        vtByteArray,    -- AOB scan: Byte Array
+        nil,            -- RoundingType (no used)
+        signature,      -- AOB String
+        nil,            -- no need by this scanoption
+        baseAddr,       -- start addr
+        maxAddr,        -- stop addr
+        scanOptions or "+X+R", -- memory protectionflags
+        fsmNotAligned,  -- no alignment
+        "1",            -- alignment
+        true,           -- using Hexadecimal
+        true,           -- isNotABinaryString
+        false,          -- isUnicode
+        false           -- isCaseSensitive
+    )
+
+    ms.waitTillDone()
+
+    local results = createFoundList(ms)
+    results.initialize()
+
+    if results.getCount() &gt; 0 then
+        local addr = results[0]
+        --print("🎯 AOB found at: 0x" .. addr)
+        results.destroy()
+        ms.destroy()
+        return addr
+    else
+        --print("❌ AOB not found in " .. moduleName)
+        results.destroy()
+        ms.destroy()
+        return nil
+    end
 end
+
+-- test `AOBScanModule()
+--local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+--if aob_addr_str then
+--    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+--else
+--    print("❌ AOB not found in ???.exe")
+--end
+
 registerLuaFunctionHighlight('AOBScanModule')
+
 
 
 
