@@ -10,11 +10,49 @@
       <Description>"コンパクトモード / Compact Mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
@@ -62,7 +100,7 @@ if baseAddress == nil then
 else
   g_containerBaseAddress = baseAddress + BaseContainerOffset
   g_SynthesisBaseAddress = baseAddress + BaseSynthesisOffset
-  getLuaEngine().Close()
+  closeLuaEngine()
 end
 
 
@@ -72,9 +110,9 @@ end
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
 
-local memoryRecordx = getAddressList().getMemoryRecordByID(386)
-memoryRecordx.Description = "Year:? Month:?? Day:??"
-getLuaEngine().Close()
+--local memoryRecordx = getAddressList().getMemoryRecordByID(386)
+--memoryRecordx.Description = "Year:? Month:?? Day:??"
+closeLuaEngine()
 
 {$asm}
 unregistersymbol(TARGET_QUALITY)
@@ -98,6 +136,8 @@ synchronize(function() getLuaEngine().Close() end)
 
 local enableBattleScripts = {
   0, -- "コンパクトモード / Compact Mode"
+  1, -- "init."
+  117, -- "ゲームウィンドウをウィンドウモードからボーダーレスフルスクリーンに変更します / Set game window mode"
   23, -- "バトル後にHP/MP/LPを回復 / Recover HP/MP after battle"
   24, -- "バトル：ダメージコントロール / Battle: Damage control"
   27, -- "バトル：MPが減少しません / Battle: inf. MP"
@@ -112,10 +152,10 @@ local enableBattleScripts = {
   43, -- "調合：使用後も無限PP / Synthesis: inf. PP after use"
   44, -- "調合：属性の倍率 / Synthesis: elements multiplier"
   46, -- "友情獲得倍率 / Friendship multiplier"
+  49, -- "コンテナ&amp;カゴ / Container &amp; basket"
   64, -- "ショップアイテムの在庫数量を少なくとも1に設定する / Set shop item avail. quantity at least 1"
   65, -- "アイテムエディター / Item Editor"
   6, -- "Date / time"
-  11, -- "全て合計 / Sum. all "
   8, -- "日付を取得 / Get current date"
 }
 local addressList = getAddressList()
@@ -137,12 +177,6 @@ synchronize(function() getLuaEngine().Close() end)
 
 local disableBattleScripts = {
   8, -- "日付を取得 / Get current date"
-  63, -- "Go!"
-  60, -- "Go!"
-  58, -- "Go!"
-  56, -- "Go!"
-  52, -- "Go!"
-  11, -- "全て合計 / Sum. all "
   85, -- "English"
   68, -- "日本語"
   67, -- "選択した &lt;&lt;調合、使用、裝備アイテム&gt;&gt; をコンテナに複製（3回） / Duplicate selected non-raw material item to container (x3)"
@@ -171,11 +205,7 @@ local disableBattleScripts = {
   27, -- "バトル：MPが減少しません / Battle: inf. MP"
   24, -- "バトル：ダメージコントロール / Battle: Damage control"
   23, -- "バトル後にHP/MP/LPを回復 / Recover HP/MP after battle"
-  2, -- "いくつかのスクリプトを切り替える / Toggle some scripts"
-  123, -- "Powershell ver. 7"
-  122, -- "Powershell ver. 5"
-  121, -- "Notice: read me first"
-  120, -- "注意：最初にお読みください"
+  117, -- "ゲームウィンドウをウィンドウモードからボーダーレスフルスクリーンに変更します / Set game window mode"
   0, -- "コンパクトモード / Compact Mode"
 }
 local addressList = getAddressList()
@@ -189,6 +219,50 @@ synchronize(function()
   end
 end)
 synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 0, Description: "コンパクトモード / Compact Mode", Depth: 0
+-- ID: 1, Description: "init.", Depth: 0
+--   ID: 2, Description: "いくつかのスクリプトを切り替える / Toggle some scripts", Depth: 1
+--   ID: 3, Description: "静的アドレス値 / Static addr. values", Depth: 1
+--     ID: 6, Description: "Date / time", Depth: 2
+--       ID: 8, Description: "日付を取得 / Get current date", Depth: 3
+--     ID: 10, Description: "業績 / Rank pt", Depth: 2
+--       ID: 11, Description: "全て合計 / Sum. all ", Depth: 3
+--   ID: 23, Description: "バトル後にHP/MP/LPを回復 / Recover HP/MP after battle", Depth: 1
+--   ID: 24, Description: "バトル：ダメージコントロール / Battle: Damage control", Depth: 1
+--   ID: 27, Description: "バトル：MPが減少しません / Battle: inf. MP", Depth: 1
+--   ID: 28, Description: "バトル：インフィニティリンクゲージ / Battle: inf. link gauge", Depth: 1
+--   ID: 31, Description: "バトル：サポートゲージの倍率 / Battle: support gauge multiplier", Depth: 1
+--   ID: 33, Description: "バトル：経験値獲得倍率 / EXP multiplier", Depth: 1
+--   ID: 35, Description: "バトル：アイテムの使用回数が減少しない / Battle: no item use count decrease", Depth: 1
+--   ID: 37, Description: "フィールド：アイテム使用回数が減少しない / Field: no item use count decrease", Depth: 1
+--   ID: 39, Description: "フィールドイベントポイントの倍率 / Field event pt multiplier", Depth: 1
+--   ID: 42, Description: "調合：インフィニティCP - マテリアル / Synthesis: inf. CP - materials", Depth: 1
+--   ID: 43, Description: "調合：使用後も無限PP / Synthesis: inf. PP after use", Depth: 1
+--   ID: 44, Description: "調合：属性の倍率 / Synthesis: elements multiplier", Depth: 1
+--   ID: 46, Description: "友情獲得倍率 / Friendship multiplier", Depth: 1
+--   ID: 49, Description: "コンテナ&amp;カゴ / Container &amp; basket", Depth: 1
+--     ID: 50, Description: "コンテナのアイテム効力を設定する / Set container items eff. to..", Depth: 2
+--       ID: 52, Description: "Go!", Depth: 3
+--     ID: 53, Description: "コンテナの原材料のスタック数量を設定する / Set container raw materials stack quantity to..", Depth: 2
+--       ID: 56, Description: "Go!", Depth: 3
+--     ID: 57, Description: "コンテナ内使用アイテムの使用回数を上限まで設定する / Set container useable items use count to its limts", Depth: 2
+--       ID: 58, Description: "Go!", Depth: 3
+--     ID: 59, Description: "コンテナ内の使用可能アイテムのスロットサイズを1に設定する / Set container useable items slot size to 1", Depth: 2
+--       ID: 60, Description: "Go!", Depth: 3
+--     ID: 61, Description: "カゴのアイテム効力を設定する / Set basket items eff. to..", Depth: 2
+--       ID: 63, Description: "Go!", Depth: 3
+--   ID: 64, Description: "ショップアイテムの在庫数量を少なくとも1に設定する / Set shop item avail. quantity at least 1", Depth: 1
+--   ID: 65, Description: "アイテムエディター / Item Editor", Depth: 1
+--     ID: 67, Description: "選択した &lt;&lt;調合、使用、裝備アイテム&gt;&gt; をコンテナに複製（3回） / Duplicate selected non-raw material item to container (x3)", Depth: 2
+--     ID: 68, Description: "日本語", Depth: 2
+--     ID: 85, Description: "English", Depth: 2
+--     ID: 101, Description: "正體中文", Depth: 2
+-- ID: 117, Description: "ゲームウィンドウをウィンドウモードからボーダーレスフルスクリーンに変更します / Set game window mode", Depth: 0
+--   ID: 120, Description: "注意：最初にお読みください", Depth: 1
+--   ID: 121, Description: "Notice: read me first", Depth: 1
+--   ID: 122, Description: "Powershell ver. 5", Depth: 1
+--   ID: 123, Description: "Powershell ver. 7", Depth: 1
 
 </AssemblerScript>
         </CheatEntry>
@@ -201,7 +275,7 @@ synchronize(function() getLuaEngine().Close() end)
 {$lua}
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
-getLuaEngine().MenuItem5.doClick()
+clearLuaLog()
 local _dbg = true
 if (_dbg) then
   local AOBs = {
@@ -217,9 +291,9 @@ if (_dbg) then
   for _, v in ipairs(AOBs) do
     local aob_addr_str = AOBScanModule(process, v.aob, "+X-C-W")
     if aob_addr_str then
-      local name_addr_str = getAddressSafe(aob_addr_str[0]) + v.pos
+      local name_addr_str = getAddressSafe(aob_addr_str) + v.pos
       local name_addr_val = readInteger(name_addr_str)
-      local aob_addr_val = tonumber(aob_addr_str[0], 16)
+      local aob_addr_val = tonumber(aob_addr_str, 16)
       local final_addr_val = name_addr_val + aob_addr_val + v.aoblen
       registerSymbol(v.symbol, final_addr_val)
 
@@ -235,7 +309,7 @@ if (_dbg) then
       print(string.format("AOB scan failed: %s", v.name))
     end
   end
-  getLuaEngine().Close()
+  closeLuaEngine()
 end
 
 {$asm}
@@ -250,7 +324,8 @@ for _, symbol in ipairs(disable_array) do
   unregisterSymbol(symbol)
 end
 
-getLuaEngine().Close()
+closeLuaEngine()
+
 
 </AssemblerScript>
           <CheatEntries>
@@ -7866,28 +7941,7 @@ end
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>alchemy_exp_base</Name>
-      <Address>141445D94</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>cole_base</Name>
-      <Address>141446644</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>day_base</Name>
-      <Address>141451ECC</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>rank_base</Name>
-      <Address>141449DE0</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>rank_base_y1m1</Name>
-      <Address>141449DBC</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <LuaScript>MaxContainerCount = 199
 MaxSynthesisCount = 1199
 MaxBasketCount = 120
@@ -7997,12 +8051,32 @@ end
 --if aob_addr_str then
 --    print("✅ Final AOB Address: 0x" .. aob_addr_str)
 --else
---    print("❌ AOB not found in ed9.exe")
+--    print("❌ AOB not found in ???.exe")
 --end
 
 registerLuaFunctionHighlight('AOBScanModule')
 
+function clearLuaLog()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+    end)
+end
+registerLuaFunctionHighlight('clearLuaLog')
 
+function closeLuaEngine()
+    synchronize(function()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+function closeLuaEngine2()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
 
 AddressList.Header.OnSectionClick = nil
 
