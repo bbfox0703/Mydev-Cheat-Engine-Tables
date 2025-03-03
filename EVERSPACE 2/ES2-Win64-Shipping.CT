@@ -1,16 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
       <Description>"Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
@@ -22,8 +60,8 @@ LuaCall(cycleFullCompact(nil,false))
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
 local enableBattleScripts = {
   0, -- "Compact mode"
@@ -36,19 +74,25 @@ local enableBattleScripts = {
   136, -- "inf. cloak field timer"
   144, -- "Fast device cooldown"
   145, -- "dismantled item: keep material amount at least 10"
+  147, -- "Get focused attribute value (Firepower/utility/resistance...)"
   155, -- "browse item &amp; set some attributes"
   157, -- "Get Mainframe Expansions"
 }
 local addressList = getAddressList()
-for _, id in ipairs(enableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = true
-end
-getLuaEngine().Close()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = true
+    end
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
+synchronize(function() getLuaEngine().Close() end)
 
 local disableBattleScripts = {
   85, -- "11~"
@@ -56,12 +100,15 @@ local disableBattleScripts = {
   34, -- "11~"
   13, -- "1~10"
   62, -- "Attributes+"
+  191, -- "Try to get detonator countdown (astorid / not real address)"
+  185, -- "Try to get racing timer (not real address)"
   171, -- "init. 2"
   168, -- "Get AESPawn"
   139, -- "Try to get EN sphere timer value (not real address)"
   11, -- "Attributes+"
+  184, -- "Auto Assemble script"
   162, -- "UE5 init."
-  138, -- "incomplete / not full function script"
+  138, -- "incomplete / not full function scripts"
   2, -- "Get last 2 items level &amp; count"
   161, -- "_debug"
   160, -- "_not working"
@@ -80,10 +127,15 @@ local disableBattleScripts = {
   0, -- "Compact mode"
 }
 local addressList = getAddressList()
-for _, id in ipairs(disableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = false
-end
-getLuaEngine().Close()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec then
+      memRec.Active = false
+    end
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 
 </AssemblerScript>
     </CheatEntry>
