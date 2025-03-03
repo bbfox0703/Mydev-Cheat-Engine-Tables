@@ -1,0 +1,123 @@
+--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
+function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+
+--memory record IDs now allowed to be 'locked'
+IDs = {99999, 9999999,
+       }
+
+--determine event trigger sequence
+
+function contains(table, val)
+   local i = 0
+   for i=1, #table do
+      if table[i] == val then
+         return true
+      end
+   end
+   return false
+end
+
+function onMemRecPreExecute(memoryrecord, newstate)
+    if contains(IDs, memoryrecord.ID) and newstate then
+	    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+		    return false
+	    end
+    end
+end
+
+function AOBScanModule(moduleName, signature, scanOptions)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList = enumModules()
+
+    for _, mod in ipairs(modList) do
+        if string.lower(mod.Name) == string.lower(moduleName) then
+            baseAddr = mod.Address
+            maxAddr = baseAddr + mod.Size
+            break
+        end
+    end
+
+    if not baseAddr then
+        print("❌ Error: Module " .. moduleName .. " not found!")
+        return nil
+    end
+
+    -- Debug:
+    --print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
+    --print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+
+    local ms = createMemScan()
+    ms.firstScan(
+        soExactValue,   -- exact scan
+        vtByteArray,    -- AOB scan: Byte Array
+        nil,            -- RoundingType (no used)
+        signature,      -- AOB String
+        nil,            -- no need by this scanoption
+        baseAddr,       -- start addr
+        maxAddr,        -- stop addr
+        scanOptions or "+X+R", -- memory protectionflags
+        fsmNotAligned,  -- no alignment
+        "1",            -- alignment
+        true,           -- using Hexadecimal
+        true,           -- isNotABinaryString
+        false,          -- isUnicode
+        false           -- isCaseSensitive
+    )
+
+    ms.waitTillDone()
+
+    local results = createFoundList(ms)
+    results.initialize()
+
+    if results.getCount() > 0 then
+        local addr = results[0]
+        --print("🎯 AOB found at: 0x" .. addr)
+        results.destroy()
+        ms.destroy()
+        return addr
+    else
+        --print("❌ AOB not found in " .. moduleName)
+        results.destroy()
+        ms.destroy()
+        return nil
+    end
+end
+
+-- test `AOBScanModule()
+--local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+--if aob_addr_str then
+--    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+--else
+--    print("❌ AOB not found in ???.exe")
+--end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+function clearLuaLog()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+    end)
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+function closeLuaEngine()
+    synchronize(function()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+function closeLuaEngine2()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+AddressList.Header.OnSectionClick = nil
