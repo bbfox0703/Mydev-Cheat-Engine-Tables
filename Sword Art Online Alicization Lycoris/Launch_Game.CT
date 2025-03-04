@@ -1,16 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="42">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>113</ID>
       <Description>"Compact Mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -23,7 +62,7 @@ LuaCall(cycleFullCompact(nil,false))
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
 
-getLuaEngine().MenuItem5.doClick()
+clearLuaLog()
 
 local _dbg = true
 if (_dbg) then
@@ -59,17 +98,17 @@ if (_dbg) then
       end
       --print(k1,v1)
     end
-    local aob_addr_str = AOBScanModule('Launch_Game.exe', a2, '+X-C-W')
-    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local aob_addr_str = AOBScanModule('Launch_Game.exe', a2, '+X+R')
+    local name_addr_str = getAddressSafe(aob_addr_str)+a3
     local name_addr_val = readInteger(name_addr_str)
-    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local aob_addr_val = tonumber(aob_addr_str, 16)
     local final_addr_val = name_addr_val + aob_addr_val + a4
     --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
     registerSymbol(a5, final_addr_val)
     --print('-------')
   end
 end
-getLuaEngine().close()
+closeLuaEngine()
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
@@ -80,7 +119,7 @@ for i = 1, a_len do
   --print(disable_array[i])
   unregisterSymbol(disable_array[i])
 end
-getLuaEngine().close()
+closeLuaEngine()
 
 --[[
 jump height:
@@ -244,7 +283,7 @@ sao_al.exe+5167D5: CC                    - int 3
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
 
-getLuaEngine().MenuItem5.doClick()
+clearLuaLog()
 
 local _dbg = true
 if (_dbg) then
@@ -280,17 +319,17 @@ if (_dbg) then
       end
       --print(k1,v1)
     end
-    local aob_addr_str = AOBScanModule('sao_al.exe', a2, '+X-C-W')
-    local name_addr_str = getAddressSafe(aob_addr_str[0])+a3
+    local aob_addr_str = AOBScanModule('sao_al.exe', a2, '+X+R')
+    local name_addr_str = getAddressSafe(aob_addr_str)+a3
     local name_addr_val = readInteger(name_addr_str)
-    local aob_addr_val = tonumber(aob_addr_str[0], 16)
+    local aob_addr_val = tonumber(aob_addr_str, 16)
     local final_addr_val = name_addr_val + aob_addr_val + a4
     --print(a1 .. " addr: " .. string.format("%08X", final_addr_val))
     registerSymbol(a5, final_addr_val)
     --print('-------')
   end
 end
-getLuaEngine().close()
+closeLuaEngine()
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
@@ -301,7 +340,7 @@ for i = 1, a_len do
   --print(disable_array[i])
   unregisterSymbol(disable_array[i])
 end
-getLuaEngine().close()
+closeLuaEngine()
 
 --[[
 jump height:
@@ -8928,33 +8967,97 @@ function onMemRecPreExecute(memoryrecord, newstate)
     end
 end
 
-function AOBScanModule(moduleName, signature, aobSignaturePrivileges, alignmentType, alignmentParam)
-	--checkArgType(moduleName, 1, 'string')
-	if not signature or not moduleName then return end
-	index = index or 1
-	local modStartAddr = getAddress(moduleName)
-	local modEndAddr = modStartAddr + getModuleSize(moduleName)
-	local ms = createMemScan()
-	if type(signature) == 'table' then
-		local sig = ''
-		for i, byte in ipairs(signature) do
-			sig = sig..string.format('%02X', byte)
-		end
-		signature = sig
-	end
-	ms.firstScan(soExactValue, vtByteArray, nil, signature, nil, modStartAddr, modEndAddr,
-				 aobSignaturePrivileges, alignmentType, alignmentParam, true, true, false, false)
-	ms.waitTillDone()
-	local results = createFoundList(ms)
-	results.initialize()
-	ms.destroy()
-	return results
+function AOBScanModule(moduleName, signature, scanOptions)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList = enumModules()
+
+    for _, mod in ipairs(modList) do
+        if string.lower(mod.Name) == string.lower(moduleName) then
+            baseAddr = mod.Address
+            maxAddr = baseAddr + mod.Size
+            break
+        end
+    end
+
+    if not baseAddr then
+        print("❌ Error: Module " .. moduleName .. " not found!")
+        return nil
+    end
+
+    -- Debug:
+    --print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
+    --print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+
+    local ms = createMemScan()
+    ms.firstScan(
+        soExactValue,   -- exact scan
+        vtByteArray,    -- AOB scan: Byte Array
+        nil,            -- RoundingType (no used)
+        signature,      -- AOB String
+        nil,            -- no need by this scanoption
+        baseAddr,       -- start addr
+        maxAddr,        -- stop addr
+        scanOptions or "+X+R", -- memory protectionflags
+        fsmNotAligned,  -- no alignment
+        "1",            -- alignment 1 byte
+        true,           -- using Hexadecimal
+        true,           -- isNotABinaryString
+        false,          -- isUnicode
+        false           -- isCaseSensitive
+    )
+
+    ms.waitTillDone()
+
+    local results = createFoundList(ms)
+    results.initialize()
+
+    if results.getCount() &gt; 0 then
+        local addr = results[0]
+        --print("🎯 AOB found at: 0x" .. addr)
+        results.destroy()
+        ms.destroy()
+        return addr
+    else
+        --print("❌ AOB not found in " .. moduleName)
+        results.destroy()
+        ms.destroy()
+        return nil
+    end
 end
+
+-- test AOBScanModule()
+--local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+--if aob_addr_str then
+--    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+--else
+--    print("❌ AOB not found in ???.exe")
+--end
+
 registerLuaFunctionHighlight('AOBScanModule')
 
+function clearLuaLog()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+    end)
+end
+registerLuaFunctionHighlight('clearLuaLog')
 
+function closeLuaEngine()
+    synchronize(function()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine')
 
-AddressList.Header.OnSectionClick = nil
+function closeLuaEngine2()
+    synchronize(function()
+      getLuaEngine().MenuItem5.doClick()
+      getLuaEngine().Close()
+    end)
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
 
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
 </LuaScript>
 </CheatTable>
