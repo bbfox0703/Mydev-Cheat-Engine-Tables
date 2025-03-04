@@ -1,16 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>32</ID>
       <Description>"精簡模式 / Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
@@ -22,51 +60,133 @@ LuaCall(cycleFullCompact(nil,false))
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
-P_NAME = 'ed8_3_PC.exe'
-
-if (p_ated == nil) and (getProcessIDFromProcessName(P_NAME) ~= nil) then
-	openProcess(P_NAME)
-    p_ated = true
-    Sleep(100)
-end
-
-
-battle_array = {32,17,19,126,36,54,119,114,45,47,20,78,41,40,142,107,108,81,140,153,158}
-
-
-local a_len = #(battle_array)
-
-local i = 0
-
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
-  sleep(1)
-end
-
-print("Scripts ON; Total " .. a_len .. " items.")
-getLuaEngine().Close()
-
+local enableBattleScripts = {
+  107, -- "VM遊戲:敵人主將HP為1 / VM Card game: Low enemy master HP"
+  108, -- "VM遊戲: Mana滿檔 / VM Card game: full mana"
+  114, -- "[戰鬥] 主結晶迴路EXP倍率 / Battle: Master Quartz EXP multiplier"
+  119, -- "[戰鬥] 無限道具數量 / Battle: inf. item amount when use"
+  126, -- "[戰鬥] 經驗值倍率 / Battle: EXP multiplier"
+  140, -- "[戰鬥] 勇氣指令不需BP / Battle: Orders cost 0 BP"
+  142, -- "釣魚快速捲線 / Fast fishing"
+  153, -- "[戰鬥] Link經驗值倍率 / Battle: Link EXP multiplier"
+  158, -- "取得裝備的迴路 / Get equipped Quartz"
+  17, -- "[戰鬥] CP無限 / Battle: inf CP"
+  186, -- "取得變更服裝的部份3D座標 / Get some Costume coords"
+  19, -- "[戰鬥] EP無限 / Battle: inf EP"
+  20, -- "取得最小耀晶數 / Get Sepiths"
+  32, -- "精簡模式 / Compact mode"
+  36, -- "[戰鬥] 破防倍率 / Battle: Break multiplier"
+  45, -- "[地圖] 設定最小奇襲點數 / Map: set min. charge"
+  47, -- "設定最小耀晶數 / Set min. Sepiths"
+  54, -- "[戰鬥] 設定最低BP值 / Battle: set min. breavery pt."
+  78, -- "道具指令 / Item scripts"
+  81, -- "綜合成績 / Get main sheet stats"
+  192, -- "Limit break"
+  40, -- "如果數量&gt;=2、則設為80 / Set item # to 80, if &gt;=2"
+  41, -- "裝備或丟棄物品時設定數量 / Drop/equip item: set # to.."
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-p_ated = nil
-battle_array_close = {192,186,143,57,109,41,40,     17,19,126,5,36,54,119,114,45,47,20,78,142,107,108,81,30,140,32,145,153,158,170,     30}
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
-local a_len1 = #(battle_array_close)
-
-local i = 0
-
-for i = 1, a_len1 do
-  getAddressList().getMemoryRecordByID(battle_array_close[i]).Active = false
-end
-
-print("Scripts OFF.")
-
-getLuaEngine().Close()
+local disableBattleScripts = {
+  41, -- "裝備或丟棄物品時設定數量 / Drop/equip item: set # to.."
+  40, -- "如果數量&gt;=2、則設為80 / Set item # to 80, if &gt;=2"
+  192, -- "Limit break"
+  143, -- "Data+"
+  109, -- "_debug"
+  81, -- "綜合成績 / Get main sheet stats"
+  78, -- "道具指令 / Item scripts"
+  57, -- "戰歷 / Get battle records"
+  54, -- "[戰鬥] 設定最低BP值 / Battle: set min. breavery pt."
+  5, -- "[戰鬥] 傷害倍率 / Battle: Damage multiplier"
+  47, -- "設定最小耀晶數 / Set min. Sepiths"
+  45, -- "[地圖] 設定最小奇襲點數 / Map: set min. charge"
+  36, -- "[戰鬥] 破防倍率 / Battle: Break multiplier"
+  32, -- "精簡模式 / Compact mode"
+  30, -- "英雄傳說 閃之軌跡III / THE LEGEND OF HEROES: SEN NO KISEKI III  /  https://opencheattables.com  /  CE 7.5+"
+  20, -- "取得最小耀晶數 / Get Sepiths"
+  19, -- "[戰鬥] EP無限 / Battle: inf EP"
+  186, -- "取得變更服裝的部份3D座標 / Get some Costume coords"
+  170, -- "取得最後裝備的物品ID / Selected equipped item ID"
+  17, -- "[戰鬥] CP無限 / Battle: inf CP"
+  158, -- "取得裝備的迴路 / Get equipped Quartz"
+  153, -- "[戰鬥] Link經驗值倍率 / Battle: Link EXP multiplier"
+  145, -- "[戰鬥] 設定最小EXP獎勵 / Battle: set min. EXP bonus"
+  142, -- "釣魚快速捲線 / Fast fishing"
+  140, -- "[戰鬥] 勇氣指令不需BP / Battle: Orders cost 0 BP"
+  136, -- "[自動選擇遊戲程序] 一鍵開啟或關閉大部份指令碼 / (Auto attach) Turn some scripts on/off"
+  126, -- "[戰鬥] 經驗值倍率 / Battle: EXP multiplier"
+  119, -- "[戰鬥] 無限道具數量 / Battle: inf. item amount when use"
+  114, -- "[戰鬥] 主結晶迴路EXP倍率 / Battle: Master Quartz EXP multiplier"
+  108, -- "VM遊戲: Mana滿檔 / VM Card game: full mana"
+  107, -- "VM遊戲:敵人主將HP為1 / VM Card game: Low enemy master HP"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 32, Description: "精簡模式 / Compact mode", Depth: 0
+-- ID: 136, Description: "[自動選擇遊戲程序] 一鍵開啟或關閉大部份指令碼 / (Auto attach) Turn some scripts on/off", Depth: 0
+-- ID: 17, Description: "[戰鬥] CP無限 / Battle: inf CP", Depth: 0
+-- ID: 19, Description: "[戰鬥] EP無限 / Battle: inf EP", Depth: 0
+-- ID: 145, Description: "[戰鬥] 設定最小EXP獎勵 / Battle: set min. EXP bonus", Depth: 0
+-- ID: 153, Description: "[戰鬥] Link經驗值倍率 / Battle: Link EXP multiplier", Depth: 0
+-- ID: 126, Description: "[戰鬥] 經驗值倍率 / Battle: EXP multiplier", Depth: 0
+-- ID: 5, Description: "[戰鬥] 傷害倍率 / Battle: Damage multiplier", Depth: 0
+--   ID: 109, Description: "_debug", Depth: 1
+-- ID: 36, Description: "[戰鬥] 破防倍率 / Battle: Break multiplier", Depth: 0
+-- ID: 140, Description: "[戰鬥] 勇氣指令不需BP / Battle: Orders cost 0 BP", Depth: 0
+-- ID: 54, Description: "[戰鬥] 設定最低BP值 / Battle: set min. breavery pt.", Depth: 0
+-- ID: 119, Description: "[戰鬥] 無限道具數量 / Battle: inf. item amount when use", Depth: 0
+-- ID: 114, Description: "[戰鬥] 主結晶迴路EXP倍率 / Battle: Master Quartz EXP multiplier", Depth: 0
+-- ID: 45, Description: "[地圖] 設定最小奇襲點數 / Map: set min. charge", Depth: 0
+-- ID: 47, Description: "設定最小耀晶數 / Set min. Sepiths", Depth: 0
+-- ID: 20, Description: "取得最小耀晶數 / Get Sepiths", Depth: 0
+--   ID: 143, Description: "Data+", Depth: 1
+-- ID: 78, Description: "道具指令 / Item scripts", Depth: 0
+--   ID: 41, Description: "裝備或丟棄物品時設定數量 / Drop/equip item: set # to..", Depth: 1
+--   ID: 40, Description: "如果數量&gt;=2、則設為80 / Set item # to 80, if &gt;=2", Depth: 1
+-- ID: 142, Description: "釣魚快速捲線 / Fast fishing", Depth: 0
+-- ID: 107, Description: "VM遊戲:敵人主將HP為1 / VM Card game: Low enemy master HP", Depth: 0
+-- ID: 108, Description: "VM遊戲: Mana滿檔 / VM Card game: full mana", Depth: 0
+-- ID: 170, Description: "取得最後裝備的物品ID / Selected equipped item ID", Depth: 0
+-- ID: 158, Description: "取得裝備的迴路 / Get equipped Quartz", Depth: 0
+-- ID: 57, Description: "戰歷 / Get battle records", Depth: 0
+-- ID: 81, Description: "綜合成績 / Get main sheet stats", Depth: 0
+-- ID: 186, Description: "取得變更服裝的部份3D座標 / Get some Costume coords", Depth: 0
+--   ID: 192, Description: "Limit break", Depth: 1
+-- ID: 30, Description: "英雄傳說 閃之軌跡III / THE LEGEND OF HEROES: SEN NO KISEKI III  /  https://opencheattables.com  /  CE 7.5+", Depth: 0
 
 </AssemblerScript>
     </CheatEntry>
@@ -3144,7 +3264,7 @@ ed8_3_PC.exe+339C57: CC                       - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_BATTLE_REC,$process,8B 8C 88 DC 2B 36 00 89 4C 24 30 48 8D 4D 10 4C 89 7C 24 28 4C 89 64 24 20 E8 F2) // should be unique
+aobscanmodule(INJECT_GET_BATTLE_REC,$process,8B 8C 88 DC 2B 36 00 89 4C 24 30 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 66 ?? ?? 04) // should be unique
 alloc(newmem,$1000,INJECT_GET_BATTLE_REC)
 
 label(code)
@@ -3184,34 +3304,65 @@ INJECT_GET_BATTLE_REC:
 
 unregistersymbol(*)
 dealloc(newmem)
+
 {
-// ORIGINAL CODE - INJECTION POINT: ed8_3_PC.exe+462F40
+// ORIGINAL CODE - INJECTION POINT: ed8_3_PC.exe+462F00
 
-ed8_3_PC.exe+462F0A: 48 8D 45 D0                       - lea rax,[rbp-30]
-ed8_3_PC.exe+462F0E: 48 89 44 24 20                    - mov [rsp+20],rax
-ed8_3_PC.exe+462F13: 48 8B 0D C6 84 7E 00              - mov rcx,[ed8_3_PC.exe+C4B3E0]
-ed8_3_PC.exe+462F1A: 0F 28 D7                          - movaps xmm2,xmm7
-ed8_3_PC.exe+462F1D: E8 EE 62 EA FF                    - call ed8_3_PC.exe+309210
-ed8_3_PC.exe+462F22: 48 8B 05 B7 84 7E 00              - mov rax,[ed8_3_PC.exe+C4B3E0]
-ed8_3_PC.exe+462F29: 4C 8D 0D 7C D0 3B 00              - lea r9,[ed8_3_PC.exe+81FFAC]
-ed8_3_PC.exe+462F30: 48 0F BF CB                       - movsx rcx,bx
-ed8_3_PC.exe+462F34: 4C 8D 05 7D D0 3B 00              - lea r8,[ed8_3_PC.exe+81FFB8]
-ed8_3_PC.exe+462F3B: BA 80 00 00 00                    - mov edx,00000080
+ed8_3_PC.exe+462ECA: 48 8D 45 D0                       - lea rax,[rbp-30]
+ed8_3_PC.exe+462ECE: 48 89 44 24 20                    - mov [rsp+20],rax
+ed8_3_PC.exe+462ED3: 48 8B 0D 46 94 7E 00              - mov rcx,[ed8_3_PC.exe+C4C320]
+ed8_3_PC.exe+462EDA: 0F 28 D7                          - movaps xmm2,xmm7
+ed8_3_PC.exe+462EDD: E8 EE 62 EA FF                    - call ed8_3_PC.exe+3091D0
+ed8_3_PC.exe+462EE2: 48 8B 05 37 94 7E 00              - mov rax,[ed8_3_PC.exe+C4C320]
+ed8_3_PC.exe+462EE9: 4C 8D 0D EC D3 3B 00              - lea r9,[ed8_3_PC.exe+8202DC]
+ed8_3_PC.exe+462EF0: 48 0F BF CB                       - movsx rcx,bx
+ed8_3_PC.exe+462EF4: 4C 8D 05 ED D3 3B 00              - lea r8,[ed8_3_PC.exe+8202E8]
+ed8_3_PC.exe+462EFB: BA 80 00 00 00                    - mov edx,00000080
 // ---------- INJECTING HERE ----------
-ed8_3_PC.exe+462F40: 8B 8C 88 DC 2B 36 00              - mov ecx,[rax+rcx*4+00362BDC]
+ed8_3_PC.exe+462F00: 8B 8C 88 DC 2B 36 00              - mov ecx,[rax+rcx*4+00362BDC]
 // ---------- DONE INJECTING  ----------
-ed8_3_PC.exe+462F47: 89 4C 24 30                       - mov [rsp+30],ecx
-ed8_3_PC.exe+462F4B: 48 8D 4D 10                       - lea rcx,[rbp+10]
-ed8_3_PC.exe+462F4F: 4C 89 7C 24 28                    - mov [rsp+28],r15
-ed8_3_PC.exe+462F54: 4C 89 64 24 20                    - mov [rsp+20],r12
-ed8_3_PC.exe+462F59: E8 F2 92 CB FF                    - call ed8_3_PC.exe+11C250
-ed8_3_PC.exe+462F5E: 0F 28 0D 1B F7 38 00              - movaps xmm1,[ed8_3_PC.exe+7F2680]
-ed8_3_PC.exe+462F65: 48 8D 45 D0                       - lea rax,[rbp-30]
-ed8_3_PC.exe+462F69: 48 8B 0D 70 84 7E 00              - mov rcx,[ed8_3_PC.exe+C4B3E0]
-ed8_3_PC.exe+462F70: 4C 8D 4D 10                       - lea r9,[rbp+10]
-ed8_3_PC.exe+462F74: C7 84 24 C0 00 00 00 03 00 00 00  - mov [rsp+000000C0],00000003
+ed8_3_PC.exe+462F07: 89 4C 24 30                       - mov [rsp+30],ecx
+ed8_3_PC.exe+462F0B: 48 8D 4D 10                       - lea rcx,[rbp+10]
+ed8_3_PC.exe+462F0F: 4C 89 7C 24 28                    - mov [rsp+28],r15
+ed8_3_PC.exe+462F14: 4C 89 64 24 20                    - mov [rsp+20],r12
+ed8_3_PC.exe+462F19: E8 42 93 CB FF                    - call ed8_3_PC.exe+11C260
+ed8_3_PC.exe+462F1E: 0F 28 0D 2B F8 38 00              - movaps xmm1,[ed8_3_PC.exe+7F2750]
+ed8_3_PC.exe+462F25: 48 8D 45 D0                       - lea rax,[rbp-30]
+ed8_3_PC.exe+462F29: 48 8B 0D F0 93 7E 00              - mov rcx,[ed8_3_PC.exe+C4C320]
+ed8_3_PC.exe+462F30: 4C 8D 4D 10                       - lea r9,[rbp+10]
+ed8_3_PC.exe+462F34: C7 84 24 C0 00 00 00 03 00 00 00  - mov [rsp+000000C0],00000003
+ed8_3_PC.exe+462F3F - 0F57 C0               - xorps xmm0,xmm0
+ed8_3_PC.exe+462F42 - 4C 89 AC 24 B8000000  - mov [rsp+000000B8],r13
+ed8_3_PC.exe+462F4A - 0F28 D7               - movaps xmm2,xmm7
+ed8_3_PC.exe+462F4D - 4C 89 AC 24 B0000000  - mov [rsp+000000B0],r13
+ed8_3_PC.exe+462F55 - 4C 89 AC 24 A8000000  - mov [rsp+000000A8],r13
+ed8_3_PC.exe+462F5D - 4C 89 AC 24 A0000000  - mov [rsp+000000A0],r13
+ed8_3_PC.exe+462F65 - 4C 89 AC 24 98000000  - mov [rsp+00000098],r13
+ed8_3_PC.exe+462F6D - 4C 89 AC 24 90000000  - mov [rsp+00000090],r13
+ed8_3_PC.exe+462F75 - 4C 89 AC 24 88000000  - mov [rsp+00000088],r13
+ed8_3_PC.exe+462F7D - 4C 89 AC 24 80000000  - mov [rsp+00000080],r13
+ed8_3_PC.exe+462F85 - 4C 89 6C 24 78        - mov [rsp+78],r13
+ed8_3_PC.exe+462F8A - 44 88 6C 24 70        - mov [rsp+70],r13b
+ed8_3_PC.exe+462F8F - 44 88 6C 24 68        - mov [rsp+68],r13b
+ed8_3_PC.exe+462F94 - C7 44 24 60 01000000  - mov [rsp+60],00000001
+ed8_3_PC.exe+462F9C - F3 44 0F11 44 24 58   - movss [rsp+58],xmm8
+ed8_3_PC.exe+462FA3 - F3 44 0F11 4C 24 50   - movss [rsp+50],xmm9
+ed8_3_PC.exe+462FAA - F3 44 0F11 44 24 48   - movss [rsp+48],xmm8
+ed8_3_PC.exe+462FB1 - F3 44 0F11 4C 24 40   - movss [rsp+40],xmm9
+ed8_3_PC.exe+462FB8 - 0F11 4D B8            - movups [rbp-48],xmm1
+ed8_3_PC.exe+462FBC - F3 44 0F11 64 24 38   - movss [rsp+38],xmm12
+ed8_3_PC.exe+462FC3 - 41 0F28 CB            - movaps xmm1,xmm11
+ed8_3_PC.exe+462FC7 - F3 0F58 0D 752B3B00   - addss xmm1,[ed8_3_PC.exe+815B44]
+ed8_3_PC.exe+462FCF - 0F11 45 D0            - movups [rbp-30],xmm0
+ed8_3_PC.exe+462FD3 - F3 0F10 45 8C         - movss xmm0,[rbp-74]
+ed8_3_PC.exe+462FD8 - F3 0F11 44 24 30      - movss [rsp+30],xmm0
+ed8_3_PC.exe+462FDE - 48 89 44 24 28        - mov [rsp+28],rax
+ed8_3_PC.exe+462FE3 - 48 8D 45 B8           - lea rax,[rbp-48]
+ed8_3_PC.exe+462FE7 - 48 89 44 24 20        - mov [rsp+20],rax
+ed8_3_PC.exe+462FEC - E8 DF61EAFF           - call ed8_3_PC.exe+3091D0
+ed8_3_PC.exe+462FF1 - 66 FF C3              - inc bx
+ed8_3_PC.exe+462FF4 - 66 83 FB 04           - cmp bx,04
 }
-
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
@@ -3881,7 +4032,7 @@ ed8_3_PC.exe+21EC7E: F3 44 0F 11 8B C4 03 00 00     - movss [rbx+000003C4],xmm9
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <LuaScript>AddressList.Header.OnSectionClick = nil
+  <LuaScript>synchronize(function() AddressList.Header.OnSectionClick = nil end)
 
 </LuaScript>
 </CheatTable>
