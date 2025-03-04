@@ -1,64 +1,176 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>143</ID>
       <Description>"Compact Mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
-
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>144</ID>
-      <Description>"Turn some sctips On / Off"</Description>
+      <Description>"Turn some scripts On/Off"</Description>
       <Color>4080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
-battle_array = {143,2,7,99,119,125,113,116,31,33,16,36,93,121,133,147}
-
-
-local a_len = #(battle_array)
-
-local i = 0
-
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
-  sleep(1)
-end
-
-print("Scripts ON; Total " .. a_len .. " items.")
-getLuaEngine().Close()
-
+local enableBattleScripts = {
+  113, -- "Battle: EXP multiplier"
+  119, -- "Battle: Set min. bravery pt."
+  121, -- "Get AP / event pt. summary"
+  125, -- "Battle: オーバーライズ / Overdrive multiplier"
+  143, -- "Compact Mode"
+  147, -- "Set min. hit/evade/move"
+  153, -- "inf. fish attempts"
+  157, -- "Card game: blade"
+  16, -- "Battle: Damage multiplier"
+  163, -- "Snow board game: always win"
+  166, -- "inf. new game+ pt."
+  2, -- "Set item count"
+  31, -- "Battle: EP do not decrease"
+  33, -- "Battle: Full CP"
+  36, -- "Get Sepiths"
+  7, -- "Drop/change item # -&gt; set # to 80"
+  93, -- "Fast fishing"
+  99, -- "Battle: Master Quartz EXP multiplier"
+  133, -- "inf. event (絆) pt"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
-battle_array_close = {133,72,21,  50,  2,7,99,119,125,116,113,31,33,16,36,93,121,143,121,147,153,157,163,166}
+local disableBattleScripts = {
+  72, -- "_"
+  21, -- "_debug"
+  134, -- "絆 pt (Japan ver. only)"
+  133, -- "inf. event (絆) pt"
+  99, -- "Battle: Master Quartz EXP multiplier"
+  93, -- "Fast fishing"
+  7, -- "Drop/change item # -&gt; set # to 80"
+  50, -- "Get some stats"
+  36, -- "Get Sepiths"
+  33, -- "Battle: Full CP"
+  31, -- "Battle: EP do not decrease"
+  2, -- "Set item count"
+  166, -- "inf. new game+ pt."
+  163, -- "Snow board game: always win"
+  16, -- "Battle: Damage multiplier"
+  157, -- "Card game: blade"
+  153, -- "inf. fish attempts"
+  147, -- "Set min. hit/evade/move"
+  143, -- "Compact Mode"
+  125, -- "Battle: オーバーライズ / Overdrive multiplier"
+  121, -- "Get AP / event pt. summary"
+  119, -- "Battle: Set min. bravery pt."
+  116, -- "Battle: Link EXP multiplier"
+  113, -- "Battle: EXP multiplier"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 143, Description: "Compact Mode", Depth: 0
+-- ID: 144, Description: "Turn some sctips On / Off", Depth: 0
+-- ID: 2, Description: "Set item count", Depth: 0
+-- ID: 7, Description: "Drop/change item # -&gt; set # to 80", Depth: 0
+-- ID: 99, Description: "Battle: Master Quartz EXP multiplier", Depth: 0
+-- ID: 119, Description: "Battle: Set min. bravery pt.", Depth: 0
+-- ID: 125, Description: "Battle: オーバーライズ / Overdrive multiplier", Depth: 0
+-- ID: 116, Description: "Battle: Link EXP multiplier", Depth: 0
+-- ID: 113, Description: "Battle: EXP multiplier", Depth: 0
+-- ID: 31, Description: "Battle: EP do not decrease", Depth: 0
+-- ID: 33, Description: "Battle: Full CP", Depth: 0
+-- ID: 16, Description: "Battle: Damage multiplier", Depth: 0
+--   ID: 21, Description: "_debug", Depth: 1
+-- ID: 147, Description: "Set min. hit/evade/move", Depth: 0
+-- ID: 36, Description: "Get Sepiths", Depth: 0
+-- ID: 50, Description: "Get some stats", Depth: 0
+--   ID: 72, Description: "_", Depth: 1
+-- ID: 93, Description: "Fast fishing", Depth: 0
+-- ID: 153, Description: "inf. fish attempts", Depth: 0
+-- ID: 157, Description: "Card game: blade", Depth: 0
+-- ID: 163, Description: "Snow board game: always win", Depth: 0
+-- ID: 121, Description: "Get AP / event pt. summary", Depth: 0
+--   ID: 133, Description: "inf. event (絆) pt", Depth: 1
+--   ID: 134, Description: "絆 pt (Japan ver. only)", Depth: 1
+-- ID: 166, Description: "inf. new game+ pt.", Depth: 0
 
-local a_len1 = #(battle_array_close)
-
-local i = 0
-
-for i = 1, a_len1 do
-  getAddressList().getMemoryRecordByID(battle_array_close[i]).Active = false
-end
-
-print("Scripts OFF.")
-
-getLuaEngine().Close()
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -3026,13 +3138,13 @@ ed8_2_PC_JP.exe+229AC0: 72 BE                 - jb ed8_2_PC_JP.exe+229A80
     </CheatEntry>
     <CheatEntry>
       <ID>154</ID>
-      <Description>"英雄伝説 閃の軌跡II  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"英雄伝説 閃の軌跡II  /  https://opencheattables.com  /  CE 7.6"</Description>
       <Color>00B000</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <LuaScript>AddressList.Header.OnSectionClick = nil
+  <LuaScript>synchronize(function() AddressList.Header.OnSectionClick = nil end)
 
 </LuaScript>
 </CheatTable>
