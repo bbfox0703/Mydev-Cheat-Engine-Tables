@@ -30,6 +30,8 @@ namespace AAToggleGenerator
                 "一鍵開啟",
                 "scripts on/",
                 "Toggle Scripts",
+                "Toggle scripts",
+                "toggle scripts",
                 "一鍵切換",
                 "Toggle some scripts"
             };
