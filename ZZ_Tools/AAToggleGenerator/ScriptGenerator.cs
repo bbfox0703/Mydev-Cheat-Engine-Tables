@@ -30,8 +30,6 @@ namespace AAToggleGenerator
                 "一鍵開啟",
                 "scripts on/",
                 "Toggle Scripts",
-                "Toggle scripts",
-                "toggle scripts",
                 "一鍵切換",
                 "Toggle some scripts"
             };
@@ -52,7 +50,7 @@ namespace AAToggleGenerator
                 .Where(e =>
                     (e.IsAutoAssembler || e.HasOptionsWithMoHideChildren || e.HasChildren) &&
                     e.Id != null &&
-                    !excludeKeywords.Any(keyword => e.Description != null && e.Description.Contains(keyword)) // Exclude entries containing specific keywords
+                    !excludeKeywords.Any(keyword => e.Description != null && e.Description.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0) // Exclude entries containing specific keywords
                 )
                 .ToList();
 
