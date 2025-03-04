@@ -24,7 +24,15 @@ namespace AAToggleGenerator
 
             string ctFilePath = openFileDialog.FileName;
             var xml = XDocument.Load(ctFilePath);
-
+            // Define keywords to exclude
+            string[] excludeKeywords = new string[]
+            {
+                "一鍵開啟",
+                "scripts on/",
+                "Toggle Scripts",
+                "一鍵切換",
+                "Toggle some scripts"
+            };
             // Extract Auto Assembler Script IDs and Descriptions
             var entries = xml.Descendants("CheatEntry")
                 .Select(e => new CheatEntry
@@ -35,11 +43,15 @@ namespace AAToggleGenerator
                     IsAutoAssembler = e.Element("VariableType")?.Value == "Auto Assembler Script",
                     HasOptionsWithMoHideChildren = e.Element("Options")?.Attributes()
                         .Any(attr => attr.Name == "moHideChildren" && attr.Value == "1") == true,
-                    HasChildren = e.Element("CheatEntries") != null,  // 確認是否有子節點
+                    HasChildren = e.Element("CheatEntries") != null,  // Check if there are child nodes
                     IsGroup = e.Element("GroupHeader")?.Value == "1" &&
                               !(e.Element("Options")?.Attributes().Any(attr => attr.Name == "moHideChildren" && attr.Value == "1") == true)
                 })
-                .Where(e => (e.IsAutoAssembler || e.HasOptionsWithMoHideChildren || e.HasChildren) && e.Id != null)
+                .Where(e =>
+                    (e.IsAutoAssembler || e.HasOptionsWithMoHideChildren || e.HasChildren) &&
+                    e.Id != null &&
+                    !excludeKeywords.Any(keyword => e.Description != null && e.Description.Contains(keyword)) // Exclude entries containing specific keywords
+                )
                 .ToList();
 
 
@@ -53,7 +65,7 @@ namespace AAToggleGenerator
 
 
             // Build TreeView nodes
-            // 存儲每個 Depth 層級的最後一個 TreeNode
+            // Store the last TreeNode at each Depth level
             Dictionary<int, TreeNode> depthLastNode = new Dictionary<int, TreeNode>();
 
             foreach (var entry in entries)
@@ -61,17 +73,17 @@ namespace AAToggleGenerator
                 TreeNode currentNode = new TreeNode(entry.Description ?? "Unnamed")
                 {
                     Tag = entry,
-                    Checked = entry.IsAutoAssembler, // 只有 Auto Assembler 預設勾選
+                    Checked = entry.IsAutoAssembler, // Only Auto Assembler scripts are pre-selected
                 };
 
                 if (entry.IsGroup)
                 {
-                    // 群組節點（例如 #A, #B），不能被點選
+                    // Group nodes (e.g., #A, #B) cannot be selected
                     currentNode.NodeFont = new System.Drawing.Font(treeView.Font, System.Drawing.FontStyle.Bold);
-                    currentNode.ForeColor = System.Drawing.Color.Gray; // 視覺上區別
+                    currentNode.ForeColor = System.Drawing.Color.Gray; // Differentiate visually
                 }
 
-                // 找到正確的父節點
+                // Find the correct parent node
                 if (entry.Depth == 0)
                 {
                     treeView.Nodes.Add(currentNode);
@@ -88,7 +100,7 @@ namespace AAToggleGenerator
                     }
                 }
 
-                // 更新 Depth 層級的最後一個節點
+                // Update the last node at this depth
                 depthLastNode[entry.Depth] = currentNode;
             }
 
@@ -97,7 +109,7 @@ namespace AAToggleGenerator
                 CheatEntry entry = e.Node.Tag as CheatEntry;
                 if (entry != null && entry.IsGroup)
                 {
-                    e.Node.Checked = false;  // **強制還原**
+                    e.Node.Checked = false;  // Force reset
                 }
             };
 
@@ -106,10 +118,10 @@ namespace AAToggleGenerator
                 CheatEntry entry = e.Node.Tag as CheatEntry;
                 if (entry != null && entry.IsGroup)
                 {
-                    e.Cancel = true; // 阻止勾選
+                    e.Cancel = true; // Prevent checking
                 }
             };
-            //treeView.AfterCheck -= TreeView_AfterCheck; // 暫時移除 AfterCheck 事件處理程序
+            //treeView.AfterCheck -= TreeView_AfterCheck; 
             treeView.NodeMouseDoubleClick += (sender, e) =>
             {
                 TreeNode node = e.Node;
@@ -118,11 +130,11 @@ namespace AAToggleGenerator
                 CheatEntry entry = node.Tag as CheatEntry;
                 if (entry != null && entry.IsGroup)
                 {
-                    node.Checked = false;  // **確保它仍然是未勾選狀態**
-                    return;  // **不再處理後續切換 Checked**
+                    node.Checked = false;  // Ensure it remains unchecked
+                    return;  // Do not process further toggle Checked
                 }
 
-                // **僅允許非 Group 節點切換勾選**
+                // Only allow non-group nodes to toggle
                 node.Checked = !node.Checked;
             };
 
@@ -348,8 +360,8 @@ namespace AAToggleGenerator
         public int Depth { get; set; }
         public bool IsAutoAssembler { get; set; }
         public bool HasOptionsWithMoHideChildren { get; set; }
-        // **新增屬性**
-        public bool HasChildren { get; set; }  // 確保是否有子節點
-        public bool IsGroup { get; set; }      // 標記是否為群組節點
+        
+        public bool HasChildren { get; set; }  
+        public bool IsGroup { get; set; }      
     }
 }
