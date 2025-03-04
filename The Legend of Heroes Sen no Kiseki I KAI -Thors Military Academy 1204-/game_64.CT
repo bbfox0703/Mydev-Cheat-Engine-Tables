@@ -1,16 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>30</ID>
       <Description>"精簡模式 / Compact mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+    synchronize(function()
+        compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+        getMainForm().Splitter1.Visible = isCompactMode
+        getMainForm().Panel4.Visible    = isCompactMode
+        getMainForm().Panel5.Visible    = isCompactMode
+    end)
+end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+    synchronize(function()
+        local mainMenu = getMainForm().Menu.Items
+        compactViewMenuItem = createMenuItem(mainMenu)
+        mainMenu.add(compactViewMenuItem)
+        compactViewMenuItem.Caption = 'Compact View Mode'
+        compactViewMenuItem.OnClick = toggleCompactView
+    end)
+
+    isCompactMenuCreated = true
+end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 
 </AssemblerScript>
     </CheatEntry>
@@ -23,7 +61,7 @@ LuaCall(cycleFullCompact(nil,false))
 {$lua}
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function() getLuaEngine().menuItem5.doClick() end)
 
 P_NAME = 'game_64.exe'
 
@@ -40,13 +78,20 @@ local a_len = #(battle_array)
 
 local i = 0
 
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
-  sleep(1)
-end
+local addressList = getAddressList()
+synchronize(function()
+  for i = 1, a_len do
+    local memRec = addressList.getMemoryRecordByID(battle_array[i])
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(50)
+    end
+    addressList.refresh()
+  end
+end)
 
 print("Scripts ON; Total " .. a_len .. " items.")
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 [DISABLE]
 {$lua}
@@ -60,14 +105,26 @@ battle_array_close = {123,122,124,62,       12,88,16,76,4,10,71,33,20,36,54,56,9
 local a_len1 = #(battle_array_close)
 
 local i = 0
-
-for i = 1, a_len1 do
-  getAddressList().getMemoryRecordByID(battle_array_close[i]).Active = false
-end
+--synchronize(function()
+--  for i = 1, a_len1 do
+--    getAddressList().getMemoryRecordByID(battle_array_close[i]).Active = false
+--  end
+--end)
+local addressList = getAddressList()
+synchronize(function()
+  for i = 1, a_len1 do
+    local memRec = addressList.getMemoryRecordByID(battle_array_close[i])
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(50)
+    end
+    addressList.refresh()
+  end
+end)
 
 print("Scripts OFF.")
 
-getLuaEngine().Close()
+synchronize(function() getLuaEngine().Close() end)
 
 
 </AssemblerScript>
@@ -76,7 +133,7 @@ getLuaEngine().Close()
       <ID>12</ID>
       <Description>"[戰鬥] CP無限 / Battle: inf CP"</Description>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript Async="1">{ Game   : game_64.exe
+      <AssemblerScript>{ Game   : game_64.exe
   Version: 
   Date   : 2024-05-04
   Author : bbfox@https://opencheattables.com
@@ -1938,18 +1995,23 @@ game_64.exe+2156CA: 44 0F 29 9C 24 F0 00 00 00  - movaps [rsp+000000F0],xmm11
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : game_64.exe
   Version: 
-  Date   : 2024-05-05
+  Date   : 2025-03-04
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_STATS,$process,44 8B 0C 06 E8 10 32 E0 FF) // should be unique
+aobscanmodule(INJECT_GET_STATS,$process,44 8B 0C 06 E8 ?? ?? ?? ?? F3 0F 10 45 A4 0F) // should be unique
 alloc(newmem,$1000,INJECT_GET_STATS)
+
+alloc(INJECT_GET_STATSo, 9)
 
 label(code)
 label(return)
 label(i_base_bstats_addr)
+
+INJECT_GET_STATSo:
+  readmem(INJECT_GET_STATS, 9)
 
 newmem:
   cmp qword ptr [i_base_bstats_addr], 0
@@ -1958,7 +2020,8 @@ newmem:
 
 code:
   mov r9d,[rsi+rax]
-  call game_64.exe+BC3D0
+  reassemble(INJECT_GET_STATS+4)
+  //call game_64.exe+BC3D0
   jmp return
 align 10 cc
   i_base_bstats_addr:
@@ -1969,16 +2032,19 @@ INJECT_GET_STATS:
   nop 4
 return:
 registersymbol(INJECT_GET_STATS)
+registersymbol(INJECT_GET_STATSo)
 registersymbol(i_base_bstats_addr)
 
 [DISABLE]
 
 INJECT_GET_STATS:
-  db 44 8B 0C 06 E8 10 32 E0 FF
+  //db 44 8B 0C 06 E8 10 32 E0 FF
+  readmem(INJECT_GET_STATSo, 9)
 
 unregistersymbol(*)
 dealloc(newmem)
-
+unregistersymbol(INJECT_GET_STATSo)
+dealloc(INJECT_GET_STATSo)
 {
 // ORIGINAL CODE - INJECTION POINT: game_64.exe+2B91B7
 
@@ -2357,7 +2423,7 @@ game_64.exe+1FA89F: F3 0F 10 8B 94 8A 14 00  - movss xmm1,[rbx+00148A94]
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <LuaScript>AddressList.Header.OnSectionClick = nil
+  <LuaScript>synchronize(function()  AddressList.Header.OnSectionClick = nil end)
 
 </LuaScript>
 </CheatTable>
