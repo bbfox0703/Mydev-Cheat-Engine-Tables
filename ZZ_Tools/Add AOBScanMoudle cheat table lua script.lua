@@ -83,6 +83,17 @@ end
 
 registerLuaFunctionHighlight('AOBScanModule')
 
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("❌ AOB not found in ???.exe")
+end
+]]--
+
+--[[
 -- **Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment**
 if not onMemRecPostExecute then
     function onMemRecPostExecute(memoryrecord, newState, succeeded)
@@ -93,6 +104,7 @@ if not onMemRecPostExecute then
         end
     end
 end
+]]--
 
 -- **Memory record IDs now allowed to be 'locked'**
 IDs = {999999, 9999999}
@@ -156,6 +168,7 @@ synchronize(function() AddressList.Header.OnSectionClick = nil end)
 
 [DISABLE]
 {$lua}
+--[[
 if AOBScanModule then
     AOBScanModule = nil
 end
@@ -174,6 +187,7 @@ end
 if closeLuaEngine2 then
     closeLuaEngine2 = nil
 end
+]]--
 ]==]
 
 -- **AA Script を Cheat Table に追加する関数**
