@@ -28,13 +28,13 @@ if not AOBScanModule then
         end
 
         if not baseAddr then
-            if debugMode then print("❌ Error: Module " .. moduleName .. " not found!") end
+            if debugMode then print("✖️ Error: Module " .. moduleName .. " not found!") end
             return nil
         end
 
         if debugMode then
-            print(string.format("✅ %s Base Address: 0x%X", moduleName, baseAddr))
-            print(string.format("📏 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("📐 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
         end
 
         local ms = createMemScan()
@@ -73,7 +73,7 @@ if not AOBScanModule then
         if addr then
             if debugMode then print("🎯 AOB found at: 0x" .. addr) end
         else
-            if debugMode then print("❌ AOB not found in " .. moduleName) end
+            if debugMode then print("✖️ AOB not found in " .. moduleName) end
         end
 
         results.destroy()
@@ -88,9 +88,9 @@ registerLuaFunctionHighlight('AOBScanModule')
 test AOBScanModule()
 local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
 if aob_addr_str then
-    print("✅ Final AOB Address: 0x" .. aob_addr_str)
+    print("✔️ Final AOB Address: 0x" .. aob_addr_str)
 else
-    print("❌ AOB not found in ???.exe")
+    print("✖️ AOB not found in ???.exe")
 end
 ]]--
 
@@ -209,21 +209,21 @@ function addToCheatTableLuaScript()
                         
                         -- **すでに AOBScanModule が含まれているかチェック**
                         if currentScript:find("AOBScanModule") then
-                            showMessage("📌 AOBScanModule is already in Cheat Table Lua Script.")
+                            showMessage("⛔ AOBScanModule is already in Cheat Table Lua Script.")
                             return
                         end
                         
                         -- **スクリプトを追加**
                         local newScript = currentScript .. "\n\n" .. scriptToInsert
                         comp.setCaption(newScript)
-                        --showMessage("✅ Script successfully added to Cheat Table Lua Script!")
+                        --showMessage("✔️ Script successfully added to Cheat Table Lua Script!")
                     end)
                     return
                 end
             end
         end
     end
-    showMessage("❌ Error: Could not find Cheat Table Lua Script window.")
+    showMessage("✖️ Error: Could not find Cheat Table Lua Script window.")
 end
 
 -- **Dev Tools メニューを取得、存在しない場合は作成**
