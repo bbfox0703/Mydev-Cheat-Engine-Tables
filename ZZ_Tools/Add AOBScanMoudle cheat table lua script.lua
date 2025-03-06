@@ -1,13 +1,14 @@
 -- **Auto Assembler スクリプトの内容**
-local aobScanAAScript = [==[
+local scriptToInsert = [==[
+--[[
 [ENABLE]
 {$lua}
 if syntaxcheck then return end
-
+]]--
 -- **デバッグモードの設定 (デフォルト: 無効)**
 local debugMode = false
 
--- **AOB スキャン関数**
+-- AOBScanModule関数
 if not AOBScanModule then
     function AOBScanModule(moduleName, signature, scanOptions)
         local baseAddr = nil
@@ -93,8 +94,7 @@ else
 end
 ]]--
 
---[[
--- **Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment**
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
 if not onMemRecPostExecute then
     function onMemRecPostExecute(memoryrecord, newState, succeeded)
         if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
@@ -104,12 +104,11 @@ if not onMemRecPostExecute then
         end
     end
 end
-]]--
 
--- **Memory record IDs now allowed to be 'locked'**
+-- Memory record IDs now allowed to be 'locked'
 IDs = {999999, 9999999}
 
--- **Determine event trigger sequence**
+-- Determine event trigger sequence
 if not contains then
     function contains(table, val)
        for i = 1, #table do
@@ -135,7 +134,8 @@ if not onMemRecPreExecute then
     end
 end
 
--- **Utility Functions**
+-- Utility Functions
+-- Clear lua engine log
 if not clearLuaLog then
     function clearLuaLog()
         synchronize(function()
@@ -145,6 +145,7 @@ if not clearLuaLog then
 end
 registerLuaFunctionHighlight('clearLuaLog')
 
+-- Close lua engine log
 if not closeLuaEngine then
     function closeLuaEngine()
         synchronize(function()
@@ -154,6 +155,7 @@ if not closeLuaEngine then
 end
 registerLuaFunctionHighlight('closeLuaEngine')
 
+-- Clear lua engine log & close lua engine
 if not closeLuaEngine2 then
     function closeLuaEngine2()
         synchronize(function()
@@ -165,10 +167,10 @@ end
 registerLuaFunctionHighlight('closeLuaEngine2')
 
 synchronize(function() AddressList.Header.OnSectionClick = nil end)
-
+--[[
 [DISABLE]
 {$lua}
---[[
+
 if AOBScanModule then
     AOBScanModule = nil
 end
@@ -190,26 +192,38 @@ end
 ]]--
 ]==]
 
--- **AA Script を Cheat Table に追加する関数**
-function createAOBScanMemoryRecord()
-    local ct = getAddressList()
-    
-    -- **すでに追加されているか確認**
-    for i = 0, ct.Count - 1 do
-        if ct[i].Description == "AOBScanModule AA Script" then
-            --showMessage("📌 AOBScanModule AA Script is already in the Cheat Table.")
-            return
+-- **Cheat Table Lua Script を設定する関数**
+function addToCheatTableLuaScript()
+    for i = 0, getFormCount() - 1 do
+        local frm = getForm(i)
+        
+        -- **TfrmAutoInject (Lua Script: Cheat Table) を探す**
+        if frm.ClassName == 'TfrmAutoInject' then
+            for ii = 0, frm.ComponentCount - 1 do
+                local comp = frm.Component[ii]
+
+                -- **Assemblescreen (Lua Script text editor) を探す**
+                if comp.Name == 'Assemblescreen' then
+                    synchronize(function()
+                        local currentScript = comp.getCaption()
+                        
+                        -- **すでに AOBScanModule が含まれているかチェック**
+                        if currentScript:find("AOBScanModule") then
+                            showMessage("📌 AOBScanModule is already in Cheat Table Lua Script.")
+                            return
+                        end
+                        
+                        -- **スクリプトを追加**
+                        local newScript = currentScript .. "\n\n" .. scriptToInsert
+                        comp.setCaption(newScript)
+                        --showMessage("✅ Script successfully added to Cheat Table Lua Script!")
+                    end)
+                    return
+                end
+            end
         end
     end
-
-    -- **新しいメモリレコードを作成**
-    local newRecord = ct.createMemoryRecord()
-    newRecord.Description = "AOBScanModule AA Script"
-    newRecord.Type = vtAutoAssembler
-    newRecord.Script = aobScanAAScript
-    newRecord.Active = false
-
-    --showMessage("✅ AOBScanModule AA Script has been added to the Cheat Table!")
+    showMessage("❌ Error: Could not find Cheat Table Lua Script window.")
 end
 
 -- **Dev Tools メニューを取得、存在しない場合は作成**
@@ -236,13 +250,13 @@ function getOrCreateDevToolsMenu()
     return devToolsMenu
 end
 
--- **Dev Tools メニューに "Add AOBScanModule AA Script" を追加**
+-- **Dev Tools メニューに "Add AOBScanModule Lua to Cheat Table Lua" を追加**
 function addMenuToDevTools()
     local devToolsMenu = getOrCreateDevToolsMenu()
 
     -- **すでにメニューが存在する場合は追加しない**
     for i = 0, devToolsMenu.Count - 1 do
-        if devToolsMenu[i].Caption == "Enable AOBScanModule" then
+        if devToolsMenu[i].Caption == "🎯Add AOBScanModule to Lua Script: Cheat Table" then
             return
         end
     end
@@ -250,8 +264,8 @@ function addMenuToDevTools()
     -- **メニューを追加**
     synchronize(function()
         local newItem = createMenuItem(devToolsMenu)
-        newItem.Caption = "Add AOBScanModule AA Script"
-        newItem.OnClick = createAOBScanMemoryRecord
+        newItem.Caption = "🎯Add AOBScanModule to Lua Script: Cheat Table"
+        newItem.OnClick = addToCheatTableLuaScript
         devToolsMenu.add(newItem)
     end)
 end
