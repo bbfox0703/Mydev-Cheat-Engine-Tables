@@ -209,14 +209,14 @@ function addToCheatTableLuaScript()
                         
                         -- **すでに AOBScanModule が含まれているかチェック**
                         if currentScript:find("AOBScanModule") then
-                            showMessage("⛔ AOBScanModule is already in Cheat Table Lua Script.")
+                            showMessage("⛔ AOBScanModule is already in Lua Script: Cheat Table.")
                             return
                         end
                         
                         -- **スクリプトを追加**
                         local newScript = currentScript .. "\n\n" .. scriptToInsert
                         comp.setCaption(newScript)
-                        --showMessage("✔️ Script successfully added to Cheat Table Lua Script!")
+                        --showMessage("✔️ Script successfully added to Lua Script: Cheat Table!")
                     end)
                     return
                 end
