@@ -1,65 +1,214 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>33</ID>
       <Description>"Compact Mode"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
---https://forum.cheatengine.org/viewtopic.php?t=570055
-LuaCall(function cycleFullCompact(sender,force) local state = not(compactmenuitem.Caption == 'Compact View Mode'); if force~=nil then state = not force end; compactmenuitem.Caption = state and 'Compact View Mode' or 'Full View Mode'; getMainForm().Splitter1.Visible = state; getMainForm().Panel4.Visible    = state; getMainForm().Panel5.Visible    = state; end; function addCompactMenu() if compactmenualreadyexists then return end; local parent = getMainForm().Menu.Items; compactmenuitem = createMenuItem(parent); parent.add(compactmenuitem); compactmenuitem.Caption = 'Compact View Mode'; compactmenuitem.OnClick = cycleFullCompact; compactmenualreadyexists = 'yes'; end; addCompactMenu(); cycleFullCompact(nil,true))
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
 
 [DISABLE]
-LuaCall(cycleFullCompact(nil,false))
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>146</ID>
       <Description>"一次開啟/關閉多個修改器/ Turn most scripts On / Off"</Description>
+      <Color>4080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>{ Game   : ed9.exe
-  Version:
-  Date   : 2023-01-28
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
-battle_array = {98, 156, 22, 72, 63, 200, 65, 66, 92, 27, 198, 53, 29, 78, 178, 176, 170, 204}
---75,  Stock Time不減 / inf. Stock Time
-
-local a_len = #(battle_array)
-
-local i = 0
-
-for i = 1, a_len do
-  getAddressList().getMemoryRecordByID(battle_array[i]).Active = true
-end
-getLuaEngine().Close()
-
+local enableBattleScripts = {
+  1186, -- "快速釣魚 / Fast fishing"
+  156, -- "部份基本資料 / Base data"
+  170, -- "填充道具數量 / Fill items / 取得部份道具數"
+  176, -- "駭入寶箱時間不減 / inf. treasure hacking time"
+  178, -- "任務中進行追蹤不被發現 / undetected tracking during quests"
+  198, -- "快速快捷魔法 / no CD for Quick magic"
+  200, -- "戰鬥：Stun倍率 / Battle: Stun multiplier"
+  204, -- "取得部份統計值 / Some stats"
+  22, -- "HP/EP/CP (受傷害時 / when get hit)"
+  27, -- "CP使用時回滿 / When use CP: full recharge"
+  29, -- "EXP倍率 / EXP Multiplier"
+  33, -- "Compact Mode"
+  53, -- "EP使用時回滿 / When use EP: full recharge"
+  57, -- "戰鬥中：取得S-Boost值 / Battle: Get S-Boost"
+  65, -- "即時戰鬥：快速蓄力 / Field battle: Fast charge"
+  66, -- "即時戰門：蓄力攻擊不扣能量條 / Field battle: No degrade for charge bar"
+  72, -- "戰鬥中：快速CHAIN / Battle: fast chain"
+  78, -- "核心EXP倍率 / Core EXP multiplier"
+  92, -- "親密度 / Closeness"
+  98, -- "取得LGC數值 / Get LGC value"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-getLuaEngine().menuItem5.doClick()
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
-local a_len_d = #(battle_array)
-
-local i1 = 0
-
-for i1 = 1, a_len_d do
-  if (getAddressList().getMemoryRecordByID(battle_array[i1]).Active)
-  then
-    getAddressList().getMemoryRecordByID(battle_array[i1]).Active = false
+local disableBattleScripts = {
+  909, -- "結晶迴路 Chips #5"
+  807, -- "結晶迴路 Chips #4"
+  705, -- "結晶迴路 Chips #3"
+  603, -- "結晶迴路 Chips #2"
+  435, -- "其它道具 / Others"
+  384, -- "結晶迴路 Chips #1"
+  333, -- "食材 / Cooking materials"
+  281, -- "一般道具 / General"
+  23, -- "HP Option"
+  1113, -- "結晶迴路 Chips #7"
+  1011, -- "結晶迴路 Chips #6"
+  89, -- "敵方 / Enemy"
+  54, -- "Player"
+  231, -- "Advanced data"
+  196, -- "+Others"
+  1214, -- "_calc data"
+  98, -- "取得LGC數值 / Get LGC value"
+  92, -- "親密度 / Closeness"
+  81, -- "取得核心資料 / Current Core data"
+  78, -- "核心EXP倍率 / Core EXP multiplier"
+  72, -- "戰鬥中：快速CHAIN / Battle: fast chain"
+  66, -- "即時戰門：蓄力攻擊不扣能量條 / Field battle: No degrade for charge bar"
+  65, -- "即時戰鬥：快速蓄力 / Field battle: Fast charge"
+  63, -- "戰鬥中：S-Boost不減 / Battle: inf. S-Boost"
+  57, -- "戰鬥中：取得S-Boost值 / Battle: Get S-Boost"
+  53, -- "EP使用時回滿 / When use EP: full recharge"
+  33, -- "Compact Mode"
+  31, -- "角色狀態 / Char. stats"
+  29, -- "EXP倍率 / EXP Multiplier"
+  27, -- "CP使用時回滿 / When use CP: full recharge"
+  226, -- "練成石&amp;道具使用時不減 / inf. item/Craft stone when use"
+  22, -- "HP/EP/CP (受傷害時 / when get hit)"
+  204, -- "取得部份統計值 / Some stats"
+  200, -- "戰鬥：Stun倍率 / Battle: Stun multiplier"
+  198, -- "快速快捷魔法 / no CD for Quick magic"
+  178, -- "任務中進行追蹤不被發現 / undetected tracking during quests"
+  176, -- "駭入寶箱時間不減 / inf. treasure hacking time"
+  170, -- "填充道具數量 / Fill items / 取得部份道具數"
+  156, -- "部份基本資料 / Base data"
+  146, -- "一次開啟/關閉多個修改器/ Turn most scripts On / Off"
+  1224, -- "目前選到的道具 / Selected item in menu"
+  1203, -- "七耀之心生命值資料 / Card game life data"
+  1199, -- "戰鬥：戰鬥總傷害統計倍率 / Battle: Total damage calculation multiplier"
+  1186, -- "快速釣魚 / Fast fishing"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
   end
-end
-getLuaEngine().Close()
-
-
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 33, Description: "Compact Mode", Depth: 0
+-- ID: 146, Description: "一次開啟/關閉多個修改器/ Turn most scripts On / Off", Depth: 0
+-- ID: 98, Description: "取得LGC數值 / Get LGC value", Depth: 0
+--   ID: 196, Description: "+Others", Depth: 1
+-- ID: 156, Description: "部份基本資料 / Base data", Depth: 0
+-- ID: 22, Description: "HP/EP/CP (受傷害時 / when get hit)", Depth: 0
+--   ID: 54, Description: "Player", Depth: 1
+--     ID: 23, Description: "HP Option", Depth: 2
+--   ID: 89, Description: "敵方 / Enemy", Depth: 1
+--   ID: 1214, Description: "_calc data", Depth: 1
+-- ID: 72, Description: "戰鬥中：快速CHAIN / Battle: fast chain", Depth: 0
+-- ID: 63, Description: "戰鬥中：S-Boost不減 / Battle: inf. S-Boost", Depth: 0
+-- ID: 57, Description: "戰鬥中：取得S-Boost值 / Battle: Get S-Boost", Depth: 0
+-- ID: 200, Description: "戰鬥：Stun倍率 / Battle: Stun multiplier", Depth: 0
+-- ID: 1199, Description: "戰鬥：戰鬥總傷害統計倍率 / Battle: Total damage calculation multiplier", Depth: 0
+-- ID: 65, Description: "即時戰鬥：快速蓄力 / Field battle: Fast charge", Depth: 0
+-- ID: 66, Description: "即時戰門：蓄力攻擊不扣能量條 / Field battle: No degrade for charge bar", Depth: 0
+-- ID: 92, Description: "親密度 / Closeness", Depth: 0
+-- ID: 27, Description: "CP使用時回滿 / When use CP: full recharge", Depth: 0
+-- ID: 198, Description: "快速快捷魔法 / no CD for Quick magic", Depth: 0
+-- ID: 53, Description: "EP使用時回滿 / When use EP: full recharge", Depth: 0
+-- ID: 29, Description: "EXP倍率 / EXP Multiplier", Depth: 0
+-- ID: 78, Description: "核心EXP倍率 / Core EXP multiplier", Depth: 0
+-- ID: 81, Description: "取得核心資料 / Current Core data", Depth: 0
+-- ID: 178, Description: "任務中進行追蹤不被發現 / undetected tracking during quests", Depth: 0
+-- ID: 176, Description: "駭入寶箱時間不減 / inf. treasure hacking time", Depth: 0
+-- ID: 170, Description: "填充道具數量 / Fill items / 取得部份道具數", Depth: 0
+--   ID: 231, Description: "Advanced data", Depth: 1
+--     ID: 281, Description: "一般道具 / General", Depth: 2
+--     ID: 435, Description: "其它道具 / Others", Depth: 2
+--     ID: 333, Description: "食材 / Cooking materials", Depth: 2
+--     ID: 384, Description: "結晶迴路 Chips #1", Depth: 2
+--     ID: 603, Description: "結晶迴路 Chips #2", Depth: 2
+--     ID: 705, Description: "結晶迴路 Chips #3", Depth: 2
+--     ID: 807, Description: "結晶迴路 Chips #4", Depth: 2
+--     ID: 909, Description: "結晶迴路 Chips #5", Depth: 2
+--     ID: 1011, Description: "結晶迴路 Chips #6", Depth: 2
+--     ID: 1113, Description: "結晶迴路 Chips #7", Depth: 2
+-- ID: 31, Description: "角色狀態 / Char. stats", Depth: 0
+-- ID: 204, Description: "取得部份統計值 / Some stats", Depth: 0
+-- ID: 1224, Description: "目前選到的道具 / Selected item in menu", Depth: 0
+-- ID: 226, Description: "練成石&amp;道具使用時不減 / inf. item/Craft stone when use", Depth: 0
+-- ID: 1203, Description: "七耀之心生命值資料 / Card game life data", Depth: 0
+-- ID: 1186, Description: "快速釣魚 / Fast fishing", Depth: 0
 
 </AssemblerScript>
     </CheatEntry>
@@ -76,7 +225,7 @@ getLuaEngine().Close()
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_LGC_RAW,$process,41 8B BE 48 11 01 00) // should be unique
+aobscanmodule(INJECT_GET_LGC_RAW,ed9.exe,41 8B BE 48 11 01 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_LGC_RAW)
 
 label(code)
@@ -394,7 +543,7 @@ ed9.exe+4B8F22: 83 FB 02                 - cmp ebx,02
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_MIRA,$process,8B B0 E8 0C 27 00) // should be unique
+aobscanmodule(INJECT_GET_MIRA,ed9.exe,8B B0 E8 0C 27 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_MIRA)
 
 label(code)
@@ -607,7 +756,7 @@ ed9.exe+146CC0: 41 B1 01                          - mov r9l,01
 
 [ENABLE]
 
-aobscanmodule(INJECT_DMG_CTRL,$process,41 89 52 0C C3) // should be unique
+aobscanmodule(INJECT_DMG_CTRL,ed9.exe,41 89 52 0C C3) // should be unique
 alloc(newmem,$1000,INJECT_DMG_CTRL)
 
 label(code)
@@ -951,7 +1100,7 @@ ed9.exe+F0681: 41 8B 4A 14  - mov ecx,[r10+14]
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATT_FAST_CHAIN,$process,45 03 C6 B8 E7 03 00 00) // should be unique
+aobscanmodule(INJECT_BATT_FAST_CHAIN,ed9.exe,45 03 C6 B8 E7 03 00 00) // should be unique
 alloc(newmem,$1000,INJECT_BATT_FAST_CHAIN)
 
 label(code)
@@ -1033,7 +1182,7 @@ ed9.exe+12E6D3: 90                    - nop
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_SBOOST,$process,F3 0F 11 81 0C 01 00 00 0F 28) // should be unique
+aobscanmodule(INJECT_INF_SBOOST,ed9.exe,F3 0F 11 81 0C 01 00 00 0F 28) // should be unique
 alloc(newmem,$1000,INJECT_INF_SBOOST)
 
 label(code)
@@ -1102,7 +1251,7 @@ ed9.exe+5079FD: 0F 1F 00                 - nop dword ptr [rax]
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_SBOOST,$process,F3 0F 10 87 0C 01 00 00 E8) // should be unique
+aobscanmodule(INJECT_GET_SBOOST,ed9.exe,F3 0F 10 87 0C 01 00 00 E8) // should be unique
 alloc(newmem,$1000,INJECT_GET_SBOOST)
 
 label(code)
@@ -1210,7 +1359,7 @@ ed9.exe+506624: F3 0F 10 87 08 01 00 00  - movss xmm0,[rdi+00000108]
 
 [ENABLE]
 
-aobscanmodule(INJECT_STUN_MULTI,$process,F3 0F 58 C6 0F 28 CA) // should be unique
+aobscanmodule(INJECT_STUN_MULTI,ed9.exe,F3 0F 58 C6 0F 28 CA) // should be unique
 alloc(newmem,$1000,INJECT_STUN_MULTI)
 
 label(code)
@@ -1294,7 +1443,7 @@ ed9.exe+E15B9: 74 11                    - je ed9.exe+E15CC
 
 [ENABLE]
 
-aobscanmodule(INJECT_DAMAGE_CALC_MULTI,$process,41 03 C6 B9 7F 96 98 00 3B C1 0F 4C C8 85 C9 0F 48 CE 89 8B 80 00 00 00 89) // should be unique
+aobscanmodule(INJECT_DAMAGE_CALC_MULTI,ed9.exe,41 03 C6 B9 7F 96 98 00 3B C1 0F 4C C8 85 C9 0F 48 CE 89 8B 80 00 00 00 89) // should be unique
 alloc(newmem,$1000,INJECT_DAMAGE_CALC_MULTI)
 
 label(code)
@@ -1388,7 +1537,7 @@ ed9.exe+E2249: 48 8B 0D 78 02 8E 00  - mov rcx,[ed9.exe+9C24C8]
 
 [ENABLE]
 
-aobscanmodule(INJECT_FIELD_BATT_CHARGE_ATK,$process,F3 0F 11 83 70 03 00 00 48 8B CB) // should be unique
+aobscanmodule(INJECT_FIELD_BATT_CHARGE_ATK,ed9.exe,F3 0F 11 83 70 03 00 00 48 8B CB) // should be unique
 alloc(newmem,$1000,INJECT_FIELD_BATT_CHARGE_ATK)
 
 label(code)
@@ -1459,7 +1608,7 @@ ed9.exe+DB5F0: 66 0F 6E C0              - movd xmm0,eax
 
 [ENABLE]
 
-aobscanmodule(INJECT_FIELD_BATT_CHARGE_NO_DEC,$process,F3 0F 11 8B 70 03 00 00) // should be unique
+aobscanmodule(INJECT_FIELD_BATT_CHARGE_NO_DEC,ed9.exe,F3 0F 11 8B 70 03 00 00) // should be unique
 alloc(newmem,$1000,INJECT_FIELD_BATT_CHARGE_NO_DEC)
 
 label(code)
@@ -1531,7 +1680,7 @@ ed9.exe+21094B: BA 01 00 00 00           - mov edx,00000001
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_RELATIONS,$process,0F B7 84 47 08 05 27 00) // should be unique
+aobscanmodule(INJECT_GET_RELATIONS,ed9.exe,0F B7 84 47 08 05 27 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_RELATIONS)
 
 label(code)
@@ -1657,7 +1806,7 @@ ed9.exe+40311D: CC                       - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_USE_CP,$process,41 8B 4A 1C 41 8B 52 20) // should be unique
+aobscanmodule(INJECT_USE_CP,ed9.exe,41 8B 4A 1C 41 8B 52 20) // should be unique
 alloc(newmem,$1000,INJECT_USE_CP)
 
 label(code)
@@ -1735,7 +1884,7 @@ ed9.exe+F06D0: 45 8B 42 10     - mov r8d,[r10+10]
 
 [ENABLE]
 
-aobscanmodule(INJECT_FAST_QUICK_MAGIC,$process,F3 0F 11 83 50 04 00 00 48) // should be unique
+aobscanmodule(INJECT_FAST_QUICK_MAGIC,ed9.exe,F3 0F 11 83 50 04 00 00 48) // should be unique
 alloc(newmem,$1000,INJECT_FAST_QUICK_MAGIC)
 
 label(code)
@@ -1803,7 +1952,7 @@ ed9.exe+438E7E: CC                       - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATTLE_FULL_EP,$process,41 89 52 14 C3) // should be unique
+aobscanmodule(INJECT_BATTLE_FULL_EP,ed9.exe,41 89 52 14 C3) // should be unique
 alloc(newmem,$1000,INJECT_BATTLE_FULL_EP)
 
 label(code)
@@ -1872,7 +2021,7 @@ ed9.exe+F06B4: 41 8B 4A 1C  - mov ecx,[r10+1C]
 
 [ENABLE]
 
-aobscanmodule(INJECT_EXP_MULTI,$process,03 D3 3B D0 41 B8 96 00 00 00) // should be unique
+aobscanmodule(INJECT_EXP_MULTI,ed9.exe,03 D3 3B D0 41 B8 96 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_EXP_MULTI)
 
 label(code)
@@ -1960,7 +2109,7 @@ ed9.exe+F0FAC: 0F 4C C7           - cmovl eax,edi
 
 [ENABLE]
 
-aobscanmodule(INJECT_CORE_EXP_MULTI2,$process,03 79 04 41 8B D6) // should be unique
+aobscanmodule(INJECT_CORE_EXP_MULTI2,ed9.exe,03 79 04 41 8B D6) // should be unique
 alloc(newmem,$1000,INJECT_CORE_EXP_MULTI2)
 
 label(code)
@@ -2047,7 +2196,7 @@ ed9.exe+3FF1BC: 78 13                 - js ed9.exe+3FF1D1
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_CORE_DATA,$process,44 8B 61 04 83 A6 BC 00 00 00 FE) // should be unique
+aobscanmodule(INJECT_GET_CORE_DATA,ed9.exe,44 8B 61 04 83 A6 BC 00 00 00 FE) // should be unique
 alloc(newmem,$1000,INJECT_GET_CORE_DATA)
 
 label(code)
@@ -2151,7 +2300,7 @@ ed9.exe+1BBCAB: 48 8D 8E 60 03 00 00  - lea rcx,[rsi+00000360]
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_TRACKING_GAUGE,$process,F3 0F 10 82 CC 00 00 00 F3) // should be unique
+aobscanmodule(INJECT_INF_TRACKING_GAUGE,ed9.exe,F3 0F 10 82 CC 00 00 00 F3) // should be unique
 alloc(newmem,$1000,INJECT_INF_TRACKING_GAUGE)
 
 label(code)
@@ -2220,7 +2369,7 @@ ed9.exe+AB69A: E8 71 00 00 00                 - call ed9.exe+AB710
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_HACKING_TIME,$process,F3 41 0F 11 46 08 48 8B 41) // should be unique
+aobscanmodule(INJECT_INF_HACKING_TIME,ed9.exe,F3 41 0F 11 46 08 48 8B 41) // should be unique
 alloc(newmem,$1000,INJECT_INF_HACKING_TIME)
 
 label(code)
@@ -2293,7 +2442,7 @@ ed9.exe+504B40: 66 41 C7 46 40 00 00     - mov word ptr [r14+40],0000
 
 [ENABLE]
 
-aobscanmodule(INJECT_FILL_ITEMS,$process,0F B7 BC 88 E8 6A 19 00 4D 85) // should be unique
+aobscanmodule(INJECT_FILL_ITEMS,ed9.exe,0F B7 BC 88 E8 6A 19 00 4D 85) // should be unique
 alloc(newmem,$1000,INJECT_FILL_ITEMS)
 
 label(code)
@@ -4481,7 +4630,7 @@ ed9.exe+4D3227: 73 47                    - jae ed9.exe+4D3270
 
 [ENABLE]
 
-aobscanmodule(INJECT_CHAR_STAT,$process,8B 50 24 89 17) // should be unique
+aobscanmodule(INJECT_CHAR_STAT,ed9.exe,8B 50 24 89 17) // should be unique
 alloc(newmem,$1000,INJECT_CHAR_STAT)
 
 label(code)
@@ -4880,7 +5029,7 @@ ed9.exe+4FCE89: 8B 40 38              - mov eax,[rax+38]
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_ACHI_STATS,$process,48 8D 04 85 10 11 01 00 8B 0C 07) // should be unique
+aobscanmodule(INJECT_GET_ACHI_STATS,ed9.exe,48 8D 04 85 10 11 01 00 8B 0C 07) // should be unique
 alloc(newmem,$1000,INJECT_GET_ACHI_STATS)
 
 label(code)
@@ -5295,7 +5444,7 @@ ed9.exe+5DFD0: 75 19                    - jne ed9.exe+5DFEB
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_CURR_ITEM_INFO,$process,0F B7 94 88 E8 6A 19 00 85 D2 0F 85 97) // should be unique
+aobscanmodule(INJECT_GET_CURR_ITEM_INFO,ed9.exe,0F B7 94 88 E8 6A 19 00 85 D2 0F 85 97) // should be unique
 alloc(newmem,$1000,INJECT_GET_CURR_ITEM_INFO)
 
 label(code)
@@ -5413,7 +5562,7 @@ ed9.exe+14CF2D: 48 8D 15 98 98 77 00     - lea rdx,[ed9.exe+8C67CC]
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_SSTONE_WHEN_USE,$process,66 89 91 E8 6A 19 00) // should be unique
+aobscanmodule(INJECT_INF_SSTONE_WHEN_USE,ed9.exe,66 89 91 E8 6A 19 00) // should be unique
 alloc(newmem,$1000,INJECT_INF_SSTONE_WHEN_USE)
 
 label(code)
@@ -5481,7 +5630,7 @@ ed9.exe+40207B: CC                    - int 3
 
 [ENABLE]
 //aobscanmodule(INJECT_CARD_GAME_LIFE,ed9.exe,ERROR: Could not find unique AOB, tried code "8B 43 04 89 43 08") // should be unique
-aobscanmodule(INJECT_CARD_GAME_LIFE,$process,CC CC CC CC CC CC CC 40 53 48 83 EC 30 F3 0F 10 51 0C 48 8B D9 48 83 C1 0C F3 0F 10 43 10 0F 2F C2 72 ?? 8B 43 04 89 43 08) // should be unique
+aobscanmodule(INJECT_CARD_GAME_LIFE,ed9.exe,CC CC CC CC CC CC CC 40 53 48 83 EC 30 F3 0F 10 51 0C 48 8B D9 48 83 C1 0C F3 0F 10 43 10 0F 2F C2 72 ?? 8B 43 04 89 43 08) // should be unique
 alloc(newmem,$1000,INJECT_CARD_GAME_LIFE)
 
 label(code)
@@ -5653,7 +5802,7 @@ ed9.exe+127E9F: 48 0F 47 C1        - cmova rax,rcx
 
 [ENABLE]
 
-aobscanmodule(INJECT_INST_FISHING,$process,F3 0F 11 89 10 03 00 00 F3) // should be unique
+aobscanmodule(INJECT_INST_FISHING,ed9.exe,F3 0F 11 89 10 03 00 00 F3) // should be unique
 alloc(newmem,$1000,INJECT_INST_FISHING)
 
 label(code)
@@ -5749,13 +5898,13 @@ ed9.exe+375898: E9 4F 07 00 00                    - jmp ed9.exe+375FEC
     </CheatEntry>
     <CheatEntry>
       <ID>8</ID>
-      <Description>"The Legend of Heroes: Kuro no Kiseki Ⅱ -CRIMSON SiN-  英雄傳說 黎之軌跡Ⅱ -緋紅原罪-  v1.14 /  https://opencheattables.com  /  CE 7.5+"</Description>
-      <Color>400080</Color>
+      <Description>"The Legend of Heroes: Kuro no Kiseki Ⅱ -CRIMSON SiN-  英雄傳說 黎之軌跡Ⅱ -緋紅原罪-  v1.14 /  https://opencheattables.com"</Description>
+      <Color>008E00</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <LuaScript>AddressList.Header.OnSectionClick = nil
+  <LuaScript>synchronize(function() AddressList.Header.OnSectionClick = nil end)
 
 --memory record IDs now allowed to be 'locked'
 IDs = {23, 108, 24, 25, 106, 107, 88, 73, 201, 94, 30, 79, 171, 172, 34,
@@ -5764,26 +5913,35 @@ IDs = {23, 108, 24, 25, 106, 107, 88, 73, 201, 94, 30, 79, 171, 172, 34,
 --determine event trigger sequence
 
 
-function contains(table, val)
-   local i = 0
-   for i=1, #table do
-      if table[i] == val then
-         return true
-      end
-   end
-   return false
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
 end
 
 
-function onMemRecPreExecute(memoryrecord, newstate)
-    if contains(IDs, memoryrecord.ID) and newstate then
-	    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
-		    return false
-	    end
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
     end
 end
 
 if _kuro_2_customInt == nil then
+
+--print('process name before ' .. process)
 
 registerCustomTypeAutoAssembler([[
 alloc(TypeName,256)
@@ -5826,7 +5984,11 @@ ret
 ]])
 
 _kuro_2_customInt = true
+
+--print('process name after: ' .. process)
+
 end
+
 
 </LuaScript>
 </CheatTable>

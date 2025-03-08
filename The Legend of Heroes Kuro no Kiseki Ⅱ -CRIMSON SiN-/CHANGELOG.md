@@ -1,5 +1,9 @@
 # Changelog  
 
+## 2025/03/08
+1. fixed a bug in CE 7.6
+1. Revised for 1.15
+
 ## 2023/02/27
 1. Revised "HP/EP/CP (受傷害時 / when get hit)" HP calculation incorrect if using option 5  
 
