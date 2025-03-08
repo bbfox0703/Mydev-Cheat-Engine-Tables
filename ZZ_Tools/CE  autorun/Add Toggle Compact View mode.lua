@@ -91,7 +91,7 @@ function addCompactViewMenu()
 
     -- すでに追加されているか確認し、重複追加を防ぐ
     for i = 0, devToolsMenu.Count - 1 do
-        if devToolsMenu[i].Caption == 'Create AA Script Record' then
+        if devToolsMenu[i].Caption == 'Create Compacr Mode AA Script Record' then
             return
         end
     end
@@ -99,7 +99,7 @@ function addCompactViewMenu()
     -- **メニューを追加（synchronize() を使用）**
     synchronize(function()
         local compactViewItem = createMenuItem(devToolsMenu)
-        compactViewItem.Caption = 'Create AA Script Record'
+        compactViewItem.Caption = 'Create Compacr Mode AA Script Record'
         compactViewItem.OnClick = function()
             createCompactViewMemoryRecord()
         end
