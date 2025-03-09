@@ -2,6 +2,56 @@
 <CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
+      <ID>63</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
       <ID>18</ID>
       <Description>"***Suggestion: Enable after game save loaded***"</Description>
       <Color>8000FF</Color>
@@ -15,12 +65,16 @@
       <AssemblerScript>[ENABLE]
 {$asm}
 define(MAINEXE, $process)
-alloc(newmem, $8000, MAINEXE)
+alloc(newmem, $A000, MAINEXE)
 label(i_warehouse_base)
 
 newmem:
   i_warehouse_base:
   dq 0
+  align 1000 0
+  db 0
+  align 1000 0
+  db 0
   align 1000 0
   db 0
   align 1000 0
@@ -250,7 +304,7 @@ loop1:
   cmp qword ptr [rdi], rax
   je check_found
   inc r14d
-  cmp r14d, #3200  // max 3584
+  cmp r14d, #4500  // max 4608
   jae check_endp
   jmp loop1
 
@@ -318,7 +372,7 @@ align 10 cc
   is_enemy:
   dd 1
   is_keep_warehouse_slot:
-  dd 0
+  dd 1
   i_min_watermark:
   dd #55
   i_max_watermark:
@@ -481,7 +535,7 @@ Anno1800.exe+10C0820: FF 50 40        - call qword ptr [rax+40]
 [ENABLE]
 
 aobscanmodule(INJECT_SELECTED_PLAYER_SHIP,$process,0F BF 56 3E E9 ?? ?? ?? ?? 48 83 7C 3B 10 01) // should be unique
-alloc(newmem,$2200,INJECT_SELECTED_PLAYER_SHIP)
+alloc(newmem,$3200,INJECT_SELECTED_PLAYER_SHIP)
 
 alloc(INJECT_SELECTED_PLAYER_SHIPo, 9)
 
@@ -524,7 +578,7 @@ loop1:
 
 check_not_found_yet:
   inc r14d
-  cmp r14d, #700 // max 1000 entries (capacity = 2000h = 1024*8 = 1024 entries)
+  cmp r14d, #1500 // max 1536 entries (capacity = 3000h = 1536 dq entries)
   ja check_endp_f
   jmp loop1
 
@@ -557,7 +611,8 @@ code:
   db 0
   align 1000 0
   db 0
-
+  align 1000 0
+  db 0
 
 INJECT_SELECTED_PLAYER_SHIP:
   jmp newmem
@@ -639,16 +694,19 @@ loop1:
   cmp qword ptr [rdi], 0
   je check_endp
 
+  cmp [rdi], rbx
+  jne check_not_found_yet
+
   // fill hp
   mov rdi, [rdi]
   mov ax, [rdi+40]
-  inc ax
+  //inc ax
   mov [rdi+3E], ax
   // *******
 
 check_not_found_yet:
   inc r14d
-  cmp r14d, #500 // max 1000 entries (capacity = 2000h = 1024*8 = 1024 entries)
+  cmp r14d, #1000 // max 1536 entries (capacity = 3000h = 1536 dq entries)
   ja check_endp
   jmp loop1
 
@@ -714,6 +772,107 @@ Anno1800.exe+CAA151: 48 8B CB                 - mov rcx,rbx
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
+              <ID>76</ID>
+              <Description>"Method 2: Try to refill the HP of other players' ships or buildings if they ever clicked"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Anno1800.exe
+  Version: 
+  Date   : 2025-03-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TRY_FILL_SHIP_HP2,$process,66 41 83 3C 24 00 0F 8F) // should be unique
+alloc(newmem,$1000,INJECT_TRY_FILL_SHIP_HP2)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  push r14
+  push rax
+  push rdi
+  xor r14, r14
+
+loop1:
+  mov rdi, i_ships_base_addr
+  lea rdi, [rdi+r14d*8]
+  cmp qword ptr [rdi], 0
+  je endp
+  mov rdi, [rdi]
+  lea rdi, [rdi+3E]
+  cmp rdi, r12
+  jne loop_tail
+
+  // fill hp
+  mov ax, [r12+2]
+  //inc ax
+  mov [r12], ax
+  // *******
+
+
+loop_tail:
+  inc r14d
+  cmp r14d, #1000 // max 1536 entries (capacity = 3000h = 1536 dq entries)
+  ja endp
+  jmp loop1
+
+endp:
+  pop rdi
+  pop rax
+  pop r14
+  popfq
+
+code:
+  cmp word ptr [r12],00
+  jmp return
+
+INJECT_TRY_FILL_SHIP_HP2:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_TRY_FILL_SHIP_HP2)
+
+[DISABLE]
+
+INJECT_TRY_FILL_SHIP_HP2:
+  db 66 41 83 3C 24 00
+
+unregistersymbol(INJECT_TRY_FILL_SHIP_HP2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+CEC4F9
+
+Anno1800.exe+CEC4D0: 48 89 45 80           - mov [rbp-80],rax
+Anno1800.exe+CEC4D4: 45 0F BF CE           - movsx r9d,r14w
+Anno1800.exe+CEC4D8: 4C 8D 45 80           - lea r8,[rbp-80]
+Anno1800.exe+CEC4DC: 48 8D 54 24 68        - lea rdx,[rsp+68]
+Anno1800.exe+CEC4E1: 48 8B CB              - mov rcx,rbx
+Anno1800.exe+CEC4E4: E8 E7 0D BD FF        - call Anno1800.exe+8BD2D0
+Anno1800.exe+CEC4E9: 90                    - nop 
+Anno1800.exe+CEC4EA: 48 8B 05 07 05 42 04  - mov rax,[Anno1800.exe+510C9F8]
+Anno1800.exe+CEC4F1: 48 89 45 80           - mov [rbp-80],rax
+Anno1800.exe+CEC4F5: 4C 89 6D 88           - mov [rbp-78],r13
+// ---------- INJECTING HERE ----------
+Anno1800.exe+CEC4F9: 66 41 83 3C 24 00     - cmp word ptr [r12],00
+// ---------- DONE INJECTING  ----------
+Anno1800.exe+CEC4FF: 0F 8F D8 00 00 00     - jg Anno1800.exe+CEC5DD
+Anno1800.exe+CEC505: 66 83 7E 2A FF        - cmp word ptr [rsi+2A],-01
+Anno1800.exe+CEC50A: 0F 84 CD 00 00 00     - je Anno1800.exe+CEC5DD
+Anno1800.exe+CEC510: 45 0F B7 E5           - movzx r12d,r13w
+Anno1800.exe+CEC514: 48 8B 4E 08           - mov rcx,[rsi+08]
+Anno1800.exe+CEC518: 48 8B 01              - mov rax,[rcx]
+Anno1800.exe+CEC51B: BA 6F 01 00 00        - mov edx,0000016F
+Anno1800.exe+CEC520: 41 B0 01              - mov r8b,01
+Anno1800.exe+CEC523: FF 50 18              - call qword ptr [rax+18]
+Anno1800.exe+CEC526: 48 85 C0              - test rax,rax
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
               <ID>54</ID>
               <Description>"HP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
@@ -735,6 +894,15 @@ Anno1800.exe+CAA151: 48 8B CB                 - mov rcx,rbx
                 <Offset>40</Offset>
               </Offsets>
             </CheatEntry>
+            <CheatEntry>
+              <ID>73</ID>
+              <Description>"base"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_sel_ship_base_addr</Address>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
@@ -755,12 +923,18 @@ alloc(newmem,$1000,INJECT_CLICK_CARGO)
 
 label(code)
 label(return)
-label(i_min_cargo_size)
+label(i_min_cargo_size is_force_set_cargo_size)
 
 newmem:
   mov ebx,[rax+20]
+  cmp dword ptr [is_force_set_cargo_size], 1
+  je @F
+  cmp ebx, 1
+  je code
   cmp ebx, [i_min_cargo_size]
   jae code
+
+@@:
   mov ebx, [i_min_cargo_size]
   mov [rax+20], ebx
 
@@ -772,11 +946,13 @@ code:
 align 10 cc
   i_min_cargo_size:
   dd #1000
+  is_force_set_cargo_size:
+  dd 0
 
 INJECT_CLICK_CARGO:
   jmp newmem
 return:
-registersymbol(i_min_cargo_size)
+registersymbol(i_min_cargo_size is_force_set_cargo_size)
 registersymbol(INJECT_CLICK_CARGO)
 
 [DISABLE]
@@ -823,6 +999,17 @@ Anno1800.exe+23B8C4B: EB 12           - jmp Anno1800.exe+23B8C5F
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_min_cargo_size</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>72</ID>
+              <Description>"Force set?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_force_set_cargo_size</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -944,6 +1131,203 @@ Anno1800.exe+241D646: 75 0F                    - jne Anno1800.exe+241D657
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>65</ID>
+          <Description>"Faster set goods min. stock limit"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Anno1800.exe
+  Version: 
+  Date   : 2025-03-09
+  Author : Andyc
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_SET_MIN_STOCK_LEVEL,$process,89 59 14 48 8B 4C 24 48) // should be unique
+alloc(newmem,$1000,INJECT_FAST_SET_MIN_STOCK_LEVEL)
+
+label(code)
+label(return)
+label(i_min_stock_limit)
+
+newmem:
+  cmp ebx, [i_min_stock_limit]
+  jae code
+  mov ebx, [i_min_stock_limit]
+
+code:
+  mov [rcx+14],ebx
+  mov rcx,[rsp+48]
+  jmp return
+align 10 cc
+  i_min_stock_limit:
+  dd 65
+
+INJECT_FAST_SET_MIN_STOCK_LEVEL:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FAST_SET_MIN_STOCK_LEVEL i_min_stock_limit)
+
+[DISABLE]
+
+INJECT_FAST_SET_MIN_STOCK_LEVEL:
+  db 89 59 14 48 8B 4C 24 48
+
+unregistersymbol(INJECT_FAST_SET_MIN_STOCK_LEVEL i_min_stock_limit)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+150CA2B
+
+Anno1800.exe+150C9FF: 48 03 0A                 - add rcx,[rdx]
+Anno1800.exe+150CA02: 83 C0 04                 - add eax,04
+Anno1800.exe+150CA05: 89 42 08                 - mov [rdx+08],eax
+Anno1800.exe+150CA08: 8B 19                    - mov ebx,[rcx]
+Anno1800.exe+150CA0A: 44 89 84 24 A8 00 00 00  - mov [rsp+000000A8],r8d
+Anno1800.exe+150CA12: 49 8D 49 48              - lea rcx,[r9+48]
+Anno1800.exe+150CA16: 4C 8D 84 24 A8 00 00 00  - lea r8,[rsp+000000A8]
+Anno1800.exe+150CA1E: 48 8D 54 24 30           - lea rdx,[rsp+30]
+Anno1800.exe+150CA23: E8 98 0B D3 FE           - call Anno1800.exe+23D5C0
+Anno1800.exe+150CA28: 48 8B 08                 - mov rcx,[rax]
+// ---------- INJECTING HERE ----------
+Anno1800.exe+150CA2B: 89 59 14                 - mov [rcx+14],ebx
+// ---------- DONE INJECTING  ----------
+Anno1800.exe+150CA2E: 48 8B 4C 24 48           - mov rcx,[rsp+48]
+Anno1800.exe+150CA33: 48 83 F9 01              - cmp rcx,01
+Anno1800.exe+150CA37: 74 32                    - je Anno1800.exe+150CA6B
+Anno1800.exe+150CA39: B8 A8 15 00 00           - mov eax,000015A8
+Anno1800.exe+150CA3E: 48 89 0C 38              - mov [rax+rdi],rcx
+Anno1800.exe+150CA42: 48 8B 44 24 50           - mov rax,[rsp+50]
+Anno1800.exe+150CA47: 48 85 C0                 - test rax,rax
+Anno1800.exe+150CA4A: 74 46                    - je Anno1800.exe+150CA92
+Anno1800.exe+150CA4C: 8B 40 20                 - mov eax,[rax+20]
+Anno1800.exe+150CA4F: 83 F8 07                 - cmp eax,07
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>67</ID>
+              <Description>"Usage: Click on the minimum stock level edit field, then click on a blank area of the window."</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>66</ID>
+              <Description>"stock limit"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_stock_limit</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
+          <Description>"Force set goods min. stock limit, if non-zero"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Anno1800.exe
+  Version: 
+  Date   : 2025-03-09
+  Author : Andyc
+
+  This script does blah blah blah
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_ALL_MIN_STOCK_LEVEL,Anno1800.exe,74 04 8B 40 14 C3 33 C0 C3 CC CC CC CC CC CC CC CC CC CC CC 41) // should be unique
+alloc(newmem,$1000,INJECT_SET_ALL_MIN_STOCK_LEVEL)
+
+label(code)
+label(return i_min_stock_level_all)
+
+newmem:
+
+code:
+  //je Anno1800.exe+14372D2
+  je INJECT_SET_ALL_MIN_STOCK_LEVEL+6
+  //reassemble(INJECT_SET_ALL_MIN_STOCK_LEVEL)
+  push r15
+  mov r15, rax
+  mov eax,[rax+14]
+
+  //
+  test eax, eax
+  jz @F
+  cmp eax, [i_min_stock_level_all]
+  je @F
+  mov eax, [i_min_stock_level_all]
+  mov [r15+14], eax
+  //
+@@:
+  pop r15
+  jmp return
+align 10 cc
+  i_min_stock_level_all:
+  dd 65
+INJECT_SET_ALL_MIN_STOCK_LEVEL:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_ALL_MIN_STOCK_LEVEL i_min_stock_level_all)
+
+[DISABLE]
+
+INJECT_SET_ALL_MIN_STOCK_LEVEL:
+  db 74 04 8B 40 14
+
+unregistersymbol(INJECT_SET_ALL_MIN_STOCK_LEVELi_min_stock_level_all )
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Anno1800.exe+14372CC
+
+Anno1800.exe+14372AF: 3B 50 10     - cmp edx,[rax+10]
+Anno1800.exe+14372B2: 74 0E        - je Anno1800.exe+14372C2
+Anno1800.exe+14372B4: 48 3B C1     - cmp rax,rcx
+Anno1800.exe+14372B7: 74 19        - je Anno1800.exe+14372D2
+Anno1800.exe+14372B9: 48 8B 40 08  - mov rax,[rax+08]
+Anno1800.exe+14372BD: 3B 50 10     - cmp edx,[rax+10]
+Anno1800.exe+14372C0: 75 F2        - jne Anno1800.exe+14372B4
+Anno1800.exe+14372C2: 48 85 C0     - test rax,rax
+Anno1800.exe+14372C5: 49 0F 44 C0  - cmove rax,r8
+Anno1800.exe+14372C9: 49 3B C0     - cmp rax,r8
+// ---------- INJECTING HERE ----------
+Anno1800.exe+14372CC: 74 04        - je Anno1800.exe+14372D2
+// ---------- DONE INJECTING  ----------
+Anno1800.exe+14372CE: 8B 40 14     - mov eax,[rax+14]
+Anno1800.exe+14372D1: C3           - ret 
+Anno1800.exe+14372D2: 33 C0        - xor eax,eax
+Anno1800.exe+14372D4: C3           - ret 
+Anno1800.exe+14372D5: CC           - int 3 
+Anno1800.exe+14372D6: CC           - int 3 
+Anno1800.exe+14372D7: CC           - int 3 
+Anno1800.exe+14372D8: CC           - int 3 
+Anno1800.exe+14372D9: CC           - int 3 
+Anno1800.exe+14372DA: CC           - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>70</ID>
+              <Description>"Usage: Click on the warehouse"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>69</ID>
+              <Description>"set min. stock limit to"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_min_stock_level_all</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>61</ID>
           <Description>"inf. golden ticket when use (scenario rewards)"</Description>
           <Options moHideChildren="1"/>
@@ -964,9 +1348,9 @@ label(return)
 
 newmem:
   mov r12d, [rax+64]
-  cmp r12d, #180000
+  cmp r12d, #380000
   jae next1
-  mov r12d, #180000
+  mov r12d, #380000
   mov [rax+64], r12d
 next1:
   xor r12d, r12d
