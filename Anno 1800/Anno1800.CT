@@ -2,6 +2,12 @@
 <CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
+      <ID>18</ID>
+      <Description>"***Suggestion: Enable after game save loaded***"</Description>
+      <Color>8000FF</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+    <CheatEntry>
       <ID>63</ID>
       <Description>"Toggle Compact View"</Description>
       <VariableType>Auto Assembler Script</VariableType>
@@ -52,10 +58,91 @@ end
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>18</ID>
-      <Description>"***Suggestion: Enable after game save loaded***"</Description>
-      <Color>8000FF</Color>
-      <GroupHeader>1</GroupHeader>
+      <ID>77</ID>
+      <Description>"Toggle scripts"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  47, -- "Active"
+  63, -- "Toggle Compact View"
+  3, -- "Coin, influence, &amp; warehouse stocks"
+  42, -- "Click warehouse -&gt; set min. stock size"
+  53, -- "Selected player ship/building: HP refill (not god mode)"
+  65, -- "Faster set goods min. stock limit"
+  76, -- "Method 2: Try to refill the HP of other players' ships or buildings if they ever clicked"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  12, -- "Keep warehouse stock (at least &gt;=2)"
+  76, -- "Method 2: Try to refill the HP of other players' ships or buildings if they ever clicked"
+  57, -- "Try to refill the HP of other players' ships or buildings if they ever clicked"
+  48, -- "+Player warehouse stock#"
+  71, -- "Force set goods min. stock limit, if non-zero"
+  65, -- "Faster set goods min. stock limit"
+  61, -- "inf. golden ticket when use (scenario rewards)"
+  53, -- "Selected player ship/building: HP refill (not god mode)"
+  42, -- "Click warehouse -&gt; set min. stock size"
+  39, -- "Click ship cargo -&gt; set min. stock size"
+  3, -- "Coin, influence, &amp; warehouse stocks"
+  63, -- "Toggle Compact View"
+  47, -- "Active"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 63, Description: "Toggle Compact View", Depth: 0
+-- ID: 47, Description: "Active", Depth: 0
+--   ID: 3, Description: "Coin, influence, &amp; warehouse stocks", Depth: 1
+--     ID: 48, Description: "+Player warehouse stock#", Depth: 2
+--       ID: 12, Description: "Keep warehouse stock (at least &gt;=2)", Depth: 3
+--   ID: 53, Description: "Selected player ship/building: HP refill (not god mode)", Depth: 1
+--     ID: 57, Description: "Try to refill the HP of other players' ships or buildings if they ever clicked", Depth: 2
+--     ID: 76, Description: "Method 2: Try to refill the HP of other players' ships or buildings if they ever clicked", Depth: 2
+--   ID: 39, Description: "Click ship cargo -&gt; set min. stock size", Depth: 1
+--   ID: 42, Description: "Click warehouse -&gt; set min. stock size", Depth: 1
+--   ID: 65, Description: "Faster set goods min. stock limit", Depth: 1
+--   ID: 71, Description: "Force set goods min. stock limit, if non-zero", Depth: 1
+--   ID: 61, Description: "inf. golden ticket when use (scenario rewards)", Depth: 1
+
+
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>47</ID>
@@ -172,30 +259,46 @@ check_if_player_endp:
   cmp ecx, #1010017
   je check_coin
 
+  cmp ecx, #1010566 // Oil
+  jne normal_check
+  push rbx
+  mov ebx, [rax+1C]
+  vcvtsi2ss xmm15, xmm15, ebx
+  vmovss xmm14, [vf_500]
+  vucomiss xmm15, xmm14
+  jae oil_endp
+  vcvtss2si ebx, xmm14
+  mov [rax+20], ebx
+
+oil_endp:
+  pop rbx
+  jmp code
+
+normal_check:
   //start check warehouse
   mov ecx, [rax+1C]  // max capacity
   test ecx, ecx
   je code
 
   mov cx, [rax+12]
-  cmp ecx, F
+  cmp cx, F
   jne check_1a_next
   jmp check_1a
 
 check_12_next:
   mov cx, [rax+12]
-  cmp ecx, 1
+  cmp cx, 1
   jne code
 
 check_1a:
   mov cx, [rax+1A]
-  cmp ecx, F
+  cmp cx, F
   jne check_1a_next
   jmp check_item_no
 
 check_1a_next:
   mov cx, [rax+1A]
-  cmp ecx, 1
+  cmp cx, 1
   jne code
 
 check_item_no:
@@ -215,12 +318,17 @@ check_warehouse0:
 check_warehouse2: // DLC
   cmp ecx, #150000
   jb to_warehouse
+
   jmp code
 check_warehouse1: // original
   cmp ecx, #1020000
   jb to_warehouse
   jmp code
   //end check warehouse
+
+check_oil:
+  //mov ecx,[rax+20]
+  jmp to_warehouse
 
 check_coin:
   push rbx
@@ -277,11 +385,13 @@ to_influence:
   jmp code
 
 to_warehouse:
+
   push rbx
   mov ebx, [rax+68]
   cmp ebx, 1
   pop rbx
   je code
+
 
   cmp dword ptr [is_keep_warehouse_slot], 1
   jne code
@@ -379,7 +489,8 @@ align 10 cc
   dd #10
   is_warehouse_id_found:
   dd 0
-
+  vf_500:
+  dd (float)500
 
 INJECT_MONEY_AND_WAREHOUSE_SLOT:
   jmp newmem
