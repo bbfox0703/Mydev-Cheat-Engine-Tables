@@ -190,7 +190,7 @@ dealloc(newmem, $8000)
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Anno1800.exe
   Version: 
-  Date   : 2022-05-23
+  Date   : 2025-03-10
   Author : bbfox @ https://opencheattables.com
 }
 
@@ -207,7 +207,7 @@ label(i_influence_avail_addr)
 label(i_influence_total_addr)
 label(is_keep_warehouse_slot)
 label(i_min_watermark)
-label(i_max_watermark)
+label(i_max_watermark is_keep_min_oil)
 
 // 28 *2c 30 *34 *3c= 0
 // 68 = 1
@@ -215,6 +215,8 @@ label(i_max_watermark)
 // 14 != 1A0
 
 newmem:
+  cmp dword ptr [rax+18], #1010566
+  je oil_base_check
   mov ecx, [rax+20]
   test ecx, ecx
   je code
@@ -252,6 +254,7 @@ check_if_player_endp:
 
 
   // check type, influence, coin for player
+check_base_resource:
   mov ecx, [rax+18]
   cmp ecx, #1010190
   je to_influence
@@ -261,6 +264,10 @@ check_if_player_endp:
 
   cmp ecx, #1010566 // Oil
   jne normal_check
+  cmp dword ptr [is_keep_min_oil], 1
+  jne normal_check
+
+oil_base_check:
   push rbx
   mov ebx, [rax+20]
   vcvtsi2ss xmm15, xmm15, ebx
@@ -299,6 +306,21 @@ check_1a:
 check_1a_next:
   mov cx, [rax+1A]
   cmp cx, 1
+  je check_item_no
+
+check_1b:
+  mov cx, [rax+1A]
+  cmp cx, 2
+  jne check_item_no
+
+check_1c:
+  mov cx, [rax+1A]
+  cmp cx, 3
+  jne check_item_no
+
+check_1d:
+  mov cx, [rax+1A]
+  cmp cx, 4
   jne code
 
 check_item_no:
@@ -317,6 +339,9 @@ check_warehouse0:
   jmp code
 check_warehouse2: // DLC
   cmp ecx, #150000
+  jb to_warehouse
+
+  cmp ecx, #220000 // new DLC
   jb to_warehouse
 
   jmp code
@@ -490,7 +515,9 @@ align 10 cc
   is_warehouse_id_found:
   dd 0
   vf_500:
-  dd (float)500
+  dd (float)1211
+  is_keep_min_oil:
+  dd 1
 
 INJECT_MONEY_AND_WAREHOUSE_SLOT:
   jmp newmem
@@ -498,7 +525,7 @@ INJECT_MONEY_AND_WAREHOUSE_SLOT:
 return:
 
 registersymbol(i_min_watermark)
-registersymbol(i_max_watermark)
+registersymbol(i_max_watermark is_keep_min_oil)
 registersymbol(is_keep_warehouse_slot)
 registersymbol(i_influence_total_addr)
 registersymbol(i_influence_avail_addr)
@@ -598,6 +625,17 @@ Anno1800.exe+10C0820: FF 50 40        - call qword ptr [rax+40]
                   <Description>"3. If any new items are added, you must click warehouse again"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>78</ID>
+                  <Description>"Keep min oil?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_keep_min_oil</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>12</ID>
