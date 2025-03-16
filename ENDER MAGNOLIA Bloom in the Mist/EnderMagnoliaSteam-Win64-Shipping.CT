@@ -347,7 +347,7 @@ alloc(newmem,$1000,INJECT_GET_HP)
 alloc(INJECT_GET_HPo, 8)
 
 label(code)
-label(return i_base_hp_addr i_off_hp_addr is_use_adv_chk)
+label(return i_base_hp_addr i_off_hp_addr is_use_adv_chk i_base_sp_addr)
 
 INJECT_GET_HPo:
   readmem(INJECT_GET_HP, 8)
@@ -366,9 +366,35 @@ newmem:
 chk_avail:
   cmp dword ptr [is_use_adv_chk], 1
   jne code
-
   push r15
   push r14
+  mov r14, [i_off_hp_addr]
+  lea r14, [r14-4]
+  lea r15, [rcx+r14]
+  cmp dword ptr [r15], 3E8
+  je chk_sp
+  cmp dword ptr [r15], 7D0
+  je chk_sp
+  jmp recheck_hp
+
+chk_sp:
+  mov r14, [i_off_hp_addr]
+  lea r14, [r14-1C] //120
+  lea r15, [rcx+r14]
+  cmp dword ptr [r15], 0
+  jne recheck_hp
+
+  mov r15, [i_base_hp_addr]
+  mov r14, [i_off_hp_addr]
+  lea r14, [r14+4]
+  lea r15, [r15+r14]
+  mov r15, qword ptr [r15]
+  cmp r15, [rcx+r14]
+  jne recheck_hp
+
+  mov [i_base_sp_addr], rcx
+
+recheck_hp:
   mov r15, [i_base_hp_addr]
   mov r14, [i_off_hp_addr]
   cmp dword ptr [r15+C8], 0
@@ -395,6 +421,8 @@ align 10 cc
   dq 0
   i_off_hp_addr:
   dq 0
+  i_base_sp_addr:
+  dq 0
   is_use_adv_chk:
   dd 0
 
@@ -402,7 +430,7 @@ INJECT_GET_HP:
   jmp newmem
   nop 3
 return:
-registersymbol(INJECT_GET_HP i_base_hp_addr i_off_hp_addr is_use_adv_chk)
+registersymbol(INJECT_GET_HP i_base_hp_addr i_off_hp_addr is_use_adv_chk i_base_sp_addr)
 registersymbol(INJECT_GET_HPo)
 [DISABLE]
 
@@ -410,7 +438,7 @@ INJECT_GET_HP:
   //db 66 0F 6E 81 3C 01 00 00
   readmem(INJECT_GET_HPo, 8)
 
-unregistersymbol(INJECT_GET_HP i_base_hp_addr i_off_hp_addr is_use_adv_chk)
+unregistersymbol(INJECT_GET_HP i_base_hp_addr i_off_hp_addr is_use_adv_chk i_base_sp_addr)
 dealloc(newmem)
 unregistersymbol(INJECT_GET_HPo)
 dealloc(INJECT_GET_HPo)
@@ -487,6 +515,19 @@ dealloc(INJECT_GET_HPo)
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>is_use_adv_chk</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>44</ID>
+              <Description>"possible SP (when advanced check is on)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_sp_addr</Address>
+              <Offsets>
+                <Offset>[i_off_hp_addr]</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -563,6 +604,104 @@ dealloc(newmem)
 "EnderMagnoliaSteam-Win64-Shipping.exe"+46F527C: 21 45 EF                 - and [rbp-11],eax
 }
 </AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>33</ID>
+      <Description>"Fast debuff out"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : EnderMagnoliaSteam-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-03-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_DEBUFF_OUT,$process,F3 0F 10 51 5C 48) // should be unique
+alloc(newmem,$1000,INJECT_FAST_DEBUFF_OUT)
+
+label(code)
+label(return is_enemy_debuff_always)
+
+newmem:
+
+
+code:
+  cmp qword ptr [rcx+30], 0
+  jne to_player
+
+orig_flow:
+  cmp dword ptr [is_enemy_debuff_always], 1
+  jne @F
+  mov dword ptr [rcx+5C], 0
+
+@@:
+  movss xmm2,[rcx+5C]
+  jmp return
+
+to_player:
+  movss xmm2,[rcx+60]
+  movss [rcx+5C], xmm2
+  jmp return
+align 10 cc
+  is_enemy_debuff_always:
+  dd 1
+
+INJECT_FAST_DEBUFF_OUT:
+  jmp newmem
+return:
+registersymbol(INJECT_FAST_DEBUFF_OUT is_enemy_debuff_always)
+
+[DISABLE]
+
+INJECT_FAST_DEBUFF_OUT:
+  db F3 0F 10 51 5C
+
+unregistersymbol(INJECT_FAST_DEBUFF_OUT is_enemy_debuff_always)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D06
+
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CF8: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CF9: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CFA: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CFB: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CFC: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CFD: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CFE: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0CFF: CC                 - int 3 
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D00: 40 53              - push rbx
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D02: 48 83 EC 20        - sub rsp,20
+// ---------- INJECTING HERE ----------
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D06: F3 0F 10 51 5C     - movss xmm2,[rcx+5C]
+// ---------- DONE INJECTING  ----------
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D0B: 48 8B D9           - mov rbx,rcx
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D0E: F3 0F 10 41 60     - movss xmm0,[rcx+60]
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D13: F3 0F 5C C2        - subss xmm0,xmm2
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D17: 0F 2F C8           - comiss xmm1,xmm0
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D1A: 72 03              - jb "EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D1F
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D1C: 0F 28 C8           - movaps xmm1,xmm0
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D1F: 48 8B 01           - mov rax,[rcx]
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D22: F3 0F 58 D1        - addss xmm2,xmm1
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D26: F3 0F 11 51 5C     - movss [rcx+5C],xmm2
+"EnderMagnoliaSteam-Win64-Shipping.exe"+47D0D2B: FF 90 C8 02 00 00  - call qword ptr [rax+000002C8]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"inf. enemy debuff?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_enemy_debuff_always</Address>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>26</ID>
