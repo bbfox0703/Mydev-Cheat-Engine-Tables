@@ -141,6 +141,9 @@ zh-TW: 同級生Remake
 ## ENDER LILIES Quietus of the Knights  
 [ENDER LILIES: Quietus of the Knights (Steam)](https://store.steampowered.com/app/1369630/ENDER_LILIES_Quietus_of_the_Knights/)  
 
+## ENDER MAGNOLIA Bloom in the Mist  
+[ENDER MAGNOLIA: Bloom in the Mist (Steam)](https://store.steampowered.com/app/2725260/ENDER_MAGNOLIA_Bloom_in_the_Mist/)  
+
 ## Endless Space 2    
 [Endless Space 2 (Steam)](https://store.steampowered.com/app/392110/ENDLESS_Space_2/)  
 
