@@ -228,7 +228,7 @@ aobscanmodule(INJECT_DAMAGE_MULTI,Atelier_Yumia.exe,44 8B 86 B0 00 00 00) // sho
 alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
 
 label(code)
-label(return vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold)
+label(return vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold i_min_hp_ratio)
 
 newmem:
   cmp r14d, 0
@@ -248,6 +248,27 @@ newmem:
   jne to_enemy
 
   //vcvtss2si r14d, xmm15
+
+  mov r8d,[rsi+000000B8]
+  vmovss xmm14, [i_min_hp_ratio]
+  vcvtsi2ss xmm13, xmm13, r8d
+  vmulss xmm13, xmm13, xmm14
+  push r15
+  vcvtss2si r15d, xmm13 // max HP * min ratio
+  mov r8d,[rsi+000000B0]
+
+  vcvtss2si r14d, xmm15
+  add r8d, r14d
+  cmp r8d, r15d
+  jge end_ratio_chk
+
+  mov r8d, r15d
+  mov [rsi+000000B0], r8d
+  vxorps xmm15, xmm15, xmm15
+
+end_ratio_chk:
+  pop r15
+
 
   mov r8d,[rsi+000000B0]
   vcvtss2si r14d, xmm15
@@ -294,19 +315,21 @@ align 10 cc
   dd 1
   i_min_hp_threshold:
   dd 32
+  i_min_hp_ratio:
+  dd (float)0.2
 
 INJECT_DAMAGE_MULTI:
   jmp newmem
   nop 2
 return:
-registersymbol(INJECT_DAMAGE_MULTI vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold)
+registersymbol(INJECT_DAMAGE_MULTI vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold i_min_hp_ratio)
 
 [DISABLE]
 
 INJECT_DAMAGE_MULTI:
   db 44 8B 86 B0 00 00 00
 
-unregistersymbol(INJECT_DAMAGE_MULTI vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold)
+unregistersymbol(INJECT_DAMAGE_MULTI vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold i_min_hp_ratio)
 dealloc(newmem)
 
 {
@@ -355,8 +378,16 @@ Atelier_Yumia.exe+F20D6C: 89 BE B0 00 00 00        - mov [rsi+000000B0],edi
           <Address>vf_damage_multi_2_enemy</Address>
         </CheatEntry>
         <CheatEntry>
+          <ID>91</ID>
+          <Description>"min. HP ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_min_hp_ratio</Address>
+        </CheatEntry>
+        <CheatEntry>
           <ID>65</ID>
-          <Description>"Min. HP"</Description>
+          <Description>"min. HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
@@ -1255,6 +1286,90 @@ Atelier_Yumia.exe+1301AEE: 48 8B FD                 - mov rdi,rbp
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>89</ID>
+      <Description>"Keep min. EN"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_KEEP_MIN_EN,$process,66 89 81 D2 00 00 00 C3 CC) // should be unique
+alloc(newmem,$1000,INJECT_KEEP_MIN_EN)
+
+label(code)
+label(return i_min_en_threshold)
+
+newmem:
+  cmp ax, [i_min_en_threshold]
+  jae code
+  mov ax, [i_min_en_threshold]
+
+code:
+  mov [rcx+000000D2],ax
+  jmp return
+align 10 cc
+  i_min_en_threshold:
+  dw 50
+
+INJECT_KEEP_MIN_EN:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_KEEP_MIN_EN i_min_en_threshold)
+
+[DISABLE]
+
+INJECT_KEEP_MIN_EN:
+  db 66 89 81 D2 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1159D15
+
+Atelier_Yumia.exe+1159CEF: 66 45 85 C0           - test r8w,r8w
+Atelier_Yumia.exe+1159CF3: 66 41 0F 4F C0        - cmovg ax,r8w
+Atelier_Yumia.exe+1159CF8: 66 89 81 D2 00 00 00  - mov [rcx+000000D2],ax
+Atelier_Yumia.exe+1159CFF: C3                    - ret 
+Atelier_Yumia.exe+1159D00: 0F B7 81 D4 00 00 00  - movzx eax,word ptr [rcx+000000D4]
+Atelier_Yumia.exe+1159D07: 66 3B D0              - cmp dx,ax
+Atelier_Yumia.exe+1159D0A: 7D 09                 - jnl Atelier_Yumia.exe+1159D15
+Atelier_Yumia.exe+1159D0C: 33 C0                 - xor eax,eax
+Atelier_Yumia.exe+1159D0E: 66 85 D2              - test dx,dx
+Atelier_Yumia.exe+1159D11: 66 0F 4F C2           - cmovg ax,dx
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1159D15: 66 89 81 D2 00 00 00  - mov [rcx+000000D2],ax
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+1159D1C: C3                    - ret 
+Atelier_Yumia.exe+1159D1D: CC                    - int 3 
+Atelier_Yumia.exe+1159D1E: CC                    - int 3 
+Atelier_Yumia.exe+1159D1F: CC                    - int 3 
+Atelier_Yumia.exe+1159D20: 48 89 5C 24 10        - mov [rsp+10],rbx
+Atelier_Yumia.exe+1159D25: 55                    - push rbp
+Atelier_Yumia.exe+1159D26: 56                    - push rsi
+Atelier_Yumia.exe+1159D27: 57                    - push rdi
+Atelier_Yumia.exe+1159D28: 41 56                 - push r14
+Atelier_Yumia.exe+1159D2A: 41 57                 - push r15
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>90</ID>
+          <Description>"min. value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_min_en_threshold</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>67</ID>
       <Description>"Get SP after battle"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -1498,6 +1613,17 @@ Atelier_Yumia.exe+1159A27: 4C 8D 0D 42 D1 E8 00     - lea r9,[Atelier_Yumia.exe+
           <Address>i_base_enh_piece_addr</Address>
           <Offsets>
             <Offset>9C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>88</ID>
+          <Description>"En"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_enh_piece_addr</Address>
+          <Offsets>
+            <Offset>92</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
