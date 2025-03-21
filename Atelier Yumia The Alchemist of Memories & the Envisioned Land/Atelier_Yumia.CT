@@ -1,0 +1,1732 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>70</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>45</ID>
+      <Description>"Bullets / crafting: craft / keep at least min. set?"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BULLETS_NO_DEC,$process,B8 E7 03 00 00 3B D0 0F 47) // should be unique
+alloc(newmem,$1000,INJECT_BULLETS_NO_DEC)
+
+label(code)
+label(return)
+
+newmem:
+  cmp edx, r8d
+  jae code
+  mov edx, r8d
+
+code:
+  mov eax,000003E7
+  jmp return
+
+INJECT_BULLETS_NO_DEC:
+  jmp newmem
+return:
+registersymbol(INJECT_BULLETS_NO_DEC)
+
+[DISABLE]
+
+INJECT_BULLETS_NO_DEC:
+  db B8 E7 03 00 00
+
+unregistersymbol(INJECT_BULLETS_NO_DEC)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1105C65
+
+Atelier_Yumia.exe+1105C57: CC              - int 3 
+Atelier_Yumia.exe+1105C58: CC              - int 3 
+Atelier_Yumia.exe+1105C59: CC              - int 3 
+Atelier_Yumia.exe+1105C5A: CC              - int 3 
+Atelier_Yumia.exe+1105C5B: CC              - int 3 
+Atelier_Yumia.exe+1105C5C: CC              - int 3 
+Atelier_Yumia.exe+1105C5D: CC              - int 3 
+Atelier_Yumia.exe+1105C5E: CC              - int 3 
+Atelier_Yumia.exe+1105C5F: CC              - int 3 
+Atelier_Yumia.exe+1105C60: 44 0F BE 41 0A  - movsx r8d,byte ptr [rcx+0A]
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1105C65: B8 E7 03 00 00  - mov eax,000003E7
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+1105C6A: 3B D0           - cmp edx,eax
+Atelier_Yumia.exe+1105C6C: 0F 47 D0        - cmova edx,eax
+Atelier_Yumia.exe+1105C6F: 41 83 E8 03     - sub r8d,03
+Atelier_Yumia.exe+1105C73: 74 18           - je Atelier_Yumia.exe+1105C8D
+Atelier_Yumia.exe+1105C75: 41 83 E8 01     - sub r8d,01
+Atelier_Yumia.exe+1105C79: 74 12           - je Atelier_Yumia.exe+1105C8D
+Atelier_Yumia.exe+1105C7B: 41 83 F8 01     - cmp r8d,01
+Atelier_Yumia.exe+1105C7F: 74 0C           - je Atelier_Yumia.exe+1105C8D
+Atelier_Yumia.exe+1105C81: 33 C0           - xor eax,eax
+Atelier_Yumia.exe+1105C83: 85 D2           - test edx,edx
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>81</ID>
+      <Description>"Crafting: set min. material amount"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_CRAFT_MATERIAL,$process,0F B7 40 14 48 8B 5C 24 30) // should be unique
+alloc(newmem,$1000,INJECT_INF_CRAFT_MATERIAL)
+
+label(code)
+label(return i_min_craft_mat_val)
+
+newmem:
+  push rbx
+  mov bx, [rax+14]
+  cmp bx, [i_min_craft_mat_val]
+  jae endp
+  mov bx, [i_min_craft_mat_val]
+  mov [rax+14], bx
+
+endp:
+  pop rbx
+
+code:
+  movzx eax,word ptr [rax+14]
+  mov rbx,[rsp+30]
+  jmp return
+align 10 cc
+  i_min_craft_mat_val:
+  dw #88
+
+INJECT_INF_CRAFT_MATERIAL:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_INF_CRAFT_MATERIAL i_min_craft_mat_val)
+
+[DISABLE]
+
+INJECT_INF_CRAFT_MATERIAL:
+  db 0F B7 40 14 48 8B 5C 24 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1141576
+
+Atelier_Yumia.exe+1141559: 74 2A           - je Atelier_Yumia.exe+1141585
+Atelier_Yumia.exe+114155B: 45 84 C9        - test r9b,r9b
+Atelier_Yumia.exe+114155E: 74 16           - je Atelier_Yumia.exe+1141576
+Atelier_Yumia.exe+1141560: 0F B7 48 16     - movzx ecx,word ptr [rax+16]
+Atelier_Yumia.exe+1141564: 66 03 48 14     - add cx,[rax+14]
+Atelier_Yumia.exe+1141568: 0F B7 C1        - movzx eax,cx
+Atelier_Yumia.exe+114156B: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Atelier_Yumia.exe+1141570: 48 83 C4 20     - add rsp,20
+Atelier_Yumia.exe+1141574: 5F              - pop rdi
+Atelier_Yumia.exe+1141575: C3              - ret 
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1141576: 0F B7 40 14     - movzx eax,word ptr [rax+14]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+114157A: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Atelier_Yumia.exe+114157F: 48 83 C4 20     - add rsp,20
+Atelier_Yumia.exe+1141583: 5F              - pop rdi
+Atelier_Yumia.exe+1141584: C3              - ret 
+Atelier_Yumia.exe+1141585: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+Atelier_Yumia.exe+114158A: 33 C0           - xor eax,eax
+Atelier_Yumia.exe+114158C: 48 83 C4 20     - add rsp,20
+Atelier_Yumia.exe+1141590: 5F              - pop rdi
+Atelier_Yumia.exe+1141591: C3              - ret 
+Atelier_Yumia.exe+1141592: CC              - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>82</ID>
+          <Description>"min. value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_min_craft_mat_val</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Battle: damage control"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_DAMAGE_MULTI,Atelier_Yumia.exe,44 8B 86 B0 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
+
+label(code)
+label(return vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold)
+
+newmem:
+  cmp r14d, 0
+  jg code
+  movaps xmm14, [vf_damage_multi_2_player]
+  vcvtsi2ss xmm15, xmm15, r14d
+  vshufps xmm15, xmm15, xmm15, 0
+  vmulps xmm15, xmm14, xmm15
+
+  cmp qword ptr [rsi+80], 0
+  jne to_enemy
+  cmp qword ptr [rsi+88], 0
+  jne to_enemy
+  cmp qword ptr [rsi+90], 0
+  jne to_enemy
+  cmp qword ptr [rsi+A0], 0
+  jne to_enemy
+
+  //vcvtss2si r14d, xmm15
+
+  mov r8d,[rsi+000000B0]
+  vcvtss2si r14d, xmm15
+  add r8d, r14d
+  cmp r8d, [i_min_hp_threshold]
+  jge code_pre
+
+  mov r8d, [i_min_hp_threshold]
+  vxorps xmm15, xmm15, xmm15
+  mov [rsi+000000B0], r8d
+
+  jmp code_pre
+
+to_enemy:
+  cmp dword ptr [rsi+A0], 0
+  jne to_e_break
+  vshufps xmm15, xmm15, xmm15, 1
+  cmp dword ptr [is_quick_break], 1
+  jne code_pre
+  cmp dword ptr [rsi+000000B4], 1
+  jb code_pre
+  mov dword ptr [rsi+000000B4], 1
+  jmp code_pre
+
+to_e_break:
+  cmp dword ptr [is_quick_break], 1
+  jne code
+  cmp dword ptr [rsi+000000B0], 1
+  jbe code
+  mov dword ptr [rsi+000000B0], 1
+
+code_pre:
+  vcvtss2si r14d, xmm15
+code:
+  mov r8d,[rsi+000000B0]
+  jmp return
+align 10 cc
+  vf_damage_multi_2_player:
+  dd (float)0.8
+  vf_damage_multi_2_enemy:
+  dd (float)1
+  dd 0 0
+  is_quick_break:
+  dd 1
+  i_min_hp_threshold:
+  dd 32
+
+INJECT_DAMAGE_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_DAMAGE_MULTI vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI:
+  db 44 8B 86 B0 00 00 00
+
+unregistersymbol(INJECT_DAMAGE_MULTI vf_damage_multi_2_player vf_damage_multi_2_enemy is_quick_break i_min_hp_threshold)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+F20D42
+
+Atelier_Yumia.exe+F20D23: 48 85 C9                 - test rcx,rcx
+Atelier_Yumia.exe+F20D26: 74 60                    - je Atelier_Yumia.exe+F20D88
+Atelier_Yumia.exe+F20D28: 8D 57 01                 - lea edx,[rdi+01]
+Atelier_Yumia.exe+F20D2B: E8 10 E2 05 00           - call Atelier_Yumia.exe+F7EF40
+Atelier_Yumia.exe+F20D30: 84 C0                    - test al,al
+Atelier_Yumia.exe+F20D32: 75 43                    - jne Atelier_Yumia.exe+F20D77
+Atelier_Yumia.exe+F20D34: 48 89 74 24 30           - mov [rsp+30],rsi
+Atelier_Yumia.exe+F20D39: 8B D7                    - mov edx,edi
+Atelier_Yumia.exe+F20D3B: 48 8D 34 BB              - lea rsi,[rbx+rdi*4]
+Atelier_Yumia.exe+F20D3F: 48 8B CB                 - mov rcx,rbx
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+F20D42: 44 8B 86 B0 00 00 00     - mov r8d,[rsi+000000B0]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+F20D49: 45 03 C6                 - add r8d,r14d
+Atelier_Yumia.exe+F20D4C: E8 9F 0B 00 00           - call Atelier_Yumia.exe+F218F0
+Atelier_Yumia.exe+F20D51: 48 8B 43 40              - mov rax,[rbx+40]
+Atelier_Yumia.exe+F20D55: 48 83 B8 C8 00 00 00 00  - cmp qword ptr [rax+000000C8],00
+Atelier_Yumia.exe+F20D5D: 74 13                    - je Atelier_Yumia.exe+F20D72
+Atelier_Yumia.exe+F20D5F: 83 FF 01                 - cmp edi,01
+Atelier_Yumia.exe+F20D62: 75 0E                    - jne Atelier_Yumia.exe+F20D72
+Atelier_Yumia.exe+F20D64: 39 BE B0 00 00 00        - cmp [rsi+000000B0],edi
+Atelier_Yumia.exe+F20D6A: 7D 06                    - jnl Atelier_Yumia.exe+F20D72
+Atelier_Yumia.exe+F20D6C: 89 BE B0 00 00 00        - mov [rsi+000000B0],edi
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"multiplier to player"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_damage_multi_2_player</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"multiplier to enemy"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_damage_multi_2_enemy</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>65</ID>
+          <Description>"Min. HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_min_hp_threshold</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>63</ID>
+          <Description>"Quick break?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_quick_break</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Item Editor"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BROWSE_ITEMS,$process,0F B7 77 04 85 C9) // should be unique
+alloc(newmem,$1000,INJECT_BROWSE_ITEMS)
+
+label(code)
+label(return i_base_item_addr)
+
+newmem:
+  mov [i_base_item_addr], rdi
+
+code:
+  movzx esi,word ptr [rdi+04]
+  test ecx,ecx
+  jmp return
+align 10 cc
+  i_base_item_addr:
+  dq 0
+
+INJECT_BROWSE_ITEMS:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BROWSE_ITEMS i_base_item_addr)
+
+[DISABLE]
+
+INJECT_BROWSE_ITEMS:
+  db 0F B7 77 04 85 C9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+110D20B
+
+Atelier_Yumia.exe+110D1DF: E8 3C 06 04 00        - call Atelier_Yumia.exe+114D820
+Atelier_Yumia.exe+110D1E4: 48 8D 15 6D 4A ED 00  - lea rdx,[Atelier_Yumia.exe+1FE1C58]
+Atelier_Yumia.exe+110D1EB: 48 8B C8              - mov rcx,rax
+Atelier_Yumia.exe+110D1EE: E8 FD 4E 02 00        - call Atelier_Yumia.exe+11320F0
+Atelier_Yumia.exe+110D1F3: 84 C0                 - test al,al
+Atelier_Yumia.exe+110D1F5: 0F 84 DC 00 00 00     - je Atelier_Yumia.exe+110D2D7
+Atelier_Yumia.exe+110D1FB: 0F BE 4F 0A           - movsx ecx,byte ptr [rdi+0A]
+Atelier_Yumia.exe+110D1FF: 33 DB                 - xor ebx,ebx
+Atelier_Yumia.exe+110D201: 48 89 6C 24 40        - mov [rsp+40],rbp
+Atelier_Yumia.exe+110D206: 48 89 74 24 48        - mov [rsp+48],rsi
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+110D20B: 0F B7 77 04           - movzx esi,word ptr [rdi+04]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+110D20F: 85 C9                 - test ecx,ecx
+Atelier_Yumia.exe+110D211: 74 0A                 - je Atelier_Yumia.exe+110D21D
+Atelier_Yumia.exe+110D213: 83 E9 01              - sub ecx,01
+Atelier_Yumia.exe+110D216: 74 05                 - je Atelier_Yumia.exe+110D21D
+Atelier_Yumia.exe+110D218: 83 F9 01              - cmp ecx,01
+Atelier_Yumia.exe+110D21B: 75 24                 - jne Atelier_Yumia.exe+110D241
+Atelier_Yumia.exe+110D21D: 48 8B 0D 84 B3 6E 01  - mov rcx,[Atelier_Yumia.exe+27F85A8]
+Atelier_Yumia.exe+110D224: 48 85 C9              - test rcx,rcx
+Atelier_Yumia.exe+110D227: 74 1E                 - je Atelier_Yumia.exe+110D247
+Atelier_Yumia.exe+110D229: E8 F2 05 04 00        - call Atelier_Yumia.exe+114D820
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>50</ID>
+          <Description>"Additional method.2"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BROWSE_ITEMS_2,$process,0F B6 51 02 0F BF 09 E9 ?? ?? ?? ?? CC B8) // should be unique
+alloc(newmem,$1000,INJECT_BROWSE_ITEMS_2)
+
+label(code)
+label(return)
+
+newmem:
+  push rcx
+  lea rcx, [rcx-C]
+  mov [i_base_item_addr], rcx
+  pop rcx
+
+
+code:
+  movzx edx,byte ptr [rcx+02]
+  movsx ecx,word ptr [rcx]
+  jmp return
+
+INJECT_BROWSE_ITEMS_2:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BROWSE_ITEMS_2)
+
+[DISABLE]
+
+INJECT_BROWSE_ITEMS_2:
+  db 0F B6 51 02 0F BF 09
+
+unregistersymbol(INJECT_BROWSE_ITEMS_2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1100AD3
+
+Atelier_Yumia.exe+1100AC7: CC              - int 3 
+Atelier_Yumia.exe+1100AC8: CC              - int 3 
+Atelier_Yumia.exe+1100AC9: CC              - int 3 
+Atelier_Yumia.exe+1100ACA: CC              - int 3 
+Atelier_Yumia.exe+1100ACB: CC              - int 3 
+Atelier_Yumia.exe+1100ACC: CC              - int 3 
+Atelier_Yumia.exe+1100ACD: CC              - int 3 
+Atelier_Yumia.exe+1100ACE: CC              - int 3 
+Atelier_Yumia.exe+1100ACF: CC              - int 3 
+Atelier_Yumia.exe+1100AD0: 4C 8B C2        - mov r8,rdx
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1100AD3: 0F B6 51 02     - movzx edx,byte ptr [rcx+02]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+1100AD7: 0F BF 09        - movsx ecx,word ptr [rcx]
+Atelier_Yumia.exe+1100ADA: E9 41 1D F7 FF  - jmp Atelier_Yumia.exe+1072820
+Atelier_Yumia.exe+1100ADF: CC              - int 3 
+Atelier_Yumia.exe+1100AE0: B8 FF FF FF FF  - mov eax,FFFFFFFF
+Atelier_Yumia.exe+1100AE5: C6 41 02 00     - mov byte ptr [rcx+02],00
+Atelier_Yumia.exe+1100AE9: 66 89 01        - mov [rcx],ax
+Atelier_Yumia.exe+1100AEC: C3              - ret 
+Atelier_Yumia.exe+1100AED: CC              - int 3 
+Atelier_Yumia.exe+1100AEE: CC              - int 3 
+Atelier_Yumia.exe+1100AEF: CC              - int 3 
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
+          <Description>"Duplicate select item to container"</Description>
+          <Color>FF80FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+
+clearLuaLog()
+
+if memrec then print(memrec.Description) end
+print("Start copying item...")
+
+local itemBaseAddr = readPointer("i_base_item_addr")
+if not itemBaseAddr or itemBaseAddr == 0 then
+  print("Please select an item first.")
+  return
+end
+
+print(string.format("Source item address: %08X", itemBaseAddr))
+
+-- Constants
+local ItemRecordSize = 134
+local EmptyItemID = 65535
+
+-- Check game process
+if getAddressSafe(process) == nil then
+  print("Game process not found.")
+  return
+end
+
+-- Start scanning
+local currentAddr = itemBaseAddr
+local found = false
+
+while true do
+  local itemID = readSmallInteger(currentAddr + 2)
+  if itemID == EmptyItemID then
+    print("Found empty slot at: " .. string.format("%08X", currentAddr))
+    local bytes = readBytes(itemBaseAddr, ItemRecordSize, true)
+    writeBytes(currentAddr, bytes)
+    found = true
+    break
+  end
+
+  currentAddr = currentAddr + ItemRecordSize
+  if currentAddr - itemBaseAddr &gt; ItemRecordSize * 4950 then
+    print("Safety stop: scanned over 4950 records.")
+    break
+  end
+end
+
+if not found then
+  print("No empty slot found. Item not copied.")
+end
+
+closeLuaEngine()
+{$asm}
+[DISABLE]
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>72</ID>
+              <Description>"Warning: used for "container window" only; make sure you have space left!"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>73</ID>
+              <Description>"Warning: may cause game unstable, recommended only for useable item and equipments"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>74</ID>
+              <Description>"Close &amp; open menu to take affect"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"Base address"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Serial No."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"Item ID"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>2</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>6</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Material: Amount"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Effect 1"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"Effect 1 Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"Effect 2"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"Effect 2 Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>12</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Effect 3"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Effect 3 Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>16</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"Effect 4"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>18</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Effect 4 Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>1A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>25</ID>
+          <Description>"Effect 5"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>1C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"Effect 5 Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>1E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"Effect 6"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>20</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"Effect 6 Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>22</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>24</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>26</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>28</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>2A</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>33</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>2E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>35</ID>
+          <Description>"Material Grade"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>36</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>32</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>51</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>52</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>6E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>75</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>78</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>76</ID>
+          <Description>"Equip: HP+"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>7C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>77</ID>
+          <Description>"Equip: Atk+"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>7E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>78</ID>
+          <Description>"Equip: Def+"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>80</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>79</ID>
+          <Description>"Equip: Spd+"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>82</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>37</ID>
+          <Description>"??"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>16</ByteLength>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>38</ID>
+          <Description>"??"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>16</ByteLength>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>44</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"??"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>16</ByteLength>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>54</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"??"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>16</ByteLength>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>64</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>41</ID>
+          <Description>"??"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>16</ByteLength>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>74</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>42</ID>
+          <Description>"??"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Array of byte</VariableType>
+          <ByteLength>2</ByteLength>
+          <Address>i_base_item_addr</Address>
+          <Offsets>
+            <Offset>84</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>54</ID>
+      <Description>"Synthesis: easy lv up"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SYN_EASY_LvUp,$process,66 01 07 4D 8D 76 08) // should be unique
+alloc(newmem,$1000,INJECT_SYN_EASY_LvUp)
+
+label(code)
+label(return vf_syn_lv_multi)
+
+newmem:
+  test ax, ax
+  jz code
+  vcvtsi2ss xmm15, xmm15, eax
+  vmovss xmm14, [vf_syn_lv_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si eax, xmm15
+
+code:
+  add [rdi],ax
+  cmp word ptr [rdi], 0
+  jge @F
+  mov word ptr [rdi], 0
+@@:
+  lea r14,[r14+08]
+  jmp return
+align 10 cc
+  vf_syn_lv_multi:
+  dd (float)1.5
+
+INJECT_SYN_EASY_LvUp:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SYN_EASY_LvUp vf_syn_lv_multi)
+
+[DISABLE]
+
+INJECT_SYN_EASY_LvUp:
+  db 66 01 07 4D 8D 76 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1301A9A
+
+Atelier_Yumia.exe+1301A75: B9 04 00 00 00           - mov ecx,00000004
+Atelier_Yumia.exe+1301A7A: 48 0F 47 CB              - cmova rcx,rbx
+Atelier_Yumia.exe+1301A7E: 77 07                    - ja Atelier_Yumia.exe+1301A87
+Atelier_Yumia.exe+1301A80: 48 0F BF C3              - movsx rax,bx
+Atelier_Yumia.exe+1301A84: 66 F3 AB                 - repe stosw 
+Atelier_Yumia.exe+1301A87: 66 89 5D 28              - mov [rbp+28],bx
+Atelier_Yumia.exe+1301A8B: 49 83 C6 08              - add r14,08
+Atelier_Yumia.exe+1301A8F: 48 8B FD                 - mov rdi,rbp
+Atelier_Yumia.exe+1301A92: 49 8B 0E                 - mov rcx,[r14]
+Atelier_Yumia.exe+1301A95: E8 A6 EE FF FF           - call Atelier_Yumia.exe+1300940
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1301A9A: 66 01 07                 - add [rdi],ax
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+1301A9D: 4D 8D 76 08              - lea r14,[r14+08]
+Atelier_Yumia.exe+1301AA1: 48 8D 7F 02              - lea rdi,[rdi+02]
+Atelier_Yumia.exe+1301AA5: 49 83 EF 01              - sub r15,01
+Atelier_Yumia.exe+1301AA9: 75 E7                    - jne Atelier_Yumia.exe+1301A92
+Atelier_Yumia.exe+1301AAB: 48 8B 44 24 78           - mov rax,[rsp+78]
+Atelier_Yumia.exe+1301AB0: 48 8B 94 24 88 00 00 00  - mov rdx,[rsp+00000088]
+Atelier_Yumia.exe+1301AB8: 48 89 6C 24 78           - mov [rsp+78],rbp
+Atelier_Yumia.exe+1301ABD: 0F B7 80 30 0C 00 00     - movzx eax,word ptr [rax+00000C30]
+Atelier_Yumia.exe+1301AC4: 66 41 03 04 24           - add ax,[r12]
+Atelier_Yumia.exe+1301AC9: 66 41 89 04 24           - mov [r12],ax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>62</ID>
+          <Description>"Disable after syhtnesis"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_syn_lv_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>58</ID>
+      <Description>"Synthesis: mana multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SYN_MANA_MULTI,$process,66 41 03 04 24) // should be unique
+alloc(newmem,$1000,INJECT_SYN_MANA_MULTI)
+
+label(code)
+label(return vf_syn_mana_multi)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, eax
+  vmovss xmm14, [vf_syn_mana_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si eax, xmm15
+
+code:
+  add ax,[r12]
+  cmp word ptr [r12], 0
+  jge return
+  mov word ptr [r12], 0
+  jmp return
+align 10 cc
+  vf_syn_mana_multi:
+  dd (float)1.5
+
+INJECT_SYN_MANA_MULTI:
+  jmp newmem
+return:
+registersymbol(INJECT_SYN_MANA_MULTI vf_syn_mana_multi)
+
+[DISABLE]
+
+INJECT_SYN_MANA_MULTI:
+  db 66 41 03 04 24
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1301AC4
+
+Atelier_Yumia.exe+1301A95: E8 A6 EE FF FF           - call Atelier_Yumia.exe+1300940
+INJECT_SYN_EASY_LvUp: E9 61 E5 CA FE           - jmp 7FF7EED70000
+Atelier_Yumia.exe+1301A9F: 66 90                    - nop 2
+Atelier_Yumia.exe+1301AA1: 48 8D 7F 02              - lea rdi,[rdi+02]
+Atelier_Yumia.exe+1301AA5: 49 83 EF 01              - sub r15,01
+Atelier_Yumia.exe+1301AA9: 75 E7                    - jne Atelier_Yumia.exe+1301A92
+Atelier_Yumia.exe+1301AAB: 48 8B 44 24 78           - mov rax,[rsp+78]
+Atelier_Yumia.exe+1301AB0: 48 8B 94 24 88 00 00 00  - mov rdx,[rsp+00000088]
+Atelier_Yumia.exe+1301AB8: 48 89 6C 24 78           - mov [rsp+78],rbp
+Atelier_Yumia.exe+1301ABD: 0F B7 80 30 0C 00 00     - movzx eax,word ptr [rax+00000C30]
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1301AC4: 66 41 03 04 24           - add ax,[r12]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+1301AC9: 66 41 89 04 24           - mov [r12],ax
+Atelier_Yumia.exe+1301ACE: 48 85 D2                 - test rdx,rdx
+Atelier_Yumia.exe+1301AD1: 74 1B                    - je Atelier_Yumia.exe+1301AEE
+Atelier_Yumia.exe+1301AD3: 44 0F B7 C0              - movzx r8d,ax
+Atelier_Yumia.exe+1301AD7: 4C 8D 4D 16              - lea r9,[rbp+16]
+Atelier_Yumia.exe+1301ADB: 48 8D 45 17              - lea rax,[rbp+17]
+Atelier_Yumia.exe+1301ADF: 48 8D 4C 24 78           - lea rcx,[rsp+78]
+Atelier_Yumia.exe+1301AE4: 48 89 44 24 20           - mov [rsp+20],rax
+Atelier_Yumia.exe+1301AE9: E8 C2 FB FF FF           - call Atelier_Yumia.exe+13016B0
+Atelier_Yumia.exe+1301AEE: 48 8B FD                 - mov rdi,rbp
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"Enable before starting synthesis"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>61</ID>
+          <Description>"Disable after syhtnesis"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>59</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_syn_mana_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>67</ID>
+      <Description>"Get SP after battle"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SP,$process,8B 81 A0 00 00 00 89 44) // should be unique
+alloc(newmem,$1000,INJECT_GET_SP)
+
+label(code)
+label(return i_base_sp_addr)
+
+newmem:
+  mov [i_base_sp_addr], rcx
+
+code:
+  mov eax,[rcx+000000A0]
+  jmp return
+align 10 cc
+  i_base_sp_addr:
+  dq 0
+
+INJECT_GET_SP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_SP i_base_sp_addr)
+
+[DISABLE]
+
+INJECT_GET_SP:
+  db 8B 81 A0 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1132345
+
+Atelier_Yumia.exe+113232C: CC                       - int 3 
+Atelier_Yumia.exe+113232D: CC                       - int 3 
+Atelier_Yumia.exe+113232E: CC                       - int 3 
+Atelier_Yumia.exe+113232F: CC                       - int 3 
+Atelier_Yumia.exe+1132330: 48 89 5C 24 18           - mov [rsp+18],rbx
+Atelier_Yumia.exe+1132335: 48 89 74 24 20           - mov [rsp+20],rsi
+Atelier_Yumia.exe+113233A: 57                       - push rdi
+Atelier_Yumia.exe+113233B: 48 83 EC 30              - sub rsp,30
+Atelier_Yumia.exe+113233F: 48 8B FA                 - mov rdi,rdx
+Atelier_Yumia.exe+1132342: 48 8B D9                 - mov rbx,rcx
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1132345: 8B 81 A0 00 00 00        - mov eax,[rcx+000000A0]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+113234B: 89 44 24 40              - mov [rsp+40],eax
+Atelier_Yumia.exe+113234F: 48 8B 0A                 - mov rcx,[rdx]
+Atelier_Yumia.exe+1132352: 48 8B 01                 - mov rax,[rcx]
+Atelier_Yumia.exe+1132355: C7 44 24 20 07 00 00 00  - mov [rsp+20],00000007
+Atelier_Yumia.exe+113235D: 4C 8D 0D 74 23 EB 00     - lea r9,[Atelier_Yumia.exe+1FE46D8]
+Atelier_Yumia.exe+1132364: 41 B8 04 00 00 00        - mov r8d,00000004
+Atelier_Yumia.exe+113236A: 48 8D 54 24 40           - lea rdx,[rsp+40]
+Atelier_Yumia.exe+113236F: FF 50 78                 - call qword ptr [rax+78]
+Atelier_Yumia.exe+1132372: 8B 83 A4 00 00 00        - mov eax,[rbx+000000A4]
+Atelier_Yumia.exe+1132378: 89 44 24 40              - mov [rsp+40],eax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>69</ID>
+          <Description>"Method.2"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SP2,$process,44 8B 81 E0 00 00 00 44) // should be unique
+alloc(newmem,$1000,INJECT_GET_SP2)
+
+label(code)
+label(return)
+
+newmem:
+  mov [i_base_sp_addr], rcx
+code:
+  mov r8d,[rcx+000000E0]
+  jmp return
+
+INJECT_GET_SP2:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_SP2)
+
+[DISABLE]
+
+INJECT_GET_SP2:
+  db 44 8B 81 E0 00 00 00
+
+unregistersymbol(INJECT_GET_SP2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+1131890
+
+Atelier_Yumia.exe+1131883: 48 83 C4 20                    - add rsp,20
+Atelier_Yumia.exe+1131887: 5F                             - pop rdi
+Atelier_Yumia.exe+1131888: C3                             - ret 
+Atelier_Yumia.exe+1131889: CC                             - int 3 
+Atelier_Yumia.exe+113188A: CC                             - int 3 
+Atelier_Yumia.exe+113188B: CC                             - int 3 
+Atelier_Yumia.exe+113188C: CC                             - int 3 
+Atelier_Yumia.exe+113188D: CC                             - int 3 
+Atelier_Yumia.exe+113188E: CC                             - int 3 
+Atelier_Yumia.exe+113188F: CC                             - int 3 
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+1131890: 44 8B 81 E0 00 00 00           - mov r8d,[rcx+000000E0]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+1131897: 44 03 C2                       - add r8d,edx
+Atelier_Yumia.exe+113189A: 41 81 F8 9F 86 01 00           - cmp r8d,0001869F
+Atelier_Yumia.exe+11318A1: 7C 0B                          - jl Atelier_Yumia.exe+11318AE
+Atelier_Yumia.exe+11318A3: C7 81 E0 00 00 00 9F 86 01 00  - mov [rcx+000000E0],0001869F
+Atelier_Yumia.exe+11318AD: C3                             - ret 
+Atelier_Yumia.exe+11318AE: 33 C0                          - xor eax,eax
+Atelier_Yumia.exe+11318B0: 45 85 C0                       - test r8d,r8d
+Atelier_Yumia.exe+11318B3: 41 0F 4F C0                    - cmovg eax,r8d
+Atelier_Yumia.exe+11318B7: 89 81 E0 00 00 00              - mov [rcx+000000E0],eax
+Atelier_Yumia.exe+11318BD: C3                             - ret 
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>68</ID>
+          <Description>"SP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>A0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>84</ID>
+      <Description>"Get enhance piece amount after battle"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_ENHANCE_PIECE,$process,41 8B 87 98 00 00 00 4C) // should be unique
+alloc(newmem,$1000,INJECT_GET_ENHANCE_PIECE)
+
+label(code)
+label(return i_base_enh_piece_addr)
+
+newmem:
+  mov [i_base_enh_piece_addr], r15
+
+code:
+  mov eax,[r15+00000098]
+  jmp return
+align 10 cc
+  i_base_enh_piece_addr:
+  dq 0
+
+INJECT_GET_ENHANCE_PIECE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_ENHANCE_PIECE i_base_enh_piece_addr)
+
+[DISABLE]
+
+INJECT_GET_ENHANCE_PIECE:
+  db 41 8B 87 98 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+11599F4
+
+Atelier_Yumia.exe+11599C3: FF 50 78                 - call qword ptr [rax+78]
+Atelier_Yumia.exe+11599C6: 41 0F B7 87 94 00 00 00  - movzx eax,word ptr [r15+00000094]
+Atelier_Yumia.exe+11599CE: 4C 8D 0D 73 D1 E8 00     - lea r9,[Atelier_Yumia.exe+1FE6B48]
+Atelier_Yumia.exe+11599D5: 48 8B 0E                 - mov rcx,[rsi]
+Atelier_Yumia.exe+11599D8: 48 8D 55 D7              - lea rdx,[rbp-29]
+Atelier_Yumia.exe+11599DC: 66 89 45 D7              - mov [rbp-29],ax
+Atelier_Yumia.exe+11599E0: 41 B8 02 00 00 00        - mov r8d,00000002
+Atelier_Yumia.exe+11599E6: C7 44 24 20 05 00 00 00  - mov [rsp+20],00000005
+Atelier_Yumia.exe+11599EE: 48 8B 01                 - mov rax,[rcx]
+Atelier_Yumia.exe+11599F1: FF 50 78                 - call qword ptr [rax+78]
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+11599F4: 41 8B 87 98 00 00 00     - mov eax,[r15+00000098]
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+11599FB: 4C 8D 0D 5E D1 E8 00     - lea r9,[Atelier_Yumia.exe+1FE6B60]
+Atelier_Yumia.exe+1159A02: 48 8B 0E                 - mov rcx,[rsi]
+Atelier_Yumia.exe+1159A05: 48 8D 55 D7              - lea rdx,[rbp-29]
+Atelier_Yumia.exe+1159A09: 89 45 D7                 - mov [rbp-29],eax
+Atelier_Yumia.exe+1159A0C: 41 B8 04 00 00 00        - mov r8d,00000004
+Atelier_Yumia.exe+1159A12: C7 44 24 20 07 00 00 00  - mov [rsp+20],00000007
+Atelier_Yumia.exe+1159A1A: 48 8B 01                 - mov rax,[rcx]
+Atelier_Yumia.exe+1159A1D: FF 50 78                 - call qword ptr [rax+78]
+Atelier_Yumia.exe+1159A20: 41 8B 87 9C 00 00 00     - mov eax,[r15+0000009C]
+Atelier_Yumia.exe+1159A27: 4C 8D 0D 42 D1 E8 00     - lea r9,[Atelier_Yumia.exe+1FE6B70]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>85</ID>
+          <Description>"Piece"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_enh_piece_addr</Address>
+          <Offsets>
+            <Offset>98</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>86</ID>
+          <Description>"Prism"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_enh_piece_addr</Address>
+          <Offsets>
+            <Offset>9C</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>64</ID>
+      <Description>"Atelier Yumia: The Alchemist of Memories &amp; the Envisioned Land  /  https://opencheattables.com"</Description>
+      <Color>00A800</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>drop item Code :mov [rcx+08],dx</Description>
+      <AddressString>Atelier_Yumia.exe+1105C8D</AddressString>
+      <Before>
+        <Byte>66</Byte>
+        <Byte>89</Byte>
+        <Byte>41</Byte>
+        <Byte>08</Byte>
+        <Byte>C3</Byte>
+      </Before>
+      <Actual>
+        <Byte>66</Byte>
+        <Byte>89</Byte>
+        <Byte>51</Byte>
+        <Byte>08</Byte>
+      </Actual>
+      <After>
+        <Byte>C3</Byte>
+        <Byte>CC</Byte>
+        <Byte>CC</Byte>
+        <Byte>CC</Byte>
+        <Byte>CC</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
+  <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+ItemRecordSize = 134
+
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("✖️ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("📐 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🎯 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("✖️ AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("✔️ Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("✖️ AOB not found in ???.exe")
+end
+]]--
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
+</CheatTable>
