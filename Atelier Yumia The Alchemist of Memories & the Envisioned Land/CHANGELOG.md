@@ -1,5 +1,8 @@
 # Change log
 
+## 2025/03/31
+1. added Long food buff timer
+
 ## 2025/03/25
 1. Revised item editor
 
