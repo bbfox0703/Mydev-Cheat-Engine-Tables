@@ -75,7 +75,9 @@ local enableBattleScripts = {
   191, -- "Get enhance piece amount after battle"
   195, -- "Recipe: set min. particles# (残響) after use"
   2, -- "Bullets / crafting: craft / keep at least min. set?"
-  226, -- "Long food buff timer"
+  229, -- "Battle: Advent gauge multiplier"
+  231, -- "Battle: Slow Advent gauge down"
+  233, -- "Get game active time / long food buff duration"
   3, -- "Crafting: set min. material amount"
   5, -- "Battle: XP multiplier"
   7, -- "Battle: fast skill cooldown"
@@ -86,11 +88,12 @@ local enableBattleScripts = {
   17, -- "Additional methods"
   189, -- "Method.2"
   196, -- "Browse &amp; set"
+  226, -- "Long food buff duration"
   162, -- "Method.2 (Equip socket-select)"
   18, -- "Additional method.2 (effect 1 not empty)"
   19, -- "Additional method.3 (material grade)"
   20, -- "Additional method.4 (Settlement / raw materials)"
-  21, -- "Additional method.5 (Equipments, if HP+/Atk+/Def+/Spd+ not zero)"
+  21, -- "Additional method.5 (Equipment, if HP+/Atk+/Def+/Spd+ not zero)"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -116,7 +119,7 @@ local disableBattleScripts = {
   210, -- "eng"
   206, -- "cht"
   202, -- "jpn"
-  21, -- "Additional method.5 (Equipments, if HP+/Atk+/Def+/Spd+ not zero)"
+  21, -- "Additional method.5 (Equipment, if HP+/Atk+/Def+/Spd+ not zero)"
   200, -- "。"
   20, -- "Additional method.4 (Settlement / raw materials)"
   19, -- "Additional method.3 (material grade)"
@@ -128,6 +131,7 @@ local disableBattleScripts = {
   29, -- "←Set min quality / 最小品質を設定"
   27, -- "←Set min traits Lv / 最小特性 Lvを設定"
   25, -- "←Set min effects Lv / 最小効果Lvを設定"
+  226, -- "Long food buff duration"
   22, -- "←Set min amount / 最小数量を設定"
   199, -- "https://opencheattables.com"
   196, -- "Browse &amp; set"
@@ -141,7 +145,9 @@ local disableBattleScripts = {
   7, -- "Battle: fast skill cooldown"
   5, -- "Battle: XP multiplier"
   3, -- "Crafting: set min. material amount"
-  226, -- "Long food buff timer"
+  233, -- "Get game active time / long food buff duration"
+  231, -- "Battle: Slow Advent gauge down"
+  229, -- "Battle: Advent gauge multiplier"
   215, -- "Get coords (readonly)"
   2, -- "Bullets / crafting: craft / keep at least min. set?"
   198, -- "Atelier Yumia: The Alchemist of Memories &amp; the Envisioned Land  /  https://opencheattables.com"
@@ -167,6 +173,8 @@ synchronize(function()
   end
 end)
 synchronize(function() getLuaEngine().Close() end)
+
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -706,6 +714,168 @@ is_quick_break:
 </AssemblerScript>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>229</ID>
+      <Description>"Battle: Advent gauge multiplier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_BATTLE_GAUGE,$process,03 D0 49 8B CE 45) // should be unique
+alloc(newmem,$1000,INJECT_FAST_BATTLE_GAUGE)
+
+label(code)
+label(return vf_batt_gauge_multi)
+
+newmem:
+  vcvtsi2ss xmm15, xmm15, eax
+  vmulss xmm15, xmm15, [vf_batt_gauge_multi]
+  vcvtss2si eax, xmm15
+
+code:
+  add edx,eax
+  mov rcx,r14
+  jmp return
+align 10 cc
+  vf_batt_gauge_multi:
+  dd (float)8
+
+INJECT_FAST_BATTLE_GAUGE:
+  jmp newmem
+return:
+registersymbol(INJECT_FAST_BATTLE_GAUGE vf_batt_gauge_multi)
+
+[DISABLE]
+
+INJECT_FAST_BATTLE_GAUGE:
+  db 03 D0 49 8B CE
+
+unregistersymbol(INJECT_FAST_BATTLE_GAUGE vf_batt_gauge_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+F545B2
+
+Atelier_Yumia.exe+F54591: 84 C0              - test al,al
+Atelier_Yumia.exe+F54593: 0F 85 27 FF FF FF  - jne Atelier_Yumia.exe+F544C0
+Atelier_Yumia.exe+F54599: EB 24              - jmp Atelier_Yumia.exe+F545BF
+Atelier_Yumia.exe+F5459B: 41 8B 56 48        - mov edx,[r14+48]
+Atelier_Yumia.exe+F5459F: 2B D0              - sub edx,eax
+Atelier_Yumia.exe+F545A1: EB 14              - jmp Atelier_Yumia.exe+F545B7
+Atelier_Yumia.exe+F545A3: 4D 8B C4           - mov r8,r12
+Atelier_Yumia.exe+F545A6: 41 8B D7           - mov edx,r15d
+Atelier_Yumia.exe+F545A9: E8 12 02 00 00     - call Atelier_Yumia.exe+F547C0
+Atelier_Yumia.exe+F545AE: 41 8B 56 48        - mov edx,[r14+48]
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+F545B2: 03 D0              - add edx,eax
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+F545B4: 49 8B CE           - mov rcx,r14
+Atelier_Yumia.exe+F545B7: 45 33 C0           - xor r8d,r8d
+Atelier_Yumia.exe+F545BA: E8 81 01 00 00     - call Atelier_Yumia.exe+F54740
+Atelier_Yumia.exe+F545BF: 48 8B 5C 24 50     - mov rbx,[rsp+50]
+Atelier_Yumia.exe+F545C4: 48 8B 6C 24 58     - mov rbp,[rsp+58]
+Atelier_Yumia.exe+F545C9: 48 83 C4 20        - add rsp,20
+Atelier_Yumia.exe+F545CD: 41 5F              - pop r15
+Atelier_Yumia.exe+F545CF: 41 5E              - pop r14
+Atelier_Yumia.exe+F545D1: 41 5C              - pop r12
+Atelier_Yumia.exe+F545D3: 5F                 - pop rdi
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>230</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_batt_gauge_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>231</ID>
+      <Description>"Battle: Slow Advent gauge down"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SLOW_BATT_GAUGE_DOWN,Atelier_Yumia.exe,FF CA 45 33 C0) // should be unique
+alloc(newmem,$1000,INJECT_SLOW_BATT_GAUGE_DOWN)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [i_flag], 0
+  je code_pre
+  inc edx
+  mov dword ptr [i_flag], 0
+  jmp code
+
+code_pre:
+  mov dword ptr [i_flag], 1
+
+code:
+  dec edx
+  xor r8d,r8d
+  jmp return
+align 10 cc
+  i_flag:
+  dd 0
+
+INJECT_SLOW_BATT_GAUGE_DOWN:
+  jmp newmem
+return:
+registersymbol(INJECT_SLOW_BATT_GAUGE_DOWN)
+
+[DISABLE]
+
+INJECT_SLOW_BATT_GAUGE_DOWN:
+  db FF CA 45 33 C0
+
+unregistersymbol(INJECT_SLOW_BATT_GAUGE_DOWN)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+EE5007
+
+Atelier_Yumia.exe+EE4FE3: 4C 8B F0           - mov r14,rax
+Atelier_Yumia.exe+EE4FE6: 48 85 C0           - test rax,rax
+Atelier_Yumia.exe+EE4FE9: 0F 84 F8 02 00 00  - je Atelier_Yumia.exe+EE52E7
+Atelier_Yumia.exe+EE4FEF: 44 8B 63 48        - mov r12d,[rbx+48]
+Atelier_Yumia.exe+EE4FF3: BA 04 00 00 00     - mov edx,00000004
+Atelier_Yumia.exe+EE4FF8: 48 8B C8           - mov rcx,rax
+Atelier_Yumia.exe+EE4FFB: E8 A0 9E 03 00     - call Atelier_Yumia.exe+F1EEA0
+Atelier_Yumia.exe+EE5000: 84 C0              - test al,al
+Atelier_Yumia.exe+EE5002: 75 1D              - jne Atelier_Yumia.exe+EE5021
+Atelier_Yumia.exe+EE5004: 8B 53 48           - mov edx,[rbx+48]
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+EE5007: FF CA              - dec edx
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+EE5009: 45 33 C0           - xor r8d,r8d
+Atelier_Yumia.exe+EE500C: 48 8B CB           - mov rcx,rbx
+Atelier_Yumia.exe+EE500F: E8 2C F7 06 00     - call Atelier_Yumia.exe+F54740
+Atelier_Yumia.exe+EE5014: BA 04 00 00 00     - mov edx,00000004
+Atelier_Yumia.exe+EE5019: 49 8B CE           - mov rcx,r14
+Atelier_Yumia.exe+EE501C: E8 CF 9E 03 00     - call Atelier_Yumia.exe+F1EEF0
+Atelier_Yumia.exe+EE5021: 8B 43 48           - mov eax,[rbx+48]
+Atelier_Yumia.exe+EE5024: 85 C0              - test eax,eax
+Atelier_Yumia.exe+EE5026: 0F 8F 78 02 00 00  - jg Atelier_Yumia.exe+EE52A4
+Atelier_Yumia.exe+EE502C: 40 38 7E 51        - cmp [rsi+51],dil
+}
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>16</ID>
@@ -2964,7 +3134,7 @@ align 10 cc
   is_set_crysl_min_amount:
   dd 0
   i_min_crysl:
-  dw 7
+  dw F
 
 
 INJECT_CRYSTAL_EDITOR:
@@ -4066,11 +4236,160 @@ Atelier_Yumia.exe+1152549: CC                    - int 3
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>226</ID>
-      <Description>"Long food buff timer"</Description>
-      <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <ID>233</ID>
+      <Description>"Get game active time / long food buff duration"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Atelier_Yumia.exe
+  Version: 
+  Date   : 2025-03-31
+  Author :bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_GAME_ACT_TIME,$process,89 41 68 C3 CC CC CC CC 83) // should be unique
+alloc(newmem,$1000,INJECT_GET_GAME_ACT_TIME)
+
+label(code)
+label(return i_base_game_act_time i_base_fbuff_addr1)
+
+newmem:
+  mov [i_base_game_act_time], rcx
+  cmp qword ptr [i_base_fbuff_addr1], 0
+  je code
+
+  push rax
+  push r15
+  push r14
+
+  mov rax, 3
+
+loop1:
+  mov r14, [i_base_fbuff_addr1]
+  lea r15, [rax-1]
+  shl r15, 4                     // r15 *= 0x10
+  lea r15, [r15+r14]
+  cmp dword ptr [r15], FFFF
+  je do_next
+
+  mov r14d, [rcx+60]
+  mov [r15+4], r14d
+  mov r14d, [rcx+64]
+  mov [r15+8], r14d
+  mov r14d, [rcx+68]
+  mov [r15+C], r14d
+
+do_next:
+  dec rax
+  jnz loop1
+
+  pop r14
+  pop r15
+  pop rax
+
+
+code:
+  mov [rcx+68],eax
+  ret 
+  int 3 
+  jmp return
+align 10 cc
+  i_base_game_act_time:
+  dq 0
+  i_base_fbuff_addr1:
+  dq 0
+
+INJECT_GET_GAME_ACT_TIME:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_GAME_ACT_TIME i_base_game_act_time i_base_fbuff_addr1)
+
+[DISABLE]
+
+INJECT_GET_GAME_ACT_TIME:
+  db 89 41 68 C3 CC
+
+unregistersymbol(INJECT_GET_GAME_ACT_TIME i_base_game_act_time i_base_fbuff_addr1)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Yumia.exe+111BEB8
+
+Atelier_Yumia.exe+111BEA9: 5F        - pop rdi
+Atelier_Yumia.exe+111BEAA: C3        - ret 
+Atelier_Yumia.exe+111BEAB: CC        - int 3 
+Atelier_Yumia.exe+111BEAC: CC        - int 3 
+Atelier_Yumia.exe+111BEAD: CC        - int 3 
+Atelier_Yumia.exe+111BEAE: CC        - int 3 
+Atelier_Yumia.exe+111BEAF: CC        - int 3 
+Atelier_Yumia.exe+111BEB0: 8B 02     - mov eax,[rdx]
+Atelier_Yumia.exe+111BEB2: 89 41 64  - mov [rcx+64],eax
+Atelier_Yumia.exe+111BEB5: 41 8B 00  - mov eax,[r8]
+// ---------- INJECTING HERE ----------
+Atelier_Yumia.exe+111BEB8: 89 41 68  - mov [rcx+68],eax
+// ---------- DONE INJECTING  ----------
+Atelier_Yumia.exe+111BEBB: C3        - ret 
+Atelier_Yumia.exe+111BEBC: CC        - int 3 
+Atelier_Yumia.exe+111BEBD: CC        - int 3 
+Atelier_Yumia.exe+111BEBE: CC        - int 3 
+Atelier_Yumia.exe+111BEBF: CC        - int 3 
+Atelier_Yumia.exe+111BEC0: 83 FA 05  - cmp edx,05
+Atelier_Yumia.exe+111BEC3: 77 09     - ja Atelier_Yumia.exe+111BECE
+Atelier_Yumia.exe+111BEC5: 8B 41 6C  - mov eax,[rcx+6C]
+Atelier_Yumia.exe+111BEC8: 89 41 70  - mov [rcx+70],eax
+Atelier_Yumia.exe+111BECB: 89 51 6C  - mov [rcx+6C],edx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>237</ID>
+          <Description>"buff addr."</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_fbuff_addr1</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>234</ID>
+          <Description>"Hours"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_game_act_time</Address>
+          <Offsets>
+            <Offset>60</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>236</ID>
+          <Description>"Minutes"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_game_act_time</Address>
+          <Offsets>
+            <Offset>64</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>235</ID>
+          <Description>"Seconds"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_game_act_time</Address>
+          <Offsets>
+            <Offset>68</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>226</ID>
+          <Description>"Long food buff duration"</Description>
+          <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Yumia.exe
   Version: 
   Date   : 2025-03-31
   Author : bbfox@https://opencheattables.com
@@ -4085,7 +4404,23 @@ label(code)
 label(return is_long_food_timer)
 
 newmem:
-  add dword ptr [rsi+rbp+64], 2
+  push r15
+  lea r15, [rbp+60]
+  mov [i_base_fbuff_addr1], r15
+  jmp endp
+
+next1:
+  mov r15d, [rsi+rbp+68]
+  add r15d, 32
+  cmp r15d, #60
+  jb @F
+  sub r15d, #60
+  inc dword ptr [rsi+rbp+64]
+@@:
+  mov [rsi+rbp+68], r15d
+
+endp:
+  pop r15
 
 code:
   mov [rsi+rbp+6C],ecx
@@ -4094,6 +4429,9 @@ code:
 align 10 cc
   is_long_food_timer:
   dd 1
+  align 10 0
+
+
 
 INJECT_LONG_FOOD_BUFF_TIMER:
   jmp newmem
@@ -4137,6 +4475,8 @@ Atelier_Yumia.exe+111D434: CC              - int 3
 Atelier_Yumia.exe+111D435: CC              - int 3 
 }
 </AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>215</ID>

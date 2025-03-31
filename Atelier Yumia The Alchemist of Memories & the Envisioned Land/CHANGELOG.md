@@ -2,6 +2,9 @@
 
 ## 2025/03/31
 1. added Long food buff timer
+1. added Battle: Advent gauge multiplier
+1. added Battle: Slow Advent gauge down
+1. added Get game active time
 
 ## 2025/03/25
 1. Revised item editor
