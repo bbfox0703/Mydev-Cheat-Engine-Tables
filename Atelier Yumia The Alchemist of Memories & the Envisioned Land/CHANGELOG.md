@@ -1,5 +1,8 @@
 # Change log
 
+## 2025/04/02
+1. added Pouch Editor
+
 ## 2025/03/31
 1. added Long food buff timer
 1. added Battle: Advent gauge multiplier
