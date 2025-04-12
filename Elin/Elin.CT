@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>11</ID>
@@ -16,25 +16,28 @@ LuaCall(cycleFullCompact(nil,false))
     </CheatEntry>
     <CheatEntry>
       <ID>12</ID>
-      <Description>"Enable (enable twice)"</Description>
-      <Options moHideChildren="1"/>
+      <Description>"Enable"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
-if syntaxcheck then
+if syntaxcheck then return end
+
+local pid = getOpenedProcessID()
+if pid == 0 then
+    messageDialog("Process not open", mtWarning, mbOK)
     return
 end
-if process == nil then
-    ShowMessage("Process is not selected.")
-elseif readInteger(process) == 0 then
-    ShowMessage("Process cannot be opened.")
-else
-    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
-        monopipe.destroy()
-        monopipe = nil
-    end
-    if monopipe == nil then
-        LaunchMonoDataCollector()
+
+if monopipe ~= nil and monopipe.ProcessID ~= pid then
+    pcall(function() monopipe.destroy() end)
+    monopipe = nil
+end
+
+if monopipe == nil then
+    local success, err = pcall(LaunchMonoDataCollector)
+    if not success then
+        messageDialog("Failed to launch MonoDataCollector:\n"..tostring(err), mtError, mbOK)
     end
 end
 
@@ -46,10 +49,14 @@ end
 
 [DISABLE]
 {$lua}
-if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
+if syntaxcheck then return end
+--if monopipe then
+--  pcall(function() monopipe.destroy() end)
+--  monopipe = nil
+--end
 
 {$asm}
-unregistersymbol(*)
+//unregistersymbol(*)
 
 </AssemblerScript>
       <CheatEntries>
@@ -302,7 +309,7 @@ Stats:get_value+48: 41 FF D3                       - call r11
 
 [ENABLE]
 
-aobscanregion(INJECT_SET_MIN_MANA,StatsMana:Mod+357,StatsMana:Mod+3A7,48 8D 65 00 5D) // should be unique
+aobscanregion(INJECT_SET_MIN_MANA,StatsMana:Mod+39B,StatsMana:Mod+4A7,48 8D 65 00 5D) // should be unique
 alloc(newmem,$1000,INJECT_SET_MIN_MANA)
 
 label(code)
@@ -422,30 +429,31 @@ dealloc(newmem)
 {
 // ORIGINAL CODE - INJECTION POINT: Chara:UseAbility+e32
 
-Chara:UseAbility+e0a: 48 C1 F9 25                    - sar rcx,25
-Chara:UseAbility+e0e: 48 8B C1                       - mov rax,rcx
-Chara:UseAbility+e11: 48 C1 E8 3F                    - shr rax,3F
-Chara:UseAbility+e15: 48 03 C1                       - add rax,rcx
-Chara:UseAbility+e18: 89 85 50 FF FF FF              - mov [rbp-000000B0],eax
-Chara:UseAbility+e1e: E9 15 00 00 00                 - jmp Chara:UseAbility+e38
-Chara:UseAbility+e23: 49 8B 45 20                    - mov rax,[r13+20]
-Chara:UseAbility+e27: 48 8B D0                       - mov rdx,rax
-Chara:UseAbility+e2a: 48 63 48 2C                    - movsxd  rcx,dword ptr [rax+2C]
-Chara:UseAbility+e2e: 4D 63 45 30                    - movsxd  r8,dword ptr [r13+30]
+Chara:UseAbility+ee2: 48 C1 F9 25                    - sar rcx,25
+Chara:UseAbility+ee6: 48 8B C1                       - mov rax,rcx
+Chara:UseAbility+ee9: 48 C1 E8 3F                    - shr rax,3F
+Chara:UseAbility+eed: 48 03 C1                       - add rax,rcx
+Chara:UseAbility+ef0: 89 85 48 FF FF FF              - mov [rbp-000000B8],eax
+Chara:UseAbility+ef6: E9 15 00 00 00                 - jmp Chara:UseAbility+f10
+Chara:UseAbility+efb: 49 8B 45 20                    - mov rax,[r13+20]
+Chara:UseAbility+eff: 48 8B D0                       - mov rdx,rax
+Chara:UseAbility+f02: 48 63 48 2C                    - movsxd  rcx,dword ptr [rax+2C]
+Chara:UseAbility+f06: 4D 63 45 30                    - movsxd  r8,dword ptr [r13+30]
 // ---------- INJECTING HERE ----------
-Chara:UseAbility+e32: 41 2B C8                       - sub ecx,r8d
+Chara:UseAbility+f0a: 41 2B C8                       - sub ecx,r8d
 // ---------- DONE INJECTING  ----------
-Chara:UseAbility+e35: 89 48 2C                       - mov [rax+2C],ecx
-Chara:UseAbility+e38: 49 8B 4D 20                    - mov rcx,[r13+20]
-Chara:UseAbility+e3c: 66 90                          - nop 2
-Chara:UseAbility+e3e: 49 BB 00 89 10 91 C6 01 00 00  - mov r11,LayerAbility:SetDirty
-Chara:UseAbility+e48: 41 FF D3                       - call r11
-Chara:UseAbility+e4b: E9 3B 04 00 00                 - jmp Chara:UseAbility+128b
-Chara:UseAbility+e50: 49 8B 45 20                    - mov rax,[r13+20]
-Chara:UseAbility+e54: 48 8B C8                       - mov rcx,rax
-Chara:UseAbility+e57: 83 38 00                       - cmp dword ptr [rax],00
-Chara:UseAbility+e5a: 48 8D 6D 00                    - lea rbp,[rbp+00]
+Chara:UseAbility+f0d: 89 48 2C                       - mov [rax+2C],ecx
+Chara:UseAbility+f10: 49 8B 4D 20                    - mov rcx,[r13+20]
+Chara:UseAbility+f14: 66 90                          - nop 2
+Chara:UseAbility+f16: 49 BB 57 FF 47 91 F5 01 00 00  - mov r11,000001F59147FF57
+Chara:UseAbility+f20: 41 FF D3                       - call r11
+Chara:UseAbility+f23: E9 3B 04 00 00                 - jmp Chara:UseAbility+1363
+Chara:UseAbility+f28: 49 8B 45 20                    - mov rax,[r13+20]
+Chara:UseAbility+f2c: 48 8B C8                       - mov rcx,rax
+Chara:UseAbility+f2f: 83 38 00                       - cmp dword ptr [rax],00
+Chara:UseAbility+f32: 48 8D 6D 00                    - lea rbp,[rbp+00]
 }
+
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
@@ -692,6 +700,7 @@ Card:HealHP+6e: 49 8B CF              - mov rcx,r15
               <ID>7</ID>
               <Description>"HP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_base_hp_addr</Address>
               <Offsets>
