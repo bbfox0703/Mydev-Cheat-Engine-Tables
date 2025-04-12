@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>104</ID>
@@ -19,25 +19,27 @@ LuaCall(cycleFullCompact(nil,false))
       <Description>"Enable (enable twice)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
-if syntaxcheck then
+if syntaxcheck then return end
+
+local pid = getOpenedProcessID()
+if pid == 0 then
+    messageDialog("Process not open", mtWarning, mbOK)
     return
 end
-if process == nil then
-    ShowMessage("Process is not selected.")
-elseif readInteger(process) == 0 then
-    ShowMessage("Process cannot be opened.")
-else
-    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
-        monopipe.destroy()
-        monopipe = nil
-    end
-    if monopipe == nil then
-        LaunchMonoDataCollector()
-    end
+
+if monopipe ~= nil and monopipe.ProcessID ~= pid then
+    pcall(function() monopipe.destroy() end)
+    monopipe = nil
 end
 
+if monopipe == nil then
+    local success, err = pcall(LaunchMonoDataCollector)
+    if not success then
+        messageDialog("Failed to launch MonoDataCollector:\n"..tostring(err), mtError, mbOK)
+    end
+end
 
 {$asm}
 //define(PlayerControllerManagedUpdateProc,"PlayerController.ManagedUpdate")
@@ -47,7 +49,18 @@ end
 
 [DISABLE]
 {$lua}
-if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
+if syntaxcheck then return end
+if monopipe ~= nil then
+  local success, err = pcall(function()
+    if monopipe.destroy then
+      monopipe.destroy()
+    end
+  end)
+  if not success then
+    showMessage("Failed to destroy monopipe:\n"..tostring(err))
+  end
+  monopipe = nil
+end
 
 {$asm}
 unregistersymbol(*)
@@ -1767,7 +1780,7 @@ if syntaxcheck then return end
     </CheatEntry>
     <CheatEntry>
       <ID>54</ID>
-      <Description>"(2024/01/12) Knights of Honor II: Sovereign 1.6.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"(2024/01/12) Knights of Honor II: Sovereign 1.7.0  /  https://opencheattables.com  /  CE 7.5+"</Description>
       <Color>00AE57</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
