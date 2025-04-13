@@ -22,40 +22,257 @@ LuaCall(cycleFullCompact(nil,false))
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if syntaxcheck then return end
+-- 🔧 SafeMonoDestroy: Clean up all Mono-related state
+if _G.SafeMonoDestroy == nil then
+  _G.SafeMonoDestroy = function()
+    -- Terminate Mono symbol enumeration thread
+    if monoSymbolEnum then
+      monoSymbolEnum.terminate()
+      if not monoSymbolEnum.waitfor(2000) then
+        print("Warning: Timeout waiting for monoSymbolEnum to terminate.")
+      end
+      monoSymbolEnum.destroy()
+      monoSymbolEnum = nil
+    end
 
+    -- Stop progress bar timer if exists
+    if monoSymbolList and monoSymbolList.progressbar then
+      monoSymbolList.progressbar.OnTimer = nil
+    end
+
+    -- Unlock pipe if locked
+    pcall(function()
+      if monopipe then
+        monopipe.unlock()
+      end
+    end)
+
+    -- Destroy Mono communication pipe
+    if monopipe then
+      monopipe.destroy()
+      monopipe = nil
+    end
+
+    -- Destroy event pipe if any
+    if monoeventpipe then
+      monoeventpipe.destroy()
+      monoeventpipe = nil
+    end
+
+    -- Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
+    end
+  end
+end
+
+-- 🔧 Register symbol by parameter type array (exact match)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local p = mono_method_get_parameters(m.method)
+        local matched = true
+
+        if #p.parameters ~= #paramTypes then
+          matched = false
+        else
+          for i = 1, #paramTypes do
+            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("Error: Method found but failed to compile.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("Symbol registered: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 🔧 Register symbol by partial signature match (overload-safe)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("Error: No methods found in %s.%s", namespace, classname))
+      return
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local sig = mono_method_getSignature(m.method)
+        local matched = true
+        for _, kw in ipairs(sigContains) do
+          if not string.find(sig, kw, 1, true) then
+            matched = false
+            break
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("Error: Signature matched but failed to compile method.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("Symbol registered by signature: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 🔧 Register symbol by simple method name (first match)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = mono_findMethod(namespace, classname, methodname)
+    if m == nil or m == 0 then
+      print(string.format("Error: Method not found - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    local addr = mono_compile_method(m)
+    if addr == 0 then
+      print(string.format("Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("Symbol registered: %s = %X", symbolname, addr))
+  end
+end
+
+-- 🔄 Attach Mono if needed
 local pid = getOpenedProcessID()
 if pid == 0 then
-    messageDialog("Process not open", mtWarning, mbOK)
-    return
+  print("Warning: No process is currently open.")
+  return
 end
 
 if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
 
 if monopipe == nil or _G.lastMonoPID ~= pid then
-    if monopipe ~= nil then
-        pcall(function() if monopipe.destroy then monopipe.destroy() end end)
-        monopipe = nil
-    end
-
-    pcall(LaunchMonoDataCollector)
-    _G.lastMonoPID = pid
+  if monopipe ~= nil then
+    pcall(_G.SafeMonoDestroy)
+  end
+  pcall(LaunchMonoDataCollector)
+  _G.lastMonoPID = pid
 end
 
--- custom actions
--- local m = mono_findMethod(...)
--- local addr = mono_compile_method(m)
--- registerSymbol(...)
+-- 🧪 Example usage - Register Mono methods to CE symbol table
+-- These functions compile (JIT) a Mono method and register it as a CE symbol
+
+-- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+-- Description: Registers the first matched method with given name.
+-- ⚠ Use this only when there's no overload (or you're fine with the first one).
+-- Params:
+--   symbolname: The name you want to register (used in CE as a label)
+--   namespace:  Mono namespace of the class (can be "" if none)
+--   classname:  Class name that contains the method
+--   methodname: Method name to find (first match will be used)
+-- Example:
+
+--_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
+
+
+-- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+-- Description: Registers a method that exactly matches the provided parameter types.
+-- Use this when there are multiple overloads of a method.
+-- Params:
+--   symbolname: The name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (exact match)
+--   paramTypes: Array of expected parameter type strings (must match count &amp; order)
+--               These are matched using `string.find`, so partial match is allowed.
+-- Example:
+--   UseAbility(string idAct, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains)
+-- Description: Registers the method whose signature contains all given substrings.
+-- Flexible, and suitable when exact type names vary or signature format is uncertain.
+-- Params:
+--   symbolname: The symbol name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (will scan all overloads)
+--   sigContains: Array of strings that should all appear in the method signature
+--                e.g., { "Act", "Card", "Point", "bool" }
+-- Example:
+--   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+--]]
+
+--[[
+
+Type Mapping (for overload filtering)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+
+--]]
 
 {$asm}
-//define(...)
-//registersymbol(...)
+//registersymbol(MyAttack) // if registerd
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
--- no cleanup
-{$asm}
-//unregistersymbol(...)
+
+-- 🧼 Release mono
+----print("Info: Cleaning up MonoDataCollector...")
+----pcall(_G.SafeMonoDestroy)
+
 
 </AssemblerScript>
       <CheatEntries>
@@ -380,10 +597,98 @@ StatsMana:Mod+384: C3                             - ret
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>15</ID>
-          <Description>"inf. ability"</Description>
+          <ID>35</ID>
+          <Description>"inf Ability: Step 1"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript Async="1">{ Game   : Elin.exe
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local cls = mono_findClass("Elin", "Chara")
+if not cls then
+  print("Class not found: Elin.Chara")
+  return
+end
+--[[
+local methods = mono_class_enumMethods(cls)
+local count = 0
+
+for _, m in ipairs(methods) do
+  if m.name == "UseAbility" then
+    local prms = mono_method_get_parameters(m.method)
+    print(string.format(
+      "Precompiling UseAbility with %d params: (%s)",
+      #prms.parameters,
+      table.concat(
+        (function()
+          local t = {}
+          for i, p in ipairs(prms.parameters) do
+            t[i] = p.typename
+          end
+          return t
+        end)(), ", "
+      )
+    ))
+
+    local addr = mono_compile_method(m.method)
+    if addr ~= 0 then
+      print(string.format("✔ Compiled at: %X", addr))
+      count = count + 1
+    else
+      print("❌ Compile failed")
+    end
+  end
+end
+--]]
+
+
+--[[
+-- Find overload functions
+-- 確保先 attach Mono
+if monopipe == nil then
+  print("🚨 Mono is not attached. Launching...")
+  LaunchMonoDataCollector()
+end
+
+-- 嘗試取得 class
+local cls = mono_findClass("Elin", "Chara")
+if not cls then
+  print("⚠️ Class not found: Elin.Chara")
+  return
+end
+
+-- 取得 methods
+local methods = mono_class_enumMethods(cls)
+if not methods then
+  print("⚠️ No methods found in Elin.Chara")
+  return
+end
+
+-- 列印所有 signature
+for i, m in ipairs(methods) do
+  if m.name == "UseAbility" then
+    local sig = mono_method_getSignature(m.method)
+    print(string.format("#%d: %s", i, sig))
+  end
+end
+
+--]]
+
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Addr", "Elin", "Chara", "UseAbility", { "Act", "Card", "Point", "bool" })
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol("UseAbility_Addr")
+
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>15</ID>
+              <Description>"inf. Ability: Step 2"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">{ Game   : Elin.exe
   Version: 
   Date   : 2024-12-29
   Author : bbfox@https://https://opencheattables.com
@@ -391,7 +696,7 @@ StatsMana:Mod+384: C3                             - ret
 
 [ENABLE]
 
-aobscan(INJECT_INF_ABILITY,41 2B C8 89 48 2C 49)
+aobscanregion(INJECT_INF_ABILITY,UseAbility_Addr+E00, UseAbility_Addr+1E00, 41 2B C8 89 48 2C 49)
 alloc(newmem,$1000,INJECT_INF_ABILITY)
 
 label(code)
@@ -454,6 +759,8 @@ Chara:UseAbility+f32: 48 8D 6D 00                    - lea rbp,[rbp+00]
 }
 
 </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>2</ID>
