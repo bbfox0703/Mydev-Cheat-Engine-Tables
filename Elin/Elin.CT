@@ -25,45 +25,66 @@ if syntaxcheck then return end
 -- 🔧 SafeMonoDestroy: Clean up all Mono-related state
 if _G.SafeMonoDestroy == nil then
   _G.SafeMonoDestroy = function()
-    -- Terminate Mono symbol enumeration thread
+    print("🧹 SafeMonoDestroy: Begin cleanup...")
+
+    -- 1. Stop symbol enumeration thread if running
     if monoSymbolEnum then
-      monoSymbolEnum.terminate()
-      if not monoSymbolEnum.waitfor(2000) then
-        print("Warning: Timeout waiting for monoSymbolEnum to terminate.")
-      end
-      monoSymbolEnum.destroy()
-      monoSymbolEnum = nil
+      print("⏹ Terminating monoSymbolEnum thread...")
+      pcall(function()
+        monoSymbolEnum.terminate()
+        if not monoSymbolEnum.waitfor(3000) then
+          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
+        end
+        monoSymbolEnum.destroy()
+        monoSymbolEnum = nil
+      end)
     end
 
-    -- Stop progress bar timer if exists
+    -- 2. Stop progressbar timer
     if monoSymbolList and monoSymbolList.progressbar then
       monoSymbolList.progressbar.OnTimer = nil
     end
 
-    -- Unlock pipe if locked
+    -- 3. Unlock pipe (try unlock even if uncertain)
+    print("🔓 Attempting to unlock pipe...")
     pcall(function()
-      if monopipe then
+      if monopipe and monopipe.unlock then
         monopipe.unlock()
       end
     end)
 
-    -- Destroy Mono communication pipe
-    if monopipe then
-      monopipe.destroy()
-      monopipe = nil
+    -- 4. Delay before destroy to let MonoCollector finish its work
+    print("⌛ Waiting before destroy (sleep 250ms)...")
+    sleep(250)  -- let it flush pipe state
+
+    -- 5. Destroy main pipe
+    local t0 = os.clock()
+    print(string.format("🧨 Destroying monopipe，This may take several minutes... [Start: %.3fs]", t0))
+
+    pcall(function()
+      if monopipe then
+        monopipe.destroy()
+        monopipe = nil
+      end
+    end)
+
+    local t1 = os.clock()
+    print(string.format("✅ monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
+
+
+    -- 6. Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
     end
 
-    -- Destroy event pipe if any
+    -- 7. Destroy event pipe if exists
     if monoeventpipe then
       monoeventpipe.destroy()
       monoeventpipe = nil
     end
 
-    -- Destroy symbol list
-    if monoSymbolList then
-      monoSymbolList.destroy()
-      monoSymbolList = nil
-    end
+    print("✅ SafeMonoDestroy: Cleanup complete.")
   end
 end
 
@@ -271,7 +292,8 @@ if syntaxcheck then return end
 
 -- 🧼 Release mono
 ----print("Info: Cleaning up MonoDataCollector...")
-----pcall(_G.SafeMonoDestroy)
+pcall(_G.SafeMonoDestroy)
+----_G.SafeMonoDestroy()
 
 
 </AssemblerScript>
