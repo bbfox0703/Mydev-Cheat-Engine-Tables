@@ -91,7 +91,7 @@ function addCompactViewMenu()
 
     -- すでに追加されているか確認し、重複追加を防ぐ
     for i = 0, devToolsMenu.Count - 1 do
-        if devToolsMenu[i].Caption == 'Create Compacr Mode AA Script Record' then
+        if devToolsMenu[i].Caption == 'Create Compact Mode AA Script Record' then
             return
         end
     end
