@@ -8087,6 +8087,57 @@ function closeLuaEngine2()
 end
 registerLuaFunctionHighlight('closeLuaEngine2')
 
+
+function getProcessNameFromPID(pid)
+  local sl = createStringList()
+  getProcessList(sl)
+  local hexPid = string.format("%X", pid):upper()
+
+  for i = 0, sl.Count - 1 do
+    local entry = sl[i]
+    local hexid, name = entry:match("^(%x+)%-(.+)$")
+    if hexid and name then
+      if tonumber(hexid, 16) == pid then
+        return name
+      end
+    end
+  end
+  return "(unknown)"
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+function printProcessInfo()
+  local pid = getOpenedProcessID()
+  local name = getProcessNameFromPID(pid)
+  print(string.format("🧠 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+function dumpProcessListAndFindPID()
+  local pid = getOpenedProcessID()
+  print(string.format("🎯 Current PID: %d / 0x%X", pid, pid))
+
+  local sl = createStringList()
+  getProcessList(sl)
+
+  print("📋 Dumping process list:")
+  for i = 0, sl.Count - 1 do
+    local entry = sl[i]
+    print(string.format("[%d] %s", i, entry))
+
+    -- 嘗試解析並比對 PID
+    local name, hexid = entry:match("(.+)%-(%x+)$")
+    if name and hexid then
+      local parsed = tonumber(hexid, 16)
+      if parsed == pid then
+        print("✅ Match found in process list:")
+        print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+      end
+    end
+  end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
 AddressList.Header.OnSectionClick = nil
 
 
