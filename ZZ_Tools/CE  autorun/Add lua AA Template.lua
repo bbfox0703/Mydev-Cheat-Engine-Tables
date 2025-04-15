@@ -49,18 +49,18 @@ closeLuaEngine()
 ]==]
 
 -- Auto Assembler のメモリレコードを作成
-function createCompactViewMemoryRecord()
+function createAATemplateMemoryRecord()
     local ct = getAddressList()  -- 現在の Cheat Table を取得
     local newRecord = ct.createMemoryRecord()
 
-    newRecord.Description = 'Toggle Compact View'
+    newRecord.Description = 'New Lua AA record'
     newRecord.Type = vtAutoAssembler  -- Auto Assembler スクリプトとして設定
     newRecord.Script = compactViewScript  -- スクリプトの内容を設定
     newRecord.Active = false  -- デフォルトでは無効状態
 end
 
 -- Compact View メニューを Dev Tools に追加
-function addCompactViewMenu()
+function addAATemplateMenu()
     local devToolsMenu = getOrCreateDevToolsMenu()
 
     -- すでに追加されているか確認し、重複追加を防ぐ
@@ -72,14 +72,14 @@ function addCompactViewMenu()
 
     -- **メニューを追加（synchronize() を使用）**
     synchronize(function()
-        local compactViewItem = createMenuItem(devToolsMenu)
-        compactViewItem.Caption = 'Create AA lua script template'
-        compactViewItem.OnClick = function()
-            createCompactViewMemoryRecord()
+        local AATemplateItem = createMenuItem(devToolsMenu)
+        AATemplateItem.Caption = 'Create AA lua script template'
+        AATemplateItem.OnClick = function()
+            createAATemplateMemoryRecord()
         end
-        devToolsMenu.add(compactViewItem)
+        devToolsMenu.add(AATemplateItem)
     end)
 end
 
 -- 機能を実行
-addCompactViewMenu()
+addAATemplateMenu()
