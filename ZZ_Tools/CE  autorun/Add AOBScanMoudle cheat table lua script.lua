@@ -306,7 +306,7 @@ function addMenuToDevTools()
 
     -- **すでにメニューが存在する場合は追加しない**
     for i = 0, devToolsMenu.Count - 1 do
-        if devToolsMenu[i].Caption == "🎯Add AOBScanModule to Lua Script: Cheat Table" then
+        if devToolsMenu[i].Caption == "Add AOBScanModule to Lua Script: Cheat Table" then
             return
         end
     end
@@ -314,7 +314,7 @@ function addMenuToDevTools()
     -- **メニューを追加**
     synchronize(function()
         local newItem = createMenuItem(devToolsMenu)
-        newItem.Caption = "🎯Add AOBScanModule to Lua Script: Cheat Table"
+        newItem.Caption = "Add AOBScanModule to Lua Script: Cheat Table"
         newItem.OnClick = addToCheatTableLuaScript
         devToolsMenu.add(newItem)
     end)
