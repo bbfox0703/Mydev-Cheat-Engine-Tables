@@ -28,13 +28,13 @@ if not AOBScanModule then
         end
 
         if not baseAddr then
-            if debugMode then print("✖️ Error: Module " .. moduleName .. " not found!") end
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
             return nil
         end
 
         if debugMode then
             print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
-            print(string.format("📐 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
         end
 
         local ms = createMemScan()
@@ -71,9 +71,9 @@ if not AOBScanModule then
         end)
 
         if addr then
-            if debugMode then print("🎯 AOB found at: 0x" .. addr) end
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
         else
-            if debugMode then print("✖️ AOB not found in " .. moduleName) end
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
         end
 
         results.destroy()
@@ -88,9 +88,9 @@ registerLuaFunctionHighlight('AOBScanModule')
 test AOBScanModule()
 local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
 if aob_addr_str then
-    print("✔️ Final AOB Address: 0x" .. aob_addr_str)
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
 else
-    print("✖️ AOB not found in ???.exe")
+    print("💔 AOB not found in ???.exe")
 end
 ]]--
 
@@ -187,18 +187,18 @@ registerLuaFunctionHighlight('getProcessNameFromPID')
 function printProcessInfo()
   local pid = getOpenedProcessID()
   local name = getProcessNameFromPID(pid)
-  print(string.format("🧠 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
 end
 registerLuaFunctionHighlight('printProcessInfo')
 
 function dumpProcessListAndFindPID()
   local pid = getOpenedProcessID()
-  print(string.format("🎯 Current PID: %d / 0x%X", pid, pid))
+  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
 
   local sl = createStringList()
   getProcessList(sl)
 
-  print("📋 Dumping process list:")
+  print("🧾 Dumping process list:")
   for i = 0, sl.Count - 1 do
     local entry = sl[i]
     print(string.format("[%d] %s", i, entry))
@@ -208,7 +208,7 @@ function dumpProcessListAndFindPID()
     if name and hexid then
       local parsed = tonumber(hexid, 16)
       if parsed == pid then
-        print("✅ Match found in process list:")
+        print("🔦 Match found in process list:")
         print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
       end
     end
