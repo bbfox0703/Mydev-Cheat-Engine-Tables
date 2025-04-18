@@ -29,6 +29,9 @@ end
 -- Auto Assembler スクリプトの内容
 local monoEnableScript = [==[
 [ENABLE]
+{$asm}
+//registersymbol(MyAttack) // if registerd
+
 {$lua}
 if syntaxcheck then return end
 -- 📏 SafeMonoDestroy: Clean up all Mono-related state
@@ -291,11 +294,9 @@ Card        (Game defined)
 Act         (Game defined)
 
 --]]
-
-{$asm}
-//registersymbol(MyAttack) // if registerd
-
 [DISABLE]
+{$asm}
+// unregistersymbol(*)
 {$lua}
 if syntaxcheck then return end
 
