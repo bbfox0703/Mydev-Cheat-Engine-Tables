@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
@@ -17,28 +17,9 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>1</ID>
       <Description>"Enable"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then
-    return
-end
-if process == nil then
-    ShowMessage("Process is not selected.")
-elseif readInteger(process) == 0 then
-    ShowMessage("Process cannot be opened.")
-else
-    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
-        monopipe.destroy()
-        monopipe = nil
-    end
-    if monopipe == nil then
-        LaunchMonoDataCollector()
-    end
-end
-
-
 {$asm}
 define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
 define(ResidenceUpdateHeatingProc, "Residence.UpdateHeating")
@@ -50,21 +31,6 @@ define(ItemBundleUpdateNumberOfItemsProc, "ItemBundle.UpdateNumberOfItems")
 define(ItemStorageUpdateItemInfoWithDegradeProc, "ItemStorage.UpdateItemInfoWithDegrade")
 define(ReservableItemStorageGetItemCountOfAllUnneededItemsProc, "ReservableItemStorage.GetItemCountOfAllUnneededItems")
 
-//Residence.UpdateFirewood   GameAssembly.dll+80E820
-//GameAssembly.dll+80E9E4
-
-//Residence.UpdateWater GameAssembly.dll+80EE42
-//GameAssembly.dll+80EF60 (11E)
-
-//Villager.EatIfNecessary
-//GameAssembly.dll+5A64EF - 41 B8 01000000        - mov r8d,00000001
-
-//Villager.CalculateToolWear   GameAssembly.dll+5A4CD0
-//GameAssembly.dll+5A4E49
-
-
-//ItemStorage.RemoveItems  GameAssembly.dll+938C74
-
 registersymbol(ResourceManagerClearItemCountsProc)
 registersymbol(ResidenceUpdateHeatingProc)
 registersymbol(ResidenceUpdateWaterProc)
@@ -75,18 +41,280 @@ registersymbol(ItemBundleUpdateNumberOfItemsProc)
 registersymbol(ItemStorageUpdateItemInfoWithDegradeProc)
 registersymbol(ReservableItemStorageGetItemCountOfAllUnneededItemsProc)
 
+{$lua}
+if syntaxcheck then return end
+-- 📏 SafeMonoDestroy: Clean up all Mono-related state
+if _G.SafeMonoDestroy == nil then
+  _G.SafeMonoDestroy = function()
+    print("🪚 SafeMonoDestroy: Begin cleanup...")
+
+    -- 1. Stop symbol enumeration thread if running
+    if monoSymbolEnum then
+      print("🚬 Terminating monoSymbolEnum thread...")
+      pcall(function()
+        monoSymbolEnum.terminate()
+        if not monoSymbolEnum.waitfor(3000) then
+          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
+        end
+        monoSymbolEnum.destroy()
+        monoSymbolEnum = nil
+      end)
+    end
+
+    -- 2. Stop progressbar timer
+    if monoSymbolList and monoSymbolList.progressbar then
+      monoSymbolList.progressbar.OnTimer = nil
+    end
+
+    -- 3. Unlock pipe (try unlock even if uncertain)
+    print("🔓 Attempting to unlock pipe...")
+    pcall(function()
+      if monopipe and monopipe.unlock then
+        monopipe.unlock()
+      end
+    end)
+
+    -- 4. Delay before destroy to let MonoCollector finish its work
+    print("⌛ Waiting before destroy (sleep 250ms)...")
+    sleep(250)  -- let it flush pipe state
+
+    -- 5. Destroy main pipe
+    local t0 = os.clock()
+    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
+
+    pcall(function()
+      if monopipe then
+        monopipe.destroy()
+        monopipe = nil
+      end
+    end)
+
+    local t1 = os.clock()
+    print(string.format("👻 monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
+
+
+    -- 6. Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
+    end
+
+    -- 7. Destroy event pipe if exists
+    if monoeventpipe then
+      monoeventpipe.destroy()
+      monoeventpipe = nil
+    end
+
+    print("👻 SafeMonoDestroy: Cleanup complete.")
+  end
+end
+
+-- 📏 Register symbol by parameter type array (exact match)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local p = mono_method_get_parameters(m.method)
+        local matched = true
+
+        if #p.parameters ~= #paramTypes then
+          matched = false
+        else
+          for i = 1, #paramTypes do
+            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Method found but failed to compile.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 📏 Register symbol by partial signature match (overload-safe)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("💔 Error: No methods found in %s.%s", namespace, classname))
+      return
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local sig = mono_method_getSignature(m.method)
+        local matched = true
+        for _, kw in ipairs(sigContains) do
+          if not string.find(sig, kw, 1, true) then
+            matched = false
+            break
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Signature matched but failed to compile method.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered by signature: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 📏 Register symbol by simple method name (first match)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = mono_findMethod(namespace, classname, methodname)
+    if m == nil or m == 0 then
+      print(string.format("💔 Error: Method not found - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    local addr = mono_compile_method(m)
+    if addr == 0 then
+      print(string.format("💔 Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+  end
+end
+
+-- 🌀 Attach Mono if needed
+local pid = getOpenedProcessID()
+if pid == 0 then
+  print("⚠ Warning: No process is currently open.")
+  return
+end
+
+if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
+
+if monopipe == nil or _G.lastMonoPID ~= pid then
+  if monopipe ~= nil then
+    pcall(_G.SafeMonoDestroy)
+  end
+  pcall(LaunchMonoDataCollector)
+  _G.lastMonoPID = pid
+end
+
+-- ⚡ Example usage - Register Mono methods to CE symbol table
+-- These functions compile (JIT) a Mono method and register it as a CE symbol
+
+-- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+-- Description: Registers the first matched method with given name.
+-- ⚠ Use this only when there's no overload (or you're fine with the first one).
+-- Params:
+--   symbolname: The name you want to register (used in CE as a label)
+--   namespace:  Mono namespace of the class (can be "" if none)
+--   classname:  Class name that contains the method
+--   methodname: Method name to find (first match will be used)
+-- Example:
+
+--_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
+
+
+-- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+-- Description: Registers a method that exactly matches the provided parameter types.
+-- Use this when there are multiple overloads of a method.
+-- Params:
+--   symbolname: The name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (exact match)
+--   paramTypes: Array of expected parameter type strings (must match count &amp; order)
+--               These are matched using `string.find`, so partial match is allowed.
+-- Example:
+--   UseAbility(string idAct, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains)
+-- Description: Registers the method whose signature contains all given substrings.
+-- Flexible, and suitable when exact type names vary or signature format is uncertain.
+-- Params:
+--   symbolname: The symbol name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (will scan all overloads)
+--   sigContains: Array of strings that should all appear in the method signature
+--                e.g., { "Act", "Card", "Point", "bool" }
+-- Example:
+--   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+--]]
+
+--[[
+
+Type Mapping (for overload filtering)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+
+--]]
 [DISABLE]
 {$lua}
-if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
-
+if syntaxcheck then return end
+--pcall(_G.SafeMonoDestroy)
 {$asm}
 unregistersymbol(*)
 
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>2</ID>
-          <Description>"Enable twice: 1st: waiting for IL2CPP to complete, then re-enabling"</Description>
+          <ID>54</ID>
+          <Description>"Notice: Waiting for IL2CPP symbol enum done!!"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
@@ -98,49 +326,81 @@ unregistersymbol(*)
           <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
 local enableBattleScripts = {
+  0, -- "Compact Mode"
+  1, -- "Enable"
+  10, -- "Prevent item corruption in storage &amp; set max count for some items"
   22, -- "Set transport wagon speed"
   23, -- "Set villager move speed / life"
   3, -- "No residence consumes firewood"
   4, -- "No residence consumes water "
   41, -- "When item remove: try to prevent corruption"
   5, -- "Villagers consume no food"
+  53, -- "Item gather number multiplier - Step 1"
   8, -- "Item degrade (corrpution) speed multiplier in storage"
-  0, -- "Compact Mode"
+  32, -- "Active - Step 2"
 }
 local addressList = getAddressList()
-for _, id in ipairs(enableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = true
-end
-getLuaEngine().Close()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-getLuaEngine().menuItem5.doClick()
-getLuaEngine().Close()
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
 local disableBattleScripts = {
+  38, -- "Try to prevent corruption?"
+  36, -- "Multiplier threshold limt"
+  45, -- "Multiplier"
+  32, -- "Active - Step 2"
+  28, -- "Set min. armor when moving?"
+  18, -- "Set base material min/max amount in each storage location."
+  15, -- "Set weapon/arrow/armor's min/max. amount in each storage location."
+  11, -- "Set some items' min/max. amount in each storage location and market"
   8, -- "Item degrade (corrpution) speed multiplier in storage"
   6, -- "No HP damage to building (inc. enemy)"
+  53, -- "Item gather number multiplier - Step 1"
   5, -- "Villagers consume no food"
-  43, -- "When add item to storage"
+  43, -- "(not working) When add item to storage"
   41, -- "When item remove: try to prevent corruption"
   4, -- "No residence consumes water "
-  32, -- "Item gather number multiplier"
   3, -- "No residence consumes firewood"
   23, -- "Set villager move speed / life"
   22, -- "Set transport wagon speed"
   10, -- "Prevent item corruption in storage &amp; set max count for some items"
+  1, -- "Enable"
   0, -- "Compact Mode"
 }
 local addressList = getAddressList()
-for _, id in ipairs(disableBattleScripts) do
-  addressList.getMemoryRecordByID(id).Active = false
-end
-getLuaEngine().Close()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
@@ -158,7 +418,7 @@ getLuaEngine().Close()
 
 //aobscanmodule(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,GameAssembly.dll,F3 0F 58 87 78 05 00 00) // should be unique
 //aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,ResidenceUpdateHeatingProc+260,ResidenceUpdateHeatingProc+320,F3 0F 58 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 48 8B 0D) // should be unique
-aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,ResidenceUpdateHeatingProc+200,ResidenceUpdateHeatingProc+320,F3 0F 10 ?? ?? ?? 00 00 F3 0F 58 ?? ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 ?? ?? ?? ?? ?? ?? ?? 0F ?? ?? ?? ?? ?? 0F ?? ?? 8B) // should be unique
+aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,Residence.UpdateHeating+200,Residence.UpdateHeating+320,F3 0F 10 ?? ?? ?? 00 00 F3 0F 58 ?? ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 ?? ?? ?? ?? ?? ?? ?? 0F ?? ?? ?? ?? ?? 0F ?? ?? 8B) // should be unique
 alloc(newmem,$1000,INJECT_RESIDENCE_FIREWOOD_BURN_RATE)
 
 alloc(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo,8)
@@ -236,8 +496,7 @@ GameAssembly.dll+E5A2E9: 0F 2F F2                 - comiss xmm6,xmm2
 
 [ENABLE]
 
-//aobscanmodule(INJECT_RESIDENCE_WATER_USAGE_RATE,GameAssembly.dll,F3 0F 58 8F 80 05 00 00) // should be unique
-aobscanmodule(INJECT_RESIDENCE_WATER_USAGE_RATE,GameAssembly.dll,F3 0F 58 8F ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 0F 11 8F ?? ?? 00 00) // should be unique
+aobscanmodule(INJECT_RESIDENCE_WATER_USAGE_RATE,GameAssembly.dll,F3 0F 58 8F ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 0F 11 8F ?? ?? 00 00 72) // should be unique
 alloc(newmem,$1000,INJECT_RESIDENCE_WATER_USAGE_RATE)
 
 alloc(INJECT_RESIDENCE_WATER_USAGE_RATEo,8)
@@ -249,6 +508,7 @@ label(return)
 INJECT_RESIDENCE_WATER_USAGE_RATEo:
   readmem(INJECT_RESIDENCE_WATER_USAGE_RATE, 8)
 
+  // Residence.UpdateWater
 newmem:
 
 code:
@@ -274,31 +534,31 @@ dealloc(newmem)
 dealloc(INJECT_RESIDENCE_WATER_USAGE_RATEo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+D4FE35
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+EE6BE8
 
-GameAssembly.dll+D4FE05: 89 9F 04 06 00 00        - mov [rdi+00000604],ebx
-GameAssembly.dll+D4FE0B: 4C 8B 7C 24 50           - mov r15,[rsp+50]
-GameAssembly.dll+D4FE10: 4C 8B 74 24 58           - mov r14,[rsp+58]
-GameAssembly.dll+D4FE15: 48 8B B4 24 80 00 00 00  - mov rsi,[rsp+00000080]
-GameAssembly.dll+D4FE1D: 48 8B 6C 24 78           - mov rbp,[rsp+78]
-GameAssembly.dll+D4FE22: 48 8B 5C 24 70           - mov rbx,[rsp+70]
-GameAssembly.dll+D4FE27: 48 83 C4 60              - add rsp,60
-GameAssembly.dll+D4FE2B: 5F                       - pop rdi
-GameAssembly.dll+D4FE2C: C3                       - ret
-GameAssembly.dll+D4FE2D: F3 0F 10 8F 04 06 00 00  - movss xmm1,[rdi+00000604]
+GameAssembly.dll+EE6BB3: 0F 28 74 24 50           - movaps xmm6,[rsp+50]
+GameAssembly.dll+EE6BB8: 4C 8B 7C 24 60           - mov r15,[rsp+60]
+GameAssembly.dll+EE6BBD: 4C 8B 74 24 68           - mov r14,[rsp+68]
+GameAssembly.dll+EE6BC2: 48 8B B4 24 90 00 00 00  - mov rsi,[rsp+00000090]
+GameAssembly.dll+EE6BCA: 48 8B AC 24 88 00 00 00  - mov rbp,[rsp+00000088]
+GameAssembly.dll+EE6BD2: 48 8B 9C 24 80 00 00 00  - mov rbx,[rsp+00000080]
+GameAssembly.dll+EE6BDA: 48 83 C4 70              - add rsp,70
+GameAssembly.dll+EE6BDE: 5F                       - pop rdi
+GameAssembly.dll+EE6BDF: C3                       - ret
+GameAssembly.dll+EE6BE0: F3 0F 10 8F 18 06 00 00  - movss xmm1,[rdi+00000618]
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+D4FE35: F3 0F 58 8F 00 06 00 00  - addss xmm1,[rdi+00000600]
+GameAssembly.dll+EE6BE8: F3 0F 58 8F 1C 06 00 00  - addss xmm1,[rdi+0000061C]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+D4FE3D: 0F 2F 0D A4 11 73 02     - comiss xmm1,[GameAssembly.dll+3480FE8]
-GameAssembly.dll+D4FE44: F3 0F 11 8F 04 06 00 00  - movss [rdi+00000604],xmm1
-GameAssembly.dll+D4FE4C: 72 BD                    - jb GameAssembly.dll+D4FE0B
-GameAssembly.dll+D4FE4E: 0F 57 C0                 - xorps xmm0,xmm0
-GameAssembly.dll+D4FE51: 8B C0                    - mov eax,eax
-GameAssembly.dll+D4FE53: F2 48 0F 2A C0           - cvtsi2sd xmm0,rax
-GameAssembly.dll+D4FE58: 66 0F 5A D0              - cvtpd2ps xmm2,xmm0
-GameAssembly.dll+D4FE5C: 0F 57 C0                 - xorps xmm0,xmm0
-GameAssembly.dll+D4FE5F: F3 0F 5D D1              - minss xmm2,xmm1
-GameAssembly.dll+D4FE63: 0F 2F C2                 - comiss xmm0,xmm2
+GameAssembly.dll+EE6BF0: 0F 2F 0D DD C4 91 02     - comiss xmm1,[GameAssembly.dll+38030D4]
+GameAssembly.dll+EE6BF7: F3 0F 11 8F 1C 06 00 00  - movss [rdi+0000061C],xmm1
+GameAssembly.dll+EE6BFF: 72 B2                    - jb GameAssembly.dll+EE6BB3
+GameAssembly.dll+EE6C01: 0F 57 C0                 - xorps xmm0,xmm0
+GameAssembly.dll+EE6C04: 8B C0                    - mov eax,eax
+GameAssembly.dll+EE6C06: F2 48 0F 2A C0           - cvtsi2sd xmm0,rax
+GameAssembly.dll+EE6C0B: 66 0F 5A D0              - cvtpd2ps xmm2,xmm0
+GameAssembly.dll+EE6C0F: 0F 57 C0                 - xorps xmm0,xmm0
+GameAssembly.dll+EE6C12: F3 0F 5D D1              - minss xmm2,xmm1
+GameAssembly.dll+EE6C16: 0F 2F C2                 - comiss xmm0,xmm2
 }
 </AssemblerScript>
         </CheatEntry>
@@ -462,26 +722,24 @@ GameAssembly.dll+5FBE1C: 75 13                 - jne GameAssembly.dll+5FBE31
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
-  Date   : 2023-11-19
+  Date   : 2025-04-18
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
-//ItemStorageUpdateItemInfoWithDegradeProc
-
-aobscanmodule(INJECT_DEGRADE_MULTI,GameAssembly.dll,8B 7B 24 8B 76 7C) // should be unique
+aobscanmodule(INJECT_DEGRADE_MULTI,GameAssembly.dll,8B 73 24 8B 6D 7C) // should be unique
 alloc(newmem,$1000,INJECT_DEGRADE_MULTI)
 
 label(code)
 label(return)
 label(vf_degrade_multi)
-
+//ItemStorage.UpdateItemInfoWithDegrade
 newmem:
 
 code:
   // orig. code start
-  mov edi,[rbx+24] //ItemInfo:&lt;spoilingSoonCount&gt;k__BackingField
-  mov esi,[rsi+7C] //ItemStorage:&lt;lifetimeModifierPercent&gt;k__BackingField
+  mov esi,[rbx+24] //ItemInfo:&lt;spoilingSoonCount&gt;k__BackingField
+  mov ebp,[rbp+7C] //ItemStorage:&lt;lifetimeModifierPercent&gt;k__BackingField
   // orig. code end
 
   test esi, esi
@@ -507,37 +765,37 @@ registersymbol(vf_degrade_multi)
 [DISABLE]
 
 INJECT_DEGRADE_MULTI:
-  db 8B 7B 24 8B 76 7C
+  db 8B 73 24 8B 6D 7C
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+8036F8
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+8C304B
 
-GameAssembly.dll+8036DB: 74 63                 - je GameAssembly.dll+803740
-GameAssembly.dll+8036DD: 3B 4A 18              - cmp ecx,[rdx+18]
-GameAssembly.dll+8036E0: 73 64                 - jae GameAssembly.dll+803746
-GameAssembly.dll+8036E2: 48 63 C1              - movsxd  rax,ecx
-GameAssembly.dll+8036E5: FF C1                 - inc ecx
-GameAssembly.dll+8036E7: 44 03 4C 82 20        - add r9d,[rdx+rax*4+20]
-GameAssembly.dll+8036EC: 83 F9 64              - cmp ecx,64
-GameAssembly.dll+8036EF: 7E E7                 - jle GameAssembly.dll+8036D8
-GameAssembly.dll+8036F1: 43 8D 04 01           - lea eax,[r9+r8]
-GameAssembly.dll+8036F5: 89 43 38              - mov [rbx+38],eax
+GameAssembly.dll+8C302A: 66 0F 1F 44 00 00     - nop word ptr [rax+rax+00]
+GameAssembly.dll+8C3030: 3B 4A 18              - cmp ecx,[rdx+18]
+GameAssembly.dll+8C3033: 73 64                 - jae GameAssembly.dll+8C3099
+GameAssembly.dll+8C3035: 48 63 C1              - movsxd  rax,ecx
+GameAssembly.dll+8C3038: FF C1                 - inc ecx
+GameAssembly.dll+8C303A: 44 03 4C 82 20        - add r9d,[rdx+rax*4+20]
+GameAssembly.dll+8C303F: 83 F9 64              - cmp ecx,64
+GameAssembly.dll+8C3042: 7E EC                 - jle GameAssembly.dll+8C3030
+GameAssembly.dll+8C3044: 43 8D 04 01           - lea eax,[r9+r8]
+GameAssembly.dll+8C3048: 89 43 38              - mov [rbx+38],eax
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+8036F8: 8B 7B 24              - mov edi,[rbx+24]
+GameAssembly.dll+8C304B: 8B 73 24              - mov esi,[rbx+24]
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+8036FB: 8B 76 7C              - mov esi,[rsi+7C]
-GameAssembly.dll+8036FE: E8 CD 1F 81 FF        - call GameAssembly.il2cpp_string_length+E370
-GameAssembly.dll+803703: 48 85 C0              - test rax,rax
-GameAssembly.dll+803706: 74 38                 - je GameAssembly.dll+803740
-GameAssembly.dll+803708: 48 8B 80 80 00 00 00  - mov rax,[rax+00000080]
-GameAssembly.dll+80370F: 48 85 C0              - test rax,rax
-GameAssembly.dll+803712: 74 2C                 - je GameAssembly.dll+803740
-GameAssembly.dll+803714: 44 8B 40 54           - mov r8d,[rax+54]
-GameAssembly.dll+803718: 45 33 C9              - xor r9d,r9d
-GameAssembly.dll+80371B: 8B D6                 - mov edx,esi
+GameAssembly.dll+8C304E: 8B 6D 7C              - mov ebp,[rbp+7C]
+GameAssembly.dll+8C3051: E8 CA 63 74 FF        - call GameAssembly.mono_string_length+2150
+GameAssembly.dll+8C3056: 48 85 C0              - test rax,rax
+GameAssembly.dll+8C3059: 74 38                 - je GameAssembly.dll+8C3093
+GameAssembly.dll+8C305B: 4C 8B 80 88 00 00 00  - mov r8,[rax+00000088]
+GameAssembly.dll+8C3062: 4D 85 C0              - test r8,r8
+GameAssembly.dll+8C3065: 74 2C                 - je GameAssembly.dll+8C3093
+GameAssembly.dll+8C3067: 45 8B 40 54           - mov r8d,[r8+54]
+GameAssembly.dll+8C306B: 45 33 C9              - xor r9d,r9d
+GameAssembly.dll+8C306E: 8B D5                 - mov edx,ebp
 }
 </AssemblerScript>
           <CheatEntries>
@@ -548,6 +806,250 @@ GameAssembly.dll+80371B: 8B D6                 - mov edx,esi
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_degrade_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>53</ID>
+          <Description>"Item gather number multiplier - Step 1"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+_G.mono_registerSymbol("AddItems2", "Assembly-CSharp.dll", "ItemBundle", "AddItems", {"numToAdd", "percentIntact"})
+
+closeLuaEngine()
+
+[DISABLE]
+{$asm}
+unregistersymbol(AddItems2)
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>32</ID>
+              <Description>"Active - Step 2"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2023-11-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+aobscanmodule(INJECT_MASS_ADD,GameAssembly.dll,41 01 91 88 00 00 00 83 F8 65 7C E4 48 83 C4 28 C3 E8 CA) // should be unique
+alloc(newmem,$1000,INJECT_MASS_ADD)
+
+label(code)
+label(return)
+label(vf_item_add_multi)
+label(vf_item_add_gold_multi)
+label(i_item_cnt_threshold)
+label(is_prevent_corruption)
+label(is_skip_gold_limit)
+
+//ItemBundle.AddItems #2
+//ID: 66 ItemPoop
+//ID: 51 ItemGoldIngot
+newmem:
+  push r15
+  mov r15d, [r9+10]
+  cmp r15d, #66 //ItemPoop
+  pop r15
+  je code
+
+  push r15
+  mov r15d, [r9+10]
+  cmp r15d, #51 //ItemGoldIngot
+  pop r15
+  je start_gold_multi //No threshold for GoldIngot
+
+  test edx, edx
+  jz code
+  push r15
+  mov r15d, [i_item_cnt_threshold]
+  cmp dword ptr [r9+00000088], r15d //&lt;numberOfItems&gt;k__BackingField
+  pop r15
+  jae code
+  jmp start_multi
+
+start_gold_multi:
+  vmovss xmm14, [vf_item_add_gold_multi]
+  jmp start_multi_calc
+
+start_multi:
+  vmovss xmm14, [vf_item_add_multi]
+
+start_multi_calc:
+  cvtsi2ss xmm15, edx
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si edx, xmm15
+  push r15
+  mov r15d, [r9+00000088]  //&lt;numberOfItems&gt;k__BackingField
+  pop r15
+
+chk_corrupt:
+  cmp eax, #40
+  ja code
+  cmp dword ptr [is_prevent_corruption], 1
+  jne code
+
+  add [r9+00000088],edx
+  mov edx, [r9+00000088]
+  mov dword ptr [r9+00000088], 0
+
+  add [r9+1B0], edx //0020 + 64*4 = 1B0, slot 100% address
+  mov edx, 0
+
+
+code:
+  //add [rcx+r9],eax
+  add [r9+00000088],edx
+  jmp return
+align 10 cc
+  vf_item_add_multi:
+  dd (float)3.333333334
+  vf_item_add_gold_multi:
+  dd (float)3.33333334
+  db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20 68 74 74 70 73 3A 2F
+  db 2F 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
+  i_item_cnt_threshold:
+  dd 64
+  i_item_min_cnt_threshold:
+  dd 2
+  is_prevent_corruption:
+  dd 1
+  is_skip_gold_limit:
+  dd 1
+
+INJECT_MASS_ADD:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MASS_ADD)
+registersymbol(vf_item_add_multi)
+registersymbol(i_item_cnt_threshold)
+registersymbol(is_prevent_corruption)
+registersymbol(is_skip_gold_limit)
+registersymbol(vf_item_add_gold_multi)
+
+[DISABLE]
+
+INJECT_MASS_ADD:
+  db 41 01 91 88 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+8BE870
+
+AddItems2 - 48 83 EC 28           - sub rsp,28
+GameAssembly.dll+8BE824- 4C 8B C9              - mov r9,rcx
+GameAssembly.dll+8BE827- 48 8B 89 90000000     - mov rcx,[rcx+00000090]
+GameAssembly.dll+8BE82E- 48 85 C9              - test rcx,rcx
+GameAssembly.dll+8BE831- 74 4E                 - je GameAssembly.dll+8BE881
+GameAssembly.dll+8BE833- 44 3B 41 18           - cmp r8d,[rcx+18]
+GameAssembly.dll+8BE837- 73 4E                 - jae GameAssembly.dll+8BE887
+GameAssembly.dll+8BE839- 41 8B C0              - mov eax,r8d
+GameAssembly.dll+8BE83C- 0F1F 40 00            - nop dword ptr [rax+00]
+GameAssembly.dll+8BE840- 01 54 81 20           - add [rcx+rax*4+20],edx
+GameAssembly.dll+8BE844: 4D 8B 81 90 00 00 00              - mov r8,[r9+00000090]
+GameAssembly.dll+8BE84B: 41 C7 81 88 00 00 00 00 00 00 00  - mov [r9+00000088],00000000
+GameAssembly.dll+8BE856: B8 01 00 00 00                    - mov eax,00000001
+GameAssembly.dll+8BE85B: 4D 85 C0                          - test r8,r8
+GameAssembly.dll+8BE85E: 74 21                             - je GameAssembly.dll+8BE881
+GameAssembly.dll+8BE860: 41 3B 40 18                       - cmp eax,[r8+18]
+GameAssembly.dll+8BE864: 73 21                             - jae GameAssembly.dll+8BE887
+GameAssembly.dll+8BE866: 48 63 C8                          - movsxd  rcx,eax
+GameAssembly.dll+8BE869: FF C0                             - inc eax
+GameAssembly.dll+8BE86B: 41 8B 54 88 20                    - mov edx,[r8+rcx*4+20]
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+8BE870: 41 01 91 88 00 00 00              - add [r9+00000088],edx
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+8BE877: 83 F8 65                          - cmp eax,65
+GameAssembly.dll+8BE87A: 7C E4                             - jl GameAssembly.dll+8BE860
+GameAssembly.dll+8BE87C: 48 83 C4 28                       - add rsp,28
+GameAssembly.dll+8BE880: C3                                - ret
+GameAssembly.dll+8BE881: E8 CA 09 B3 FF                    - call GameAssembly.dll+3EF250
+GameAssembly.dll+8BE886: CC                                - int 3
+GameAssembly.dll+8BE887: E8 D4 09 B3 FF                    - call GameAssembly.dll+3EF260
+GameAssembly.dll+8BE88C: CC                                - int 3
+GameAssembly.dll+8BE88D: CC                                - int 3
+GameAssembly.dll+8BE88E: CC                                - int 3
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>33</ID>
+                  <Description>"No threshold for gold ingot; multiplier does not apply to poop"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>34</ID>
+                  <Description>"Multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_item_add_multi</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>35</ID>
+                  <Description>"Multiplier for Gold ingot"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_item_add_gold_multi</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>36</ID>
+                  <Description>"Multiplier threshold limt"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_item_cnt_threshold</Address>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>37</ID>
+                      <Description>"multiplier is disabled, if stock# exceed this value"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>38</ID>
+                  <Description>"Try to prevent corruption?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_prevent_corruption</Address>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>39</ID>
+                      <Description>"Only checked when adding a new item"</Description>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>40</ID>
+                  <Description>"No threshold limit for gold ingot?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_skip_gold_limit</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -565,7 +1067,7 @@ GameAssembly.dll+80371B: 8B D6                 - mov edx,esi
 [ENABLE]
 
 //aobscanmodule(INJECT_UPDATE_MAX_ITEM_COUNT,GameAssembly.dll,03 B7 90 00 00 00 FF C3 E9 4B FF FF FF 48 8B 5C) // should be unique
-aobscanregion(INJECT_UPDATE_MAX_ITEM_COUNT,ReservableItemStorageGetItemCountOfAllUnneededItemsProc+110,ReservableItemStorageGetItemCountOfAllUnneededItemsProc+160,03 B7 88 00 00 00) // should be unique
+aobscanregion(INJECT_UPDATE_MAX_ITEM_COUNT,ReservableItemStorage.GetItemCountOfAllUnneededItems+110,ReservableItemStorage.GetItemCountOfAllUnneededItems+160,03 B7 88 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_UPDATE_MAX_ITEM_COUNT)
 
 label(code)
@@ -856,8 +1358,8 @@ calc_loop_sum:
   cmp dword ptr [rdi+10], #50 //ItemGoldOre
   je chk_base_set_limit
 
-  //cmp dword ptr [rdi+10], #51 //ItemGoldIngot
-  //je chk_base_set_limit
+  cmp dword ptr [rdi+10], #51 //ItemGoldIngot
+  je chk_gold_low_limit
 
   //51: ItemGoldIngot
 
@@ -927,6 +1429,15 @@ chk_base_lower_limit:
   mov r14d, ecx
   jmp endp_pre
 
+chk_gold_low_limit:
+  mov ecx, [rax+1B0]
+  cmp ecx, #501
+  jae endp_pre
+  mov ecx, #501
+  mov [rax+1B0], ecx
+  mov r14d, ecx
+  jmp endp_pre
+
 
 endp_pre:
   mov eax, [rdi+10]
@@ -947,11 +1458,11 @@ align 10 cc
   i_max_count_for_unneeded:
   dd #295
   i_min_count_for_unneeded:
-  dd #33
+  dd #53
   i_max_count_for_weapon_unneeded:
-  dd #310
+  dd #133
   i_min_count_for_weapon_unneeded:
-  dd #31
+  dd #33
   i_max_count_for_base_unneeded:
   dd #395
   i_min_count_for_base_unneeded:
@@ -1098,6 +1609,7 @@ GameAssembly.dll+82ED11: C3                 - ret
         <CheatEntry>
           <ID>22</ID>
           <Description>"Set transport wagon speed"</Description>
+          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
@@ -1112,6 +1624,7 @@ alloc(newmem,$1000,INJECT_SET_TRANS_WAGON_SPPEED)
 
 label(code)
 label(return)
+label(vf_wagon_multi)
 
 newmem:
 
@@ -1130,6 +1643,7 @@ INJECT_SET_TRANS_WAGON_SPPEED:
   nop 3
 return:
 registersymbol(INJECT_SET_TRANS_WAGON_SPPEED)
+registersymbol(vf_wagon_multi)
 
 [DISABLE]
 
@@ -1137,6 +1651,7 @@ INJECT_SET_TRANS_WAGON_SPPEED:
   db F3 0F 10 8B A8 00 00 00
 
 unregistersymbol(INJECT_SET_TRANS_WAGON_SPPEED)
+unregistersymbol(vf_wagon_multi)
 dealloc(newmem)
 
 {
@@ -1167,6 +1682,16 @@ GameAssembly.dll+EA0D06: 48 8B 5C 24 30           - mov rbx,[rsp+30]
 GameAssembly.dll+EA0D0B: 48 83 C4 20              - add rsp,20
 }
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>55</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_wagon_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>23</ID>
@@ -1182,7 +1707,7 @@ GameAssembly.dll+EA0D0B: 48 83 C4 20              - add rsp,20
 [ENABLE]
 //Character.get_movementSpeed
 //aobscanmodule(INJECT_SET_VILLAGER_DATA,GameAssembly.dll,F3 0F 10 73 58 F3 0F 59) // should be unique
-aobscanregion(INJECT_SET_VILLAGER_DATA,Characterget_movementSpeedProc+20,Characterget_movementSpeedProc+40,F3 0F 10 73 58 F3) // should be unique
+aobscanregion(INJECT_SET_VILLAGER_DATA,Character.get_movementSpeed+20,Character.get_movementSpeed+40,F3 0F 10 73 58 F3) // should be unique
 alloc(newmem,$1000,INJECT_SET_VILLAGER_DATA)
 
 label(code)
@@ -1498,243 +2023,6 @@ GameAssembly.dll+F594C9: C6 05 60 95 D6 02 01  - mov byte ptr [GameAssembly.dll+
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>32</ID>
-          <Description>"Item gather number multiplier"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-11-19
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-aobscanmodule(INJECT_MASS_ADD,GameAssembly.dll,42 01 04 09 41 83 F8 65) // should be unique
-alloc(newmem,$1000,INJECT_MASS_ADD)
-
-label(code)
-label(return)
-label(vf_item_add_multi)
-label(vf_item_add_gold_multi)
-label(i_item_cnt_threshold)
-label(is_prevent_corruption)
-label(is_skip_gold_limit)
-
-//ItemBundle.AddItems #2
-//ID: 66 ItemPoop
-//ID: 51 ItemGoldIngot
-newmem:
-  push r15
-  mov r15d, [rdx+10]
-  cmp r15d, #66 //ItemPoop
-  pop r15
-  je code
-
-  push r15
-  mov r15d, [rdx+10]
-  cmp r15d, #51 //ItemGoldIngot
-  pop r15
-  je start_gold_multi //No threshold for GoldIngot
-
-  cmp eax, 0
-  je code
-  push r15
-  mov r15d, [i_item_cnt_threshold]
-  cmp dword ptr [rcx+r9], r15d
-  pop r15
-  jae code
-  jmp start_multi
-
-start_gold_multi:
-  vmovss xmm14, [vf_item_add_gold_multi]
-  jmp start_multi_calc
-
-start_multi:
-  vmovss xmm14, [vf_item_add_multi]
-
-start_multi_calc:
-  cvtsi2ss xmm15, eax
-  vmulss xmm15, xmm15, xmm14
-  vcvtss2si eax, xmm15
-  push r15
-  mov r15d, [rcx+r9]
-  pop r15
-
-chk_corrupt:
-  cmp r8d, #40
-  ja code
-  cmp dword ptr [is_prevent_corruption], 1
-  jne code
-
-  add [rcx+r9],eax
-  mov eax, [rcx+r9]
-  mov dword ptr [rcx+r9], 0
-
-  add [r9+1B0], eax //0020 + 64*4 = 1B0, slot 100% address
-  mov eax, 0
-
-
-code:
-  add [rcx+r9],eax
-  cmp r8d,65
-  jmp return
-align 10 cc
-  vf_item_add_multi:
-  dd (float)3.333333334
-  vf_item_add_gold_multi:
-  dd (float)3.33333334
-  db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20 68 74 74 70 73 3A 2F
-  db 2F 6F 70 65 6E 63 68 65 61 74 74 61 62 6C 65 73 2E 63 6F 6D 20 2F 20 43 45 20 37 2E 34 2B
-  i_item_cnt_threshold:
-  dd 64
-  i_item_min_cnt_threshold:
-  dd 2
-  is_prevent_corruption:
-  dd 1
-  is_skip_gold_limit:
-  dd 1
-
-INJECT_MASS_ADD:
-  jmp newmem
-  nop 3
-return:
-registersymbol(INJECT_MASS_ADD)
-registersymbol(vf_item_add_multi)
-registersymbol(i_item_cnt_threshold)
-registersymbol(is_prevent_corruption)
-registersymbol(is_skip_gold_limit)
-registersymbol(vf_item_add_gold_multi)
-
-[DISABLE]
-
-INJECT_MASS_ADD:
-  db 42 01 04 09 41 83 F8 65
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+7FF217
-GameAssembly.dll+7FF1CF - CC                    - int 3
-ItemBundle.AddItems     - 48 83 EC 28           - sub rsp,28
-GameAssembly.dll+7FF1D4 - 4C 8B D1              - mov r10,rcx
-GameAssembly.dll+7FF1D7 - 45 33 C0              - xor r8d,r8d
-GameAssembly.dll+7FF1DA - 66 0F1F 44 00 00      - nop word ptr [rax+rax+00]
-GameAssembly.dll+7FF1E0 - 4D 8B 8A 90000000     - mov r9,[r10+00000090]
-GameAssembly.dll+7FF1E7 - 4D 85 C9              - test r9,r9
-GameAssembly.dll+7FF1EA - 74 72                 - je GameAssembly.dll+7FF25E
-GameAssembly.dll+7FF1EC - 45 3B 41 18           - cmp r8d,[r9+18]
-GameAssembly.dll+7FF1F0 - 73 72                 - jae GameAssembly.dll+7FF264
-GameAssembly.dll+7FF1F2: 4A 8D 0C 85 20 00 00 00           - lea rcx,[r8*4+00000020]
-GameAssembly.dll+7FF1FA: 48 85 D2                          - test rdx,rdx
-GameAssembly.dll+7FF1FD: 74 5F                             - je GameAssembly.dll+7FF25E
-GameAssembly.dll+7FF1FF: 48 8B 82 90 00 00 00              - mov rax,[rdx+00000090]
-GameAssembly.dll+7FF206: 48 85 C0                          - test rax,rax
-GameAssembly.dll+7FF209: 74 53                             - je GameAssembly.dll+7FF25E
-GameAssembly.dll+7FF20B: 44 3B 40 18                       - cmp r8d,[rax+18]
-GameAssembly.dll+7FF20F: 73 53                             - jae GameAssembly.dll+7FF264
-GameAssembly.dll+7FF211: 8B 04 01                          - mov eax,[rcx+rax]
-GameAssembly.dll+7FF214: 41 FF C0                          - inc r8d
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+7FF217: 42 01 04 09                       - add [rcx+r9],eax
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+7FF21B: 41 83 F8 65                       - cmp r8d,65
-GameAssembly.dll+7FF21F: 72 BF                             - jb GameAssembly.dll+7FF1E0
-GameAssembly.dll+7FF221: 4D 8B 82 90 00 00 00              - mov r8,[r10+00000090]
-GameAssembly.dll+7FF228: B8 01 00 00 00                    - mov eax,00000001
-GameAssembly.dll+7FF22D: 41 C7 82 88 00 00 00 00 00 00 00  - mov [r10+00000088],00000000
-GameAssembly.dll+7FF238: 4D 85 C0                          - test r8,r8
-GameAssembly.dll+7FF23B: 74 21                             - je GameAssembly.dll+7FF25E
-GameAssembly.dll+7FF23D: 41 3B 40 18                       - cmp eax,[r8+18]
-GameAssembly.dll+7FF241: 73 21                             - jae GameAssembly.dll+7FF264
-GameAssembly.dll+7FF243: 48 63 C8                          - movsxd  rcx,eax
-GameAssembly.dll+7FF246 - FF C0                 - inc eax
-GameAssembly.dll+7FF248 - 41 8B 54 88 20        - mov edx,[r8+rcx*4+20]
-GameAssembly.dll+7FF24D - 41 01 92 88000000     - add [r10+00000088],edx
-GameAssembly.dll+7FF254 - 83 F8 65              - cmp eax,65
-GameAssembly.dll+7FF257 - 7C DF                 - jl GameAssembly.dll+7FF238
-GameAssembly.dll+7FF259 - 48 83 C4 28           - add rsp,28
-GameAssembly.dll+7FF25D - C3                    - ret
-GameAssembly.dll+7FF25E - E8 2DA9B5FF           - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+5D0
-GameAssembly.dll+7FF263 - CC                    - int 3
-GameAssembly.dll+7FF264 - E8 37A9B5FF           - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+5E0
-GameAssembly.dll+7FF269 - CC                    - int 3
-GameAssembly.dll+7FF26A - CC                    - int 3
-
-}
-</AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>33</ID>
-              <Description>"No threshold for gold ingot; multiplier does not apply to poop"</Description>
-              <Color>8000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>34</ID>
-              <Description>"Multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_item_add_multi</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>35</ID>
-              <Description>"Multiplier for Gold ingot"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_item_add_gold_multi</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>36</ID>
-              <Description>"Multiplier threshold limt"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>i_item_cnt_threshold</Address>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>37</ID>
-                  <Description>"multiplier is disabled, if stock# exceed this value"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>38</ID>
-              <Description>"Try to prevent corruption?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>is_prevent_corruption</Address>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>39</ID>
-                  <Description>"Only checked when adding a new item"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>40</ID>
-              <Description>"No threshold limit for gold ingot?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>is_skip_gold_limit</Address>
-            </CheatEntry>
-          </CheatEntries>
-        </CheatEntry>
-        <CheatEntry>
           <ID>41</ID>
           <Description>"When item remove: try to prevent corruption"</Description>
           <Options moHideChildren="1"/>
@@ -1845,18 +2133,19 @@ GameAssembly.dll+7FF421: 41 5C                 - pop r12
         </CheatEntry>
         <CheatEntry>
           <ID>43</ID>
-          <Description>"When add item to storage"</Description>
+          <Description>"(not working) When add item to storage"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
-  Date   : 2023-11-19
+  Date   : 2025-04-18
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_STOR_ITEM_MULTI,GameAssembly.dll,41 01 04 10 83 F9 65 72 AE) // should be unique
+//aobscanmodule(INJECT_STOR_ITEM_MULTI,GameAssembly.dll,41 01 48 20 83 FA 65) // should be unique
+aobscanregion(INJECT_STOR_ITEM_MULTI,ItemStorage.AddItems+100,ItemStorage.AddItems+E00,41 01 48 20 83 FA 65) // should be unique
 alloc(newmem,$1000,INJECT_STOR_ITEM_MULTI)
 
 label(code)
@@ -1870,13 +2159,13 @@ label(i_min_amount_in_100_slot)
 //ItemStorage.AddItems
 
 newmem:
-  //cmp ecx, 64
-  //jne do_next
-  mov [i_tmp1], eax
-  cvtsi2ss xmm15, eax
+  test ecx, ecx
+  jz code
+  mov [i_tmp1], ecx
+  cvtsi2ss xmm15, ecx
   vmovss xmm14, [vf_item_count_multi]
   vmulss xmm15, xmm14, xmm15
-  vcvtss2si eax, xmm15
+  vcvtss2si ecx, xmm15
 
 
 do_next:
@@ -1888,7 +2177,7 @@ do_next:
   cmp r15d, #66 //ItemPoop
   jne chk_gold
   // Poop
-  mov eax, [i_tmp1]
+  mov ecx, [i_tmp1]
   mov r15, [rdi+90] //percentDegradationQtyArray
   mov r14d, [r15+1B0] //100%
   cmp r14d, [i_max_poop_count]
@@ -1909,7 +2198,7 @@ chk_gold:
 
 
 chk_min_amount:
-  cmp ecx, 65
+  cmp edx, 65
   jne endp
   mov r15, [rdi+90] //percentDegradationQtyArray
   mov r14d, [r15+1B0] //100%
@@ -1924,13 +2213,14 @@ endp:
   pop r15
 
 code:
-  add [r8+rdx],eax
-  mov eax, [i_tmp1]
-  cmp ecx,65
+  //add [r8+rdx],eax
+  add [r8+20],ecx
+  mov ecx, [i_tmp1]
+  cmp edx,65
   jmp return
 align 10 cc
   vf_item_count_multi:
-  dd (float)3.3333333333
+  dd (float)1
   i_min_storage_item:
   dd A
   i_max_poop_count:
@@ -1956,37 +2246,82 @@ registersymbol(i_min_amount_in_100_slot)
 [DISABLE]
 
 INJECT_STOR_ITEM_MULTI:
-  db 41 01 04 10 83 F9 65
+  db 41 01 48 20 83 FA 65
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+803359
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+8C2BD5
 
-GameAssembly.dll+803329: 4C 8D 04 8D 20 00 00 00        - lea r8,[rcx*4+00000020]
-GameAssembly.dll+803331: 48 85 FF                       - test rdi,rdi
-GameAssembly.dll+803334: 0F 84 84 01 00 00              - je GameAssembly.dll+8034BE
-GameAssembly.dll+80333A: 48 8B 87 90 00 00 00           - mov rax,[rdi+00000090]
-GameAssembly.dll+803341: 48 85 C0                       - test rax,rax
-GameAssembly.dll+803344: 0F 84 74 01 00 00              - je GameAssembly.dll+8034BE
-GameAssembly.dll+80334A: 3B 48 18                       - cmp ecx,[rax+18]
-GameAssembly.dll+80334D: 0F 83 71 01 00 00              - jae GameAssembly.dll+8034C4
-GameAssembly.dll+803353: 41 8B 04 00                    - mov eax,[r8+rax]
-GameAssembly.dll+803357: FF C1                          - inc ecx
+GameAssembly.dll+8C2B5B - 48 63 47 10           - movsxd  rax,dword ptr [rdi+10]
+GameAssembly.dll+8C2B5F - 3B 43 18              - cmp eax,[rbx+18]
+GameAssembly.dll+8C2B62 - 0F83 94020000         - jae GameAssembly.dll+8C2DFC
+GameAssembly.dll+8C2B68 - 48 8B 5C C3 20        - mov rbx,[rbx+rax*8+20]
+GameAssembly.dll+8C2B6D - EB 02                 - jmp GameAssembly.dll+8C2B71
+GameAssembly.dll+8C2B6F - 33 DB                 - xor ebx,ebx
+GameAssembly.dll+8C2B71 - 83 B9 E0000000 00     - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+8C2B78 - 75 05                 - jne GameAssembly.dll+8C2B7F
+GameAssembly.dll+8C2B7A - E8 C1FCADFF           - call GameAssembly.il2cpp_field_static_set_value+4950
+GameAssembly.dll+8C2B7F - 48 85 DB              - test rbx,rbx
+GameAssembly.dll+8C2B82 - 0F84 9C000000         - je GameAssembly.dll+8C2C24
+GameAssembly.dll+8C2B88 - 45 32 FF              - xor r15b,r15b
+GameAssembly.dll+8C2B8B - 33 D2                 - xor edx,edx
+GameAssembly.dll+8C2B8D - 0F1F 00               - nop dword ptr [rax]
+GameAssembly.dll+8C2B90 - 48 8B 8B 90000000     - mov rcx,[rbx+00000090]
+GameAssembly.dll+8C2B97 - 48 85 C9              - test rcx,rcx
+GameAssembly.dll+8C2B9A - 0F84 56020000         - je GameAssembly.dll+8C2DF6
+GameAssembly.dll+8C2BA0 - 3B 51 18              - cmp edx,[rcx+18]
+GameAssembly.dll+8C2BA3 - 0F83 53020000         - jae GameAssembly.dll+8C2DFC
+GameAssembly.dll+8C2BA9: 4C 8D 04 91                    - lea r8,[rcx+rdx*4]
+GameAssembly.dll+8C2BAD: 48 85 FF                       - test rdi,rdi
+GameAssembly.dll+8C2BB0: 0F 84 40 02 00 00              - je GameAssembly.dll+8C2DF6
+GameAssembly.dll+8C2BB6: 48 8B 8F 90 00 00 00           - mov rcx,[rdi+00000090]
+GameAssembly.dll+8C2BBD: 48 85 C9                       - test rcx,rcx
+GameAssembly.dll+8C2BC0: 0F 84 30 02 00 00              - je GameAssembly.dll+8C2DF6
+GameAssembly.dll+8C2BC6: 3B 51 18                       - cmp edx,[rcx+18]
+GameAssembly.dll+8C2BC9: 0F 83 2D 02 00 00              - jae GameAssembly.dll+8C2DFC
+GameAssembly.dll+8C2BCF: 8B 4C 91 20                    - mov ecx,[rcx+rdx*4+20]
+GameAssembly.dll+8C2BD3: FF C2                          - inc edx
 // ---------- INJECTING HERE ----------
-GameAssembly.dll+803359: 41 01 04 10                    - add [r8+rdx],eax
+GameAssembly.dll+8C2BD5: 41 01 48 20                    - add [r8+20],ecx
 // ---------- DONE INJECTING  ----------
-GameAssembly.dll+80335D: 83 F9 65                       - cmp ecx,65
-GameAssembly.dll+803360: 72 AE                          - jb GameAssembly.dll+803310
-GameAssembly.dll+803362: 4C 8B 83 90 00 00 00           - mov r8,[rbx+00000090]
-GameAssembly.dll+803369: BA 01 00 00 00                 - mov edx,00000001
-GameAssembly.dll+80336E: C7 83 88 00 00 00 00 00 00 00  - mov [rbx+00000088],00000000
-GameAssembly.dll+803378: 0F 1F 84 00 00 00 00 00        - nop dword ptr [rax+rax+00000000]
-GameAssembly.dll+803380: 4D 85 C0                       - test r8,r8
-GameAssembly.dll+803383: 0F 84 35 01 00 00              - je GameAssembly.dll+8034BE
-GameAssembly.dll+803389: 41 3B 50 18                    - cmp edx,[r8+18]
-GameAssembly.dll+80338D: 0F 83 31 01 00 00              - jae GameAssembly.dll+8034C4
+GameAssembly.dll+8C2BD9: 83 FA 65                       - cmp edx,65
+GameAssembly.dll+8C2BDC: 72 B2                          - jb GameAssembly.dll+8C2B90
+GameAssembly.dll+8C2BDE: 4C 8B 83 90 00 00 00           - mov r8,[rbx+00000090]
+GameAssembly.dll+8C2BE5: C7 83 88 00 00 00 00 00 00 00  - mov [rbx+00000088],00000000
+GameAssembly.dll+8C2BEF: 90                             - nop
+GameAssembly.dll+8C2BF0: BA 01 00 00 00                 - mov edx,00000001
+GameAssembly.dll+8C2BF5: 4D 85 C0                       - test r8,r8
+GameAssembly.dll+8C2BF8: 0F 84 F8 01 00 00              - je GameAssembly.dll+8C2DF6
+GameAssembly.dll+8C2BFE: 66 90                          - nop 2
+GameAssembly.dll+8C2C00: 41 3B 50 18                    - cmp edx,[r8+18]
+GameAssembly.dll+8C2C04 - 0F83 F2010000         - jae GameAssembly.dll+8C2DFC
+GameAssembly.dll+8C2C0A - 48 63 C2              - movsxd  rax,edx
+GameAssembly.dll+8C2C0D - FF C2                 - inc edx
+GameAssembly.dll+8C2C0F - 41 8B 4C 80 20        - mov ecx,[r8+rax*4+20]
+GameAssembly.dll+8C2C14 - 01 8B 88000000        - add [rbx+00000088],ecx
+GameAssembly.dll+8C2C1A - 83 FA 65              - cmp edx,65
+GameAssembly.dll+8C2C1D - 7C E1                 - jl GameAssembly.dll+8C2C00
+GameAssembly.dll+8C2C1F - E9 86000000           - jmp GameAssembly.dll+8C2CAA
+GameAssembly.dll+8C2C24 - 48 8B 0D 5DE62803     - mov rcx,[GameAssembly.dll+3B51288]
+GameAssembly.dll+8C2C2B - 41 B7 01              - mov r15b,01
+GameAssembly.dll+8C2C2E - E8 8D37B0FF           - call GameAssembly.dll+3C63C0
+GameAssembly.dll+8C2C33 - 45 33 C0              - xor r8d,r8d
+GameAssembly.dll+8C2C36 - 48 8B D7              - mov rdx,rdi
+GameAssembly.dll+8C2C39 - 48 8B C8              - mov rcx,rax
+GameAssembly.dll+8C2C3C - 48 8B D8              - mov rbx,rax
+GameAssembly.dll+8C2C3F - E8 5CB8FFFF           - call ItemBundle..ctor
+GameAssembly.dll+8C2C44 - 48 8B 4E 60           - mov rcx,[rsi+60]
+GameAssembly.dll+8C2C48 - 48 85 C9              - test rcx,rcx
+GameAssembly.dll+8C2C4B - 0F84 A5010000         - je GameAssembly.dll+8C2DF6
+GameAssembly.dll+8C2C51 - 48 8B D3              - mov rdx,rbx
+GameAssembly.dll+8C2C54 - E8 27CF75FF           - call GameAssembly.il2cpp_property_get_set_method+F640
+GameAssembly.dll+8C2C59 - 48 85 FF              - test rdi,rdi
+GameAssembly.dll+8C2C5C - 0F84 94010000         - je GameAssembly.dll+8C2DF6
+GameAssembly.dll+8C2C62 - 80 7F 70 00           - cmp byte ptr [rdi+70],00
+GameAssembly.dll+8C2C66 - 74 06                 - je GameAssembly.dll+8C2C6E
+
 }
 </AssemblerScript>
           <CheatEntries>
@@ -2046,76 +2381,291 @@ GameAssembly.dll+80338D: 0F 83 31 01 00 00              - jae GameAssembly.dll+8
     </CheatEntry>
     <CheatEntry>
       <ID>51</ID>
-      <Description>"Farthest Frontier v0.9.6 /  https://opencheattables.com  /  CE 7.5+"</Description>
+      <Description>"Farthest Frontier v0.9.7 /  https://opencheattables.com"</Description>
       <Color>009700</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
   <LuaScript>--[[
-from https://forum.cheatengine.org/viewtopic.php?p=5659739&amp;sid=72bd2d145c30bf0d344304bce17ea990#5659739
-FauDrei
---]]
-function toHex(num)
-    if num == 0 then
-        return '0'
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
     end
-    local neg = false
-    if num &lt; 0 then
-        neg = true
-        num = num * -1
-    end
-    local hexstr = "0123456789ABCDEF"
-    local result = ""
-    while num &gt; 0 do
-        local n = math.mod(num, 16)
-        result = string.sub(hexstr, n + 1, n + 1) .. result
-        num = math.floor(num / 16)
-    end
-    if neg then
-        result = '-' .. result
-    end
-    return result
 end
 
+registerLuaFunctionHighlight('AOBScanModule')
 
-function reEscape(s)
-  local escPatChars = [[().%+-*?[^]]
-  s = s:gsub('.',function(c) if escPatChars:find(c,1,true) then return '%'..c end end)
-  return s
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
 end
 
-function findMethodAddrBySignature(namespace,classname,methodname,signature,check)
-  local meth = findMethodBySignature(namespace,classname,methodname,signature,check)
-  if meth~=nil and meth&gt;0 then
-    return mono_compile_method(meth)
-  end
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
 end
 
-function findMethodBySignature(namespace,classname,methodname,signature,check)
-  assert(type(signature)=='string',"invalid signature")
-  signature="^"..reEscape(signature:gsub(";",","))
-  local class = mono_findClass(namespace,classname)
-  if type(class)~='number' or class==0 then return nil end
-  local methods=mono_class_enumMethods(class)
-  if type(methods)~='table' or #methods&lt;1 then return nil end
-  if check then  print('check:'..methodname..": &lt;"..signature.."&gt; vs ") end
-  for i=1,#methods do
-   if methodname == methods[i].name then
-     local sign = mono_method_getSignature(methods[i].method)
-     if check then  print("  &gt;&gt; &lt;"..sign..'&gt;') end
-     if sign:match(signature) then
-       return methods[i].method
-     end
-   end
-  end
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
 end
 
---registerLuaFunctionHighlight('tohex')
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
 registerLuaFunctionHighlight('toHex')
-registerLuaFunctionHighlight('reEscape')
-registerLuaFunctionHighlight('findMethodAddrBySignature')
-registerLuaFunctionHighlight('findMethodBySignature')
 
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
 </LuaScript>
 </CheatTable>
