@@ -166,55 +166,95 @@ if not closeLuaEngine2 then
 end
 registerLuaFunctionHighlight('closeLuaEngine2')
 
-function getProcessNameFromPID(pid)
-  local sl = createStringList()
-  getProcessList(sl)
-  local hexPid = string.format("%X", pid):upper()
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
 
-  for i = 0, sl.Count - 1 do
-    local entry = sl[i]
-    local hexid, name = entry:match("^(%x+)%-(.+)$")
-    if hexid and name then
-      if tonumber(hexid, 16) == pid then
-        return name
-      end
-    end
-  end
-  return "(unknown)"
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
 end
 registerLuaFunctionHighlight('getProcessNameFromPID')
 
-function printProcessInfo()
-  local pid = getOpenedProcessID()
-  local name = getProcessNameFromPID(pid)
-  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
 end
 registerLuaFunctionHighlight('printProcessInfo')
 
-function dumpProcessListAndFindPID()
-  local pid = getOpenedProcessID()
-  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
 
-  local sl = createStringList()
-  getProcessList(sl)
+	  local sl = createStringList()
+	  getProcessList(sl)
 
-  print("🧾 Dumping process list:")
-  for i = 0, sl.Count - 1 do
-    local entry = sl[i]
-    print(string.format("[%d] %s", i, entry))
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
 
-    -- 嘗試解析並比對 PID
-    local name, hexid = entry:match("(.+)%-(%x+)$")
-    if name and hexid then
-      local parsed = tonumber(hexid, 16)
-      if parsed == pid then
-        print("🔦 Match found in process list:")
-        print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
-      end
-    end
-  end
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
 end
 registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num < 0 then
+			num = (num + (1 << 32)) % (1 << 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num & 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num >> 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num < 0 then
+			num = (num + (1 << 64)) % (1 << 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num & 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num >> 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
 
 synchronize(function() AddressList.Header.OnSectionClick = nil end)
 --[[
@@ -300,13 +340,13 @@ function getOrCreateDevToolsMenu()
     return devToolsMenu
 end
 
--- **Dev Tools メニューに "Add AOBScanModule Lua to Cheat Table Lua" を追加**
+-- **Dev Tools メニューに "Add Lua Script: Cheat Table Template" を追加**
 function addMenuToDevTools()
     local devToolsMenu = getOrCreateDevToolsMenu()
 
     -- **すでにメニューが存在する場合は追加しない**
     for i = 0, devToolsMenu.Count - 1 do
-        if devToolsMenu[i].Caption == "Add AOBScanModule to Lua Script: Cheat Table" then
+        if devToolsMenu[i].Caption == "Add Lua Script: Cheat Table Template" then
             return
         end
     end
@@ -314,7 +354,7 @@ function addMenuToDevTools()
     -- **メニューを追加**
     synchronize(function()
         local newItem = createMenuItem(devToolsMenu)
-        newItem.Caption = "Add AOBScanModule to Lua Script: Cheat Table"
+        newItem.Caption = "Add Lua Script: Cheat Table Template"
         newItem.OnClick = addToCheatTableLuaScript
         devToolsMenu.add(newItem)
     end)
