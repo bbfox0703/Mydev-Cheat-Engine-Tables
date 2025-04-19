@@ -21,25 +21,11 @@ LuaCall(cycleFullCompact(nil,false))
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 {$asm}
+{
 define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
-define(ResidenceUpdateHeatingProc, "Residence.UpdateHeating")
-define(ResidenceUpdateWaterProc, "Residence.UpdateWater")
-define(VillagerEatIfNecessaryProc, "Villager.EatIfNecessary")
-define(ItemStorageRemoveItemsProc, "ItemStorage.RemoveItems")
-define(Characterget_movementSpeedProc, "Character.get_movementSpeed")
-define(ItemBundleUpdateNumberOfItemsProc, "ItemBundle.UpdateNumberOfItems")
-define(ItemStorageUpdateItemInfoWithDegradeProc, "ItemStorage.UpdateItemInfoWithDegrade")
-define(ReservableItemStorageGetItemCountOfAllUnneededItemsProc, "ReservableItemStorage.GetItemCountOfAllUnneededItems")
 
 registersymbol(ResourceManagerClearItemCountsProc)
-registersymbol(ResidenceUpdateHeatingProc)
-registersymbol(ResidenceUpdateWaterProc)
-registersymbol(VillagerEatIfNecessaryProc)
-registersymbol(ItemStorageRemoveItemsProc)
-registersymbol(Characterget_movementSpeedProc)
-registersymbol(ItemBundleUpdateNumberOfItemsProc)
-registersymbol(ItemStorageUpdateItemInfoWithDegradeProc)
-registersymbol(ReservableItemStorageGetItemCountOfAllUnneededItemsProc)
+}
 
 {$lua}
 if syntaxcheck then return end
@@ -152,9 +138,9 @@ if _G.mono_registerSymbolEx == nil then
   end
 end
 
--- 📏 Register symbol by partial signature match (overload-safe)
+-- 📏 Register symbol by partial signature match (overload-safe, with excludes)
 if _G.mono_registerSymbolBySignatureMatch == nil then
-  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains)
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
     local cls = mono_findClass(namespace, classname)
     if not cls then
       print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
@@ -170,11 +156,24 @@ if _G.mono_registerSymbolBySignatureMatch == nil then
     for _, m in ipairs(methods) do
       if m.name == methodname then
         local sig = mono_method_getSignature(m.method)
+        print(sig)
         local matched = true
+
+        -- Check all required substrings
         for _, kw in ipairs(sigContains) do
           if not string.find(sig, kw, 1, true) then
             matched = false
             break
+          end
+        end
+
+        -- Check excluded substrings (if given)
+        if matched and sigExcludes then
+          for _, ex in ipairs(sigExcludes) do
+            if string.find(sig, ex, 1, true) then
+              matched = false
+              break
+            end
           end
         end
 
@@ -194,6 +193,7 @@ if _G.mono_registerSymbolBySignatureMatch == nil then
     print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
   end
 end
+
 
 -- 📏 Register symbol by simple method name (first match)
 if _G.mono_registerSymbol == nil then
@@ -269,7 +269,7 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 --]]
 
 
--- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains)
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
 -- Description: Registers the method whose signature contains all given substrings.
 -- Flexible, and suitable when exact type names vary or signature format is uncertain.
 -- Params:
@@ -279,6 +279,7 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 --   methodname: Method name (will scan all overloads)
 --   sigContains: Array of strings that should all appear in the method signature
 --                e.g., { "Act", "Card", "Point", "bool" }
+--   sigExcludes: Exclude signatures
 -- Example:
 --   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
 
@@ -286,6 +287,11 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 _G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
   "Act", "Card", "Point", "bool"
 })
+
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  {"Item"},      -- sigContains
+  {"List"}       -- sigExcludes
+)
 --]]
 
 --[[
@@ -308,7 +314,7 @@ Act         (Game defined)
 if syntaxcheck then return end
 --pcall(_G.SafeMonoDestroy)
 {$asm}
-unregistersymbol(*)
+//unregistersymbol(*)
 
 </AssemblerScript>
       <CheatEntries>
@@ -333,17 +339,17 @@ end)
 
 local enableBattleScripts = {
   0, -- "Compact Mode"
-  1, -- "Enable"
   10, -- "Prevent item corruption in storage &amp; set max count for some items"
   22, -- "Set transport wagon speed"
   23, -- "Set villager move speed / life"
   3, -- "No residence consumes firewood"
   4, -- "No residence consumes water "
-  41, -- "When item remove: try to prevent corruption"
   5, -- "Villagers consume no food"
   53, -- "Item gather number multiplier - Step 1"
+  60, -- "Set minor grain/hay stock in storages - Step 1"
   8, -- "Item degrade (corrpution) speed multiplier in storage"
   32, -- "Active - Step 2"
+  59, -- "Set minor ...  in storages - Step 2"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -368,6 +374,7 @@ end)
 local disableBattleScripts = {
   38, -- "Try to prevent corruption?"
   36, -- "Multiplier threshold limt"
+  59, -- "Set minor ...  in storages - Step 2"
   45, -- "Multiplier"
   32, -- "Active - Step 2"
   28, -- "Set min. armor when moving?"
@@ -375,10 +382,11 @@ local disableBattleScripts = {
   15, -- "Set weapon/arrow/armor's min/max. amount in each storage location."
   11, -- "Set some items' min/max. amount in each storage location and market"
   8, -- "Item degrade (corrpution) speed multiplier in storage"
+  60, -- "Set minor grain/hay stock in storages - Step 1"
   6, -- "No HP damage to building (inc. enemy)"
   53, -- "Item gather number multiplier - Step 1"
   5, -- "Villagers consume no food"
-  43, -- "(not working) When add item to storage"
+  43, -- "When add item to storage"
   41, -- "When item remove: try to prevent corruption"
   4, -- "No residence consumes water "
   3, -- "No residence consumes firewood"
@@ -573,34 +581,20 @@ GameAssembly.dll+EE6C16: 0F 2F C2                 - comiss xmm0,xmm2
 
 [ENABLE]
 
-aobscanmodule(INJECT_VILLAGER_NO_NEED_EAT,GameAssembly.dll,41 B8 01 00 00 00 48 8B D6 49) // should be unique
-alloc(newmem,$1000,INJECT_VILLAGER_NO_NEED_EAT)
+//aobscanmodule(INJECT_VILLAGER_NO_NEED_EAT,GameAssembly.dll,41 B8 01 00 00 00 48 8B D6 49) // should be unique
+aobscanregion(INJECT_VILLAGER_NO_NEED_EAT,Villager.EatIfNecessary+200,Villager.EatIfNecessary+600,41 B8 01 00 00 00 48 8B D6 49) // should be unique
 
-label(code)
-label(return)
-
-newmem:
-
-code:
-  mov r8d,00000001
-  //
-  xor r8d, r8d
-  //
-  jmp return
-
-INJECT_VILLAGER_NO_NEED_EAT:
-  jmp newmem
-  nop
+INJECT_VILLAGER_NO_NEED_EAT+2:
+  db 0
 return:
 registersymbol(INJECT_VILLAGER_NO_NEED_EAT)
 
 [DISABLE]
 
-INJECT_VILLAGER_NO_NEED_EAT:
-  db 41 B8 01 00 00 00
-
+INJECT_VILLAGER_NO_NEED_EAT+2:
+  db 1
 unregistersymbol(INJECT_VILLAGER_NO_NEED_EAT)
-dealloc(newmem)
+
 
 {
 // ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+E29D82
@@ -644,7 +638,8 @@ GameAssembly.dll+E29DAD: E8 EE F2 01 00        - call VillagerHealth.Eat
 
 [ENABLE]
 
-aobscanmodule(INJECT_SET_BUILDING_LIFE,GameAssembly.dll,F3 0F 11 73 58 48) // should be unique
+//aobscanmodule(INJECT_SET_BUILDING_LIFE,GameAssembly.dll,F3 0F 11 73 58 48) // should be unique
+aobscanregion(INJECT_SET_BUILDING_LIFE,DamageableComponent.set_life+20,DamageableComponent.set_life+120,F3 0F 11 73 58 48) // should be unique
 alloc(newmem,$1000,INJECT_SET_BUILDING_LIFE)
 
 label(code)
@@ -726,7 +721,8 @@ GameAssembly.dll+5FBE1C: 75 13                 - jne GameAssembly.dll+5FBE31
 }
 
 [ENABLE]
-aobscanmodule(INJECT_DEGRADE_MULTI,GameAssembly.dll,8B 73 24 8B 6D 7C) // should be unique
+//aobscanmodule(INJECT_DEGRADE_MULTI,GameAssembly.dll,8B 73 24 8B 6D 7C) // should be unique
+aobscanregion(INJECT_DEGRADE_MULTI,ItemStorage.UpdateItemInfoWithDegrade+200,ItemStorage.UpdateItemInfoWithDegrade+500,8B 73 24 8B 6D 7C) // should be unique
 alloc(newmem,$1000,INJECT_DEGRADE_MULTI)
 
 label(code)
@@ -1455,15 +1451,15 @@ align 10 cc
   is_prevent_corrput_in_unneeded:
   dd 1
   i_max_count_for_unneeded:
-  dd #295
+  dd #1001 // 295
   i_min_count_for_unneeded:
   dd #53
   i_max_count_for_weapon_unneeded:
-  dd #133
+  dd #155
   i_min_count_for_weapon_unneeded:
   dd #33
   i_max_count_for_base_unneeded:
-  dd #395
+  dd #1001 // 395
   i_min_count_for_base_unneeded:
   dd #151
 
@@ -2041,7 +2037,8 @@ GameAssembly.dll+F594C9: C6 05 60 95 D6 02 01  - mov byte ptr [GameAssembly.dll+
 
 [ENABLE]
 
-aobscanmodule(INJECT_REMOVE_ITEM,GameAssembly.dll,01 8E 88 00 00 00) // should be unique
+//aobscanmodule(INJECT_REMOVE_ITEM,GameAssembly.dll,01 8E 88 00 00 00) // should be unique
+aobscanregion(INJECT_REMOVE_ITEM,ItemBundle.RemoveItems+100,ItemBundle.RemoveItems+300,01 8E 88 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_REMOVE_ITEM)
 
 label(code)
@@ -2393,6 +2390,130 @@ GameAssembly.dll+8C2C66 - 74 06                 - je GameAssembly.dll+8C2C6E
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"Set minor grain/hay stock in storages - Step 1"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+_G.mono_registerSymbolBySignatureMatch("GetItemCount1", "Assembly-CSharp", "ItemStorage", "GetItemCount", {"Item"}, {"List"})
+
+closeLuaEngine()
+
+[DISABLE]
+{$asm}
+unregistersymbol(GetItemCount1)
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>59</ID>
+              <Description>"Set minor ...  in storages - Step 2"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2025-04-19
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+//aobscanmodule(INJECT_SET_ITEM_CNT2,GameAssembly.dll,8B BB 88 00 00 00 48 8B 5C) // should be unique
+aobscanregion(INJECT_SET_ITEM_CNT2,GetItemCount1+50,GetItemCount1+2A0,8B BB 88 00 00 00 48 8B 5C) // should be unique
+alloc(newmem,$1000,INJECT_SET_ITEM_CNT2)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  cmp dword ptr [rbx+00000010], #83 //ItemHay
+  jne chk_grain
+  cmp dword ptr [rbx+00000088], 33 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 33
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 65
+  jmp endp
+
+chk_grain:
+  cmp dword ptr [rbx+00000010], #16 //ItemGrain
+  jne chk_veg
+  cmp dword ptr [rbx+00000088], 33 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 33
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 65
+  jmp endp
+
+chk_veg:
+  cmp dword ptr [rbx+00000010], #13 //ItemRootVegetable
+  jne endp
+  cmp dword ptr [rbx+00000088], 33 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 33
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 65
+  //jmp endp
+
+endp:
+  pop r15
+
+
+code:
+  mov edi,[rbx+00000088]
+  jmp return
+
+INJECT_SET_ITEM_CNT2:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_ITEM_CNT2)
+
+[DISABLE]
+
+INJECT_SET_ITEM_CNT2:
+  db 8B BB 88 00 00 00
+
+unregistersymbol(INJECT_SET_ITEM_CNT2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+8C1F79
+
+GameAssembly.dll+8C1F4B: 75 13                 - jne GameAssembly.dll+8C1F60
+GameAssembly.dll+8C1F4D: 48 8D 0D 3C F3 28 03  - lea rcx,[GameAssembly.dll+3B51290]
+GameAssembly.dll+8C1F54: E8 27 53 AB FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+600
+GameAssembly.dll+8C1F59: C6 05 BD 26 42 03 01  - mov byte ptr [GameAssembly.dll+3CE461D],01
+GameAssembly.dll+8C1F60: 48 8B 0D 29 F3 28 03  - mov rcx,[GameAssembly.dll+3B51290]
+GameAssembly.dll+8C1F67: 39 B9 E0 00 00 00     - cmp [rcx+000000E0],edi
+GameAssembly.dll+8C1F6D: 75 05                 - jne GameAssembly.dll+8C1F74
+GameAssembly.dll+8C1F6F: E8 CC 08 AE FF        - call GameAssembly.il2cpp_field_static_set_value+4950
+GameAssembly.dll+8C1F74: 48 85 DB              - test rbx,rbx
+GameAssembly.dll+8C1F77: 74 06                 - je GameAssembly.dll+8C1F7F
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+8C1F79: 8B BB 88 00 00 00     - mov edi,[rbx+00000088]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+8C1F7F: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+GameAssembly.dll+8C1F84: 8B C7                 - mov eax,edi
+GameAssembly.dll+8C1F86: 48 8B 74 24 38        - mov rsi,[rsp+38]
+GameAssembly.dll+8C1F8B: 48 83 C4 20           - add rsp,20
+GameAssembly.dll+8C1F8F: 5F                    - pop rdi
+GameAssembly.dll+8C1F90: C3                    - ret 
+GameAssembly.dll+8C1F91: E8 BA D2 B2 FF        - call GameAssembly.dll+3EF250
+GameAssembly.dll+8C1F96: CC                    - int 3 
+GameAssembly.dll+8C1F97: E8 C4 D2 B2 FF        - call GameAssembly.dll+3EF260
+GameAssembly.dll+8C1F9C: CC                    - int 3 
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
@@ -2402,12 +2523,7 @@ GameAssembly.dll+8C2C66 - 74 06                 - je GameAssembly.dll+8C2C6E
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>AddItems2</Name>
-      <Address>7FFB234AE820</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <LuaScript>--[[
 [ENABLE]
 {$lua}
