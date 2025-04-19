@@ -30,7 +30,11 @@ end
 local monoEnableScript = [==[
 [ENABLE]
 {$asm}
-//registersymbol(MyAttack) // if registerd
+{
+define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+
+registersymbol(ResourceManagerClearItemCountsProc)
+}
 
 {$lua}
 if syntaxcheck then return end
@@ -71,7 +75,7 @@ if _G.SafeMonoDestroy == nil then
 
     -- 5. Destroy main pipe
     local t0 = os.clock()
-    print(string.format("🚨 Destroying monopipe，This may take several minutes👺👺👺... [Start: %.3fs]", t0))
+    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
 
     pcall(function()
       if monopipe then
@@ -143,9 +147,9 @@ if _G.mono_registerSymbolEx == nil then
   end
 end
 
--- 📏 Register symbol by partial signature match (overload-safe)
+-- 📏 Register symbol by partial signature match (overload-safe, with excludes and match info)
 if _G.mono_registerSymbolBySignatureMatch == nil then
-  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains)
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
     local cls = mono_findClass(namespace, classname)
     if not cls then
       print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
@@ -162,10 +166,22 @@ if _G.mono_registerSymbolBySignatureMatch == nil then
       if m.name == methodname then
         local sig = mono_method_getSignature(m.method)
         local matched = true
+
+        -- Check required substrings
         for _, kw in ipairs(sigContains) do
           if not string.find(sig, kw, 1, true) then
             matched = false
             break
+          end
+        end
+
+        -- Check excluded substrings (if given)
+        if matched and sigExcludes then
+          for _, ex in ipairs(sigExcludes) do
+            if string.find(sig, ex, 1, true) then
+              matched = false
+              break
+            end
           end
         end
 
@@ -176,7 +192,8 @@ if _G.mono_registerSymbolBySignatureMatch == nil then
             return
           end
           registerSymbol(symbolname, addr)
-          print(string.format("🪧 Symbol registered by signature: %s = %X", symbolname, addr))
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          print(string.format("🔎 Matched Signature: %s", sig))
           return
         end
       end
@@ -185,6 +202,7 @@ if _G.mono_registerSymbolBySignatureMatch == nil then
     print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
   end
 end
+
 
 -- 📏 Register symbol by simple method name (first match)
 if _G.mono_registerSymbol == nil then
@@ -260,7 +278,7 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 --]]
 
 
--- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains)
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
 -- Description: Registers the method whose signature contains all given substrings.
 -- Flexible, and suitable when exact type names vary or signature format is uncertain.
 -- Params:
@@ -270,6 +288,7 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 --   methodname: Method name (will scan all overloads)
 --   sigContains: Array of strings that should all appear in the method signature
 --                e.g., { "Act", "Card", "Point", "bool" }
+--   sigExcludes: Exclude signatures
 -- Example:
 --   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
 
@@ -277,6 +296,17 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 _G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
   "Act", "Card", "Point", "bool"
 })
+
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  {"Item"},      -- sigContains
+  {"List"}       -- sigExcludes
+)
+
+Signatures:
+System.Collections.Generic.List<Item> 
+Item 
+
+** Both have "Item" but first one have "List"
 --]]
 
 --[[
@@ -295,16 +325,11 @@ Act         (Game defined)
 
 --]]
 [DISABLE]
-{$asm}
-// unregistersymbol(*)
 {$lua}
 if syntaxcheck then return end
-
--- ☔ Release mono
-----print("Info: Cleaning up MonoDataCollector...")
-pcall(_G.SafeMonoDestroy)
-----_G.SafeMonoDestroy()
-
+--pcall(_G.SafeMonoDestroy)
+{$asm}
+//unregistersymbol(*)
 
 ]==]
 
