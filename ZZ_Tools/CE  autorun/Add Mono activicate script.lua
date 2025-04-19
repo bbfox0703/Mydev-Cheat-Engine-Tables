@@ -288,7 +288,7 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 --   methodname: Method name (will scan all overloads)
 --   sigContains: Array of strings that should all appear in the method signature
 --                e.g., { "Act", "Card", "Point", "bool" }
---   sigExcludes: Exclude signatures
+--   sigExcludes: Signatures to exclude
 -- Example:
 --   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
 
@@ -302,7 +302,7 @@ _G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "
   {"List"}       -- sigExcludes
 )
 
-Signatures:
+Signatures above:
 System.Collections.Generic.List<Item> 
 Item 
 
