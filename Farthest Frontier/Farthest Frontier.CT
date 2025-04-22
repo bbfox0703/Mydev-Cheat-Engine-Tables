@@ -339,17 +339,15 @@ end)
 
 local enableBattleScripts = {
   0, -- "Compact Mode"
-  10, -- "Prevent item corruption in storage &amp; set max count for some items"
   22, -- "Set transport wagon speed"
   23, -- "Set villager move speed / life"
-  3, -- "No residence consumes firewood"
   4, -- "No residence consumes water "
   5, -- "Villagers consume no food"
   53, -- "Item gather number multiplier - Step 1"
-  60, -- "Set minor grain/hay stock in storages - Step 1"
+  60, -- "Set minor some production buildings/resource spots material amount - Step 1"
   8, -- "Item degrade (corrpution) speed multiplier in storage"
   32, -- "Active - Step 2"
-  59, -- "Set minor ...  in storages - Step 2"
+  59, -- "Set minor amount ... - Step 2"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -372,9 +370,10 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  68, -- "Options"
   38, -- "Try to prevent corruption?"
   36, -- "Multiplier threshold limt"
-  59, -- "Set minor ...  in storages - Step 2"
+  59, -- "Set minor amount ... - Step 2"
   45, -- "Multiplier"
   32, -- "Active - Step 2"
   28, -- "Set min. armor when moving?"
@@ -382,14 +381,14 @@ local disableBattleScripts = {
   15, -- "Set weapon/arrow/armor's min/max. amount in each storage location."
   11, -- "Set some items' min/max. amount in each storage location and market"
   8, -- "Item degrade (corrpution) speed multiplier in storage"
-  60, -- "Set minor grain/hay stock in storages - Step 1"
+  60, -- "Set minor some production buildings/resource spots material amount - Step 1"
   6, -- "No HP damage to building (inc. enemy)"
   53, -- "Item gather number multiplier - Step 1"
   5, -- "Villagers consume no food"
   43, -- "When add item to storage"
   41, -- "When item remove: try to prevent corruption"
   4, -- "No residence consumes water "
-  3, -- "No residence consumes firewood"
+  3, -- "(buggy) No residence consumes firewood"
   23, -- "Set villager move speed / life"
   22, -- "Set transport wagon speed"
   10, -- "Prevent item corruption in storage &amp; set max count for some items"
@@ -412,7 +411,7 @@ synchronize(function() getLuaEngine().Close() end)
         </CheatEntry>
         <CheatEntry>
           <ID>3</ID>
-          <Description>"No residence consumes firewood"</Description>
+          <Description>"(buggy) No residence consumes firewood"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
@@ -441,6 +440,9 @@ newmem:
 
 
 code:
+  xorps xmm15, xmm15
+  vucomiss xmm1, xmm15
+  ja return
   //addss xmm1,[rdi+00000608]
   jmp return
 
@@ -712,7 +714,7 @@ GameAssembly.dll+5FBE1C: 75 13                 - jne GameAssembly.dll+5FBE31
         <CheatEntry>
           <ID>8</ID>
           <Description>"Item degrade (corrpution) speed multiplier in storage"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
@@ -904,7 +906,7 @@ code:
   jmp return
 align 10 cc
   vf_item_add_multi:
-  dd (float)1.2
+  dd (float)1
   vf_item_add_gold_multi:
   dd (float)2
   db EB 3B 54 68 69 73 20 74 61 62 6C 65 20 63 6F 6D 65 73 20 66 72 6F 6D 20 68 74 74 70 73 3A 2F
@@ -1125,7 +1127,6 @@ calc_loop_sum:
   //12: ItemMeat
   //13: ItemRootVegetable
   //14: ItemBeans
-  //14: ItemBeans
   //15: ItemGreens
   //17: ItemMushroom
   //18: ItemRoots
@@ -1139,6 +1140,7 @@ calc_loop_sum:
   //28: ItemHeavyTool
   //39: ItemFish
   //40: ItemShoes
+  //42: ItemBoarCarcass
   //43: ItemSmokedMeat
   //44: ItemSmokedFish
   //45: ItemFlax
@@ -1161,6 +1163,7 @@ calc_loop_sum:
   //79: ItemBooks
   //80: ItemPaper
   //83: ItemHay
+  //86: ItemPastry
 
   cmp dword ptr [rdi+10], #3 //ItemBerries
   je do_set_limit
@@ -1375,7 +1378,7 @@ do_set_limit:
   mov ecx, [i_max_count_for_unneeded]
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
 chk_lower_limit:
   mov ecx, [rax+1B0]
@@ -1384,7 +1387,7 @@ chk_lower_limit:
   mov ecx, [i_min_count_for_unneeded]
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
 
 do_weapon_set_limit:
@@ -1394,7 +1397,7 @@ do_weapon_set_limit:
   mov ecx, [i_max_count_for_weapon_unneeded]
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
 chk_weapon_lower_limit:
   mov ecx, [rax+1B0]
@@ -1403,7 +1406,7 @@ chk_weapon_lower_limit:
   mov ecx, [i_min_count_for_weapon_unneeded]
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
 
 chk_base_set_limit:
@@ -1413,7 +1416,7 @@ chk_base_set_limit:
   mov ecx, [i_max_count_for_base_unneeded]
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
 chk_base_lower_limit:
   mov ecx, [rax+1B0]
@@ -1422,7 +1425,7 @@ chk_base_lower_limit:
   mov ecx, [i_min_count_for_base_unneeded]
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
 chk_gold_low_limit:
   mov ecx, [rax+1B0]
@@ -1431,8 +1434,30 @@ chk_gold_low_limit:
   mov ecx, #501
   mov [rax+1B0], ecx
   mov r14d, ecx
-  jmp endp_pre
+  jmp endp_pre_clear0
 
+endp_pre_clear0:
+  pxor xmm15, xmm15
+
+  push rdx
+  push rcx
+
+  mov rdx, rax
+  xor rcx, rcx
+
+  add rdx, 24   // first array positiob (buicket 0)
+  mov ecx, #24  // 16 bytes = 4*int32, 4*24 = 96 elements
+
+clear_loop:
+  movdqu [rdx], xmm15
+  add rdx, 10
+  loop clear_loop
+
+  mov qword ptr [rdx], 0   // clear #97~#98
+  mov dword ptr [rdx+8], 0 // chear #99
+
+  pop rcx
+  pop rdx
 
 endp_pre:
   mov eax, [rdi+10]
@@ -1455,9 +1480,9 @@ align 10 cc
   i_min_count_for_unneeded:
   dd #53
   i_max_count_for_weapon_unneeded:
-  dd #155
+  dd #161
   i_min_count_for_weapon_unneeded:
-  dd #33
+  dd #41
   i_max_count_for_base_unneeded:
   dd #1001 // 395
   i_min_count_for_base_unneeded:
@@ -2064,7 +2089,7 @@ start_p:
   mov ecx, [r8+rax*4+20]
   mov dword ptr [r8+rax*4+20], 0
   add [r8+1B0], ecx
-  mov ecx, 0
+  //mov ecx, 0
 
 code:
   add [rsi+00000088],ecx
@@ -2175,10 +2200,6 @@ do_next:
   push r15
   push r14
 
-  mov r15,[rdi+00000090]
-  mov r14, rdx
-  dec r14d
-  mov [r15+r14*4+20], ecx
 
 
   // rdi: ItemBundle
@@ -2193,6 +2214,7 @@ do_next:
   jbe chk_gold
   mov r14d, [i_max_poop_count]
   mov [r15+1B0], r14d
+  mov ecx, r14d
   jmp endp
 
 chk_gold:
@@ -2205,10 +2227,16 @@ chk_gold:
   jae chk_min_amount
   mov r14d, [i_min_gold_count]
   mov [r15+1B0], r14d
+  mov ecx, r14d
   jmp endp
 
 
 chk_min_amount:
+  mov r15,[rdi+00000090]
+  mov r14, rdx
+  dec r14d
+  mov [r15+r14*4+20], ecx
+
   {
   cmp edx, 65
   jne endp
@@ -2237,7 +2265,7 @@ align 10 cc
   i_min_storage_item:
   dd A
   i_max_poop_count:
-  dd 14
+  dd 6
   i_min_gold_count:
   dd #200
   i_tmp1:
@@ -2392,7 +2420,7 @@ GameAssembly.dll+8C2C66 - 74 06                 - je GameAssembly.dll+8C2C6E
         </CheatEntry>
         <CheatEntry>
           <ID>60</ID>
-          <Description>"Set minor grain/hay stock in storages - Step 1"</Description>
+          <Description>"Set minor some production buildings/resource spots material amount - Step 1"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>[ENABLE]
@@ -2410,7 +2438,8 @@ unregistersymbol(GetItemCount1)
           <CheatEntries>
             <CheatEntry>
               <ID>59</ID>
-              <Description>"Set minor ...  in storages - Step 2"</Description>
+              <Description>"Set minor amount ... - Step 2"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Farthest Frontier.exe
   Version: 
@@ -2426,6 +2455,7 @@ alloc(newmem,$1000,INJECT_SET_ITEM_CNT2)
 
 label(code)
 label(return)
+label(is_lock_logs_amt is_lock_stone_amt is_lock_berries_amt is_lock_hide_amt is_lock_meat_amt is_lock_fish_amt is_lock_firewood_amt)
 
 newmem:
   push r15
@@ -2436,7 +2466,7 @@ newmem:
 
   add dword ptr [rbx+00000088], 33
   mov r15, [rbx+90]
-  add dword ptr [r15+1B0], 65
+  add dword ptr [r15+1B0], 33
   jmp endp
 
 chk_grain:
@@ -2447,19 +2477,144 @@ chk_grain:
 
   add dword ptr [rbx+00000088], 33
   mov r15, [rbx+90]
-  add dword ptr [r15+1B0], 65
+  add dword ptr [r15+1B0], 33
   jmp endp
 
 chk_veg:
   cmp dword ptr [rbx+00000010], #13 //ItemRootVegetable
-  jne endp
-  cmp dword ptr [rbx+00000088], 33 //&lt;numberOfItems&gt;k__BackingField
+  jne chk_flax
+  cmp dword ptr [rbx+00000088], 23 //&lt;numberOfItems&gt;k__BackingField
   jae endp
 
-  add dword ptr [rbx+00000088], 33
+  add dword ptr [rbx+00000088], 23
   mov r15, [rbx+90]
-  add dword ptr [r15+1B0], 65
-  //jmp endp
+  add dword ptr [r15+1B0], 23
+  jmp endp
+
+chk_flax:
+  cmp dword ptr [rbx+00000010], #45 //ItemFlax
+  jne chk_honey
+  cmp dword ptr [rbx+00000088], 11 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 11
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 11
+  jmp endp
+
+chk_honey:
+  cmp dword ptr [rbx+00000010], #54 //ItemHoney
+  jne chk_most
+  cmp dword ptr [rbx+00000088], 23 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 23
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 23
+  jmp endp
+
+  //=====================
+chk_most:
+  cmp dword ptr [is_lock_logs_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #2 //ItemLogs
+  je set_most_amt
+
+@@:
+  cmp dword ptr [is_lock_berries_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #3 //ItemBerries
+  je set_most_amt
+
+@@:
+  cmp dword ptr [is_lock_stone_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #4 //ItemStone
+  je set_most_amt
+
+@@:
+  cmp dword ptr [is_lock_hide_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #10 //ItemHide
+  je set_most_amt
+
+@@:
+  cmp dword ptr [is_lock_meat_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #12 //ItemMeat
+  je set_most_amt
+
+@@:
+  cmp dword ptr [is_lock_fish_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #39 //ItemFish
+  je set_most_amt
+
+@@:
+  cmp dword ptr [is_lock_firewood_amt], 1
+  jne @F
+  cmp dword ptr [rbx+00000010], #8 //ItemFirewood
+  je set_most_amt
+
+
+@@:
+  cmp dword ptr [rbx+00000010], #5 //ItemPlunks
+  je @F
+  cmp dword ptr [rbx+00000010], #9 //ItemFlour
+  je @F
+  cmp dword ptr [rbx+00000010], #18 //ItemRoot
+  je @F
+  cmp dword ptr [rbx+00000010], #20 //ItemFruit
+  je @F
+  cmp dword ptr [rbx+00000010], #23 //ItemHerbs
+  je @F
+  cmp dword ptr [rbx+00000010], #24 //ItemEggs
+  je @F
+  cmp dword ptr [rbx+00000010], #25 //ItemIronOre
+  je @F
+  cmp dword ptr [rbx+00000010], #47 //ItemCoal
+  je @F
+  cmp dword ptr [rbx+00000010], #48 //ItemClay
+  je @F
+  cmp dword ptr [rbx+00000010], #50 //ItemGoldOre
+  je @F
+  cmp dword ptr [rbx+00000010], #56 //ItemWillow
+  je @F
+  cmp dword ptr [rbx+00000010], #61 //ItemTallow
+  je @F
+  jmp endp
+set_most_amt:
+  cmp dword ptr [rbx+00000088], D //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], D
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], D
+  jmp endp
+  //=====================
+
+chk_sand:
+  cmp dword ptr [rbx+00000010], #73 //ItemSand
+  jne chk_boar
+  cmp dword ptr [rbx+00000088], 15 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 15
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 15
+  jmp endp
+
+chk_boar:
+  cmp dword ptr [rbx+00000010], #42 //ItemBoarCarcass
+  jne endp
+  cmp dword ptr [rbx+00000088], 2 //&lt;numberOfItems&gt;k__BackingField
+  jae endp
+
+  add dword ptr [rbx+00000088], 2
+  mov r15, [rbx+90]
+  add dword ptr [r15+1B0], 2
+  jmp endp
+
 
 endp:
   pop r15
@@ -2468,12 +2623,29 @@ endp:
 code:
   mov edi,[rbx+00000088]
   jmp return
+align 10 cc
+  is_lock_logs_amt:
+  dd 0
+  is_lock_stone_amt:
+  dd 0
+  is_lock_berries_amt:
+  dd 1
+  is_lock_hide_amt:
+  dd 1
+  is_lock_meat_amt:
+  dd 1
+  is_lock_fish_amt:
+  dd 1
+  is_lock_firewood_amt:
+  dd 1
+
 
 INJECT_SET_ITEM_CNT2:
   jmp newmem
   nop
 return:
 registersymbol(INJECT_SET_ITEM_CNT2)
+registersymbol(is_lock_logs_amt is_lock_stone_amt is_lock_berries_amt is_lock_hide_amt is_lock_meat_amt is_lock_fish_amt is_lock_firewood_amt)
 
 [DISABLE]
 
@@ -2481,6 +2653,8 @@ INJECT_SET_ITEM_CNT2:
   db 8B BB 88 00 00 00
 
 unregistersymbol(INJECT_SET_ITEM_CNT2)
+unregistersymbol(is_lock_logs_amt is_lock_stone_amt is_lock_berries_amt is_lock_hide_amt is_lock_meat_amt is_lock_fish_amt is_lock_firewood_amt)
+
 dealloc(newmem)
 
 {
@@ -2511,6 +2685,81 @@ GameAssembly.dll+8C1F97: E8 C4 D2 B2 FF        - call GameAssembly.dll+3EF260
 GameAssembly.dll+8C1F9C: CC                    - int 3 
 }
 </AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>68</ID>
+                  <Description>"Options"</Description>
+                  <Options moHideChildren="1"/>
+                  <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>61</ID>
+                      <Description>"inc. logs?"</Description>
+                      <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_logs_amt</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>62</ID>
+                      <Description>"inc. stone?"</Description>
+                      <DropDownListLink>inc. logs?</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_stone_amt</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>63</ID>
+                      <Description>"inc. berries?"</Description>
+                      <DropDownListLink>inc. logs?</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_berries_amt</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>64</ID>
+                      <Description>"inc. hide?"</Description>
+                      <DropDownListLink>inc. logs?</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_hide_amt</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>65</ID>
+                      <Description>"inc. meat?"</Description>
+                      <DropDownListLink>inc. logs?</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_meat_amt</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>66</ID>
+                      <Description>"inc. fish?"</Description>
+                      <DropDownListLink>inc. logs?</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_fish_amt</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>67</ID>
+                      <Description>"inc. firewood?"</Description>
+                      <DropDownListLink>inc. logs?</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>C08000</Color>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>is_lock_firewood_amt</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
