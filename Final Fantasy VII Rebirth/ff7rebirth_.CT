@@ -2,8 +2,146 @@
 <CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
-      <ID>2</ID>
+      <ID>0</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>61</ID>
+      <Description>"Toggle Scripts"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  0, -- "Toggle Compact View"
+  1, -- "When get hit: set min HP/MP"
+  10, -- "Enemy HP"
+  12, -- "set min. ATB"
+  14, -- "Heat multiplier"
+  16, -- "Slower heat down"
+  18, -- "Quick limit break"
+  21, -- "Materia XP multiplier"
+  23, -- "Set materia EXP, if non zero"
+  26, -- "Char. status viewer"
+  5, -- "Get gil"
+  7, -- "Item menu -&gt; set items amount"
+  2, -- "Set min. MP after use"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  59, -- "."
+  57, -- "+Inventory (do not delete this)"
+  56, -- "Generate item list"
+  36, -- "Attributes"
+  2, -- "Set min. MP after use"
+  7, -- "Item menu -&gt; set items amount"
+  58, -- "Final Fantasy VII Rebirth  /  https://opencheattables.com"
+  52, -- "Get item list"
+  51, -- "Fort Condor: inf. units"
+  50, -- "Fort Condor: inf. ATB"
+  5, -- "Get gil"
+  26, -- "Char. status viewer"
+  23, -- "Set materia EXP, if non zero"
+  21, -- "Materia XP multiplier"
+  18, -- "Quick limit break"
+  16, -- "Slower heat down"
+  14, -- "Heat multiplier"
+  12, -- "set min. ATB"
+  10, -- "Enemy HP"
+  1, -- "When get hit: set min HP/MP"
+  0, -- "Toggle Compact View"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
       <Description>"When get hit: set min HP/MP"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
@@ -37,7 +175,7 @@ code:
   jmp return
 align 10 cc
   min_hp:
-  dd #3700
+  dd #3000
   min_mp:
   dd #65
 
@@ -86,6 +224,76 @@ ff7rebirth_.exe+AB8F17: E8 D8 CC 53 00     - call ff7rebirth_.exe+FF5BF4
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>2</ID>
+          <Description>"Set min. MP after use"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MIN_MP,$process,89 BB AC 03 00 00 89) // should be unique
+alloc(newmem,$1000,INJECT_SET_MIN_MP)
+
+label(code)
+label(return)
+
+newmem:
+  cmp edi, [min_mp]
+  jae code
+  mov edi, [min_mp]
+
+code:
+  mov [rbx+000003AC],edi
+  jmp return
+
+INJECT_SET_MIN_MP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_MIN_MP)
+
+[DISABLE]
+
+INJECT_SET_MIN_MP:
+  db 89 BB AC 03 00 00
+
+unregistersymbol(INJECT_SET_MIN_MP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+AB88BE
+
+ff7rebirth_.exe+AB8896: 44 88 7D A3        - mov [rbp-5D],r15b
+ff7rebirth_.exe+AB889A: 44 88 7D AB        - mov [rbp-55],r15b
+ff7rebirth_.exe+AB889E: 44 88 7D B7        - mov [rbp-49],r15b
+ff7rebirth_.exe+AB88A2: 44 88 7D C3        - mov [rbp-3D],r15b
+ff7rebirth_.exe+AB88A6: 44 88 7D CF        - mov [rbp-31],r15b
+ff7rebirth_.exe+AB88AA: 44 88 7D E7        - mov [rbp-19],r15b
+ff7rebirth_.exe+AB88AE: 44 88 7D FF        - mov [rbp-01],r15b
+ff7rebirth_.exe+AB88B2: 44 88 7D 0F        - mov [rbp+0F],r15b
+ff7rebirth_.exe+AB88B6: 44 89 7D 13        - mov [rbp+13],r15d
+ff7rebirth_.exe+AB88BA: 44 88 7D 17        - mov [rbp+17],r15b
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+AB88BE: 89 BB AC 03 00 00  - mov [rbx+000003AC],edi
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+AB88C4: 89 78 18           - mov [rax+18],edi
+ff7rebirth_.exe+AB88C7: 48 8B 4D 1F        - mov rcx,[rbp+1F]
+ff7rebirth_.exe+AB88CB: 48 85 C9           - test rcx,rcx
+ff7rebirth_.exe+AB88CE: 74 0A              - je ff7rebirth_.exe+AB88DA
+ff7rebirth_.exe+AB88D0: 48 8D 54 24 20     - lea rdx,[rsp+20]
+ff7rebirth_.exe+AB88D5: E8 BA 68 5B 00     - call ff7rebirth_.exe+106F194
+ff7rebirth_.exe+AB88DA: 48 8B D3           - mov rdx,rbx
+ff7rebirth_.exe+AB88DD: E8 5E 06 00 00     - call ff7rebirth_.exe+AB8F40
+ff7rebirth_.exe+AB88E2: 48 8D 4C 24 20     - lea rcx,[rsp+20]
+ff7rebirth_.exe+AB88E7: E8 08 D3 53 00     - call ff7rebirth_.exe+FF5BF4
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>3</ID>
           <Description>"min. HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
@@ -105,13 +313,8 @@ ff7rebirth_.exe+AB8F17: E8 D8 CC 53 00     - call ff7rebirth_.exe+FF5BF4
     </CheatEntry>
     <CheatEntry>
       <ID>5</ID>
-      <Description>"No description"</Description>
-      <VariableType>4 Bytes</VariableType>
-      <Address>ff7rebirth_.exe+70F5404</Address>
-    </CheatEntry>
-    <CheatEntry>
-      <ID>6</ID>
       <Description>"Get gil"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
@@ -181,7 +384,7 @@ ff7rebirth_.exe+FF46EA: CC                    - int 3
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>7</ID>
+          <ID>6</ID>
           <Description>"Gil"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -194,8 +397,9 @@ ff7rebirth_.exe+FF46EA: CC                    - int 3
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>9</ID>
+      <ID>7</ID>
       <Description>"Item menu -&gt; set items amount"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
@@ -234,7 +438,7 @@ align 10 cc
   i_min_item_cnt:
   dd 2
   i_set_item_cnt_to:
-  dd A
+  dd 10
 
 INJECT_SET_ITEM_CNT:
   jmp newmem
@@ -279,7 +483,7 @@ ff7rebirth_.exe+FF2B46: EB 9E           - jmp ff7rebirth_.exe+FF2AE6
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>10</ID>
+          <ID>8</ID>
           <Description>"min. amount to trigger"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -287,7 +491,7 @@ ff7rebirth_.exe+FF2B46: EB 9E           - jmp ff7rebirth_.exe+FF2AE6
           <Address>i_min_item_cnt</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>11</ID>
+          <ID>9</ID>
           <Description>"Set amount to"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -297,11 +501,2309 @@ ff7rebirth_.exe+FF2B46: EB 9E           - jmp ff7rebirth_.exe+FF2AE6
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>10</ID>
+      <Description>"Enemy HP"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ENEMY_HP,ff7rebirth_.exe,CC 89 51 0C C3 CC) // should be unique
+alloc(newmem,$1000,INJECT_ENEMY_HP)
+
+label(code)
+label(return)
+label(i_enemy_hp_options)
+
+newmem:
+  cmp dword ptr [i_enemy_hp_options], 0
+  je code
+  cmp dword ptr [i_enemy_hp_options], 1  // 1HP
+  je set_1hp
+  cmp dword ptr [i_enemy_hp_options], 2  // lots of HP
+  je set_1m
+  jmp code
+
+set_1hp:
+  cmp edx, 1
+  jbe code
+  mov edx, 1
+  jmp code
+
+set_1m:
+  cmp edx, #1000000
+  jae code
+  mov edx, #1000000
+
+code:
+  mov [rcx+0C],edx
+  ret 
+  int 3 
+  jmp return
+align 10 cc
+  i_enemy_hp_options:
+  dd 0
+
+INJECT_ENEMY_HP+01:
+  jmp newmem
+return:
+registersymbol(INJECT_ENEMY_HP)
+registersymbol(i_enemy_hp_options)
+[DISABLE]
+
+INJECT_ENEMY_HP+01:
+  db 89 51 0C C3 CC
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+1996BD0
+
+ff7rebirth_.exe+1996BC6: CC        - int 3 
+ff7rebirth_.exe+1996BC7: CC        - int 3 
+ff7rebirth_.exe+1996BC8: CC        - int 3 
+ff7rebirth_.exe+1996BC9: CC        - int 3 
+ff7rebirth_.exe+1996BCA: CC        - int 3 
+ff7rebirth_.exe+1996BCB: CC        - int 3 
+ff7rebirth_.exe+1996BCC: CC        - int 3 
+ff7rebirth_.exe+1996BCD: CC        - int 3 
+ff7rebirth_.exe+1996BCE: CC        - int 3 
+ff7rebirth_.exe+1996BCF: CC        - int 3 
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+1996BD0: 89 51 0C  - mov [rcx+0C],edx
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+1996BD3: C3        - ret 
+ff7rebirth_.exe+1996BD4: CC        - int 3 
+ff7rebirth_.exe+1996BD5: CC        - int 3 
+ff7rebirth_.exe+1996BD6: CC        - int 3 
+ff7rebirth_.exe+1996BD7: CC        - int 3 
+ff7rebirth_.exe+1996BD8: CC        - int 3 
+ff7rebirth_.exe+1996BD9: CC        - int 3 
+ff7rebirth_.exe+1996BDA: CC        - int 3 
+ff7rebirth_.exe+1996BDB: CC        - int 3 
+ff7rebirth_.exe+1996BDC: CC        - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"Options"</Description>
+          <DropDownList DisplayValueAsItem="1">0:None
+1:1 HP
+2:1M HP
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_enemy_hp_options</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>12</ID>
-      <Description>"4 Bytes"</Description>
-      <VariableType>4 Bytes</VariableType>
-      <Address>7FF72E9F53F8+2C</Address>
+      <Description>"Set min. ATB"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_ATB,$process,C5 FA 11 B0 A8 20 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SET_ATB)
+
+label(code)
+label(return vf_min_atb)
+
+newmem:
+  movaps [tmp_xmm15], xmm15
+  vmovss xmm15, [vf_min_atb]
+  vucomiss xmm6, xmm15
+  jae code_pre
+  movss xmm6, xmm15
+
+code_pre:
+  movaps xmm15, [tmp_xmm15]
+
+code:
+  vmovss [rax+000020A8],xmm6
+  jmp return
+align 10 cc
+  tmp_xmm15:
+  dq 0 0
+  vf_min_atb:
+  dd (float)2000
+
+INJECT_SET_ATB:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_ATB vf_min_atb)
+
+[DISABLE]
+
+INJECT_SET_ATB:
+  db C5 FA 11 B0 A8 20 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+E5AB89
+
+ff7rebirth_.exe+E5AB62: E9 01 00 00 00           - jmp ff7rebirth_.exe+E5AB68
+ff7rebirth_.exe+E5AB67: CC                       - int 3 
+ff7rebirth_.exe+E5AB68: B8 38 00 00 00           - mov eax,00000038
+ff7rebirth_.exe+E5AB6D: E8 4E E3 2F 01           - call ff7rebirth_.exe+2158EC0
+ff7rebirth_.exe+E5AB72: 48 2B E0                 - sub rsp,rax
+ff7rebirth_.exe+E5AB75: C5 F8 29 74 24 20        - vmovaps [rsp+20],xmm6
+ff7rebirth_.exe+E5AB7B: C5 F8 28 F2              - vmovaps xmm6,xmm2
+ff7rebirth_.exe+E5AB7F: E8 A4 F8 F7 FF           - call ff7rebirth_.exe+DDA428
+ff7rebirth_.exe+E5AB84: 48 85 C0                 - test rax,rax
+ff7rebirth_.exe+E5AB87: 74 08                    - je ff7rebirth_.exe+E5AB91
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+E5AB89: C5 FA 11 B0 A8 20 00 00  - vmovss [rax+000020A8],xmm6
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+E5AB91: C5 F8 28 74 24 20        - vmovaps xmm6,[rsp+20]
+ff7rebirth_.exe+E5AB97: 48 83 C4 38              - add rsp,38
+ff7rebirth_.exe+E5AB9B: C3                       - ret 
+ff7rebirth_.exe+E5AB9C: B8 B8 00 00 00           - mov eax,000000B8
+ff7rebirth_.exe+E5ABA1: E8 1A E3 2F 01           - call ff7rebirth_.exe+2158EC0
+ff7rebirth_.exe+E5ABA6: 48 2B E0                 - sub rsp,rax
+ff7rebirth_.exe+E5ABA9: 45 33 DB                 - xor r11d,r11d
+ff7rebirth_.exe+E5ABAC: 44 8A D2                 - mov r10b,dl
+ff7rebirth_.exe+E5ABAF: 44 38 1D B3 F3 17 08     - cmp [ff7rebirth_.exe+8FD9F69],r11b
+ff7rebirth_.exe+E5ABB6: 74 18                    - je ff7rebirth_.exe+E5ABD0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_atb</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Heat multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_QUICK_HEAT,$process,C5 F2 58 46 08 * * * * 0C) // should be unique
+alloc(newmem,$1000,INJECT_QUICK_HEAT)
+
+label(code)
+label(return vf_heat_multi)
+
+newmem:
+  movaps [tmp_xmm15], xmm15
+  vmovss xmm15, [vf_heat_multi]
+  vmulss xmm1, xmm1, xmm15
+  movaps xmm15, [tmp_xmm15]
+
+code:
+  vaddss xmm0,xmm1,[rsi+08]
+  jmp return
+align 10 cc
+  tmp_xmm15:
+  dq 0 0
+  vf_heat_multi:
+  dd (float)3
+
+INJECT_QUICK_HEAT:
+  jmp newmem
+return:
+registersymbol(INJECT_QUICK_HEAT vf_heat_multi)
+
+[DISABLE]
+
+INJECT_QUICK_HEAT:
+  db C5 F2 58 46 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+153AD85
+
+ff7rebirth_.exe+153AD5B: 49 8B 86 08 01 00 00     - mov rax,[r14+00000108]
+ff7rebirth_.exe+153AD62: C5 F8 28 C8              - vmovaps xmm1,xmm0
+ff7rebirth_.exe+153AD66: 48 85 C0                 - test rax,rax
+ff7rebirth_.exe+153AD69: 74 1A                    - je ff7rebirth_.exe+153AD85
+ff7rebirth_.exe+153AD6B: 41 80 BE 20 01 00 00 01  - cmp byte ptr [r14+00000120],01
+ff7rebirth_.exe+153AD73: 75 07                    - jne ff7rebirth_.exe+153AD7C
+ff7rebirth_.exe+153AD75: C5 FA 10 40 68           - vmovss xmm0,[rax+68]
+ff7rebirth_.exe+153AD7A: EB 05                    - jmp ff7rebirth_.exe+153AD81
+ff7rebirth_.exe+153AD7C: C5 FA 10 40 74           - vmovss xmm0,[rax+74]
+ff7rebirth_.exe+153AD81: C5 F2 59 C8              - vmulss xmm1,xmm1,xmm0
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+153AD85: C5 F2 58 46 08           - vaddss xmm0,xmm1,[rsi+08]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+153AD8A: C5 FA 10 56 0C           - vmovss xmm2,[rsi+0C]
+ff7rebirth_.exe+153AD8F: C5 F8 2F D0              - vcomiss xmm2,xmm0
+ff7rebirth_.exe+153AD93: C5 FA 11 46 08           - vmovss [rsi+08],xmm0
+ff7rebirth_.exe+153AD98: 0F 87 B4 05 00 00        - ja ff7rebirth_.exe+153B352
+ff7rebirth_.exe+153AD9E: C4 C1 78 2F C8           - vcomiss xmm1,xmm8
+ff7rebirth_.exe+153ADA3: C5 FA 11 56 08           - vmovss [rsi+08],xmm2
+ff7rebirth_.exe+153ADA8: 0F 86 A4 05 00 00        - jbe ff7rebirth_.exe+153B352
+ff7rebirth_.exe+153ADAE: 48 8B 0E                 - mov rcx,[rsi]
+ff7rebirth_.exe+153ADB1: E8 66 B5 A1 FF           - call ff7rebirth_.exe+F5631C
+ff7rebirth_.exe+153ADB6: 84 C0                    - test al,al
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_heat_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"Slower heat down"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SLOW_HEAT_DOWN,$process,C5 FA 5C CE C5 F8 2F CF * * * * 10) // should be unique
+alloc(newmem,$1000,INJECT_SLOW_HEAT_DOWN)
+
+label(code)
+label(return vf_heat_down_multi)
+
+newmem:
+  movaps [tmp_xmm15], xmm15
+  vxorps xmm15, xmm15, xmm15
+  vucomiss xmm6, xmm15
+  jbe code_pre
+  vmovss xmm15, [vf_heat_down_multi]
+  vmulss xmm6, xmm6, xmm15
+
+code_pre:
+  movaps xmm15, [tmp_xmm15]
+
+code:
+  vsubss xmm1,xmm0,xmm6
+  vcomiss xmm1,xmm7
+  jmp return
+align 10 cc
+  tmp_xmm15:
+  dq 0 0
+  vf_heat_down_multi:
+  dd (float)0.5
+
+INJECT_SLOW_HEAT_DOWN:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SLOW_HEAT_DOWN vf_heat_down_multi )
+
+[DISABLE]
+
+INJECT_SLOW_HEAT_DOWN:
+  db C5 FA 5C CE C5 F8 2F CF
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+AFB610
+
+ff7rebirth_.exe+AFB5F1: 48 83 C4 40        - add rsp,40
+ff7rebirth_.exe+AFB5F5: 5B                 - pop rbx
+ff7rebirth_.exe+AFB5F6: C3                 - ret 
+ff7rebirth_.exe+AFB5F7: 80 79 18 00        - cmp byte ptr [rcx+18],00
+ff7rebirth_.exe+AFB5FB: 74 E8              - je ff7rebirth_.exe+AFB5E5
+ff7rebirth_.exe+AFB5FD: 48 8D 4C 24 50     - lea rcx,[rsp+50]
+ff7rebirth_.exe+AFB602: E8 9D 9F 90 00     - call ff7rebirth_.exe+14055A4
+ff7rebirth_.exe+AFB607: 84 C0              - test al,al
+ff7rebirth_.exe+AFB609: 75 1E              - jne ff7rebirth_.exe+AFB629
+ff7rebirth_.exe+AFB60B: C5 FA 10 43 10     - vmovss xmm0,[rbx+10]
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+AFB610: C5 FA 5C CE        - vsubss xmm1,xmm0,xmm6
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+AFB614: C5 F8 2F CF        - vcomiss xmm1,xmm7
+ff7rebirth_.exe+AFB618: C5 FA 11 4B 10     - vmovss [rbx+10],xmm1
+ff7rebirth_.exe+AFB61D: 73 C6              - jae ff7rebirth_.exe+AFB5E5
+ff7rebirth_.exe+AFB61F: 48 8B CB           - mov rcx,rbx
+ff7rebirth_.exe+AFB622: E8 C1 0F E3 00     - call ff7rebirth_.exe+192C5E8
+ff7rebirth_.exe+AFB627: EB BC              - jmp ff7rebirth_.exe+AFB5E5
+ff7rebirth_.exe+AFB629: C5 CA 59 74 24 50  - vmulss xmm6,xmm6,[rsp+50]
+ff7rebirth_.exe+AFB62F: EB DA              - jmp ff7rebirth_.exe+AFB60B
+ff7rebirth_.exe+AFB631: CC                 - int 3 
+ff7rebirth_.exe+AFB632: CC                 - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_heat_down_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>18</ID>
+      <Description>"Quick limit break"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_LIMIT_BRK_GAUGE,$process,C5 FA 11 B0 AC 20 00 00) // should be unique
+alloc(newmem,$1000,INJECT_SET_LIMIT_BRK_GAUGE)
+
+label(code)
+label(return)
+label(vf_min_lb vf_lb_multi)
+
+newmem:
+  movaps [tmp_xmm15], xmm15
+  movaps [tmp_xmm14], xmm14
+  vmovss xmm15, [rax+000020AC]
+  vucomiss xmm15, xmm6
+  jae code_pre
+
+  vmovss xmm15, [vf_min_lb]
+  vucomiss xmm6, xmm15
+  jae chk_multi
+  movss xmm6, xmm15
+  jmp code_pre
+
+chk_multi:
+  vmovss xmm15, [rax+000020AC]
+  vsubss xmm14, xmm6, xmm15
+  vmovss xmm15, [vf_lb_multi]
+  vmulss xmm14, xmm14, xmm15
+  vmovss xmm15, [rax+000020AC]
+  vaddss xmm6, xmm14, xmm15
+
+
+code_pre:
+  movaps xmm15, [tmp_xmm15]
+  movaps xmm14, [tmp_xmm14]
+
+code:
+  vmovss [rax+000020AC],xmm6
+  jmp return
+align 10 cc
+  tmp_xmm15:
+  dq 0 0
+  tmp_xmm14:
+  dq 0 0
+
+  vf_min_lb:
+  dd (float)700
+  vf_lb_multi:
+  dd (float)3
+
+INJECT_SET_LIMIT_BRK_GAUGE:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_LIMIT_BRK_GAUGE)
+registersymbol(vf_min_lb vf_lb_multi)
+
+[DISABLE]
+
+INJECT_SET_LIMIT_BRK_GAUGE:
+  db C5 FA 11 B0 AC 20 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+1405591
+
+ff7rebirth_.exe+140556E: CC                       - int 3 
+ff7rebirth_.exe+140556F: CC                       - int 3 
+ff7rebirth_.exe+1405570: B8 38 00 00 00           - mov eax,00000038
+ff7rebirth_.exe+1405575: E8 46 39 D5 00           - call ff7rebirth_.exe+2158EC0
+ff7rebirth_.exe+140557A: 48 2B E0                 - sub rsp,rax
+ff7rebirth_.exe+140557D: C5 F8 29 74 24 20        - vmovaps [rsp+20],xmm6
+ff7rebirth_.exe+1405583: C5 F8 28 F2              - vmovaps xmm6,xmm2
+ff7rebirth_.exe+1405587: E8 9C 4E 9D FF           - call ff7rebirth_.exe+DDA428
+ff7rebirth_.exe+140558C: 48 85 C0                 - test rax,rax
+ff7rebirth_.exe+140558F: 74 08                    - je ff7rebirth_.exe+1405599
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+1405591: C5 FA 11 B0 AC 20 00 00  - vmovss [rax+000020AC],xmm6
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+1405599: C5 F8 28 74 24 20        - vmovaps xmm6,[rsp+20]
+ff7rebirth_.exe+140559F: 48 83 C4 38              - add rsp,38
+ff7rebirth_.exe+14055A3: C3                       - ret 
+ff7rebirth_.exe+14055A4: 48 89 5C 24 08           - mov [rsp+08],rbx
+ff7rebirth_.exe+14055A9: 48 89 6C 24 10           - mov [rsp+10],rbp
+ff7rebirth_.exe+14055AE: 48 89 74 24 18           - mov [rsp+18],rsi
+ff7rebirth_.exe+14055B3: 57                       - push rdi
+ff7rebirth_.exe+14055B4: B8 40 00 00 00           - mov eax,00000040
+ff7rebirth_.exe+14055B9: E8 02 39 D5 00           - call ff7rebirth_.exe+2158EC0
+ff7rebirth_.exe+14055BE: 48 2B E0                 - sub rsp,rax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"min. value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_lb</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_lb_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>21</ID>
+      <Description>"Materia XP multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MATERIA_XP,ff7rebirth_.exe,41 89 76 08 4C 89 7D D7) // should be unique
+alloc(newmem,$1000,INJECT_SET_MATERIA_XP)
+
+label(code)
+label(return)
+label(vf_mxp_multi)
+
+newmem:
+  cmp [r14+08],esi
+  jae code
+
+  movaps [tmp13], xmm13
+  movaps [tmp14], xmm14
+  movaps [tmp15], xmm15
+  push r15
+
+  vcvtsi2ss xmm15, xmm15, esi
+  mov r15d, [r14+08]
+  vcvtsi2ss xmm14, xmm14, r15d
+
+  vsubss xmm15, xmm15, xmm14
+  vxorps xmm13, xmm13, xmm13
+  vucomiss xmm15, xmm13
+  jbe code_pre
+
+  vmovss xmm13, [vf_mxp_multi]
+  vmulss xmm15, xmm15, xmm13
+  vaddss xmm14, xmm14, xmm15
+  vcvtss2si esi, xmm14
+
+
+code_pre:
+  pop r15
+  movaps xmm13, [tmp13]
+  movaps xmm14, [tmp14]
+  movaps xmm15, [tmp15]
+
+code:
+  mov [r14+08],esi
+  mov [rbp-29],r15
+  jmp return
+align 10 cc
+  tmp13:
+  dq 0 0
+  tmp14:
+  dq 0 0
+  tmp15:
+  dq 0 0
+  vf_mxp_multi:
+  dd (float)4.25
+
+INJECT_SET_MATERIA_XP:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_MATERIA_XP)
+registersymbol(vf_mxp_multi)
+[DISABLE]
+
+INJECT_SET_MATERIA_XP:
+  db 41 89 76 08 4C 89 7D D7
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+E07B5C
+
+ff7rebirth_.exe+E07B33: 44 8A 4D 9F              - mov r9b,[rbp-61]
+ff7rebirth_.exe+E07B37: 4C 8D 15 D2 8F 8B 04     - lea r10,[ff7rebirth_.exe+56C0B10]
+ff7rebirth_.exe+E07B3E: 8B F0                    - mov esi,eax
+ff7rebirth_.exe+E07B40: 41 8B 4E 08              - mov ecx,[r14+08]
+ff7rebirth_.exe+E07B44: 41 03 CC                 - add ecx,r12d
+ff7rebirth_.exe+E07B47: 0F 89 ED 00 00 00        - jns ff7rebirth_.exe+E07C3A
+ff7rebirth_.exe+E07B4D: 33 F6                    - xor esi,esi
+ff7rebirth_.exe+E07B4F: 45 8A 66 10              - mov r12b,[r14+10]
+ff7rebirth_.exe+E07B53: 48 89 5D DF              - mov [rbp-21],rbx
+ff7rebirth_.exe+E07B57: BB 01 00 00 00           - mov ebx,00000001
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+E07B5C: 41 89 76 08              - mov [r14+08],esi
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+E07B60: 4C 89 7D D7              - mov [rbp-29],r15
+ff7rebirth_.exe+E07B64: 44 88 4D E7              - mov [rbp-19],r9b
+ff7rebirth_.exe+E07B68: 4C 89 55 CF              - mov [rbp-31],r10
+ff7rebirth_.exe+E07B6C: 41 80 BF 24 01 00 00 00  - cmp byte ptr [r15+00000124],00
+ff7rebirth_.exe+E07B74: 75 32                    - jne ff7rebirth_.exe+E07BA8
+ff7rebirth_.exe+E07B76: 45 33 FF                 - xor r15d,r15d
+ff7rebirth_.exe+E07B79: 41 8B D7                 - mov edx,r15d
+ff7rebirth_.exe+E07B7C: 48 8D 4D CF              - lea rcx,[rbp-31]
+ff7rebirth_.exe+E07B80: E8 B7 08 00 00           - call ff7rebirth_.exe+E0843C
+ff7rebirth_.exe+E07B85: 3B C6                    - cmp eax,esi
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_mxp_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"Set materia EXP, if non zero"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MATERIA_XP,$process,41 8B 45 08 4D 63 EE 48) // should be unique
+alloc(newmem,$1000,INJECT_SET_MATERIA_XP)
+
+label(code)
+label(return)
+label(i_min_mxp)
+
+newmem:
+  cmp dword ptr [r13+08], #300
+  je code
+  cmp dword ptr [r13+08], #1200
+  je code
+  cmp dword ptr [r13+08], #2000
+  je code
+  cmp dword ptr [r13+08], #3600
+  je code
+  cmp dword ptr [r13+08], #5000
+  je code
+  cmp dword ptr [r13+08], #10000
+  je code
+  cmp dword ptr [r13+08], #18000
+  jae code
+
+  mov eax, [i_min_mxp]
+  cmp eax, [r13+08]
+  jbe code
+  mov [r13+08], eax
+
+code:
+  mov eax,[r13+08]
+  movsxd  r13,r14d
+  jmp return
+align 10 cc
+  i_min_mxp:
+  dd #299
+
+INJECT_SET_MATERIA_XP:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SET_MATERIA_XP)
+registersymbol(i_min_mxp)
+
+[DISABLE]
+
+INJECT_SET_MATERIA_XP:
+  db 41 8B 45 08 4D 63 EE
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+E06E7A
+
+ff7rebirth_.exe+E06E56: E8 89 E4 26 00           - call ff7rebirth_.exe+10752E4
+ff7rebirth_.exe+E06E5B: 4C 8B E8                 - mov r13,rax
+ff7rebirth_.exe+E06E5E: 48 85 C0                 - test rax,rax
+ff7rebirth_.exe+E06E61: 74 56                    - je ff7rebirth_.exe+E06EB9
+ff7rebirth_.exe+E06E63: 8B 50 04                 - mov edx,[rax+04]
+ff7rebirth_.exe+E06E66: 48 8D 4D D7              - lea rcx,[rbp-29]
+ff7rebirth_.exe+E06E6A: E8 B9 E4 26 00           - call ff7rebirth_.exe+1075328
+ff7rebirth_.exe+E06E6F: C6 45 DF 00              - mov byte ptr [rbp-21],00
+ff7rebirth_.exe+E06E73: 44 89 7D E3              - mov [rbp-1D],r15d
+ff7rebirth_.exe+E06E77: 48 8B 08                 - mov rcx,[rax]
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+E06E7A: 41 8B 45 08              - mov eax,[r13+08]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+E06E7E: 4D 63 EE                 - movsxd  r13,r14d
+ff7rebirth_.exe+E06E81: 48 89 4D E7              - mov [rbp-19],rcx
+ff7rebirth_.exe+E06E85: 89 45 B7                 - mov [rbp-49],eax
+ff7rebirth_.exe+E06E88: 45 8D 75 01              - lea r14d,[r13+01]
+ff7rebirth_.exe+E06E8C: 44 89 75 C7              - mov [rbp-39],r14d
+ff7rebirth_.exe+E06E90: 44 3B F6                 - cmp r14d,esi
+ff7rebirth_.exe+E06E93: 0F 8F DD 00 00 00        - jg ff7rebirth_.exe+E06F76
+ff7rebirth_.exe+E06E99: C5 F8 10 45 DF           - vmovups xmm0,[rbp-21]
+ff7rebirth_.exe+E06E9E: 8B 45 B7                 - mov eax,[rbp-49]
+ff7rebirth_.exe+E06EA1: 4A 8D 0C AD 00 00 00 00  - lea rcx,[r13*4+00000000]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"min XP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_min_mxp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>25</ID>
+          <Description>"Usage: Open item menu-&gt;materia tab after script enabled"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>26</ID>
+      <Description>"Char. status viewer"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CHAR_VIEWER,$process,8B 88 A8 03 00 00 89) // should be unique
+alloc(newmem,$1000,INJECT_CHAR_VIEWER)
+
+label(code)
+label(return i_base_char_addr)
+
+newmem:
+  mov [i_base_char_addr], rax
+
+code:
+  mov ecx,[rax+000003A8]
+  jmp return
+align 10 cc
+  i_base_char_addr:
+  dq 0
+
+INJECT_CHAR_VIEWER:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CHAR_VIEWER i_base_char_addr)
+
+[DISABLE]
+
+INJECT_CHAR_VIEWER:
+  db 8B 88 A8 03 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+E0AD10
+
+ff7rebirth_.exe+E0ACE5: C5 FA 11 75 50        - vmovss [rbp+50],xmm6
+ff7rebirth_.exe+E0ACEA: 45 89 2F              - mov [r15],r13d
+ff7rebirth_.exe+E0ACED: 45 89 2C 24           - mov [r12],r13d
+ff7rebirth_.exe+E0ACF1: E8 4E D1 1E 00        - call ff7rebirth_.exe+FF7E44
+ff7rebirth_.exe+E0ACF6: 48 8B F0              - mov rsi,rax
+ff7rebirth_.exe+E0ACF9: 48 85 C0              - test rax,rax
+ff7rebirth_.exe+E0ACFC: 0F 84 1C 01 00 00     - je ff7rebirth_.exe+E0AE1E
+ff7rebirth_.exe+E0AD02: 0F B6 88 83 00 00 00  - movzx ecx,byte ptr [rax+00000083]
+ff7rebirth_.exe+E0AD09: BA E8 03 00 00        - mov edx,000003E8
+ff7rebirth_.exe+E0AD0E: 89 0B                 - mov [rbx],ecx
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+E0AD10: 8B 88 A8 03 00 00     - mov ecx,[rax+000003A8]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+E0AD16: 89 4B 04              - mov [rbx+04],ecx
+ff7rebirth_.exe+E0AD19: 8B 88 94 00 00 00     - mov ecx,[rax+00000094]
+ff7rebirth_.exe+E0AD1F: 89 4B 08              - mov [rbx+08],ecx
+ff7rebirth_.exe+E0AD22: 8B 88 AC 03 00 00     - mov ecx,[rax+000003AC]
+ff7rebirth_.exe+E0AD28: 89 4B 0C              - mov [rbx+0C],ecx
+ff7rebirth_.exe+E0AD2B: 8B 88 98 00 00 00     - mov ecx,[rax+00000098]
+ff7rebirth_.exe+E0AD31: 89 4B 10              - mov [rbx+10],ecx
+ff7rebirth_.exe+E0AD34: 48 8D 0D D5 4D 2D 08  - lea rcx,[ff7rebirth_.exe+90DFB10]
+ff7rebirth_.exe+E0AD3B: 8B 80 AC 20 00 00     - mov eax,[rax+000020AC]
+ff7rebirth_.exe+E0AD41: 89 43 14              - mov [rbx+14],eax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"Usage: Menu -&gt; Status"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"ID?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:Cloud
+1:Barret
+2:Tifa
+3:Aerith
+4:Red XIII
+5:Yuffie
+6:Cait Sith
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"Total EXP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>88</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"Cur. HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>3A8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"Max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>94</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"Cur. MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>3AC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>33</ID>
+          <Description>"Max MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>98</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"ATB"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>20A8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>35</ID>
+          <Description>"Limit"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>20AC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>36</ID>
+          <Description>"Attributes"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"Attack"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>9C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>38</ID>
+              <Description>"Magic Attack"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>A0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>39</ID>
+              <Description>"Defense"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>A4</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>40</ID>
+              <Description>"Magic Defense"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>A8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>41</ID>
+              <Description>"Strength"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>AC</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>42</ID>
+              <Description>"Magic"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>B0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>43</ID>
+              <Description>"Vitality"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>B4</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>44</ID>
+              <Description>"Spirit"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>B8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>45</ID>
+              <Description>"Luck"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>C0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>46</ID>
+              <Description>"Speed"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_addr</Address>
+              <Offsets>
+                <Offset>BC</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>47</ID>
+          <Description>"Base SP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>20A0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>48</ID>
+          <Description>"SP Bonus"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>20A4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>49</ID>
+          <Description>"Relationship w/ Cloud"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_addr</Address>
+          <Offsets>
+            <Offset>2098</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>62</ID>
+      <Description>"Mini games"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>50</ID>
+          <Description>"Fort Condor: inf. ATB"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@http://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CONDOR_INF_ATB,$process,80 0C C5 FA 10 47 10) // should be unique
+alloc(newmem,$1000,INJECT_CONDOR_INF_ATB)
+
+label(code)
+label(return)
+
+newmem:
+  mov [rdi+10], (float)8
+
+code:
+  vmovss xmm0,[rdi+10]
+  jmp return
+
+INJECT_CONDOR_INF_ATB+02:
+  jmp newmem
+return:
+registersymbol(INJECT_CONDOR_INF_ATB)
+
+[DISABLE]
+
+INJECT_CONDOR_INF_ATB+02:
+  db C5 FA 10 47 10
+
+unregistersymbol(INJECT_CONDOR_INF_ATB)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3ACCE3E
+
+ff7rebirth_.exe+3ACCE1C: 7D 42                    - jnl ff7rebirth_.exe+3ACCE60
+ff7rebirth_.exe+3ACCE1E: 48 8B 00                 - mov rax,[rax]
+ff7rebirth_.exe+3ACCE21: 4C 8D 04 9B              - lea r8,[rbx+rbx*4]
+ff7rebirth_.exe+3ACCE25: 66 42 39 4C 80 0E        - cmp [rax+r8*4+0E],cx
+ff7rebirth_.exe+3ACCE2B: 7C 0B                    - jl ff7rebirth_.exe+3ACCE38
+ff7rebirth_.exe+3ACCE2D: 42 38 4C 80 10           - cmp [rax+r8*4+10],cl
+ff7rebirth_.exe+3ACCE32: 77 04                    - ja ff7rebirth_.exe+3ACCE38
+ff7rebirth_.exe+3ACCE34: B0 01                    - mov al,01
+ff7rebirth_.exe+3ACCE36: EB 2A                    - jmp ff7rebirth_.exe+3ACCE62
+ff7rebirth_.exe+3ACCE38: 42 0F B6 44 80 0C        - movzx eax,byte ptr [rax+r8*4+0C]
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3ACCE3E: C5 FA 10 47 10           - vmovss xmm0,[rdi+10]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3ACCE43: C5 FA 58 C8              - vaddss xmm1,xmm0,xmm0
+ff7rebirth_.exe+3ACCE47: C5 F2 5C 15 D1 EC 4C 02  - vsubss xmm2,xmm1,[ff7rebirth_.exe+5F9BB20]
+ff7rebirth_.exe+3ACCE4F: C5 FA 2D CA              - vcvtss2si ecx,xmm2
+ff7rebirth_.exe+3ACCE53: D1 F9                    - sar ecx,1
+ff7rebirth_.exe+3ACCE55: 3B C1                    - cmp eax,ecx
+ff7rebirth_.exe+3ACCE57: 0F 9E C0                 - setle al
+ff7rebirth_.exe+3ACCE5A: FE C8                    - dec al
+ff7rebirth_.exe+3ACCE5C: 24 02                    - and al,02
+ff7rebirth_.exe+3ACCE5E: EB 02                    - jmp ff7rebirth_.exe+3ACCE62
+ff7rebirth_.exe+3ACCE60: B0 05                    - mov al,05
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>51</ID>
+          <Description>"Fort Condor: inf. units"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CONDOR_INF_UNIT,$process,FE C8 43 88 44 81 10) // should be unique
+
+
+INJECT_CONDOR_INF_UNIT:
+  nop 2
+
+registersymbol(INJECT_CONDOR_INF_UNIT)
+
+[DISABLE]
+
+INJECT_CONDOR_INF_UNIT:
+  db FE C8
+
+unregistersymbol(INJECT_CONDOR_INF_UNIT)
+
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3AD866E
+
+ff7rebirth_.exe+3AD864D: E8 A2 47 FF FF  - call ff7rebirth_.exe+3ACCDF4
+ff7rebirth_.exe+3AD8652: 84 C0           - test al,al
+ff7rebirth_.exe+3AD8654: 75 68           - jne ff7rebirth_.exe+3AD86BE
+ff7rebirth_.exe+3AD8656: 48 8B CB        - mov rcx,rbx
+ff7rebirth_.exe+3AD8659: E8 CE 5D FF FF  - call ff7rebirth_.exe+3ACE42C
+ff7rebirth_.exe+3AD865E: 4C 8D 04 BF     - lea r8,[rdi+rdi*4]
+ff7rebirth_.exe+3AD8662: 4C 8B 08        - mov r9,[rax]
+ff7rebirth_.exe+3AD8665: 43 8A 44 81 10  - mov al,[r9+r8*4+10]
+ff7rebirth_.exe+3AD866A: 84 C0           - test al,al
+ff7rebirth_.exe+3AD866C: 74 07           - je ff7rebirth_.exe+3AD8675
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3AD866E: FE C8           - dec al
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3AD8670: 43 88 44 81 10  - mov [r9+r8*4+10],al
+ff7rebirth_.exe+3AD8675: 48 63 43 40     - movsxd  rax,dword ptr [rbx+40]
+ff7rebirth_.exe+3AD8679: 48 8B 53 38     - mov rdx,[rbx+38]
+ff7rebirth_.exe+3AD867D: 48 8D 0C 40     - lea rcx,[rax+rax*2]
+ff7rebirth_.exe+3AD8681: 4C 8D 14 CA     - lea r10,[rdx+rcx*8]
+ff7rebirth_.exe+3AD8685: EB 16           - jmp ff7rebirth_.exe+3AD869D
+ff7rebirth_.exe+3AD8687: 43 8A 44 81 0D  - mov al,[r9+r8*4+0D]
+ff7rebirth_.exe+3AD868C: 38 42 0D        - cmp [rdx+0D],al
+ff7rebirth_.exe+3AD868F: 75 08           - jne ff7rebirth_.exe+3AD8699
+ff7rebirth_.exe+3AD8691: 43 8A 44 81 0C  - mov al,[r9+r8*4+0C]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>63</ID>
+          <Description>"Desert rush score"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_DESERT_RUSH_SCORE,$process,03 A9 B0 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_DESERT_RUSH_SCORE)
+
+label(code)
+label(return)
+
+newmem:
+  mov ebp, #999999
+
+code:
+  //add ebp,[rcx+000001B0]
+  jmp return
+
+INJECT_DESERT_RUSH_SCORE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_DESERT_RUSH_SCORE)
+
+[DISABLE]
+
+INJECT_DESERT_RUSH_SCORE:
+  db 03 A9 B0 01 00 00
+
+unregistersymbol(INJECT_DESERT_RUSH_SCORE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3AE4A54
+
+ff7rebirth_.exe+3AE4A29: E8 92 44 67 FE           - call ff7rebirth_.exe+2158EC0
+ff7rebirth_.exe+3AE4A2E: 48 2B E0                 - sub rsp,rax
+ff7rebirth_.exe+3AE4A31: 48 8B 41 20              - mov rax,[rcx+20]
+ff7rebirth_.exe+3AE4A35: 48 8B F1                 - mov rsi,rcx
+ff7rebirth_.exe+3AE4A38: 48 85 C0                 - test rax,rax
+ff7rebirth_.exe+3AE4A3B: 0F 84 14 01 00 00        - je ff7rebirth_.exe+3AE4B55
+ff7rebirth_.exe+3AE4A41: 83 38 02                 - cmp dword ptr [rax],02
+ff7rebirth_.exe+3AE4A44: 0F 85 0B 01 00 00        - jne ff7rebirth_.exe+3AE4B55
+ff7rebirth_.exe+3AE4A4A: 0F B6 D2                 - movzx edx,dl
+ff7rebirth_.exe+3AE4A4D: 8B AC 91 F8 00 00 00     - mov ebp,[rcx+rdx*4+000000F8]
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3AE4A54: 03 A9 B0 01 00 00        - add ebp,[rcx+000001B0]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3AE4A5A: 89 A9 B0 01 00 00        - mov [rcx+000001B0],ebp
+ff7rebirth_.exe+3AE4A60: 83 BC 91 F8 00 00 00 00  - cmp dword ptr [rcx+rdx*4+000000F8],00
+ff7rebirth_.exe+3AE4A68: 7E 06                    - jle ff7rebirth_.exe+3AE4A70
+ff7rebirth_.exe+3AE4A6A: FF 89 B4 01 00 00        - dec [rcx+000001B4]
+ff7rebirth_.exe+3AE4A70: 48 8B 49 60              - mov rcx,[rcx+60]
+ff7rebirth_.exe+3AE4A74: 48 85 C9                 - test rcx,rcx
+ff7rebirth_.exe+3AE4A77: 0F 84 D8 00 00 00        - je ff7rebirth_.exe+3AE4B55
+ff7rebirth_.exe+3AE4A7D: 83 BC 96 F8 00 00 00 00  - cmp dword ptr [rsi+rdx*4+000000F8],00
+ff7rebirth_.exe+3AE4A85: 0F 8E CA 00 00 00        - jng ff7rebirth_.exe+3AE4B55
+ff7rebirth_.exe+3AE4A8B: 3B AE 04 02 00 00        - cmp ebp,[rsi+00000204]
+}
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>52</ID>
+      <Description>"Get item list"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-03
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_ITEM_ADDR_LIST,$process,41 8B 56 04 48 81 C1 B8 00 00 00) // should be unique
+alloc(newmem,$4000,INJECT_GET_ITEM_ADDR_LIST)
+
+label(code)
+label(return)
+label(i_base_items_addr_1)
+
+newmem:
+  push r15
+  push r13
+  push rcx
+  xor r13, r13
+
+loop1:
+  mov r15, i_base_items_addr_1
+  lea r15, [r15+r13*8]
+  cmp qword ptr [r15], r14
+  je endp
+
+  cmp qword ptr [r15], 0
+  je write_it
+
+  inc r13
+  cmp r13, #1000
+  ja endp
+  jmp loop1
+
+write_it:
+  mov [r15], r14
+  jmp endp
+
+endp:
+  pop rcx
+  pop r13
+  pop r15
+
+code:
+  mov edx,[r14+04]
+  add rcx,000000B8
+  jmp return
+align 10 cc
+
+  i_base_items_addr_1:
+  dq 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
+INJECT_GET_ITEM_ADDR_LIST:
+  jmp newmem
+  nop 6
+return:
+registersymbol(INJECT_GET_ITEM_ADDR_LIST)
+registersymbol(i_base_items_addr_1)
+
+[DISABLE]
+
+INJECT_GET_ITEM_ADDR_LIST:
+  db 41 8B 56 04 48 81 C1 B8 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+2428718
+
+ff7rebirth_.exe+24286F6: 48 83 C3 08           - add rbx,08
+ff7rebirth_.exe+24286FA: 83 FF 0F              - cmp edi,0F
+ff7rebirth_.exe+24286FD: 7C E1                 - jl ff7rebirth_.exe+24286E0
+ff7rebirth_.exe+24286FF: EB 10                 - jmp ff7rebirth_.exe+2428711
+ff7rebirth_.exe+2428701: 48 63 C7              - movsxd  rax,edi
+ff7rebirth_.exe+2428704: 48 8D 54 24 70        - lea rdx,[rsp+70]
+ff7rebirth_.exe+2428709: 48 8D 4C 24 20        - lea rcx,[rsp+20]
+ff7rebirth_.exe+242870E: FF 14 C6              - call qword ptr [rsi+rax*8]
+ff7rebirth_.exe+2428711: 49 8B 0F              - mov rcx,[r15]
+ff7rebirth_.exe+2428714: 4D 8D 46 04           - lea r8,[r14+04]
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+2428718: 41 8B 56 04           - mov edx,[r14+04]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+242871C: 48 81 C1 B8 00 00 00  - add rcx,000000B8
+ff7rebirth_.exe+2428723: 8B 9D 30 01 00 00     - mov ebx,[rbp+00000130]
+ff7rebirth_.exe+2428729: E8 1E A0 70 FE        - call ff7rebirth_.exe+B3274C
+ff7rebirth_.exe+242872E: 4D 8D 46 08           - lea r8,[r14+08]
+ff7rebirth_.exe+2428732: 89 18                 - mov [rax],ebx
+ff7rebirth_.exe+2428734: 49 8B 0F              - mov rcx,[r15]
+ff7rebirth_.exe+2428737: 41 8B 56 08           - mov edx,[r14+08]
+ff7rebirth_.exe+242873B: 48 81 C1 08 01 00 00  - add rcx,00000108
+ff7rebirth_.exe+2428742: 0F B6 9D 70 01 00 00  - movzx ebx,byte ptr [rbp+00000170]
+ff7rebirth_.exe+2428749: E8 FE 9F 70 FE        - call ff7rebirth_.exe+B3274C
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>53</ID>
+          <Description>"Usage: Open item menu after script enabled"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>54</ID>
+          <Description>"re-enable when held-item changed"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"addr."</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_base_items_addr_1</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>56</ID>
+          <Description>"Generate item list"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return end
+closeLuaEngine2()
+local baseSymbol = "i_base_items_addr_1"
+local parentName = "+Inventory (do not delete this)"
+local addressList = getAddressList()
+
+-- 顏色設定
+local evenColor = 0xFF8000 -- 水藍
+local grayColor = 0x7F7F7F -- 灰
+local quantity_color = 0x007FFF
+local id_color = 0x007FAF
+
+-- 開始讀取地址清單
+local listStartAddr = getAddressSafe(baseSymbol)
+if not listStartAddr then
+  print("❌ cannot find symbol：" .. baseSymbol)
+  return
+end
+
+local maxItems = 1000
+local index = 0
+
+synchronize(function()
+  -- 取得或建立 parent node（UI 控制）
+  local parentRecord = addressList.getMemoryRecordByDescription(parentName)
+  if not parentRecord then
+    parentRecord = addressList.createMemoryRecord()
+    parentRecord.Description = parentName
+    parentRecord.IsGroupHeader = true
+    parentRecord.Options = "[moHideChildren]"
+  end
+
+  -- 建立所有 item nodes（UI 控制）
+  while index &lt; maxItems do
+    local itemAddr = readQword(listStartAddr + index * 8)
+    if itemAddr == 0 then break end
+
+    local mainChild = addressList.createMemoryRecord()
+    mainChild.Description = string.format("Item[%d]", index)
+    mainChild.Address = string.format("%X", itemAddr)
+    mainChild.Vartype = vtDword
+    mainChild.ShowAsHex = false
+    mainChild.Parent = parentRecord
+    mainChild.Color = (index % 2 == 1) and evenColor or grayColor
+
+    -- Unknown (ptr+0)
+    local unknown = addressList.createMemoryRecord()
+    unknown.Description = "Unknown"
+    unknown.Address = string.format("%X", itemAddr)
+    unknown.Vartype = vtDword
+    unknown.ShowAsHex = true
+    unknown.Parent = mainChild
+
+    -- Serial (ptr+4)
+    local serial = addressList.createMemoryRecord()
+    serial.Description = "Serial/uid"
+    serial.Address = string.format("%X+4", itemAddr)
+    serial.Vartype = vtDword
+    serial.ShowAsHex = false
+    serial.Parent = mainChild
+
+    -- (ptr+8)
+    local itemid = addressList.createMemoryRecord()
+    itemid.Description = "ID"
+    itemid.Address = string.format("%X+8", itemAddr)
+    itemid.Vartype = vtDword
+    itemid.Color = id_color
+    itemid.ShowAsHex = false
+    itemid.Parent = mainChild
+    itemid.DropDownLinkedMemrec = "I.ID"
+    itemid.DropDownLinked = true
+
+    -- (ptr+8)
+    local itemid16 = addressList.createMemoryRecord()
+    itemid16.Description = "ID (hex)"
+    itemid16.Address = string.format("%X+8", itemAddr)
+    itemid16.Vartype = vtDword
+    itemid16.Color = id_color
+    itemid16.ShowAsHex = true
+    itemid16.Parent = mainChild
+
+    -- Quantity (ptr+C)
+    local quantity = addressList.createMemoryRecord()
+    quantity.Description = "Quantity"
+    quantity.Address = string.format("%X+C", itemAddr)
+    quantity.Vartype = vtDword
+    quantity.ShowAsHex = false
+    quantity.Color = quantity_color
+    quantity.Parent = mainChild
+
+    -- Item serial (ptr+10)
+    local itemserial = addressList.createMemoryRecord()
+    itemserial.Description = "Category serial?"
+    itemserial.Address = string.format("%X+10", itemAddr)
+    itemserial.Vartype = vtDword
+    itemserial.ShowAsHex = false
+    itemserial.Parent = mainChild
+
+    index = index + 1
+  end
+
+  --parentRecord.Active = true
+  --parentRecord.IsExpanded = true
+end)
+
+print("✔ generated " .. index .. " item records.")
+closeLuaEngine()
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+local parentName = "+Inventory (do not delete this)"
+local addressList = getAddressList()
+
+synchronize(function()
+  local parentRecord = addressList.getMemoryRecordByDescription(parentName)
+  if parentRecord then
+    parentRecord.Active = false
+    for i = addressList.Count - 1, 0, -1 do
+      local child = addressList[i]
+      if child.Parent == parentRecord then
+        child.delete()
+      end
+    end
+  else
+    print("⚠️ Parent record not found: " .. parentName)
+  end
+end)
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>57</ID>
+          <Description>"+Inventory (do not delete this)"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>58</ID>
+      <Description>"Final Fantasy VII Rebirth  /  https://opencheattables.com"</Description>
+      <Options moHideChildren="1"/>
+      <Color>00A200</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>59</ID>
+          <Description>"."</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>60</ID>
+              <Description>"I.ID"</Description>
+              <DropDownList DisplayValueAsItem="1">2:Moogle Medals
+3:Golden Plum
+100:Potion
+101:Hi-Potion
+102:Mega-Potion
+103:Giga-Potion
+104:X-Potion
+105:Mixed Potion
+106:Mixed Hi-Potion
+107:Mist Potion
+108:Mist Hi-Potion
+109:Mist Mega-Potion
+110:Mist Giga-Potion
+111:Ether
+112:Hi-Ether
+113:Dry Ether
+114:Turbo Ether
+115:Elilxir
+116:Phoenix Down
+117:Phoenix Draft
+118:Maiden's Kiss
+119:Antidote
+120:SMelling Salts
+121:Echo Mist
+122:Gold Needle
+123:Adrenaline
+124:Sedative
+125:Remedy
+126:Celeris
+127:Grenade
+128:Armor-Piecing Grenade
+129:Hazardous Material
+130:Spiderweb
+131:blank
+132:Molotov Cocktail
+133:Orb of Gravity
+134:blank
+135:blank
+136:blank
+137:Cushion
+300:Sage
+301:Oregano
+302:Saint Luche Leaf
+303:Pearl Ginger Root
+304:Marjoram
+321:Iron Ore
+322:Zinc Ore
+323:Chromite Ore
+324:Lea Titanium
+325:Tourmaline
+326:Amethyst
+327:Moss Agate
+328:Crimsonite Crystal
+329:Moonstone
+330:Mythril Ore
+331:Numinous Ashes
+332:Cosmotite Ore
+333:Gold Dust
+341:341:Timer
+342:Ancient Bark
+343:Dinvine Heartwood
+344:Mellow Oak
+345:Condor Cedar
+346:Sycamore Wood
+347:Gongaga Pine
+348:Baobab Wood
+349:Ash Wood
+350:Laurel
+351:Mist Seeds
+361:Beast Pelt
+362:Exquisite Beast Hide
+381:Beast Bone
+382:Exquisite Beast Spine
+401:Planet's Blessing
+402:Planet's Favor
+403:Planet's Benison
+404:Planet's Splendor
+405:Ether Onion
+406:Planet's Mercy
+407:Planet's Spirit
+421:Ruby
+422:Emerald
+423:Sapphire
+431:Beast Talon
+432:Astral Remnant
+433:Slimy Malboro Tendril
+434:Heavy Jabberwock Horn
+435:Argen King Zu Feather
+491:Quetzalcoatl Talon
+492:Mindflayer Crown
+493:Tonberry King's Robe
+494:Great Malboro Tendril
+495:Jabberwock Horn
+496:King Zu Feather
+497: Sinister Quetzalcoatl Talon
+498:Vile Mindflayer Crown
+499:Tonberry King's Wretch Robe
+500:Gold Talon
+501:Burnished Crown
+502:Respledent Robe
+503:Gilded Tentacle
+504:Aureate Horn
+505:Lustrous Feather
+506:Dark Matter
+507:Pirate's Relic alpha
+508:Pirate's Relic beta
+509:Pirate's Relic gamma
+510:Pirate's Relic delta
+511:Pirate Jetsam
+99999999:====Weapons====
+1001:Buster Sword
+1002:Sleek Saber
+1003:Rune Saber
+1004:Umbral Blade
+1005:Crystal Sword
+1006:Igneous Saber
+1007:Slipstream Saber
+1008:Gatling Gun
+1009:Hi-Caliber Rifle
+1010:Barrage Blaster
+1011:Vulcan Cannon
+1012:Fafnir Rifle
+1013:Calamitous Bazooka
+1014:Battle Cry
+1015:Leather Gloves
+1016:Sylph Gloves
+1017:Kaiser Knuckles
+1018:Dragon Claws
+1019:Tiger Fangs
+1020:Crystal Gloves
+1021:Jarngreipr
+1022:Guard Stick
+1023:Timless Rod
+1024:Empress's Scepter
+1025:Wizard's Rod
+1026:Ceremonial Staff
+1027:Plumose Rod
+1028:Gambanteinn
+1029:Mythril Collar
+1030:Regegade's Collar
+1031:Silver Collar
+1032:Amethyst Collar
+1033:Golden Collar
+1034:Mystic Collar
+1035:Brisingamen
+1036:4-Point Shuriken
+1037:Savage Dagger
+1038:Twin Viper
+1039:Bird of Prey
+1040:Cresent Sickle
+1041:Crystalline Cross
+1042:Fuma Shuriken
+1043:Yellow Megaphone
+1044:Iron Megaphone
+1045:Red Megaphone
+1046:Resounding Megaphone
+1047:Crystal Megaphone
+1048:Golden Megaphone
+1049:Gjallarhorn
+1050:Masamune
+99999999:====Equipments====
+2000:Metal Bracer
+2001:Leather Bangle
+2004:Copper Bracer
+2005:Hunter's Bangle
+2006:Bone Bracelet
+2007:Woodsprite Armlet
+2008:Enhanced Copper Bracer
+2009:Enhanced Hunter's Bangle
+2010:Enhanced Bone Bracelet
+2011:Enhanced Woodsprite Armlet
+2013:Owl Bracer
+2014:Beastman Armband
+2020:Sailor's Bracer
+2021:Elphadunk Bangle
+2022:Wisefox Bracelet
+2023:Gold Coral Armlet
+2024:Enhanced Sailor's Bracer
+2025:Enhanced Elphadunk Bangle
+2026:Enhanced Wisefox Bracelet
+2027:Enhanced Gold Coral Armlet
+2029:Queensguard Bangle
+2030:Warmage's Armband
+2036:Fortress Bracer
+2037:Abyssal Bangle
+2038:Oldbeast Bracelet
+2039:Beguiling Armlet
+2040:Enhanced Fortress Bracer
+2041:Enhanced Abyssal Bangle
+2042:Enhanced Oldebeast Bracelet
+2043:Enhanced Beguiling Armlet
+2047:Illusionist's Armband
+2052:Crucible Bracer
+2053:Outlaw Bangle
+2054:Crocodile Bracelet
+2055:Witch's Armlet
+2056:Enhanced Crucible Bracer
+2057:Enhanced Outlaw Bangle
+2058:Enhanced Crocodile Bracelet
+2059:Enhanced Witch's Armlet
+2060:Sage Armband
+2061:Big Horn Bracelet
+2068:Commander's Bracer
+2069:Road Warrior Bangle
+2070:Snailshell Bracelet
+2071:Spiritbound Armlet
+2072:Enhanced Commander's Bracer
+2073:Enhanced Road Warrior Bangle
+2074:Enhanced Snailshell Bracelet
+2075:Enhanced Spiritbound Armlet
+2077:Backbone Bracelet
+2078:Celestial Bangle
+2084:Resplendent Bracer
+2085:Garm Bangle
+2086:Varvados Bracelet
+2087:Yggdrasill Armlet
+2088:Enhanced Resplendent Bracer
+2089:Enhanced Garm Bangle
+2090:Enhanced Varvados Bracelet
+2091:Enhanced Yggdrasill Armlet
+2093:Valkyrian Bangle
+2094:Hades Armlet
+2100:Cetran Armlet
+2101:Cetran Bangle
+2102:Cetram Armband
+2103:Cetran Armlet 2
+2104:Chocobo Armband
+2105:Midgar Bangle Mk. II
+2106:Orchid Bracelet
+2107:Shinra Bangle Mk. II
+9017:Power Wristguards
+9018:Bullerproof Vest
+9019:Earrubgs
+9020:Talisman
+9021:Headband
+9022:Star Pendant
+9023:Fury Ring
+9024:Revival Earrings
+9025:Whistlewind Scarf
+9026:Mythical Amulet
+9027:Healing Carcanet
+9029:Transference Module
+9030:Spectral Cogwheel
+9031:Moogle's Amulet
+9032:Enfeeblement Ring
+9033:Crescent Moon Charm
+9034:Champion Belt
+9035:Protective Boots
+9036:Circlet
+9037:Tarot Cards
+9038:Otherworldly Crystal
+9039:Salvation Badge
+9040:Enchanted Ring
+9041:Supernatural Wristguards
+9042:Survival Vest
+9043:Platinum Earrings
+9044:Timeworn Talisman
+9045:Gotterdammerung
+9049:Ribbon
+9061:Hi-Power Wristguards
+9062:Bulletproof Vest Mk.II
+9063:Magical Earrings
+9064:Talisman of Focus
+9065:Full Throttle WRistguard
+9066:Riot Vest
+9067:Sorcerer's Earrings
+9068:Cetra Talisman
+9069:Jeweled Ring
+9070:White Cape
+9071:Genji Gloves
+9072:Aureate Pinion
+9073:Lucky Amulet
+9074:Fortutude Ring
+9075:Safety Bit
+9076:Noble Thief's Gloves
+9077:Karmic Cowl
+9078:Expeditionary Medal
+9079:Psychic's Charm
+9080:Draconic Ring
+9081:Malboro Orb
+9082:Speed Demon Keychain
+9083:Pedometer Pin
+9084:Gi Warrior's Charm
+9085:Cameraderie Earrings
+9086:Genji Earring
+9087:Genji Ring
+9088:Silver Brawler's Gloves
+9089:Golden Brawler's Gloves
+9090:Space Ranger Service Medal
+9091:Space Ranger Medal of Honor
+9092:Hermes Shoes
+9093:Chocoking's Cape
+9094:Beastkiller Badge
+9095:Boxcrusher keychain
+9096:Assess Materia Earrings
+9097:Revival Materia Earrings
+9098:HP UP Materia Earrings
+9105:Limit Booster
+9108:Chakra Matera Earrings
+9109:Prayer Materia Earrings
+9110:MP UP Materia Earrings
+9111:Luck UP Materia Earrings
+9112:Steadfast Block Materia Earrings
+9113:Item Master Materia Earrings
+9114:Precision Defense Focus Materia Earrings
+9115:Fire Materia Earrings
+9116:Ice Materia Earrings
+9117:Lightning Materia Earrings
+9118:Wind Materia Earrings
+9119:Healing Materia Earrings
+9120:Cleansing Materia Earrings
+9121:Poison Materia Earrings
+9122:Binding Materia Earrings
+9123:Time Materia Earrings
+9124:Barrier Materia Earrings
+9125:Subversion Materia Earrings
+9126:Empowerment Materia Earrings
+9127:Fortification Materia Earrings
+9128:Disempowerment Materia Earrings
+9129:Enervation Materia Earrings
+9130:Enhanced Camaraderie Earrings
+9131:Enhanced Psychic's Charm
+9132:Enhanced Karmic Cowl
+9133:Enhanced Malboro Orb
+9134:Enahnced Draconic Ring
+9135:Enhanced Expeditionary Medal
+9136:Corsair's Compass
+9137:Kupo Charm
+9138:Reclaimant Choker
+99999999:====Materia====
+10001:Healing
+10002:Cleansing
+10003:Revival
+10004:Fire
+10005:Ice
+10006:Lightning
+10007:Wind
+10008:Poison
+10009:Binding
+10010:Time
+10011:Barrier
+10012:Subversion
+10017:Petrify
+10018:Gravity
+10019:Comet
+10020:Empowerment
+10021:Fortification
+10022:Disempowerment
+10023:Enervation
+10024:Fire and Ice
+10025:Lightning and Wind
+10026:Poison and Petrify
+10027:Reraise
+11001:Magnify
+11002:Elemental
+11003:Warding
+11004:HP Absorption
+11005:MP Absorption
+11006:Synergy
+11007:AP Up
+11008:Magic Focus
+11009:Magic Efficiency
+11010:Swiftcast
+11011:Auto-Cast
+11012:Level Boost
+12001:Steal
+12002:Assess
+12003:Enemy Skill
+12004:Chakra
+12005:Prayer
+12006:ATB Boost
+12101:Morph
+12102:Spare Change
+12103:Item Economizer
+12104:Limit Siphon
+12105:Jump
+12106:Darkside
+12107:Gambler
+13001:HP Up
+13002:MP Up
+13003:Magic Up
+13004:Luck Up
+13005:Gil Up
+13006:EXP Up
+13007:Item Master
+13008:ATB Stagger
+13009:First Strike
+13010:Steadfast Block
+13011:Skill Master
+13014:ATB Assist
+13016:Provoke
+13101:HP&lt;-&gt;MP
+13102:ATK&lt;-&gt;MATK
+13103:VIT&lt;-&gt;SPR
+13104:Limit Support
+13105:Speed Up
+13106:Strength Up
+13107:Spirit Up
+13108:Vitality Up
+13109:Auto-Unique Ability
+13110:Auto-Weapon Ability
+13111:Precision Defense
+13112:Synergy Support
+14001:Chocobo &amp; Moogle
+14002:Shiva
+14003:Ifrit
+14004:Leviathan
+14010:Ramuh
+14011:Titan
+14012:Phoenix
+14013:Alexander
+14014:Kujata
+14015:Bahamut Arisen
+14016:Odin
+14017:Gilgamesh
+14018:Posh Chocobo
+14019:Magic Pot
+14020:Moogle Trio
+</DropDownList>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
 </CheatTable>
