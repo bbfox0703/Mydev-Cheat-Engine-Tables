@@ -168,6 +168,9 @@ ja-JP: ja-JP: フェアリーフェンサー エフ Refrain Chord
 zh-TW: 太空戰士VI 像素複刻版  
 ja-JP: ファイナルファンタジーVI ピクセルリマスター  
 
+## Final Fantasy VII Rebirth  
+[Final Fantasy VII Rebirth(Steam)](https://store.steampowered.com/app/2909400/FINAL_FANTASY_VII_REBIRTH/)  
+
 ## Final Fantasy VII Remake Intergrade  
 [Final Fantasy VII Remake Intergrade(Steam)](https://store.steampowered.com/app/1462040/FINAL_FANTASY_VII_REMAKE_INTERGRADE/)  
 
