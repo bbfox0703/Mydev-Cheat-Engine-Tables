@@ -1,5 +1,8 @@
 # Changelog
 
+## 2025/05/17
+1. rev. for game update
+
 ## 2023/02/15
 1. added Fast device cooldown
 
