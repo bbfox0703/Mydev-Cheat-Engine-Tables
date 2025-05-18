@@ -90,6 +90,7 @@ local enableBattleScripts = {
   12, -- "Chain ability gauge no decrease"
   132, -- "Last got new items (serial 100xxx)"
   171, -- "Fill chain ability after battle"
+  184, -- "Magonga Mushroom: inf retry"
   3, -- "Set min. MP after use"
   72, -- "Queen's blood score"
 }
@@ -129,7 +130,7 @@ local disableBattleScripts = {
   105, -- "#3"
   100, -- "#2"
   88, -- "Last got new materia (serial 600xxx)"
-  84, -- "Scripts from other makers"
+  84, -- "Scripts from other makers+"
   83, -- "G-Bike inf gauge"
   82, -- "Desert rush score"
   81, -- "Gym easy win"
@@ -142,8 +143,10 @@ local disableBattleScripts = {
   72, -- "Queen's blood score"
   57, -- "Attributes"
   3, -- "Set min. MP after use"
+  184, -- "Magonga Mushroom: inf retry"
+  182, -- "Chocobo race - speed"
   180, -- "Desert escape: inf. Bullets"
-  178, -- "inf. Chocobo charge"
+  178, -- "inf. Chocobo ability"
   176, -- "3D Brawler - limit break gauge"
   173, -- "Galactic Saviors score"
   171, -- "Fill chain ability after battle"
@@ -231,9 +234,11 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 176, Description: "3D Brawler - limit break gauge", Depth: 1
 --   ID: 82, Description: "Desert rush score", Depth: 1
 --   ID: 83, Description: "G-Bike inf gauge", Depth: 1
---   ID: 178, Description: "inf. Chocobo charge", Depth: 1
+--   ID: 178, Description: "inf. Chocobo ability", Depth: 1
+--   ID: 182, Description: "Chocobo race - speed", Depth: 1
 --   ID: 180, Description: "Desert escape: inf. Bullets", Depth: 1
---   ID: 84, Description: "Scripts from other makers", Depth: 1
+--   ID: 184, Description: "Magonga Mushroom: inf retry", Depth: 1
+--   ID: 84, Description: "Scripts from other makers+", Depth: 1
 --     ID: 85, Description: "Piano all great / Cissa90", Depth: 2
 --     ID: 86, Description: "Run wild (enable after game start) / BigBear743", Depth: 2
 -- ID: 87, Description: "When get new item..", Depth: 0
@@ -3557,7 +3562,7 @@ ff7rebirth_.exe+3A3C55B: 48 2B E0                 - sub rsp,rax
         </CheatEntry>
         <CheatEntry>
           <ID>178</ID>
-          <Description>"inf. Chocobo charge"</Description>
+          <Description>"inf. Chocobo ability"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
@@ -3623,6 +3628,77 @@ ff7rebirth_.exe+3B899A7: C5 FA 5C C1              - vsubss xmm0,xmm0,xmm1
 ff7rebirth_.exe+3B899AB: C5 F8 54 05 AD 21 41 02  - vandps xmm0,xmm0,[ff7rebirth_.exe+5F9BB60]
 ff7rebirth_.exe+3B899B3: C5 F8 2F 05 69 21 41 02  - vcomiss xmm0,[ff7rebirth_.exe+5F9BB24]
 ff7rebirth_.exe+3B899BB: 77 12                    - ja ff7rebirth_.exe+3B899CF
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>182</ID>
+          <Description>"Chocobo race - speed"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CHOCOBO_RACE_SPEED,$process,8B 8F F8 01 00 00 85) // should be unique
+alloc(newmem,$1000,INJECT_CHOCOBO_RACE_SPEED)
+
+label(code)
+label(return)
+
+newmem:
+  mov dword ptr [rdi+000001EC], 2
+  cmp dword ptr [rdi+000001F8], 18
+  jae code
+  mov dword ptr [rdi+000001F8], 18
+
+code:
+  mov ecx,[rdi+000001F8]
+  jmp return
+
+INJECT_CHOCOBO_RACE_SPEED:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_CHOCOBO_RACE_SPEED)
+
+[DISABLE]
+
+INJECT_CHOCOBO_RACE_SPEED:
+  db 8B 8F F8 01 00 00
+
+unregistersymbol(INJECT_CHOCOBO_RACE_SPEED)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3B9A1C4
+
+ff7rebirth_.exe+3B9A198: 48 8B F9                 - mov rdi,rcx
+ff7rebirth_.exe+3B9A19B: E8 F8 02 00 00           - call ff7rebirth_.exe+3B9A498
+ff7rebirth_.exe+3B9A1A0: 8B B7 78 07 00 00        - mov esi,[rdi+00000778]
+ff7rebirth_.exe+3B9A1A6: C5 F8 28 F0              - vmovaps xmm6,xmm0
+ff7rebirth_.exe+3B9A1AA: 40 F6 C6 01              - test sil,01
+ff7rebirth_.exe+3B9A1AE: 74 08                    - je ff7rebirth_.exe+3B9A1B8
+ff7rebirth_.exe+3B9A1B0: C5 FA 59 B7 30 08 00 00  - vmulss xmm6,xmm0,[rdi+00000830]
+ff7rebirth_.exe+3B9A1B8: 48 8B 9F 50 01 00 00     - mov rbx,[rdi+00000150]
+ff7rebirth_.exe+3B9A1BF: 48 85 DB                 - test rbx,rbx
+ff7rebirth_.exe+3B9A1C2: 74 47                    - je ff7rebirth_.exe+3B9A20B
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3B9A1C4: 8B 8F F8 01 00 00        - mov ecx,[rdi+000001F8]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3B9A1CA: 85 C9                    - test ecx,ecx
+ff7rebirth_.exe+3B9A1CC: 7E 3D                    - jle ff7rebirth_.exe+3B9A20B
+ff7rebirth_.exe+3B9A1CE: 0F BE 83 FB 00 00 00     - movsx eax,byte ptr [rbx+000000FB]
+ff7rebirth_.exe+3B9A1D5: C5 F8 57 C0              - vxorps xmm0,xmm0,xmm0
+ff7rebirth_.exe+3B9A1D9: C5 FA 2A C1              - vcvtsi2ss xmm0,xmm0,ecx
+ff7rebirth_.exe+3B9A1DD: C5 7A 59 83 AC 00 00 00  - vmulss xmm8,xmm0,[rbx+000000AC]
+ff7rebirth_.exe+3B9A1E5: 3B C8                    - cmp ecx,eax
+ff7rebirth_.exe+3B9A1E7: 75 19                    - jne ff7rebirth_.exe+3B9A202
+ff7rebirth_.exe+3B9A1E9: 45 33 C0                 - xor r8d,r8d
+ff7rebirth_.exe+3B9A1EC: B2 17                    - mov dl,17
 }
 </AssemblerScript>
         </CheatEntry>
@@ -3699,8 +3775,77 @@ ff7rebirth_.exe+3A3C779: 3B C8                 - cmp ecx,eax
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>184</ID>
+          <Description>"Magonga Mushroom: inf retry"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2025-05-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MOG_MUSHROOM_INF_TRY,$process,44 00 A7 0C 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_MOG_MUSHROOM_INF_TRY)
+
+label(code)
+label(return)
+
+newmem:
+  xor r12b, r12b
+  mov byte ptr [rdi+0000010C], 0
+
+code:
+  add [rdi+0000010C],r12b
+  jmp return
+
+INJECT_MOG_MUSHROOM_INF_TRY:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_MOG_MUSHROOM_INF_TRY)
+
+[DISABLE]
+
+INJECT_MOG_MUSHROOM_INF_TRY:
+  db 44 00 A7 0C 01 00 00
+
+unregistersymbol(INJECT_MOG_MUSHROOM_INF_TRY)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+356C49A
+
+ff7rebirth_.exe+356C46B: 48 8D 0D 06 AE DB 05  - lea rcx,[ff7rebirth_.exe+9327278]
+ff7rebirth_.exe+356C472: E8 45 C3 BE FE        - call ff7rebirth_.exe+21587BC
+ff7rebirth_.exe+356C477: 48 8B 0D 02 AE DB 05  - mov rcx,[ff7rebirth_.exe+9327280]
+ff7rebirth_.exe+356C47E: 41 B0 09              - mov r8b,09
+ff7rebirth_.exe+356C481: 33 D2                 - xor edx,edx
+ff7rebirth_.exe+356C483: E8 44 4A FB FD        - call ff7rebirth_.exe+1520ECC
+ff7rebirth_.exe+356C488: 80 3D D9 4F D2 05 00  - cmp byte ptr [ff7rebirth_.exe+9291468],00
+ff7rebirth_.exe+356C48F: 75 10                 - jne ff7rebirth_.exe+356C4A1
+ff7rebirth_.exe+356C491: 80 BF 15 01 00 00 00  - cmp byte ptr [rdi+00000115],00
+ff7rebirth_.exe+356C498: 75 07                 - jne ff7rebirth_.exe+356C4A1
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+356C49A: 44 00 A7 0C 01 00 00  - add [rdi+0000010C],r12b
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+356C4A1: 48 8D 4F 54           - lea rcx,[rdi+54]
+ff7rebirth_.exe+356C4A5: E8 D2 FC 43 FE        - call ff7rebirth_.exe+19AC17C
+ff7rebirth_.exe+356C4AA: 48 8B F0              - mov rsi,rax
+ff7rebirth_.exe+356C4AD: 48 85 C0              - test rax,rax
+ff7rebirth_.exe+356C4B0: 74 0C                 - je ff7rebirth_.exe+356C4BE
+ff7rebirth_.exe+356C4B2: 48 8B C8              - mov rcx,rax
+ff7rebirth_.exe+356C4B5: E8 B2 E3 29 FE        - call ff7rebirth_.exe+180A86C
+ff7rebirth_.exe+356C4BA: 84 C0                 - test al,al
+ff7rebirth_.exe+356C4BC: 75 02                 - jne ff7rebirth_.exe+356C4C0
+ff7rebirth_.exe+356C4BE: 33 F6                 - xor esi,esi
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>84</ID>
-          <Description>"Scripts from other makers"</Description>
+          <Description>"Scripts from other makers+"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
@@ -5932,129 +6077,6 @@ end)
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
-  <Structures StructVersion="2">
-    <Structure Name="unnamed structure" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
-      <Elements>
-        <Element Offset="0" Vartype="Pointer" Bytesize="8" OffsetHex="00000000" DisplayMethod="unsigned integer"/>
-        <Element Offset="8" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000008" DisplayMethod="unsigned integer"/>
-        <Element Offset="12" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000000C" DisplayMethod="hexadecimal"/>
-        <Element Offset="16" Vartype="Pointer" Bytesize="8" OffsetHex="00000010" DisplayMethod="unsigned integer"/>
-        <Element Offset="24" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000018" DisplayMethod="hexadecimal"/>
-        <Element Offset="32" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="00000020" DisplayMethod="unsigned integer"/>
-        <Element Offset="48" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000030" DisplayMethod="hexadecimal"/>
-        <Element Offset="52" Vartype="4 Bytes" Bytesize="4" RLECount="9" OffsetHex="00000034" DisplayMethod="unsigned integer"/>
-        <Element Offset="88" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000058" DisplayMethod="hexadecimal"/>
-        <Element Offset="96" Vartype="4 Bytes" Bytesize="4" RLECount="14" OffsetHex="00000060" DisplayMethod="unsigned integer"/>
-        <Element Offset="152" Vartype="Double" Bytesize="8" OffsetHex="00000098" DisplayMethod="unsigned integer"/>
-        <Element Offset="160" Vartype="Float" Bytesize="4" OffsetHex="000000A0" DisplayMethod="unsigned integer"/>
-        <Element Offset="164" Vartype="4 Bytes" Bytesize="4" RLECount="17" OffsetHex="000000A4" DisplayMethod="unsigned integer"/>
-        <Element Offset="232" Vartype="Pointer" Bytesize="8" OffsetHex="000000E8" DisplayMethod="unsigned integer"/>
-        <Element Offset="240" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000000F0" DisplayMethod="unsigned integer"/>
-        <Element Offset="248" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000F8" DisplayMethod="hexadecimal"/>
-        <Element Offset="252" Vartype="4 Bytes" Bytesize="4" RLECount="3" OffsetHex="000000FC" DisplayMethod="unsigned integer"/>
-        <Element Offset="264" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000108" DisplayMethod="hexadecimal"/>
-        <Element Offset="268" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000010C" DisplayMethod="unsigned integer"/>
-        <Element Offset="272" Vartype="Float" Bytesize="4" RLECount="3" OffsetHex="00000110" DisplayMethod="unsigned integer"/>
-        <Element Offset="284" Vartype="4 Bytes" Bytesize="4" RLECount="7" OffsetHex="0000011C" DisplayMethod="unsigned integer"/>
-        <Element Offset="312" Vartype="Pointer" Bytesize="8" OffsetHex="00000138" DisplayMethod="unsigned integer"/>
-        <Element Offset="320" Vartype="4 Bytes" Bytesize="4" RLECount="26" OffsetHex="00000140" DisplayMethod="unsigned integer"/>
-        <Element Offset="424" Vartype="Pointer" Bytesize="8" OffsetHex="000001A8" DisplayMethod="unsigned integer"/>
-        <Element Offset="432" Vartype="4 Bytes" Bytesize="4" RLECount="22" OffsetHex="000001B0" DisplayMethod="unsigned integer"/>
-        <Element Offset="520" Vartype="Pointer" Bytesize="8" OffsetHex="00000208" DisplayMethod="unsigned integer"/>
-        <Element Offset="528" Vartype="4 Bytes" Bytesize="4" RLECount="6" OffsetHex="00000210" DisplayMethod="unsigned integer"/>
-        <Element Offset="552" Vartype="Float" Bytesize="4" RLECount="2" OffsetHex="00000228" DisplayMethod="unsigned integer"/>
-        <Element Offset="560" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000230" DisplayMethod="unsigned integer"/>
-        <Element Offset="564" Vartype="Float" Bytesize="4" OffsetHex="00000234" DisplayMethod="unsigned integer"/>
-        <Element Offset="568" Vartype="4 Bytes" Bytesize="4" RLECount="8" OffsetHex="00000238" DisplayMethod="unsigned integer"/>
-        <Element Offset="600" Vartype="Float" Bytesize="4" RLECount="3" OffsetHex="00000258" DisplayMethod="unsigned integer"/>
-        <Element Offset="612" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000264" DisplayMethod="unsigned integer"/>
-        <Element Offset="616" Vartype="Float" Bytesize="4" RLECount="2" OffsetHex="00000268" DisplayMethod="unsigned integer"/>
-        <Element Offset="624" Vartype="Double" Bytesize="8" OffsetHex="00000270" DisplayMethod="unsigned integer"/>
-        <Element Offset="632" Vartype="Pointer" Bytesize="8" OffsetHex="00000278" DisplayMethod="unsigned integer"/>
-        <Element Offset="640" Vartype="4 Bytes" Bytesize="4" RLECount="18" OffsetHex="00000280" DisplayMethod="unsigned integer"/>
-        <Element Offset="712" Vartype="Pointer" Bytesize="8" OffsetHex="000002C8" DisplayMethod="unsigned integer"/>
-        <Element Offset="720" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000002D0" DisplayMethod="unsigned integer"/>
-        <Element Offset="728" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="000002D8" DisplayMethod="unsigned integer"/>
-        <Element Offset="744" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000002E8" DisplayMethod="unsigned integer"/>
-        <Element Offset="752" Vartype="Double" Bytesize="8" OffsetHex="000002F0" DisplayMethod="unsigned integer"/>
-        <Element Offset="760" Vartype="4 Bytes" Bytesize="4" RLECount="6" OffsetHex="000002F8" DisplayMethod="unsigned integer"/>
-        <Element Offset="784" Vartype="Pointer" Bytesize="8" OffsetHex="00000310" DisplayMethod="unsigned integer"/>
-        <Element Offset="792" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000318" DisplayMethod="unsigned integer"/>
-        <Element Offset="800" Vartype="Pointer" Bytesize="8" OffsetHex="00000320" DisplayMethod="unsigned integer"/>
-        <Element Offset="808" Vartype="Float" Bytesize="4" RLECount="3" OffsetHex="00000328" DisplayMethod="unsigned integer"/>
-        <Element Offset="820" Vartype="Byte" Bytesize="1" RLECount="4" OffsetHex="00000334" DisplayMethod="unsigned integer"/>
-        <Element Offset="824" Vartype="Float" Bytesize="4" OffsetHex="00000338" DisplayMethod="unsigned integer"/>
-        <Element Offset="828" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000033C" DisplayMethod="unsigned integer"/>
-        <Element Offset="832" Vartype="Pointer" Bytesize="8" RLECount="3" OffsetHex="00000340" DisplayMethod="unsigned integer"/>
-        <Element Offset="856" Vartype="4 Bytes" Bytesize="4" RLECount="4" OffsetHex="00000358" DisplayMethod="unsigned integer"/>
-        <Element Offset="872" Vartype="Byte" Bytesize="1" RLECount="4" OffsetHex="00000368" DisplayMethod="unsigned integer"/>
-        <Element Offset="876" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000036C" DisplayMethod="hexadecimal"/>
-        <Element Offset="880" Vartype="Pointer" Bytesize="8" RLECount="5" OffsetHex="00000370" DisplayMethod="unsigned integer"/>
-        <Element Offset="920" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000398" DisplayMethod="unsigned integer"/>
-        <Element Offset="928" Vartype="Pointer" Bytesize="8" OffsetHex="000003A0" DisplayMethod="unsigned integer"/>
-        <Element Offset="936" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000003A8" DisplayMethod="unsigned integer"/>
-        <Element Offset="944" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="000003B0" DisplayMethod="unsigned integer"/>
-        <Element Offset="960" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000003C0" DisplayMethod="unsigned integer"/>
-        <Element Offset="968" Vartype="Double" Bytesize="8" OffsetHex="000003C8" DisplayMethod="unsigned integer"/>
-        <Element Offset="976" Vartype="4 Bytes" Bytesize="4" RLECount="10" OffsetHex="000003D0" DisplayMethod="unsigned integer"/>
-        <Element Offset="1016" Vartype="Float" Bytesize="4" RLECount="3" OffsetHex="000003F8" DisplayMethod="unsigned integer"/>
-        <Element Offset="1028" Vartype="Byte" Bytesize="1" RLECount="4" OffsetHex="00000404" DisplayMethod="unsigned integer"/>
-        <Element Offset="1032" Vartype="Float" Bytesize="4" RLECount="2" OffsetHex="00000408" DisplayMethod="unsigned integer"/>
-        <Element Offset="1040" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000410" DisplayMethod="unsigned integer"/>
-        <Element Offset="1044" Vartype="Float" Bytesize="4" RLECount="3" OffsetHex="00000414" DisplayMethod="unsigned integer"/>
-        <Element Offset="1056" Vartype="4 Bytes" Bytesize="4" RLECount="3" OffsetHex="00000420" DisplayMethod="hexadecimal"/>
-        <Element Offset="1068" Vartype="4 Bytes" Bytesize="4" RLECount="7" OffsetHex="0000042C" DisplayMethod="unsigned integer"/>
-        <Element Offset="1096" Vartype="Pointer" Bytesize="8" OffsetHex="00000448" DisplayMethod="unsigned integer"/>
-        <Element Offset="1104" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000450" DisplayMethod="unsigned integer"/>
-        <Element Offset="1112" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000458" DisplayMethod="hexadecimal"/>
-        <Element Offset="1116" Vartype="4 Bytes" Bytesize="4" RLECount="6" OffsetHex="0000045C" DisplayMethod="unsigned integer"/>
-        <Element Offset="1140" Vartype="Float" Bytesize="4" OffsetHex="00000474" DisplayMethod="unsigned integer"/>
-        <Element Offset="1144" Vartype="4 Bytes" Bytesize="4" RLECount="4" OffsetHex="00000478" DisplayMethod="unsigned integer"/>
-        <Element Offset="1160" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000488" DisplayMethod="hexadecimal"/>
-        <Element Offset="1168" Vartype="Float" Bytesize="4" RLECount="2" OffsetHex="00000490" DisplayMethod="unsigned integer"/>
-        <Element Offset="1176" Vartype="Double" Bytesize="8" OffsetHex="00000498" DisplayMethod="unsigned integer"/>
-        <Element Offset="1184" Vartype="4 Bytes" Bytesize="4" OffsetHex="000004A0" DisplayMethod="unsigned integer"/>
-        <Element Offset="1188" Vartype="Float" Bytesize="4" OffsetHex="000004A4" DisplayMethod="unsigned integer"/>
-        <Element Offset="1192" Vartype="4 Bytes" Bytesize="4" OffsetHex="000004A8" DisplayMethod="unsigned integer"/>
-        <Element Offset="1196" Vartype="Float" Bytesize="4" OffsetHex="000004AC" DisplayMethod="unsigned integer"/>
-        <Element Offset="1200" Vartype="Double" Bytesize="8" OffsetHex="000004B0" DisplayMethod="unsigned integer"/>
-        <Element Offset="1208" Vartype="4 Bytes" Bytesize="4" OffsetHex="000004B8" DisplayMethod="unsigned integer"/>
-        <Element Offset="1212" Vartype="Float" Bytesize="4" OffsetHex="000004BC" DisplayMethod="unsigned integer"/>
-        <Element Offset="1216" Vartype="Byte" Bytesize="1" RLECount="4" OffsetHex="000004C0" DisplayMethod="unsigned integer"/>
-        <Element Offset="1220" Vartype="4 Bytes" Bytesize="4" OffsetHex="000004C4" DisplayMethod="unsigned integer"/>
-        <Element Offset="1224" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="000004C8" DisplayMethod="unsigned integer"/>
-        <Element Offset="1240" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000004D8" DisplayMethod="unsigned integer"/>
-        <Element Offset="1248" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="000004E0" DisplayMethod="unsigned integer"/>
-        <Element Offset="1264" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="000004F0" DisplayMethod="unsigned integer"/>
-        <Element Offset="1272" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="000004F8" DisplayMethod="unsigned integer"/>
-        <Element Offset="1288" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000508" DisplayMethod="unsigned integer"/>
-        <Element Offset="1296" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="00000510" DisplayMethod="unsigned integer"/>
-        <Element Offset="1312" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000520" DisplayMethod="unsigned integer"/>
-        <Element Offset="1320" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="00000528" DisplayMethod="unsigned integer"/>
-        <Element Offset="1336" Vartype="4 Bytes" Bytesize="4" RLECount="6" OffsetHex="00000538" DisplayMethod="unsigned integer"/>
-        <Element Offset="1360" Vartype="Pointer" Bytesize="8" OffsetHex="00000550" DisplayMethod="unsigned integer"/>
-        <Element Offset="1368" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000558" DisplayMethod="unsigned integer"/>
-        <Element Offset="1376" Vartype="Pointer" Bytesize="8" RLECount="169" OffsetHex="00000560" DisplayMethod="unsigned integer"/>
-        <Element Offset="2728" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000AA8" DisplayMethod="unsigned integer"/>
-        <Element Offset="2736" Vartype="Pointer" Bytesize="8" OffsetHex="00000AB0" DisplayMethod="unsigned integer"/>
-        <Element Offset="2744" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000AB8" DisplayMethod="unsigned integer"/>
-        <Element Offset="2752" Vartype="Pointer" Bytesize="8" OffsetHex="00000AC0" Description="Pointer to instance of CLayeredObject&lt;CResource&gt;::CContainedObject" DisplayMethod="unsigned integer"/>
-        <Element Offset="2760" Vartype="Pointer" Bytesize="8" OffsetHex="00000AC8" DisplayMethod="unsigned integer"/>
-        <Element Offset="2768" Vartype="4 Bytes" Bytesize="4" RLECount="268" OffsetHex="00000AD0" DisplayMethod="unsigned integer"/>
-        <Element Offset="3840" Vartype="Pointer" Bytesize="8" RLECount="2" OffsetHex="00000F00" DisplayMethod="unsigned integer"/>
-        <Element Offset="3856" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000F10" DisplayMethod="hexadecimal"/>
-        <Element Offset="3860" Vartype="4 Bytes" Bytesize="4" RLECount="4" OffsetHex="00000F14" DisplayMethod="unsigned integer"/>
-        <Element Offset="3876" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000F24" DisplayMethod="hexadecimal"/>
-        <Element Offset="3880" Vartype="4 Bytes" Bytesize="4" RLECount="6" OffsetHex="00000F28" DisplayMethod="unsigned integer"/>
-        <Element Offset="3904" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000F40" DisplayMethod="hexadecimal"/>
-        <Element Offset="3912" Vartype="4 Bytes" Bytesize="4" RLECount="11" OffsetHex="00000F48" DisplayMethod="unsigned integer"/>
-        <Element Offset="3956" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000F74" DisplayMethod="hexadecimal"/>
-        <Element Offset="3964" Vartype="4 Bytes" Bytesize="4" RLECount="25" OffsetHex="00000F7C" DisplayMethod="unsigned integer"/>
-        <Element Offset="4064" Vartype="Pointer" Bytesize="8" RLECount="3" OffsetHex="00000FE0" DisplayMethod="unsigned integer"/>
-        <Element Offset="4088" Vartype="4 Bytes" Bytesize="4" RLECount="2" OffsetHex="00000FF8" DisplayMethod="unsigned integer"/>
-      </Elements>
-    </Structure>
-  </Structures>
   <LuaScript>--[[
 [ENABLE]
 {$lua}
