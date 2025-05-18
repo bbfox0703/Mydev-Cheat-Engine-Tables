@@ -1,5 +1,8 @@
 # Changelog
 
+## 2025/05/18
+1. add/revise scripts
+
 ## 2025/05/07
 1. added Fast chain ability gauge
 
