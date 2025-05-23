@@ -1,5 +1,8 @@
 # Change log
 
+## 2025/05/23
+1. rev. for game update
+
 ## 2025/04/02
 1. added Pouch Editor
 
