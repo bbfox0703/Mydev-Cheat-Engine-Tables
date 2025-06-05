@@ -29,7 +29,7 @@ namespace AAToggleGenerator
                 OpenFileDialog openFileDialog = new OpenFileDialog
                 {
                     Filter = "Cheat Engine Table (*.CT)|*.CT",
-                    Title = "Select a Cheat Engine Table for re-nmber"
+                    Title = "Select a Cheat Engine Table for renumber"
                 };
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)

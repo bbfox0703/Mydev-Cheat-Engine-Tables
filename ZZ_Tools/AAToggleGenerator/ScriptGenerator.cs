@@ -345,11 +345,20 @@ namespace AAToggleGenerator
             }
         }
 
+        private static int ParseId(string id)
+        {
+            return int.TryParse(id, out var result) ? result : int.MaxValue;
+        }
+
         private static List<CheatEntry> GetOrderedEntries(List<CheatEntry> entries, bool ascending)
         {
             return ascending
-                ? entries.OrderBy(e => e.Depth).ThenBy(e => e.Id).ToList()
-                : entries.OrderByDescending(e => e.Depth).ThenByDescending(e => e.Id).ToList();
+                ? entries.OrderBy(e => e.Depth)
+                         .ThenBy(e => ParseId(e.Id))
+                         .ToList()
+                : entries.OrderByDescending(e => e.Depth)
+                         .ThenByDescending(e => ParseId(e.Id))
+                         .ToList();
         }
     }
 
