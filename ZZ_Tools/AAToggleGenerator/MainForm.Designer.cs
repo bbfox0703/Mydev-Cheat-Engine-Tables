@@ -41,7 +41,7 @@
             this.btnAAToggleGen.Name = "btnAAToggleGen";
             this.btnAAToggleGen.Size = new System.Drawing.Size(371, 45);
             this.btnAAToggleGen.TabIndex = 0;
-            this.btnAAToggleGen.Text = "Generate AA bulk toggle sctipt";
+            this.btnAAToggleGen.Text = "Generate AA bulk toggle script";
             this.btnAAToggleGen.UseVisualStyleBackColor = true;
             this.btnAAToggleGen.Click += new System.EventHandler(this.btnAAToggleGen_Click);
             // 
