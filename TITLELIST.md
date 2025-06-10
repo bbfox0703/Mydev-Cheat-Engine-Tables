@@ -276,6 +276,11 @@ zh-TW: 舊世界 Old World
 zh-TW: 女神異聞錄３ Reload  
 ja-JP: ペルソナ３ リロード  
 
+## Persona 4 Golden  
+[Persona 4 Golden (Steam)](https://store.steampowered.com/app/1113000/4/)  
+zh-TW: 女神異聞錄４ 黃金版  
+ja-JP: ペルソナ4 ザ・ゴールデン  
+  
 ## Persona 5 Royal  
 [Persona 5 Royal (Steam)](https://store.steampowered.com/app/1687950/5/)  
 zh-TW: 女神異聞錄5皇家版  
