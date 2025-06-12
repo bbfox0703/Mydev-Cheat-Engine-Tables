@@ -1,0 +1,829 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Toggle Scripts"</Description>
+      <Color>0080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  0, -- "Toggle Compact View"
+  11, -- "Get Gold"
+  18, -- "Get SP"
+  2, -- "Damage multiplier"
+  6, -- "SH Gen muldiplier"
+  8, -- "BE Gen multiplier"
+  14, -- "Sync. to real data when purchase"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  14, -- "Sync. to real data when purchase"
+  8, -- "BE Gen multiplier"
+  6, -- "SH Gen muldiplier"
+  2, -- "Damage multiplier"
+  18, -- "Get SP"
+  11, -- "Get Gold"
+  0, -- "Toggle Compact View"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 0, Description: "Toggle Compact View", Depth: 0
+-- ID: 2, Description: "Damage multiplier", Depth: 0
+-- ID: 6, Description: "SH Gen muldiplier", Depth: 0
+-- ID: 8, Description: "BE Gen multiplier", Depth: 0
+-- ID: 11, Description: "Get Gold", Depth: 0
+--   ID: 14, Description: "Sync. to real data when purchase", Depth: 1
+-- ID: 18, Description: "Get SP", Depth: 0
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Damage multiplier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_DAMAGE_MULTI,$process,F3 0F 58 C7 0F 2F C1) // should be unique
+alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
+
+label(code)
+label(return vf_damage_to_player vf_damage_to_enemy vf_min_hp)
+
+newmem:
+  vxorps xmm15,xmm15, xmm15
+  vucomiss xmm7, xmm15
+  jae code
+
+  movaps xmm15, [vf_damage_to_player]
+  movaps xmm14, xmm7
+  vshufps xmm14, xmm14, xmm14, 0
+  vmulps xmm14, xmm14, xmm15
+
+  cmp dword ptr [rdi+154], 0
+  je to_enemy
+
+  movss xmm7, xmm14
+  jmp code
+
+to_enemy:
+  vshufps xmm14, xmm14, xmm14, 1
+  movss xmm7, xmm14
+
+code:
+  addss xmm0,xmm7
+  //
+  cmp dword ptr [rdi+154], 0
+  je @F
+  movss xmm15, [vf_min_hp]
+  vucomiss xmm0, xmm15
+  jae @F
+  movaps xmm0, xmm15
+
+@@:
+  //
+  comiss xmm0,xmm1
+  jmp return
+align 10 cc
+  vf_damage_to_player:
+  dd (float)0.75
+  vf_damage_to_enemy:
+  dd (float)1.15
+  dd 0 0
+  vf_min_hp:
+  dd (float)505
+
+INJECT_DAMAGE_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_DAMAGE_MULTI vf_damage_to_player vf_damage_to_enemy vf_min_hp)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI:
+  db F3 0F 58 C7 0F 2F C1
+
+unregistersymbol(INJECT_DAMAGE_MULTI vf_damage_to_player vf_damage_to_enemy vf_min_hp)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1A4E550
+
+"SB-Win64-Shipping.exe"+1A4E527: 48 8B CF                 - mov rcx,rdi
+"SB-Win64-Shipping.exe"+1A4E52A: E8 B1 FC FF FF           - call "SB-Win64-Shipping.exe"+1A4E1E0
+"SB-Win64-Shipping.exe"+1A4E52F: 84 C0                    - test al,al
+"SB-Win64-Shipping.exe"+1A4E531: 74 0A                    - je "SB-Win64-Shipping.exe"+1A4E53D
+"SB-Win64-Shipping.exe"+1A4E533: F3 0F 10 05 6D 94 D3 04  - movss xmm0,["SB-Win64-Shipping.exe"+67879A8]
+"SB-Win64-Shipping.exe"+1A4E53B: EB 03                    - jmp "SB-Win64-Shipping.exe"+1A4E540
+"SB-Win64-Shipping.exe"+1A4E53D: 0F 57 C0                 - xorps xmm0,xmm0
+"SB-Win64-Shipping.exe"+1A4E540: F3 0F 10 8F C4 02 00 00  - movss xmm1,[rdi+000002C4]
+"SB-Win64-Shipping.exe"+1A4E548: F3 0F 5F C8              - maxss xmm1,xmm0
+"SB-Win64-Shipping.exe"+1A4E54C: 41 0F 28 C0              - movaps xmm0,xmm8
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1A4E550: F3 0F 58 C7              - addss xmm0,xmm7
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1A4E554: 0F 2F C1                 - comiss xmm0,xmm1
+"SB-Win64-Shipping.exe"+1A4E557: 76 0B                    - jna "SB-Win64-Shipping.exe"+1A4E564
+"SB-Win64-Shipping.exe"+1A4E559: 0F 28 C8                 - movaps xmm1,xmm0
+"SB-Win64-Shipping.exe"+1A4E55C: F3 0F 5D 8F 20 01 00 00  - minss xmm1,[rdi+00000120]
+"SB-Win64-Shipping.exe"+1A4E564: B9 01 00 00 00           - mov ecx,00000001
+"SB-Win64-Shipping.exe"+1A4E569: E8 72 34 21 00           - call "SB-Win64-Shipping.exe"+1C619E0
+"SB-Win64-Shipping.exe"+1A4E56E: F3 0F 11 87 1C 01 00 00  - movss [rdi+0000011C],xmm0
+"SB-Win64-Shipping.exe"+1A4E576: F3 0F 10 8F 20 01 00 00  - movss xmm1,[rdi+00000120]
+"SB-Win64-Shipping.exe"+1A4E57E: 0F 2F CE                 - comiss xmm1,xmm6
+"SB-Win64-Shipping.exe"+1A4E581: 76 17                    - jna "SB-Win64-Shipping.exe"+1A4E59A
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"multiplier to player"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_damage_to_player</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"multiplier to enemy"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_damage_to_enemy</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"min. HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_hp</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"SH Gen multiplier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-12
+  Author : bbfxo@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_SH,$process,F3 0F 58 CF 0F 2F CE) // should be unique
+alloc(newmem,$1000,INJECT_INF_SH)
+
+label(code)
+label(return vf_sh_gen_multi)
+
+newmem:
+  cmp dword ptr [rdi+154], 0
+  je code
+
+  vxorps xmm15, xmm15, xmm15
+  vucomiss xmm7, xmm15
+
+  jb to_damage
+  mulss xmm7, dword ptr [vf_sh_gen_multi]
+  jmp code
+
+to_damage:
+  divss xmm7, dword ptr [vf_sh_gen_multi]
+
+
+code:
+  addss xmm1,xmm7
+  comiss xmm1,xmm6
+  jmp return
+align 10 cc
+  vf_sh_gen_multi:
+  dd (float)3.33333333333
+
+INJECT_INF_SH:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INF_SH vf_sh_gen_multi)
+
+[DISABLE]
+
+INJECT_INF_SH:
+  db F3 0F 58 CF 0F 2F CE
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1A4E80A
+
+"SB-Win64-Shipping.exe"+1A4E7DD: E8 FE F9 FF FF           - call "SB-Win64-Shipping.exe"+1A4E1E0
+"SB-Win64-Shipping.exe"+1A4E7E2: 84 C0                    - test al,al
+"SB-Win64-Shipping.exe"+1A4E7E4: 0F 85 70 08 00 00        - jne "SB-Win64-Shipping.exe"+1A4F05A
+"SB-Win64-Shipping.exe"+1A4E7EA: BA 03 00 00 00           - mov edx,00000003
+"SB-Win64-Shipping.exe"+1A4E7EF: 48 8B CF                 - mov rcx,rdi
+"SB-Win64-Shipping.exe"+1A4E7F2: E8 E9 F9 FF FF           - call "SB-Win64-Shipping.exe"+1A4E1E0
+"SB-Win64-Shipping.exe"+1A4E7F7: 84 C0                    - test al,al
+"SB-Win64-Shipping.exe"+1A4E7F9: 0F 85 5B 08 00 00        - jne "SB-Win64-Shipping.exe"+1A4F05A
+"SB-Win64-Shipping.exe"+1A4E7FF: F3 0F 10 97 34 01 00 00  - movss xmm2,[rdi+00000134]
+"SB-Win64-Shipping.exe"+1A4E807: 0F 28 CA                 - movaps xmm1,xmm2
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1A4E80A: F3 0F 58 CF              - addss xmm1,xmm7
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1A4E80E: 0F 2F CE                 - comiss xmm1,xmm6
+"SB-Win64-Shipping.exe"+1A4E811: 77 05                    - ja "SB-Win64-Shipping.exe"+1A4E818
+"SB-Win64-Shipping.exe"+1A4E813: 0F 57 C0                 - xorps xmm0,xmm0
+"SB-Win64-Shipping.exe"+1A4E816: EB 0C                    - jmp "SB-Win64-Shipping.exe"+1A4E824
+"SB-Win64-Shipping.exe"+1A4E818: F3 0F 10 87 38 01 00 00  - movss xmm0,[rdi+00000138]
+"SB-Win64-Shipping.exe"+1A4E820: F3 0F 5D C1              - minss xmm0,xmm1
+"SB-Win64-Shipping.exe"+1A4E824: F3 0F 2C C0              - cvttss2si eax,xmm0
+"SB-Win64-Shipping.exe"+1A4E828: 66 0F 6E C0              - movd xmm0,eax
+"SB-Win64-Shipping.exe"+1A4E82C: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+"SB-Win64-Shipping.exe"+1A4E82F: F3 0F 11 87 34 01 00 00  - movss [rdi+00000134],xmm0
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_sh_gen_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"BE Gen multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BE_MULTI,$process,F3 0F 58 E2 33 C9) // should be unique
+alloc(newmem,$1000,INJECT_BE_MULTI)
+
+label(code)
+label(return vf_be_multi vf_min_be)
+
+newmem:
+  cmp dword ptr [edi+154], 0
+  je code
+
+  vxorps xmm15, xmm15, xmm15
+  vucomiss xmm2, xmm15
+  jb to_decrease
+
+  mulss xmm2, dword ptr [vf_be_multi]
+  jmp code_pre
+
+to_decrease:
+  divss xmm2, dword ptr [vf_be_multi]
+
+
+code_pre:
+
+code:
+  addss xmm4,xmm2
+
+  //
+
+  cmp dword ptr [rdi+154], 0
+  je @F
+  vmovss xmm15, [vf_min_be]
+  vucomiss xmm4, xmm15
+  jae @F
+  movaps xmm4, xmm15
+
+
+@@:
+  xor ecx,ecx
+  jmp return
+align 10 cc
+  vf_be_multi:
+  dd (float)3.333333333
+  vf_min_be:
+  dd (float)401
+
+
+INJECT_BE_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BE_MULTI vf_be_multi vf_min_be)
+
+[DISABLE]
+
+INJECT_BE_MULTI:
+  db F3 0F 58 E2 33 C9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1A4EA99
+
+"SB-Win64-Shipping.exe"+1A4EA6F: 4C 8D 97 50 01 00 00     - lea r10,[rdi+00000150]
+"SB-Win64-Shipping.exe"+1A4EA76: 44 0F 28 C0              - movaps xmm8,xmm0
+"SB-Win64-Shipping.exe"+1A4EA7A: F3 0F 10 26              - movss xmm4,[rsi]
+"SB-Win64-Shipping.exe"+1A4EA7E: 41 0F 28 C8              - movaps xmm1,xmm8
+"SB-Win64-Shipping.exe"+1A4EA82: F3 0F 2C CF              - cvttss2si ecx,xmm7
+"SB-Win64-Shipping.exe"+1A4EA86: E8 D5 60 21 00           - call "SB-Win64-Shipping.exe"+1C64B60
+"SB-Win64-Shipping.exe"+1A4EA8B: 49 8B F2                 - mov rsi,r10
+"SB-Win64-Shipping.exe"+1A4EA8E: 66 0F 6E D0              - movd xmm2,eax
+"SB-Win64-Shipping.exe"+1A4EA92: 0F 5B D2                 - cvtdq2ps xmm2,xmm2
+"SB-Win64-Shipping.exe"+1A4EA95: F3 0F 58 D7              - addss xmm2,xmm7
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1A4EA99: F3 0F 58 E2              - addss xmm4,xmm2
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1A4EA9D: 33 C9                    - xor ecx,ecx
+"SB-Win64-Shipping.exe"+1A4EA9F: F3 0F 2C D4              - cvttss2si edx,xmm4
+"SB-Win64-Shipping.exe"+1A4EAA3: 85 D2                    - test edx,edx
+"SB-Win64-Shipping.exe"+1A4EAA5: 7F 04                    - jg "SB-Win64-Shipping.exe"+1A4EAAB
+"SB-Win64-Shipping.exe"+1A4EAA7: 8B C1                    - mov eax,ecx
+"SB-Win64-Shipping.exe"+1A4EAA9: EB 0D                    - jmp "SB-Win64-Shipping.exe"+1A4EAB8
+"SB-Win64-Shipping.exe"+1A4EAAB: F3 0F 2C 87 54 01 00 00  - cvttss2si eax,[rdi+00000154]
+"SB-Win64-Shipping.exe"+1A4EAB3: 3B D0                    - cmp edx,eax
+"SB-Win64-Shipping.exe"+1A4EAB5: 0F 4C C2                 - cmovl eax,edx
+"SB-Win64-Shipping.exe"+1A4EAB8: 66 0F 6E C0              - movd xmm0,eax
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_be_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"min."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_be</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"Get Gold"</Description>
+      <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_MONEY,$process,44 03 71 34 8B 4D E4 F7 D1 21 4D F0 48 8D 4D E0 E8 23) // should be unique
+alloc(newmem,$1000,INJECT_GET_MONEY)
+
+label(code)
+label(return i_base_money_addr i_base_money_tag)
+
+newmem:
+  cmp qword ptr [i_base_money_addr], 0
+  jne code
+  mov [i_base_money_addr], rcx
+  push r15
+  mov r15d, [rcx+20]
+  mov [i_base_money_tag], r15d
+  pop r15
+
+code:
+  add r14d,[rcx+34]
+  mov ecx,[rbp-1C]
+  jmp return
+align 10 cc
+  i_base_money_addr:
+  dq 0
+  i_base_money_tag:
+  dd 0
+
+INJECT_GET_MONEY:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_MONEY i_base_money_addr i_base_money_tag)
+
+[DISABLE]
+
+INJECT_GET_MONEY:
+  db 44 03 71 34 8B 4D E4
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1C28C98
+
+"SB-Win64-Shipping.exe"+1C28C79: 74 0D                    - je "SB-Win64-Shipping.exe"+1C28C88
+"SB-Win64-Shipping.exe"+1C28C7B: 8B 80 60 01 00 00        - mov eax,[rax+00000160]
+"SB-Win64-Shipping.exe"+1C28C81: 83 F8 FF                 - cmp eax,-01
+"SB-Win64-Shipping.exe"+1C28C84: 75 CA                    - jne "SB-Win64-Shipping.exe"+1C28C50
+"SB-Win64-Shipping.exe"+1C28C86: EB 14                    - jmp "SB-Win64-Shipping.exe"+1C28C9C
+"SB-Win64-Shipping.exe"+1C28C88: 48 85 C0                 - test rax,rax
+"SB-Win64-Shipping.exe"+1C28C8B: 48 8D 48 10              - lea rcx,[rax+10]
+"SB-Win64-Shipping.exe"+1C28C8F: 49 0F 44 CC              - cmove rcx,r12
+"SB-Win64-Shipping.exe"+1C28C93: 48 85 C9                 - test rcx,rcx
+"SB-Win64-Shipping.exe"+1C28C96: 74 04                    - je "SB-Win64-Shipping.exe"+1C28C9C
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1C28C98: 44 03 71 34              - add r14d,[rcx+34]
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1C28C9C: 8B 4D E4                 - mov ecx,[rbp-1C]
+"SB-Win64-Shipping.exe"+1C28C9F: F7 D1                    - not ecx
+"SB-Win64-Shipping.exe"+1C28CA1: 21 4D F0                 - and [rbp-10],ecx
+"SB-Win64-Shipping.exe"+1C28CA4: 48 8D 4D E0              - lea rcx,[rbp-20]
+"SB-Win64-Shipping.exe"+1C28CA8: E8 23 CA 21 FF           - call "SB-Win64-Shipping.exe"+E456D0
+"SB-Win64-Shipping.exe"+1C28CAD: 48 8B 4D E8              - mov rcx,[rbp-18]
+"SB-Win64-Shipping.exe"+1C28CB1: 8B 45 F4                 - mov eax,[rbp-0C]
+"SB-Win64-Shipping.exe"+1C28CB4: 3B 41 18                 - cmp eax,[rcx+18]
+"SB-Win64-Shipping.exe"+1C28CB7: 0F 8C 23 FF FF FF        - jl "SB-Win64-Shipping.exe"+1C28BE0
+"SB-Win64-Shipping.exe"+1C28CBD: 48 8B BC 24 90 00 00 00  - mov rdi,[rsp+00000090]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"Usage: open in equip menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"Re-active when die / reload / data incorrect"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"Sync. to real data when purchase"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_GOLD,$process,44 03 71 6C 48 83 C5 10) // should be unique
+alloc(newmem,$1000,INJECT_SET_GOLD)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  push r14
+
+  mov r15d, [i_base_money_tag]
+  cmp r15d, [rcx+58]
+  jne endp
+
+  mov r15, [i_base_money_addr]
+  mov r14, [r15+34]
+
+  cmp r14, [rcx+6C]
+  jbe endp
+  mov [rcx+6C], r14
+  mov [rcx+70], r14
+
+endp:
+  pop r14
+  pop r15
+
+code:
+  add r14d,[rcx+6C]
+  add rbp,10
+  jmp return
+
+INJECT_SET_GOLD:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_SET_GOLD)
+
+[DISABLE]
+
+INJECT_SET_GOLD:
+  db 44 03 71 6C 48 83 C5 10
+
+unregistersymbol(INJECT_SET_GOLD)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1BCA596
+
+"SB-Win64-Shipping.exe"+1BCA57C: 48 85 DB           - test rbx,rbx
+"SB-Win64-Shipping.exe"+1BCA57F: 74 19              - je "SB-Win64-Shipping.exe"+1BCA59A
+"SB-Win64-Shipping.exe"+1BCA581: 48 8B 0B           - mov rcx,[rbx]
+"SB-Win64-Shipping.exe"+1BCA584: 48 8B 01           - mov rax,[rcx]
+"SB-Win64-Shipping.exe"+1BCA587: FF 50 28           - call qword ptr [rax+28]
+"SB-Win64-Shipping.exe"+1BCA58A: 84 C0              - test al,al
+"SB-Win64-Shipping.exe"+1BCA58C: 74 0C              - je "SB-Win64-Shipping.exe"+1BCA59A
+"SB-Win64-Shipping.exe"+1BCA58E: 48 8B 0B           - mov rcx,[rbx]
+"SB-Win64-Shipping.exe"+1BCA591: 48 85 C9           - test rcx,rcx
+"SB-Win64-Shipping.exe"+1BCA594: 74 04              - je "SB-Win64-Shipping.exe"+1BCA59A
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1BCA596: 44 03 71 6C        - add r14d,[rcx+6C]
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1BCA59A: 48 83 C5 10        - add rbp,10
+"SB-Win64-Shipping.exe"+1BCA59E: 49 3B EF           - cmp rbp,r15
+"SB-Win64-Shipping.exe"+1BCA5A1: 0F 85 19 FF FF FF  - jne "SB-Win64-Shipping.exe"+1BCA4C0
+"SB-Win64-Shipping.exe"+1BCA5A7: 48 8B 7C 24 38     - mov rdi,[rsp+38]
+"SB-Win64-Shipping.exe"+1BCA5AC: 48 8B 74 24 70     - mov rsi,[rsp+70]
+"SB-Win64-Shipping.exe"+1BCA5B1: 48 8B 6C 24 68     - mov rbp,[rsp+68]
+"SB-Win64-Shipping.exe"+1BCA5B6: 41 8B C6           - mov eax,r14d
+"SB-Win64-Shipping.exe"+1BCA5B9: 4C 8B 7C 24 30     - mov r15,[rsp+30]
+"SB-Win64-Shipping.exe"+1BCA5BE: 48 83 C4 40        - add rsp,40
+"SB-Win64-Shipping.exe"+1BCA5C2: 41 5E              - pop r14
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"tag"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_tag</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Display /chk value #1"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Display value #2"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>38</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>18</ID>
+      <Description>"Get SP"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SP,$process,F3 0F 10 8A C0 02 00 00 F3 0F 58 C9 41) // should be unique
+alloc(newmem,$1000,INJECT_GET_SP)
+
+label(code)
+label(return i_base_sp_addr)
+
+newmem:
+  mov [i_base_sp_addr], rdx
+
+code:
+  movss xmm1,[rdx+000002C0]
+  jmp return
+align 10 cc
+  i_base_sp_addr:
+  dq 0
+
+INJECT_GET_SP:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_SP i_base_sp_addr)
+
+[DISABLE]
+
+INJECT_GET_SP:
+  db F3 0F 10 8A C0 02 00 00
+
+unregistersymbol(INJECT_GET_SP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1E007DF
+
+"SB-Win64-Shipping.exe"+1E0079A: F3 0F 10 15 2E 70 98 04  - movss xmm2,["SB-Win64-Shipping.exe"+67877D0]
+"SB-Win64-Shipping.exe"+1E007A2: F3 0F 58 C9              - addss xmm1,xmm1
+"SB-Win64-Shipping.exe"+1E007A6: 48 89 B4 24 F0 00 00 00  - mov [rsp+000000F0],rsi
+"SB-Win64-Shipping.exe"+1E007AE: 48 89 BC 24 00 01 00 00  - mov [rsp+00000100],rdi
+"SB-Win64-Shipping.exe"+1E007B6: 4C 89 A4 24 08 01 00 00  - mov [rsp+00000108],r12
+"SB-Win64-Shipping.exe"+1E007BE: 4C 89 AC 24 C8 00 00 00  - mov [rsp+000000C8],r13
+"SB-Win64-Shipping.exe"+1E007C6: F3 0F 58 CA              - addss xmm1,xmm2
+"SB-Win64-Shipping.exe"+1E007CA: 4C 89 BC 24 C0 00 00 00  - mov [rsp+000000C0],r15
+"SB-Win64-Shipping.exe"+1E007D2: 0F 29 B4 24 B0 00 00 00  - movaps [rsp+000000B0],xmm6
+"SB-Win64-Shipping.exe"+1E007DA: F3 44 0F 2D E9           - cvtss2si r13d,xmm1
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1E007DF: F3 0F 10 8A C0 02 00 00  - movss xmm1,[rdx+000002C0]
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1E007E7: F3 0F 58 C9              - addss xmm1,xmm1
+"SB-Win64-Shipping.exe"+1E007EB: 41 D1 FD                 - sar r13d,1
+"SB-Win64-Shipping.exe"+1E007EE: F3 0F 58 CA              - addss xmm1,xmm2
+"SB-Win64-Shipping.exe"+1E007F2: F3 44 0F 2D F9           - cvtss2si r15d,xmm1
+"SB-Win64-Shipping.exe"+1E007F7: F3 0F 10 8A BC 02 00 00  - movss xmm1,[rdx+000002BC]
+"SB-Win64-Shipping.exe"+1E007FF: F3 0F 58 C9              - addss xmm1,xmm1
+"SB-Win64-Shipping.exe"+1E00803: 41 D1 FF                 - sar r15d,1
+"SB-Win64-Shipping.exe"+1E00806: F3 0F 58 CA              - addss xmm1,xmm2
+"SB-Win64-Shipping.exe"+1E0080A: F3 0F 2D F1              - cvtss2si esi,xmm1
+"SB-Win64-Shipping.exe"+1E0080E: D1 FE                    - sar esi,1
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"Usage: open skill tree menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"SP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>12C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"SP EXP (modify this to get SP)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>2C0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>11C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"SH"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>134</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"BE"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>150</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>25</ID>
+      <Description>"Stellar Blade™  /  https://opencheattables.com"</Description>
+      <Color>009700</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
