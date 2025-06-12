@@ -342,6 +342,10 @@ zh-TW: 文明帝國V
 [Station to Station (Steam)](https://store.steampowered.com/app/2272400/_Station_to_Station/)  
 zh-TW: 站點連連 Station to Station  
 
+## Stellar Blade  
+[Stellar Blade™ (Steam)](https://store.steampowered.com/app/3489700/Stellar_Blade/)  
+zh-TW: 劍星  
+
 ## Stellaris  
 [Stellaris (Steam)](https://store.steampowered.com/app/281990/Stellaris/)  
 
