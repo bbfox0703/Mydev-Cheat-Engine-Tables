@@ -66,14 +66,15 @@ end)
 
 local enableBattleScripts = {
   0, -- "Toggle Compact View"
-  13, -- "Get Gold"
+  13, -- "Get Gold / set item amount"
   2, -- "Damage multiplier"
   23, -- "Get SP"
   31, -- "BE Gen multiplier"
   6, -- "SH Gen multiplier"
   9, -- "Fast de-balance"
-  16, -- "Sync. to real data when purchase"
-  35, -- "inf. drone ammo"
+  16, -- "Sync. gold/item amt. to real data when purchase / get"
+  35, -- "inf. drone ammo / Nikki DLC ammo"
+  40, -- "Also fix display ammo amount"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -96,14 +97,15 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
-  35, -- "inf. drone ammo"
-  16, -- "Sync. to real data when purchase"
+  40, -- "Also fix display ammo amount"
+  35, -- "inf. drone ammo / Nikki DLC ammo"
+  16, -- "Sync. gold/item amt. to real data when purchase / get"
   9, -- "Fast de-balance"
   6, -- "SH Gen multiplier"
   31, -- "BE Gen multiplier"
   23, -- "Get SP"
   2, -- "Damage multiplier"
-  13, -- "Get Gold"
+  13, -- "Get Gold / set item amount"
   0, -- "Toggle Compact View"
 }
 local addressList = getAddressList()
@@ -124,9 +126,10 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 6, Description: "SH Gen multiplier", Depth: 0
 -- ID: 9, Description: "Fast de-balance", Depth: 0
 -- ID: 31, Description: "BE Gen multiplier", Depth: 0
--- ID: 13, Description: "Get Gold", Depth: 0
---   ID: 16, Description: "Sync. to real data when purchase", Depth: 1
---     ID: 35, Description: "inf. drone ammo", Depth: 2
+-- ID: 13, Description: "Get Gold / set item amount", Depth: 0
+--   ID: 16, Description: "Sync. gold/item amt. to real data when purchase / get", Depth: 1
+--     ID: 35, Description: "inf. drone ammo / Nikki DLC ammo", Depth: 2
+--       ID: 40, Description: "Also fix display ammo amount", Depth: 3
 -- ID: 23, Description: "Get SP", Depth: 0
 
 </AssemblerScript>
@@ -223,7 +226,7 @@ align 10 cc
   is_fast_de_shield:
   dd 0
   vf_min_hp_ratio:
-  dd (float)0.61
+  dd (float)0.66
 
 INJECT_DAMAGE_MULTI:
   jmp far newmem
@@ -617,7 +620,7 @@ dealloc(newmem)
     </CheatEntry>
     <CheatEntry>
       <ID>13</ID>
-      <Description>"Get Gold"</Description>
+      <Description>"Get Gold / set item amount"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
@@ -635,15 +638,14 @@ label(code)
 label(return i_base_money_addr i_base_money_tag is_chk_ammo_amt)
 
 newmem:
-  cmp qword ptr [i_base_money_addr], 0
-  jne chk_ammos_pre
   cmp [rcx+20], 00018E43
   jne chk_ammos_pre
   mov [i_base_money_addr], rcx
-  push r15
-  mov r15d, [rcx+20]
-  mov [i_base_money_tag], r15d
-  pop r15
+  mov dword ptr [i_base_money_tag], 00018E43
+  //push r15
+  //mov r15d, [rcx+20]
+  //mov [i_base_money_tag], r15d
+  //pop r15
   jmp code
 
 chk_ammos_pre:
@@ -659,6 +661,8 @@ chk_ammos_pre:
   je chk_ammo_dis
   cmp dword ptr [rcx+20], 01285282 // 剌針
   je chk_ammo_stinger
+  cmp dword ptr [rcx+20], 012D4F30 // nikki game ammo
+  je chk_ammo_nikki_mission
   jmp code
 
 chk_ammo:
@@ -699,39 +703,51 @@ chk_ammo_normal:
 
 
 chk_ammo_dis:
-  cmp dword ptr [rcx+34], C
+  cmp dword ptr [rcx+34], B
   jbe @F
-  mov dword ptr [rcx+34], C
-  mov dword ptr [rcx+38], C
+  mov dword ptr [rcx+34], B
+  mov dword ptr [rcx+38], B
 @@:
-  cmp dword ptr [rcx+34], C
+  cmp dword ptr [rcx+34], B
   je code
-  mov dword ptr [rcx+34], C
-  mov dword ptr [rcx+38], C
+  mov dword ptr [rcx+34], B
+  mov dword ptr [rcx+38], B
   jmp code
 
 chk_ammo_imp:
-  cmp dword ptr [rcx+34], 8
+  cmp dword ptr [rcx+34], 7
   jbe @F
-  mov dword ptr [rcx+34], 8
-  mov dword ptr [rcx+38], 8
+  mov dword ptr [rcx+34], 7
+  mov dword ptr [rcx+38], 7
 @@:
-  cmp dword ptr [rcx+34], 8
+  cmp dword ptr [rcx+34], 7
   je code
-  mov dword ptr [rcx+34], 8
-  mov dword ptr [rcx+38], 8
+  mov dword ptr [rcx+34], 7
+  mov dword ptr [rcx+38], 7
   jmp code
 
 chk_ammo_stinger:
-  cmp dword ptr [rcx+34], 18
+  cmp dword ptr [rcx+34], 1F
   jbe @F
-  mov dword ptr [rcx+34], 18
-  mov dword ptr [rcx+38], 18
+  mov dword ptr [rcx+34], 1F
+  mov dword ptr [rcx+38], 1F
 @@:
-  cmp dword ptr [rcx+34], 18
+  cmp dword ptr [rcx+34], 1F
   je code
-  mov dword ptr [rcx+34], 18
-  mov dword ptr [rcx+38], 18
+  mov dword ptr [rcx+34], 1F
+  mov dword ptr [rcx+38], 1F
+  jmp code
+
+chk_ammo_nikki_mission:
+  cmp dword ptr [rcx+34], #60
+  jbe @F
+  mov dword ptr [rcx+34], #60
+  mov dword ptr [rcx+38], #60
+@@:
+  cmp dword ptr [rcx+34], #60
+  je code
+  mov dword ptr [rcx+34], #60
+  mov dword ptr [rcx+38], #60
   jmp code
 
 
@@ -805,7 +821,7 @@ dealloc(newmem)
         </CheatEntry>
         <CheatEntry>
           <ID>16</ID>
-          <Description>"Sync. to real data when purchase"</Description>
+          <Description>"Sync. gold/item amt. to real data when purchase / get"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
@@ -826,15 +842,17 @@ newmem:
   push r15
   push r14
 
-  mov r15d, [i_base_money_tag]
-  cmp r15d, [rcx+58]
+  //mov r15d, [i_base_money_tag]
+  cmp dword ptr [rcx+58], 00018E43
   jne endp
 
   mov r15, [i_base_money_addr]
+  //test r15, r15
+  //jz endp
   mov r14, [r15+34]
 
   cmp r14, [rcx+6C]
-  jbe endp
+  je endp
   mov [rcx+6C], r14
   mov [rcx+70], r14
 
@@ -857,10 +875,13 @@ chk_items:
   je chk_ammo_dis
   cmp dword ptr [rcx+58], 01285282
   je chk_ammo_stinger
+  cmp dword ptr [rcx+58], 012D4F30
+  je chk_ammo_nikki_mission
 
 @@:
   cmp dword ptr [is_set_real_item_amount], 1
   jne code
+
   push r15
   mov r15d, [i_real_amount_threshold]
   cmp dword ptr [rcx+6C], r15d
@@ -926,39 +947,51 @@ chk_ammo_normal:
   jmp code
 
 chk_ammo_dis:
-  cmp dword ptr [rcx+6C], C
+  cmp dword ptr [rcx+6C], B
   jbe @F
-  mov dword ptr [rcx+6C], C
-  mov dword ptr [rcx+70], C
+  mov dword ptr [rcx+6C], B
+  mov dword ptr [rcx+70], B
 @@:
-  cmp dword ptr [rcx+6C], C
+  cmp dword ptr [rcx+6C], B
   je code
-  mov dword ptr [rcx+6C], C
-  mov dword ptr [rcx+70], C
+  mov dword ptr [rcx+6C], B
+  mov dword ptr [rcx+70], B
   jmp code
 
 chk_ammo_imp:
-  cmp dword ptr [rcx+6C], 8
+  cmp dword ptr [rcx+6C], 7
   jbe @F
-  mov dword ptr [rcx+6C], 8
-  mov dword ptr [rcx+70], 8
+  mov dword ptr [rcx+6C], 7
+  mov dword ptr [rcx+70], 7
 @@:
-  cmp dword ptr [rcx+6C], 8
+  cmp dword ptr [rcx+6C], 7
   je code
-  mov dword ptr [rcx+6C], 8
-  mov dword ptr [rcx+70], 8
+  mov dword ptr [rcx+6C], 7
+  mov dword ptr [rcx+70], 7
   jmp code
 
 chk_ammo_stinger:
-  cmp dword ptr [rcx+6C], 18
+  cmp dword ptr [rcx+6C], 1F
   jbe @F
-  mov dword ptr [rcx+6C], 18
-  mov dword ptr [rcx+70], 18
+  mov dword ptr [rcx+6C], 1F
+  mov dword ptr [rcx+70], 1F
 @@:
-  cmp dword ptr [rcx+6C], 18
+  cmp dword ptr [rcx+6C], 1F
   je code
-  mov dword ptr [rcx+6C], 18
-  mov dword ptr [rcx+70], 18
+  mov dword ptr [rcx+6C], 1F
+  mov dword ptr [rcx+70], 1F
+  jmp code
+
+chk_ammo_nikki_mission:
+  cmp dword ptr [rcx+6C], #60
+  jbe @F
+  mov dword ptr [rcx+6C], #60
+  mov dword ptr [rcx+70], #60
+@@:
+  cmp dword ptr [rcx+6C], #60
+  je code
+  mov dword ptr [rcx+6C], #60
+  mov dword ptr [rcx+70], #60
   jmp code
 
 
@@ -1021,7 +1054,8 @@ dealloc(newmem)
           <CheatEntries>
             <CheatEntry>
               <ID>35</ID>
-              <Description>"inf. drone ammo"</Description>
+              <Description>"inf. drone ammo / Nikki DLC ammo"</Description>
+              <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
   Version: 
@@ -1039,7 +1073,21 @@ label(return)
 
 newmem:
   cmp dword ptr [is_chk_ammo_amt], 1
-  jne @F
+  jne code
+  cmp dword ptr [r15+20], 012DE46F // 一般彈
+  je @F
+  cmp dword ptr [r15+20], 01285ED4 // 爆破彈
+  je @F
+  cmp dword ptr [r15+20], 012DE3A4 // 衝擊
+  je @F
+  cmp dword ptr [r15+20], 012DE467 // 散彈
+  je @F
+  cmp dword ptr [r15+20], 01285282 // 剌針
+  je @F
+  cmp dword ptr [r15+20], 012D4F30 // nikki game ammo
+  je @F
+  jmp code
+@@:
   xor r12d, r12d
 
 code:
@@ -1089,6 +1137,94 @@ dealloc(newmem)
 "SB-Win64-Shipping.exe"+1C28011: 41 2B C4                 - sub eax,r12d
 }
 </AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>40</ID>
+                  <Description>"Also fix display ammo amount"</Description>
+                  <Options moHideChildren="1"/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_AMMO3,$process,2B C5 41 39 29) // should be unique
+alloc(newmem,$1000,INJECT_AMMO3)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [is_chk_ammo_amt], 1
+  jne code
+  cmp dword ptr [rdx+58], 012DE46F
+  je @F
+  cmp dword ptr [rdx+58], 01285ED4
+  je @F
+  cmp dword ptr [rdx+58], 012DE3A4
+  je @F
+  cmp dword ptr [rdx+58], 012DE467
+  je @F
+  cmp dword ptr [rdx+58], 01285282
+  je @F
+  cmp dword ptr [rdx+58], 012D4F30
+  je @F
+  jmp code
+
+@@:
+  xor ebp ebp
+
+code:
+  sub eax,ebp
+  cmp [r9],ebp
+  jmp return
+
+INJECT_AMMO3:
+  jmp newmem
+return:
+registersymbol(INJECT_AMMO3)
+
+[DISABLE]
+
+INJECT_AMMO3:
+  db 2B C5 41 39 29
+
+unregistersymbol(INJECT_AMMO3)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1BC8994
+
+"SB-Win64-Shipping.exe"+1BC896D: 44 8B 42 6C                 - mov r8d,[rdx+6C]
+"SB-Win64-Shipping.exe"+1BC8971: 4C 8D 4A 70                 - lea r9,[rdx+70]
+"SB-Win64-Shipping.exe"+1BC8975: 44 0F B6 94 24 90 00 00 00  - movzx r10d,byte ptr [rsp+00000090]
+"SB-Win64-Shipping.exe"+1BC897E: 44 2B C5                    - sub r8d,ebp
+"SB-Win64-Shipping.exe"+1BC8981: 39 6A 6C                    - cmp [rdx+6C],ebp
+"SB-Win64-Shipping.exe"+1BC8984: 44 0F 46 C7                 - cmovbe r8d,edi
+"SB-Win64-Shipping.exe"+1BC8988: 44 89 42 6C                 - mov [rdx+6C],r8d
+"SB-Win64-Shipping.exe"+1BC898C: 45 84 D2                    - test r10b,r10b
+"SB-Win64-Shipping.exe"+1BC898F: 74 0E                       - je "SB-Win64-Shipping.exe"+1BC899F
+"SB-Win64-Shipping.exe"+1BC8991: 41 8B 01                    - mov eax,[r9]
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1BC8994: 2B C5                       - sub eax,ebp
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1BC8996: 41 39 29                    - cmp [r9],ebp
+"SB-Win64-Shipping.exe"+1BC8999: 0F 46 C7                    - cmovbe eax,edi
+"SB-Win64-Shipping.exe"+1BC899C: 41 89 01                    - mov [r9],eax
+"SB-Win64-Shipping.exe"+1BC899F: 45 39 01                    - cmp [r9],r8d
+"SB-Win64-Shipping.exe"+1BC89A2: 76 03                       - jna "SB-Win64-Shipping.exe"+1BC89A7
+"SB-Win64-Shipping.exe"+1BC89A4: 45 89 01                    - mov [r9],r8d
+"SB-Win64-Shipping.exe"+1BC89A7: 0F B6 84 24 98 00 00 00     - movzx eax,byte ptr [rsp+00000098]
+"SB-Win64-Shipping.exe"+1BC89AF: 45 0F B6 CE                 - movzx r9d,r14b
+"SB-Win64-Shipping.exe"+1BC89B3: 88 44 24 28                 - mov [rsp+28],al
+"SB-Win64-Shipping.exe"+1BC89B7: 44 8B C5                    - mov r8d,ebp
+}
+</AssemblerScript>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>17</ID>
@@ -1129,7 +1265,7 @@ dealloc(newmem)
         </CheatEntry>
         <CheatEntry>
           <ID>33</ID>
-          <Description>"Check drone ammo amount?"</Description>
+          <Description>"Check ammo amount?"</Description>
           <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
 </DropDownList>
@@ -1202,7 +1338,7 @@ registersymbol(INJECT_GET_SP i_base_sp_addr)
 INJECT_GET_SP:
   db F3 0F 10 8A C0 02 00 00
 
-unregistersymbol(INJECT_GET_SP)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
