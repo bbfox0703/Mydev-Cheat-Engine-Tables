@@ -69,15 +69,16 @@ local enableBattleScripts = {
   11, -- "Fast de-balance"
   13, -- "BE gen. multiplier"
   16, -- "BU gen. multiplier"
-  19, -- "Get Gold / set item amount"
+  19, -- "Tachy mode multiplier"
+  22, -- "Get Gold / set item amount"
   3, -- "Damage multiplier"
-  38, -- "Get SP"
-  46, -- "Get last stat data (circular update)"
+  41, -- "Get SP"
+  50, -- "Get last stat data (circular update)"
   8, -- "SH Gen multiplier"
-  22, -- "Sync. gold/item amt. to real data when purchase / get"
-  23, -- "inf. drone ammo / Nikki DLC ammo / some grenades in hand"
-  27, -- "inf. smart mines in hand"
-  24, -- "Also fix display ammo amount"
+  25, -- "Sync. gold/item amt. to real data when purchase / get"
+  26, -- "inf. drone ammo / Nikki DLC ammo / some grenades in hand"
+  30, -- "inf. smart mines in hand"
+  27, -- "Also fix display ammo amount"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -100,16 +101,17 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
-  24, -- "Also fix display ammo amount"
-  27, -- "inf. smart mines in hand"
-  23, -- "inf. drone ammo / Nikki DLC ammo / some grenades in hand"
-  33, -- "Set amount+"
-  22, -- "Sync. gold/item amt. to real data when purchase / get"
+  27, -- "Also fix display ammo amount"
+  30, -- "inf. smart mines in hand"
+  26, -- "inf. drone ammo / Nikki DLC ammo / some grenades in hand"
+  36, -- "Set amount+"
+  25, -- "Sync. gold/item amt. to real data when purchase / get"
   8, -- "SH Gen multiplier"
-  46, -- "Get last stat data (circular update)"
-  38, -- "Get SP"
+  50, -- "Get last stat data (circular update)"
+  41, -- "Get SP"
   3, -- "Damage multiplier"
-  19, -- "Get Gold / set item amount"
+  22, -- "Get Gold / set item amount"
+  19, -- "Tachy mode multiplier"
   16, -- "BU gen. multiplier"
   13, -- "BE gen. multiplier"
   11, -- "Fast de-balance"
@@ -134,14 +136,15 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 11, Description: "Fast de-balance", Depth: 0
 -- ID: 13, Description: "BE gen. multiplier", Depth: 0
 -- ID: 16, Description: "BU gen. multiplier", Depth: 0
--- ID: 19, Description: "Get Gold / set item amount", Depth: 0
---   ID: 22, Description: "Sync. gold/item amt. to real data when purchase / get", Depth: 1
---     ID: 23, Description: "inf. drone ammo / Nikki DLC ammo / some grenades in hand", Depth: 2
---       ID: 24, Description: "Also fix display ammo amount", Depth: 3
---     ID: 27, Description: "inf. smart mines in hand", Depth: 2
---   ID: 33, Description: "Set amount+", Depth: 1
--- ID: 38, Description: "Get SP", Depth: 0
--- ID: 46, Description: "Get last stat data (circular update)", Depth: 0
+-- ID: 19, Description: "Tachy mode multiplier", Depth: 0
+-- ID: 22, Description: "Get Gold / set item amount", Depth: 0
+--   ID: 25, Description: "Sync. gold/item amt. to real data when purchase / get", Depth: 1
+--     ID: 26, Description: "inf. drone ammo / Nikki DLC ammo / some grenades in hand", Depth: 2
+--       ID: 27, Description: "Also fix display ammo amount", Depth: 3
+--     ID: 30, Description: "inf. smart mines in hand", Depth: 2
+--   ID: 36, Description: "Set amount+", Depth: 1
+-- ID: 41, Description: "Get SP", Depth: 0
+-- ID: 50, Description: "Get last stat data (circular update)", Depth: 0
 
 </AssemblerScript>
       <CheatEntries>
@@ -755,6 +758,122 @@ dealloc(newmem)
     </CheatEntry>
     <CheatEntry>
       <ID>19</ID>
+      <Description>"Tachy mode multiplier"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : SB-Win64-Shipping.exe
+  Version: 
+  Date   : 2025-06-17
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TACHY_GAUGE_MULTI,$process,F3 0F 58 C7 F3 0F 2C C8 85) // should be unique
+alloc(newmem,$1000,INJECT_TACHY_GAUGE_MULTI)
+
+label(code)
+label(return vf_min_tmode vf_tachy_multi)
+
+newmem:
+  xor ecx, ecx
+
+  vxorps xmm15, xmm15, xmm15
+  vucomiss xmm7, xmm15
+  jbe code
+
+  mulss xmm7, [vf_tachy_multi]
+  mov ecx, 1
+
+code:
+  addss xmm0,xmm7
+
+  // begin code injection
+  test ecx, ecx
+  jz @F
+
+  vmovss xmm15, [vf_min_tmode]
+  vucomiss xmm0, xmm15
+  jae @F
+  movss xmm0, xmm15
+
+@@:
+  // end code injection
+
+
+  cvttss2si ecx,xmm0
+  jmp return
+align 10 cc
+  vf_min_tmode:
+  dd (float)16500
+  vf_tachy_multi:
+  dd (float)3.3333333
+  is_val_modified:
+  dd 0
+
+INJECT_TACHY_GAUGE_MULTI:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_TACHY_GAUGE_MULTI vf_min_tmode vf_tachy_multi)
+
+[DISABLE]
+
+INJECT_TACHY_GAUGE_MULTI:
+  db F3 0F 58 C7 F3 0F 2C C8
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1A4EDAE
+
+"SB-Win64-Shipping.exe"+1A4ED7A: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+"SB-Win64-Shipping.exe"+1A4ED7D: F3 0F 11 87 60 01 00 00  - movss [rdi+00000160],xmm0
+"SB-Win64-Shipping.exe"+1A4ED85: 0F 2E D9                 - ucomiss xmm3,xmm1
+"SB-Win64-Shipping.exe"+1A4ED88: 0F 84 CC 02 00 00        - je "SB-Win64-Shipping.exe"+1A4F05A
+"SB-Win64-Shipping.exe"+1A4ED8E: E9 6E F8 FF FF           - jmp "SB-Win64-Shipping.exe"+1A4E601
+"SB-Win64-Shipping.exe"+1A4ED93: F3 0F 2C 87 EC 02 00 00  - cvttss2si eax,[rdi+000002EC]
+"SB-Win64-Shipping.exe"+1A4ED9B: 85 C0                    - test eax,eax
+"SB-Win64-Shipping.exe"+1A4ED9D: 0F 8E B7 02 00 00        - jng "SB-Win64-Shipping.exe"+1A4F05A
+"SB-Win64-Shipping.exe"+1A4EDA3: F3 0F 10 97 70 01 00 00  - movss xmm2,[rdi+00000170]
+"SB-Win64-Shipping.exe"+1A4EDAB: 0F 28 C2                 - movaps xmm0,xmm2
+// ---------- INJECTING HERE ----------
+"SB-Win64-Shipping.exe"+1A4EDAE: F3 0F 58 C7              - addss xmm0,xmm7
+// ---------- DONE INJECTING  ----------
+"SB-Win64-Shipping.exe"+1A4EDB2: F3 0F 2C C8              - cvttss2si ecx,xmm0
+"SB-Win64-Shipping.exe"+1A4EDB6: 85 C9                    - test ecx,ecx
+"SB-Win64-Shipping.exe"+1A4EDB8: 7F 04                    - jg "SB-Win64-Shipping.exe"+1A4EDBE
+"SB-Win64-Shipping.exe"+1A4EDBA: 33 C9                    - xor ecx,ecx
+"SB-Win64-Shipping.exe"+1A4EDBC: EB 0F                    - jmp "SB-Win64-Shipping.exe"+1A4EDCD
+"SB-Win64-Shipping.exe"+1A4EDBE: F3 0F 2C 87 74 01 00 00  - cvttss2si eax,[rdi+00000174]
+"SB-Win64-Shipping.exe"+1A4EDC6: 3B C8                    - cmp ecx,eax
+"SB-Win64-Shipping.exe"+1A4EDC8: 0F 4C C1                 - cmovl eax,ecx
+"SB-Win64-Shipping.exe"+1A4EDCB: 8B C8                    - mov ecx,eax
+"SB-Win64-Shipping.exe"+1A4EDCD: 66 0F 6E C1              - movd xmm0,ecx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"min."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_tmode</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_tachy_multi</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>22</ID>
       <Description>"Get Gold / set item amount"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -987,19 +1106,19 @@ dealloc(newmem)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>20</ID>
+          <ID>23</ID>
           <Description>"Usage: open in equip menu"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>21</ID>
+          <ID>24</ID>
           <Description>"Re-active when die / reload / data incorrect"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>22</ID>
+          <ID>25</ID>
           <Description>"Sync. gold/item amt. to real data when purchase / get"</Description>
           <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -1270,7 +1389,7 @@ dealloc(newmem)
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>23</ID>
+              <ID>26</ID>
               <Description>"inf. drone ammo / Nikki DLC ammo / some grenades in hand"</Description>
               <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1375,7 +1494,7 @@ dealloc(newmem)
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>24</ID>
+                  <ID>27</ID>
                   <Description>"Also fix display ammo amount"</Description>
                   <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
                   <VariableType>Auto Assembler Script</VariableType>
@@ -1516,7 +1635,7 @@ dealloc(newmem)
 </AssemblerScript>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>25</ID>
+                      <ID>28</ID>
                       <Description>"E. grenade?"</Description>
                       <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
@@ -1527,7 +1646,7 @@ dealloc(newmem)
                       <Address>is_grenade</Address>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>26</ID>
+                      <ID>29</ID>
                       <Description>"P. grenade?"</Description>
                       <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
@@ -1542,7 +1661,7 @@ dealloc(newmem)
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>27</ID>
+              <ID>30</ID>
               <Description>"inf. smart mines in hand"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
@@ -1658,13 +1777,13 @@ dealloc(newmem)
 </AssemblerScript>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>28</ID>
+                  <ID>31</ID>
                   <Description>""Also fix display ammo amount" must on"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>29</ID>
+                  <ID>32</ID>
                   <Description>"Enabled?"</Description>
                   <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
@@ -1679,7 +1798,7 @@ dealloc(newmem)
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>30</ID>
+          <ID>33</ID>
           <Description>"Chk ammo amount?"</Description>
           <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
@@ -1690,7 +1809,7 @@ dealloc(newmem)
           <Address>is_chk_ammo_amt</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>31</ID>
+          <ID>34</ID>
           <Description>"Gold display /chk value #1"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1701,7 +1820,7 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>32</ID>
+          <ID>35</ID>
           <Description>"Gold display value #2"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1712,13 +1831,13 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>33</ID>
+          <ID>36</ID>
           <Description>"Set amount+"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>34</ID>
+              <ID>37</ID>
               <Description>"Enable item amount modification?"</Description>
               <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
@@ -1729,7 +1848,7 @@ dealloc(newmem)
               <Address>is_set_real_item_amount</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>35</ID>
+              <ID>38</ID>
               <Description>"cur. item amount must &gt;? to trigger, ? ="</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1737,7 +1856,7 @@ dealloc(newmem)
               <Address>i_real_amount_threshold</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>36</ID>
+              <ID>39</ID>
               <Description>"Set amount to ?, if &lt; 100. ? ="</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1745,7 +1864,7 @@ dealloc(newmem)
               <Address>i_set_real_amount_to</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>37</ID>
+              <ID>40</ID>
               <Description>"Set amount to ?, if amount &gt; 100. ? ="</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1757,7 +1876,7 @@ dealloc(newmem)
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>38</ID>
+      <ID>41</ID>
       <Description>"Get SP"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -1849,13 +1968,13 @@ unregistersymbol(INJECT_GET_SPo)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>39</ID>
+          <ID>42</ID>
           <Description>"Usage: open skill tree menu"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
-          <ID>40</ID>
+          <ID>43</ID>
           <Description>"SP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1866,7 +1985,7 @@ unregistersymbol(INJECT_GET_SPo)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>41</ID>
+          <ID>44</ID>
           <Description>"SP EXP (modify this to get SP)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1877,7 +1996,7 @@ unregistersymbol(INJECT_GET_SPo)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>42</ID>
+          <ID>45</ID>
           <Description>"HP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1888,7 +2007,7 @@ unregistersymbol(INJECT_GET_SPo)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>43</ID>
+          <ID>46</ID>
           <Description>"SH"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1899,7 +2018,7 @@ unregistersymbol(INJECT_GET_SPo)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>44</ID>
+          <ID>47</ID>
           <Description>"BE"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1910,7 +2029,7 @@ unregistersymbol(INJECT_GET_SPo)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>45</ID>
+          <ID>48</ID>
           <Description>"BU"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1920,10 +2039,21 @@ unregistersymbol(INJECT_GET_SPo)
             <Offset>[i_base_sp_offset]-160</Offset>
           </Offsets>
         </CheatEntry>
+        <CheatEntry>
+          <ID>49</ID>
+          <Description>"Tachy mode"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_sp_addr</Address>
+          <Offsets>
+            <Offset>[i_base_sp_offset]-150</Offset>
+          </Offsets>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>46</ID>
+      <ID>50</ID>
       <Description>"Get last stat data (circular update)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -1954,7 +2084,7 @@ loop1:
   cmp [r15], 0
   je write_data
   inc r14
-  cmp r14, 4
+  cmp r14, A
   jae write_data
   jmp loop1
 
@@ -1964,7 +2094,7 @@ write_data:
   lea r15, [r15+r14*8]
   mov [r15], rcx
   inc qword ptr [i_stat_idx]
-  cmp qword ptr [i_stat_idx], 4
+  cmp qword ptr [i_stat_idx], A
   jb endp
   mov qword ptr [i_stat_idx], 0
 
@@ -1981,7 +2111,8 @@ code:
 align 10 cc
   i_base_stats_addr:
   dq 0 0 0 0
-  dq 0 0
+  dq 0 0 0 0
+  dq 0 0 0 0
   i_stat_idx:
   dq 0
 
@@ -2029,7 +2160,7 @@ dealloc(newmem)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>47</ID>
+          <ID>51</ID>
           <Description>"next data position"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -2037,12 +2168,21 @@ dealloc(newmem)
           <Address>i_stat_idx</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>48</ID>
+          <ID>52</ID>
           <Description>"ID #0"</Description>
-          <DropDownList DisplayValueAsItem="1">20022:# of executed
-20027:# of perfect evade
-20028:# of perfect parry
-20031:# of kills
+          <DropDownList DisplayValueAsItem="1">20009:# of cans found (49/arch.)
+20010:# of Data Bank entries (200/arch.)
+20011:# of Naytibas'info. got (67/arch.)
+20014:# of Exospines enhanced to max (10/arch.)
+20015:# of Rechargeable Tumbler enhanced to max (5/arch.)
+20018:# of Blood Edge enhanced to max (15/arch.)
+20022:# of execution (50/arch.)
+20024:# of kills in burst skills (50/arch.)
+20025:# of kills in Tachy mode (50/arch.)
+20029:# of boxes opened (200/arch.)
+20027:# of Perfect Dodged (200/arch.)
+20028:# of Perfect Parried (300/arch.)
+20031:# of Defeated (1500/arch.)
 20042:# of completed achievenents?
 </DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2054,7 +2194,7 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>49</ID>
+          <ID>53</ID>
           <Description>"Value #0"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2065,7 +2205,7 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>50</ID>
+          <ID>54</ID>
           <Description>"ID #1"</Description>
           <DropDownListLink>ID #0</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2077,7 +2217,7 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>51</ID>
+          <ID>55</ID>
           <Description>"Value #1"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2088,7 +2228,7 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>52</ID>
+          <ID>56</ID>
           <Description>"ID #2"</Description>
           <DropDownListLink>ID #0</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -2100,8 +2240,8 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>53</ID>
-          <Description>"Value #3"</Description>
+          <ID>57</ID>
+          <Description>"Value #2"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -2111,8 +2251,8 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>54</ID>
-          <Description>"ID #2"</Description>
+          <ID>58</ID>
+          <Description>"ID #3"</Description>
           <DropDownListLink>ID #0</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2123,12 +2263,150 @@ dealloc(newmem)
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>55</ID>
-          <Description>"Value #4"</Description>
+          <ID>59</ID>
+          <Description>"Value #3"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_base_stats_addr+18</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"ID #4"</Description>
+          <DropDownListLink>ID #0</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+20</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>61</ID>
+          <Description>"Value #4"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+20</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>62</ID>
+          <Description>"ID #5"</Description>
+          <DropDownListLink>ID #0</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+28</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>63</ID>
+          <Description>"Value #5"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+28</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>64</ID>
+          <Description>"ID #6"</Description>
+          <DropDownListLink>ID #0</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+30</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>65</ID>
+          <Description>"Value #6"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+30</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>66</ID>
+          <Description>"ID #7"</Description>
+          <DropDownListLink>ID #0</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+38</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>67</ID>
+          <Description>"Value #7"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+38</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>68</ID>
+          <Description>"ID #8"</Description>
+          <DropDownListLink>ID #0</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+40</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>69</ID>
+          <Description>"Value #8"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+40</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>70</ID>
+          <Description>"ID #9"</Description>
+          <DropDownListLink>ID #0</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+48</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
+          <Description>"Value #9"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_stats_addr+48</Address>
           <Offsets>
             <Offset>14</Offset>
           </Offsets>
@@ -2136,7 +2414,7 @@ dealloc(newmem)
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>56</ID>
+      <ID>72</ID>
       <Description>"Stellar Blade™  /  https://opencheattables.com"</Description>
       <Color>009700</Color>
       <GroupHeader>1</GroupHeader>
