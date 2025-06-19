@@ -345,8 +345,8 @@ dealloc(newmem)
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_SH,$process,F3 0F 58 CF 0F 2F CE) // should be unique
-alloc(newmem,$1000,INJECT_INF_SH)
+aobscanmodule(INJECT_INF_SH,$process,F3 0F 58 CF 0F 2F CE 77 05 0F 57 C0 EB 0C) // should be unique
+alloc(newmem,$1000)
 
 label(code)
 label(return vf_sh_gen_multi is_null_enemy_sh)
@@ -374,6 +374,10 @@ to_enemy:
 code:
   addss xmm1,xmm7
   comiss xmm1,xmm6
+  reassemble(INJECT_INF_SH+7)
+  //ja far return+E
+  xorps xmm0,xmm0
+  reassemble(INJECT_INF_SH+C)
   jmp return
 align 10 cc
   vf_sh_gen_multi:
@@ -384,15 +388,14 @@ align 10 cc
   dd (float)-100000
 
 INJECT_INF_SH:
-  jmp newmem
-  nop 2
+  jmp far newmem
 return:
 registersymbol(INJECT_INF_SH vf_sh_gen_multi is_null_enemy_sh)
 
 [DISABLE]
 
 INJECT_INF_SH:
-  db F3 0F 58 CF 0F 2F CE
+  db F3 0F 58 CF 0F 2F CE 77 05 0F 57 C0 EB 0C
 
 unregistersymbol(*)
 dealloc(newmem)
@@ -550,8 +553,8 @@ dealloc(newmem)
 
 [ENABLE]
 
-aobscanmodule(INJECT_BE_MULTI,$process,F3 0F 58 E2 33 C9) // should be unique
-alloc(newmem,$1000,INJECT_BE_MULTI)
+aobscanmodule(INJECT_BE_MULTI,$process,F3 0F 58 E2 33 C9 F3 0F 2C D4 85 D2 7F 04) // should be unique
+alloc(newmem,$1000)
 
 label(code)
 label(return vf_be_multi vf_min_be)
@@ -576,6 +579,7 @@ code_pre:
 
 code:
   addss xmm4,xmm2
+
   // Start inject code
   cmp dword ptr [rdi+154], 0
   je @F
@@ -585,7 +589,13 @@ code:
   movaps xmm4, xmm15
 @@:
   //End inject code
+
+
   xor ecx,ecx
+  cvttss2si edx,xmm4
+  test edx,edx
+  //jg "SB-Win64-Shipping.exe"+1A568DB
+  reassemble(INJECT_BE_MULTI+C)
   jmp return
 align 10 cc
   vf_be_multi:
@@ -593,15 +603,14 @@ align 10 cc
   vf_min_be:
   dd (float)840
 INJECT_BE_MULTI:
-  jmp newmem
-  nop
+  jmp far newmem
 return:
 registersymbol(INJECT_BE_MULTI vf_be_multi vf_min_be)
 
 [DISABLE]
 
 INJECT_BE_MULTI:
-  db F3 0F 58 E2 33 C9
+  db F3 0F 58 E2 33 C9 F3 0F 2C D4 85 D2 7F 04
 
 unregistersymbol(*)
 dealloc(newmem)
@@ -666,7 +675,7 @@ dealloc(newmem)
 
 [ENABLE]
 
-aobscanmodule(INJECT_BU_MULTI,$process,F3 0F 58 E0 F3 0F 2C CC) // should be unique
+aobscanmodule(INJECT_BU_MULTI,$process,F3 0F 58 E0 F3 0F 2C CC 85 C9 7F 04 33 C9) // should be unique
 alloc(newmem,$1000,INJECT_BU_MULTI)
 
 label(code)
@@ -676,8 +685,6 @@ newmem:
 
 code:
   mulss xmm0, [vf_bu_multi]
-
-
 
   // *** orogin code start
   addss xmm4,xmm0
@@ -689,10 +696,13 @@ code:
 
   movss xmm4, xmm14
 
-
 @@:
   // *** orogin code start
   cvttss2si ecx,xmm4
+  test ecx,ecx
+  //jg "SB-Win64-Shipping.exe"+1A56ABF
+  reassemble(INJECT_BU_MULTI+A)
+  xor ecx,ecx
   jmp return
 align 10 cc
   vf_min_bu:
@@ -701,15 +711,14 @@ align 10 cc
   dd (float)4
 
 INJECT_BU_MULTI:
-  jmp newmem
-  nop 3
+  jmp far newmem
 return:
 registersymbol(INJECT_BU_MULTI vf_min_bu vf_bu_multi)
 
 [DISABLE]
 
 INJECT_BU_MULTI:
-  db F3 0F 58 E0 F3 0F 2C CC
+  db F3 0F 58 E0 F3 0F 2C CC 85 C9 7F 04 33 C9
 
 unregistersymbol(*)
 dealloc(newmem)
@@ -890,7 +899,7 @@ dealloc(newmem)
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_MONEY,$process,74 04 44 03 71 34 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 90) // should be unique
+aobscanmodule(INJECT_GET_MONEY,$process,48 8D 48 10 49 0F 44 CC 48 85 C9 74 04 44 03 71 34 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 90) // should be unique
 alloc(newmem,$1000,INJECT_GET_MONEY)
 
 label(code)
@@ -900,7 +909,10 @@ label(is_set_min_fishing_pt i_min_fishing_pt)
 newmem:
   // original code start
   //je code_je
-  reassemble(INJECT_GET_MONEY)
+  lea rcx,[rax+10]
+  cmove rcx,r12
+  test rcx,rcx
+  reassemble(INJECT_GET_MONEY+B)
   // original code end
 
   cmp [rcx+00], 32D471BB
@@ -1095,22 +1107,25 @@ align 10 cc
   dd #12340
 
 INJECT_GET_MONEY:
-  jmp newmem
-  nop
+  jmp far newmem
+  nop 3
 return:
 registersymbol(INJECT_GET_MONEY i_base_money_addr i_base_money_tag is_chk_ammo_amt is_chk_smart_mine is_sonic_bomb is_grenade is_p_grenade)
 registersymbol(is_set_min_fishing_pt i_min_fishing_pt)
 [DISABLE]
 
 INJECT_GET_MONEY:
-  db 74 04 44 03 71 34
+  db 48 8D 48 10 49 0F 44 CC 48 85 C9 74 04 44 03 71 34
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1C31856
+// ORIGINAL CODE - INJECTION POINT: "SB-Win64-Shipping.exe"+1C3184B
 
+"SB-Win64-Shipping.exe"+1C31831: 0B D1              - or edx,ecx
+"SB-Win64-Shipping.exe"+1C31833: 8B CB              - mov ecx,ebx
+"SB-Win64-Shipping.exe"+1C31835: 33 08              - xor ecx,[rax]
 "SB-Win64-Shipping.exe"+1C31837: 0B D1              - or edx,ecx
 "SB-Win64-Shipping.exe"+1C31839: 74 0D              - je "SB-Win64-Shipping.exe"+1C31848
 "SB-Win64-Shipping.exe"+1C3183B: 8B 80 60 01 00 00  - mov eax,[rax+00000160]
@@ -1118,12 +1133,12 @@ dealloc(newmem)
 "SB-Win64-Shipping.exe"+1C31844: 75 CA              - jne "SB-Win64-Shipping.exe"+1C31810
 "SB-Win64-Shipping.exe"+1C31846: EB 14              - jmp "SB-Win64-Shipping.exe"+1C3185C
 "SB-Win64-Shipping.exe"+1C31848: 48 85 C0           - test rax,rax
+// ---------- INJECTING HERE ----------
 "SB-Win64-Shipping.exe"+1C3184B: 48 8D 48 10        - lea rcx,[rax+10]
+// ---------- DONE INJECTING  ----------
 "SB-Win64-Shipping.exe"+1C3184F: 49 0F 44 CC        - cmove rcx,r12
 "SB-Win64-Shipping.exe"+1C31853: 48 85 C9           - test rcx,rcx
-// ---------- INJECTING HERE ----------
 "SB-Win64-Shipping.exe"+1C31856: 74 04              - je "SB-Win64-Shipping.exe"+1C3185C
-// ---------- DONE INJECTING  ----------
 "SB-Win64-Shipping.exe"+1C31858: 44 03 71 34        - add r14d,[rcx+34]
 "SB-Win64-Shipping.exe"+1C3185C: 8B 4D E4           - mov ecx,[rbp-1C]
 "SB-Win64-Shipping.exe"+1C3185F: F7 D1              - not ecx
@@ -1131,20 +1146,6 @@ dealloc(newmem)
 "SB-Win64-Shipping.exe"+1C31864: 48 8D 4D E0        - lea rcx,[rbp-20]
 "SB-Win64-Shipping.exe"+1C31868: E8 A3 3F 21 FF     - call "SB-Win64-Shipping.exe"+E45810
 "SB-Win64-Shipping.exe"+1C3186D: 48 8B 4D E8        - mov rcx,[rbp-18]
-"SB-Win64-Shipping.exe"+1C31871: 8B 45 F4           - mov eax,[rbp-0C]
-"SB-Win64-Shipping.exe"+1C31874: 3B 41 18           - cmp eax,[rcx+18]
-"SB-Win64-Shipping.exe"+1C31877: 0F 8C 23 FF FF FF  - jl "SB-Win64-Shipping.exe"+1C317A0
-"SB-Win64-Shipping.exe"+1C3187D - 48 8B BC 24 90000000  - mov rdi,[rsp+00000090]
-"SB-Win64-Shipping.exe"+1C31885 - 41 8B C6              - mov eax,r14d
-"SB-Win64-Shipping.exe"+1C31888 - 4C 8B B4 24 98000000  - mov r14,[rsp+00000098]
-"SB-Win64-Shipping.exe"+1C31890 - 48 8B 9C 24 A8000000  - mov rbx,[rsp+000000A8]
-"SB-Win64-Shipping.exe"+1C31898 - 48 83 C4 70           - add rsp,70
-"SB-Win64-Shipping.exe"+1C3189C - 41 5C                 - pop r12
-"SB-Win64-Shipping.exe"+1C3189E - 5E                    - pop rsi
-"SB-Win64-Shipping.exe"+1C3189F - 5D                    - pop rbp
-"SB-Win64-Shipping.exe"+1C318A0 - C3                    - ret
-"SB-Win64-Shipping.exe"+1C318A1 - CC                    - int 3
-
 }
 </AssemblerScript>
       <CheatEntries>
@@ -2345,6 +2346,7 @@ dealloc(newmem)
 20010:#Data Bank entries (200/arch.)
 20011:#Naytibas'info. got (67/arch.)
 20012:#fish types got (20/arch.)
+20013:#Learned skills (96/arch.)
 20014:#Exospines enhanced to max (10/arch.)
 20015:#Rechargeable Tumbler enhanced to max (5/arch.)
 20017:#Enhanced Beta Energy to its max (6/arch.)
