@@ -332,6 +332,9 @@ zh-TW: 文明帝國V
 ## Sid Meier's Pirates!  
 [Sid Meier's Pirates! (Steam)](https://store.steampowered.com/app/3920/Sid_Meiers_Pirates/)  
 
+## Songs of Silence  
+[Songs of Silence (Steam)](https://store.steampowered.com/app/2195410/Songs_of_Silence/)
+
 ## Star Traders Frontiers  
 [Star Traders: Frontiers (Steam)](https://store.steampowered.com/app/335620/Star_Traders_Frontiers/)  
 
