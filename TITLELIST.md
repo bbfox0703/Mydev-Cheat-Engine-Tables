@@ -352,6 +352,9 @@ zh-TW: 劍星
 ## Stellaris  
 [Stellaris (Steam)](https://store.steampowered.com/app/281990/Stellaris/)  
 
+## Stronghold Crusader Definitive Edition  
+[Stronghold Crusader: Definitive Edition (Steam)](https://store.steampowered.com/app/3024040/Stronghold_Crusader_Definitive_Edition/)  
+
 ## Sword Art Online Alicization Lycoris  
 [Cheat Table for Sword Art Online: Alicization Lycoris (Steam)](https://store.steampowered.com/app/1009290/_/)  
 ja-JP: ソードアート・オンライン アリシゼーション リコリス  
