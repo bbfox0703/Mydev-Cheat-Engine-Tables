@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>34</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Get incoming (transport) resources"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Stronghold Crusader Definitive Edition.exe
+  Version: 
+  Date   : 2025-07-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_RESOURCES,CrusaderDE.dll,8B 84 29 ?? ?? ?? 00 89 43 08 48 63 05 ?? ?? ?? ?? 48 69 C8 3C 58 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_RESOURCES)
+
+alloc(INJECT_GET_RESOURCESo, 7)
+
+label(code)
+label(return)
+label(i_res_offset i_res_addr)
+
+INJECT_GET_RESOURCESo:
+  readmem(INJECT_GET_RESOURCES, 7)
+
+newmem:
+
+code:
+  //mov eax,[rcx+rbp+0012F098]
+  db 8B 84 29
+  readmem(INJECT_GET_RESOURCES+3, 4)
+
+  push r15
+  push r14
+  xor r14, r14
+
+  //mov r14d, ??????
+  db 41 be
+  readmem(INJECT_GET_RESOURCES+3, 4)
+
+  mov [i_res_offset], r14
+
+  lea r15, [rcx+rbp]
+  lea r15, [r15+r14]
+  mov [i_res_addr], r15
+
+  pop r14
+  pop r15
+
+
+  jmp return
+align 10 cc
+  i_res_offset:
+  dd 0
+  dd 0
+  i_res_addr:
+  dq 0
+
+
+INJECT_GET_RESOURCES:
+  jmp newmem
+  nop 2
+return:
+registersymbol(i_res_offset i_res_addr)
+registersymbol(INJECT_GET_RESOURCES)
+registersymbol(INJECT_GET_RESOURCESo)
+
+[DISABLE]
+
+INJECT_GET_RESOURCES:
+  //db 8B 84 29 98 F0 12 00
+  readmem(INJECT_GET_RESOURCESo, 7)
+
+unregistersymbol(i_res_offset i_res_addr)
+unregistersymbol(INJECT_GET_RESOURCES)
+dealloc(newmem)
+unregistersymbol(INJECT_GET_RESOURCESo)
+dealloc(INJECT_GET_RESOURCESo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrusaderDE.dll+18D75B
+
+CrusaderDE.dll+18D71A: 48 63 05 17 A1 B7 07  - movsxd  rax,dword ptr [CrusaderDE.dll+7D07838]
+CrusaderDE.dll+18D721: 48 69 C8 3C 58 00 00  - imul rcx,rax,0000583C
+CrusaderDE.dll+18D728: 8B 84 29 94 F0 12 00  - mov eax,[rcx+rbp+0012F094]
+CrusaderDE.dll+18D72F: 89 43 04              - mov [rbx+04],eax
+CrusaderDE.dll+18D732: 48 63 05 FF A0 B7 07  - movsxd  rax,dword ptr [CrusaderDE.dll+7D07838]
+CrusaderDE.dll+18D739: 48 69 C8 3C 58 00 00  - imul rcx,rax,0000583C
+CrusaderDE.dll+18D740: 8B 84 29 30 F0 12 00  - mov eax,[rcx+rbp+0012F030]
+CrusaderDE.dll+18D747: 89 83 A0 05 00 00     - mov [rbx+000005A0],eax
+CrusaderDE.dll+18D74D: 48 63 05 E4 A0 B7 07  - movsxd  rax,dword ptr [CrusaderDE.dll+7D07838]
+CrusaderDE.dll+18D754: 48 69 C8 3C 58 00 00  - imul rcx,rax,0000583C
+// ---------- INJECTING HERE ----------
+CrusaderDE.dll+18D75B: 8B 84 29 98 F0 12 00  - mov eax,[rcx+rbp+0012F098]
+// ---------- DONE INJECTING  ----------
+CrusaderDE.dll+18D762: 89 43 08              - mov [rbx+08],eax
+CrusaderDE.dll+18D765: 48 63 05 CC A0 B7 07  - movsxd  rax,dword ptr [CrusaderDE.dll+7D07838]
+CrusaderDE.dll+18D76C: 48 69 C8 3C 58 00 00  - imul rcx,rax,0000583C
+CrusaderDE.dll+18D773: 8B 84 29 34 F0 12 00  - mov eax,[rcx+rbp+0012F034]
+CrusaderDE.dll+18D77A: 89 83 A4 05 00 00     - mov [rbx+000005A4],eax
+CrusaderDE.dll+18D780: 48 63 05 B1 A0 B7 07  - movsxd  rax,dword ptr [CrusaderDE.dll+7D07838]
+CrusaderDE.dll+18D787: 48 69 C8 3C 58 00 00  - imul rcx,rax,0000583C
+CrusaderDE.dll+18D78E: 8B 84 29 9C F0 12 00  - mov eax,[rcx+rbp+0012F09C]
+CrusaderDE.dll+18D795: 89 43 0C              - mov [rbx+0C],eax
+CrusaderDE.dll+18D798: 48 63 05 99 A0 B7 07  - movsxd  rax,dword ptr [CrusaderDE.dll+7D07838]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"Notice: incoming resources are on-the-fly."</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"    Don't set to too high value when game started"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"i.e. if you set wood to a high value, you will never get stone and iron"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"incoming coins"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"incoming wood"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-64</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"incoming stone"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-5C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"incoming iron"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-54</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>6</ID>
+          <Description>"incoming asphalt / 瀝青"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-50</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"incoming Hops / 啤酒花"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-60</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"incoming wheat"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-48</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"incoming bread"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-44</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"incoming cheese"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"incoming meat"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-3C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"incoming apple"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-38</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"incoming beer"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"incoming flour"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>-2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"Coins"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_res_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>19</ID>
+      <Description>"Set min granary resources amount"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Stronghold Crusader Definitive Edition.exe
+  Version: 
+  Date   : 2025-07-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_GRANARY_RES,CrusaderDE.dll,42 8B 94 0F ?? ?? ?? 00 85 D2 0F 45 EA EB ??) // should be unique
+alloc(newmem,$1000,INJECT_SET_GRANARY_RES)
+
+alloc(INJECT_SET_GRANARY_RESo, 8)
+
+label(code)
+label(return)
+label(i_base_gra_res_addr is_lock_gra_res)
+
+INJECT_SET_GRANARY_RESo:
+  readmem(INJECT_SET_GRANARY_RES, 8)
+
+newmem:
+
+code:
+  //mov edx,[rdi+r9+0000015C]
+  readmem(INJECT_SET_GRANARY_RES, 8)
+  cmp dword ptr [rdi+r9+0000001C], 1
+  jne code_end
+
+  push r15
+  push r14
+  xor r14, r14
+  db 41 be
+  readmem(INJECT_SET_GRANARY_RES+4, 4)
+
+  lea r15, [rdi+r9]
+  lea r15, [r15+r14]
+  mov [i_base_gra_res_addr], r15
+  cmp dword ptr [is_lock_gra_res], 1
+  jne endp
+  cmp dword ptr [r15], 20
+  jae @F
+  mov dword ptr [r15], 20
+@@:
+  cmp dword ptr [r15+4], 20
+  jae @F
+  mov dword ptr [r15+4], 20
+@@:
+  cmp dword ptr [r15+8], 20
+  jae @F
+  mov dword ptr [r15+8], 20
+@@:
+  cmp dword ptr [r15+C], 20
+  jae @F
+  mov dword ptr [r15+C], 20
+@@:
+
+endp:
+  pop r14
+  pop r15
+
+code_end:
+
+  jmp return
+align 10 cc
+  i_base_gra_res_addr:
+  dq 0
+  is_lock_gra_res:
+  dd 1
+
+INJECT_SET_GRANARY_RES:
+  jmp newmem
+  nop 3
+return:
+
+registersymbol(i_base_gra_res_addr is_lock_gra_res)
+registersymbol(INJECT_SET_GRANARY_RES)
+registersymbol(INJECT_SET_GRANARY_RESo)
+
+[DISABLE]
+
+INJECT_SET_GRANARY_RES:
+  //db 42 8B 94 0F 5C 01 00 00
+  readmem(INJECT_SET_GRANARY_RESo, 8)
+
+unregistersymbol(i_base_gra_res_addr is_lock_gra_res)
+unregistersymbol(INJECT_SET_GRANARY_RES)
+dealloc(newmem)
+unregistersymbol(INJECT_SET_GRANARY_RESo)
+dealloc(INJECT_SET_GRANARY_RESo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrusaderDE.dll+9DAAE
+
+CrusaderDE.dll+9DA6D: 46 89 44 0F 58              - mov [rdi+r9+58],r8d
+CrusaderDE.dll+9DA72: 4E 89 44 0F 70              - mov [rdi+r9+70],r8
+CrusaderDE.dll+9DA77: 4E 89 44 0F 78              - mov [rdi+r9+78],r8
+CrusaderDE.dll+9DA7C: 4E 89 84 0F 80 00 00 00     - mov [rdi+r9+00000080],r8
+CrusaderDE.dll+9DA84: 4E 89 84 0F 88 00 00 00     - mov [rdi+r9+00000088],r8
+CrusaderDE.dll+9DA8C: 49 69 C6 3C 58 00 00        - imul rax,r14,0000583C
+CrusaderDE.dll+9DA93: 4E 89 84 0F 90 00 00 00     - mov [rdi+r9+00000090],r8
+CrusaderDE.dll+9DA9B: 4E 89 84 0F 98 00 00 00     - mov [rdi+r9+00000098],r8
+CrusaderDE.dll+9DAA3: 66 42 39 AC 38 40 0E 13 00  - cmp [rax+r15+00130E40],bp
+CrusaderDE.dll+9DAAC: 75 0F                       - jne CrusaderDE.dll+9DABD
+// ---------- INJECTING HERE ----------
+CrusaderDE.dll+9DAAE: 42 8B 94 0F 5C 01 00 00     - mov edx,[rdi+r9+0000015C]
+// ---------- DONE INJECTING  ----------
+CrusaderDE.dll+9DAB6: 85 D2                       - test edx,edx
+CrusaderDE.dll+9DAB8: 0F 45 EA                    - cmovne ebp,edx
+CrusaderDE.dll+9DABB: EB 02                       - jmp CrusaderDE.dll+9DABF
+CrusaderDE.dll+9DABD: 8B D5                       - mov edx,ebp
+CrusaderDE.dll+9DABF: 66 46 39 84 38 42 0E 13 00  - cmp [rax+r15+00130E42],r8w
+CrusaderDE.dll+9DAC8: 75 10                       - jne CrusaderDE.dll+9DADA
+CrusaderDE.dll+9DACA: 46 8B A4 0F 60 01 00 00     - mov r12d,[rdi+r9+00000160]
+CrusaderDE.dll+9DAD2: 45 85 E4                    - test r12d,r12d
+CrusaderDE.dll+9DAD5: 74 03                       - je CrusaderDE.dll+9DADA
+CrusaderDE.dll+9DAD7: 41 03 EC                    - add ebp,r12d
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>25</ID>
+      <Description>"When add res. to storage area: set min amount"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Stronghold Crusader Definitive Edition.exe
+  Version: 
+  Date   : 2025-07-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ADD_RES_2_STORAGE_AREA,CrusaderDE.dll,8B 9C 81 34 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_ADD_RES_2_STORAGE_AREA)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [rcx+rax*4+00000134], 40
+  jae code
+  mov dword ptr [rcx+rax*4+00000134], 40
+  xor rdx, rdx
+
+code:
+  mov ebx,[rcx+rax*4+00000134]
+  jmp return
+
+INJECT_ADD_RES_2_STORAGE_AREA:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_ADD_RES_2_STORAGE_AREA)
+
+[DISABLE]
+
+INJECT_ADD_RES_2_STORAGE_AREA:
+  db 8B 9C 81 34 01 00 00
+
+unregistersymbol(INJECT_ADD_RES_2_STORAGE_AREA)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrusaderDE.dll+B1CB3
+
+CrusaderDE.dll+B1C89: 44 2B C8              - sub r9d,eax
+CrusaderDE.dll+B1C8C: 41 8B C1              - mov eax,r9d
+CrusaderDE.dll+B1C8F: C3                    - ret
+CrusaderDE.dll+B1C90: 48 89 5C 24 08        - mov [rsp+08],rbx
+CrusaderDE.dll+B1C95: 4D 63 D8              - movsxd  r11,r8d
+CrusaderDE.dll+B1C98: 4C 8D 81 38 01 00 00  - lea r8,[rcx+00000138]
+CrusaderDE.dll+B1C9F: 4C 63 D2              - movsxd  r10,edx
+CrusaderDE.dll+B1CA2: 49 69 C2 CB 00 00 00  - imul rax,r10,000000CB
+CrusaderDE.dll+B1CA9: 49 69 D2 2C 03 00 00  - imul rdx,r10,0000032C
+CrusaderDE.dll+B1CB0: 49 03 C3              - add rax,r11
+// ---------- INJECTING HERE ----------
+CrusaderDE.dll+B1CB3: 8B 9C 81 34 01 00 00  - mov ebx,[rcx+rax*4+00000134]
+// ---------- DONE INJECTING  ----------
+CrusaderDE.dll+B1CBA: B8 01 00 00 00        - mov eax,00000001
+CrusaderDE.dll+B1CBF: 4C 03 C2              - add r8,rdx
+CrusaderDE.dll+B1CC2: 41 83 38 00           - cmp dword ptr [r8],00
+CrusaderDE.dll+B1CC6: 74 05                 - je CrusaderDE.dll+B1CCD
+CrusaderDE.dll+B1CC8: 49 3B C3              - cmp rax,r11
+CrusaderDE.dll+B1CCB: 75 12                 - jne CrusaderDE.dll+B1CDF
+CrusaderDE.dll+B1CCD: 48 FF C0              - inc rax
+CrusaderDE.dll+B1CD0: 49 83 C0 04           - add r8,04
+CrusaderDE.dll+B1CD4: 48 83 F8 19           - cmp rax,19
+CrusaderDE.dll+B1CD8: 7C E8                 - jl CrusaderDE.dll+B1CC2
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"Not fully tested; may applied to enemy"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>26</ID>
+      <Description>"Build: material no decrease (appplied to enemy)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : Stronghold Crusader Definitive Edition.exe
+  Version: 
+  Date   : 2025-07-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BUILD_MAT_NO_DEC,CrusaderDE.dll,2B D7 89 91 34 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_BUILD_MAT_NO_DEC)
+
+label(code)
+label(return)
+
+newmem:
+  //cmp dword ptr [rcx+00000014], 1
+  //jne code
+  cmp edi, 0
+  jl code
+  jmp code1
+
+code:
+  sub edx,edi
+code1:
+  mov [rcx+00000134],edx
+  jmp return
+
+INJECT_BUILD_MAT_NO_DEC:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_BUILD_MAT_NO_DEC)
+
+[DISABLE]
+
+INJECT_BUILD_MAT_NO_DEC:
+  db 2B D7 89 91 34 01 00 00
+
+unregistersymbol(INJECT_BUILD_MAT_NO_DEC)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrusaderDE.dll+ACAB2
+
+CrusaderDE.dll+ACA8F: 66 44 89 0B              - mov [rbx],r9w
+CrusaderDE.dll+ACA93: 8B 91 34 01 00 00        - mov edx,[rcx+00000134]
+CrusaderDE.dll+ACA99: C7 44 24 24 01 00 00 00  - mov [rsp+24],00000001
+CrusaderDE.dll+ACAA1: 3B D7                    - cmp edx,edi
+CrusaderDE.dll+ACAA3: 7C 2C                    - jl CrusaderDE.dll+ACAD1
+CrusaderDE.dll+ACAA5: 45 85 ED                 - test r13d,r13d
+CrusaderDE.dll+ACAA8: 74 08                    - je CrusaderDE.dll+ACAB2
+CrusaderDE.dll+ACAAA: 66 89 3B                 - mov [rbx],di
+CrusaderDE.dll+ACAAD: 41 8B F9                 - mov edi,r9d
+CrusaderDE.dll+ACAB0: EB 59                    - jmp CrusaderDE.dll+ACB0B
+// ---------- INJECTING HERE ----------
+CrusaderDE.dll+ACAB2: 2B D7                    - sub edx,edi
+// ---------- DONE INJECTING  ----------
+CrusaderDE.dll+ACAB4: 89 91 34 01 00 00        - mov [rcx+00000134],edx
+CrusaderDE.dll+ACABA: 49 69 CE 0F 16 00 00     - imul rcx,r14,0000160F
+CrusaderDE.dll+ACAC1: 49 03 C8                 - add rcx,r8
+CrusaderDE.dll+ACAC4: 41 29 BC 8F 90 F0 12 00  - sub [r15+rcx*4+0012F090],edi
+CrusaderDE.dll+ACACC: 41 8B F9                 - mov edi,r9d
+CrusaderDE.dll+ACACF: EB 25                    - jmp CrusaderDE.dll+ACAF6
+CrusaderDE.dll+ACAD1: 2B FA                    - sub edi,edx
+CrusaderDE.dll+ACAD3: 45 85 ED                 - test r13d,r13d
+CrusaderDE.dll+ACAD6: 74 05                    - je CrusaderDE.dll+ACADD
+CrusaderDE.dll+ACAD8: 66 89 13                 - mov [rbx],dx
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>33</ID>
+      <Description>"Stronghold Crusader: Definitive Edition  /  https://opencheattables.com"</Description>
+      <Color>009700</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
