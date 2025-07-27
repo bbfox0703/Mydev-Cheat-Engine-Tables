@@ -94,6 +94,98 @@ else
 end
 ]]--
 
+-- AOBScanModuleN関数
+if not AOBScanModuleN then
+    function AOBScanModuleN(moduleName, signature, maxResults, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addrs = {}
+        synchronize(function()
+            local count = results.getCount()
+            for i = 0, math.min(maxResults - 1, count - 1) do
+                table.insert(addrs, results[i])
+                if debugMode then
+                    print(string.format("🔦 AOB[%d] found at: 0x%s", i + 1, results[i]))
+                end
+            end
+        end)
+
+        if #addrs == 0 and debugMode then
+            print("💔 AOB not found in " .. moduleName)
+        end
+
+        results.destroy()
+        ms.destroy()
+
+        return addrs
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModuleN')
+
+
+-- 搜尋並取出最多5筆結果
+--[[
+local list = AOBScanModuleN("GameModule.exe", "12 34 56 ?? 78", 5)
+
+if list then
+    for i, addr in ipairs(list) do
+        print(string.format("地址 %d: 0x%s", i, addr))
+    end
+end
+]]--
+
+
 -- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
 if not onMemRecPostExecute then
     function onMemRecPostExecute(memoryrecord, newState, succeeded)
