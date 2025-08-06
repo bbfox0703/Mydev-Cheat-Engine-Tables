@@ -72,6 +72,8 @@ local enableBattleScripts = {
   35, -- "inf. trebuchet stone (engineer built)"
   38, -- "Towers HP"
   47, -- "Selected unit: Million+ HP"
+  54, -- "Kill count multiplier, pos. 1"
+  57, -- "Kill count multiplier, pos. 2"
   39, -- "Lookout tower HP"
   40, -- "Set lookout tower HP"
   42, -- "Other towers HP"
@@ -106,6 +108,8 @@ local disableBattleScripts = {
   42, -- "Other towers HP"
   40, -- "Set lookout tower HP"
   39, -- "Lookout tower HP"
+  57, -- "Kill count multiplier, pos. 2"
+  54, -- "Kill count multiplier, pos. 1"
   47, -- "Selected unit: Million+ HP"
   38, -- "Towers HP"
   35, -- "inf. trebuchet stone (engineer built)"
@@ -144,7 +148,8 @@ synchronize(function() getLuaEngine().Close() end)
 --         ID: 45, Description: "Set perimeter tower HP", Depth: 4
 --         ID: 46, Description: "Set defense tower HP", Depth: 4
 -- ID: 47, Description: "Selected unit: Million+ HP", Depth: 0
-
+-- ID: 54, Description: "Kill count multiplier, pos. 1", Depth: 0
+-- ID: 57, Description: "Kill count multiplier, pos. 2", Depth: 0
 
 </AssemblerScript>
     </CheatEntry>
@@ -524,6 +529,7 @@ CrusaderDE.dll+18EBBB: 48 63 05 06 A5 B7 07     - movsxd  rax,dword ptr [Crusade
     <CheatEntry>
       <ID>27</ID>
       <Description>"Set min granary resources amount"</Description>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : Stronghold Crusader Definitive Edition.exe
   Version: 
@@ -1413,7 +1419,7 @@ code:
   jmp return
 ALIGN 10 CC
   i_target_hp:
-  dd #5000000
+  dd #100000000
 
 INJECT_HUGE_HP:
   jmp newmem
@@ -1476,6 +1482,235 @@ CrusaderDE.dll+10FF1C: 8B E9                 - mov ebp,ecx
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_target_hp</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>54</ID>
+      <Description>"Kill count multiplier, pos. 1"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">{ Game   : Stronghold Crusader Definitive Edition.exe
+  Version: 
+  Date   : 2025-08-06
+  Author : bbfox@https://openchattables.com
+}
+
+[ENABLE]
+
+aobscan(INJECT_KILL_CNT_MULTI1,02 00 00 48 03 C1 48 8B 00 FF E0 49 63 47 10 03 C6 41 89 47 10) // should be unique
+alloc(newmem,$1000,INJECT_KILL_CNT_MULTI1)
+
+label(code)
+label(return vf_kill_cnt_multi1 i_base_kill_cnt1)
+
+newmem:
+  mov [i_base_kill_cnt1], r15
+  cmp eax, #1000000
+  jae @F
+  cmp eax, #999970
+  jae code
+
+  cmp eax, #100000
+  jae @F
+  cmp eax, #99970
+  jae code
+
+@@:
+  vmovss xmm14, [vf_kill_cnt_multi1]
+  vcvtsi2ss xmm15, xmm15, esi
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si esi, xmm13
+
+code:
+  add eax,esi
+  mov [r15+10],eax
+  jmp return
+align 10 cc
+  i_base_kill_cnt1:
+  dq 0
+  vf_kill_cnt_multi1:
+  dd (float)10
+
+INJECT_KILL_CNT_MULTI1+0F:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_KILL_CNT_MULTI1 vf_kill_cnt_multi1 i_base_kill_cnt1)
+
+[DISABLE]
+
+INJECT_KILL_CNT_MULTI1+0F:
+  db 03 C6 41 89 47 10
+
+unregistersymbol(INJECT_KILL_CNT_MULTI1 vf_kill_cnt_multi1 i_base_kill_cnt1)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 25E8246947D
+
+25E82469455: 83 FF 03                       - cmp edi,03
+25E82469458: 0F 83 D5 00 00 00              - jae 25E82469533
+25E8246945E: 48 8B C7                       - mov rax,rdi
+25E82469461: 48 C1 E0 03                    - shl rax,03
+25E82469465: 8B C8                          - mov ecx,eax
+25E82469467: 48 B8 80 95 46 82 5E 02 00 00  - mov rax,0000025E82469580
+25E82469471: 48 03 C1                       - add rax,rcx
+25E82469474: 48 8B 00                       - mov rax,[rax]
+25E82469477: FF E0                          - jmp rax
+25E82469479: 49 63 47 10                    - movsxd  rax,dword ptr [r15+10]
+// ---------- INJECTING HERE ----------
+25E8246947D: 03 C6                          - add eax,esi
+// ---------- DONE INJECTING  ----------
+25E8246947F: 41 89 47 10                    - mov [r15+10],eax
+25E82469483: 49 63 57 10                    - movsxd  rdx,dword ptr [r15+10]
+25E82469487: 48 B9 C0 21 27 B0 5E 02 00 00  - mov rcx,0000025EB02721C0
+25E82469491: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+25E82469496: 49 BB A0 95 46 82 5E 02 00 00  - mov r11,0000025E824695A0
+25E824694A0: 41 FF D3                       - call r11
+25E824694A3: 66 66 90                       - nop 3
+25E824694A6: 49 BB 50 70 FC DE 5E 02 00 00  - mov r11,0000025EDEFC7050
+25E824694B0: 41 FF D3                       - call r11
+25E824694B3: E9 7B 00 00 00                 - jmp 25E82469533
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"Count"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_kill_cnt1</Address>
+          <Offsets>
+            <Offset>10</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>56</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_kill_cnt_multi1</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>57</ID>
+      <Description>"Kill count multiplier, pos. 2"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">{ Game   : Stronghold Crusader Definitive Edition.exe
+  Version: 
+  Date   : 2025-08-06
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscan(INJECT_KILL_CNT_MULTI2,03 45 E8 89 47 18 48 8B CF 48 8D 64 24 00) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return vf_kill_cnt_multi2 i_base_kill_cnt2)
+
+newmem:
+  cmp dword ptr [rdi+10], #42
+  jne code
+  mov [i_base_kill_cnt2], rdi
+
+  cmp eax, #1000000
+  jae @F
+  cmp eax, #999970
+  jae code
+
+  cmp eax, #100000
+  jae @F
+  cmp eax, #99970
+  jae code
+
+@@:
+  vmovss xmm14, [vf_kill_cnt_multi2]
+  mov ecx, [rbp-18]
+  vcvtsi2ss xmm15, xmm15, ecx
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si ecx, xmm13
+  mov [rbp-18], ecx
+
+code:
+  add eax,[rbp-18]
+  mov [rdi+18],eax
+  mov rcx,rdi
+  lea rsp,[rsp+00]
+  jmp return
+align 10 cc
+  i_base_kill_cnt2:
+  dq 0
+  vf_kill_cnt_multi2:
+  dd (float)10
+
+
+INJECT_KILL_CNT_MULTI2:
+  jmp far newmem
+return:
+registersymbol(INJECT_KILL_CNT_MULTI2 vf_kill_cnt_multi2 i_base_kill_cnt2)
+
+[DISABLE]
+
+INJECT_KILL_CNT_MULTI2:
+  db 03 45 E8 89 47 18 48 8B CF 48 8D 64 24 00
+
+unregistersymbol(INJECT_KILL_CNT_MULTI2 vf_kill_cnt_multi2 i_base_kill_cnt2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: 25DD3758D97
+
+25DD3758D71: 48 8B EC                       - mov rbp,rsp
+25DD3758D74: 48 83 EC 40                    - sub rsp,40
+25DD3758D78: 48 89 7D F0                    - mov [rbp-10],rdi
+25DD3758D7C: 4C 89 7D F8                    - mov [rbp-08],r15
+25DD3758D80: 48 8B F9                       - mov rdi,rcx
+25DD3758D83: 48 89 55 E8                    - mov [rbp-18],rdx
+25DD3758D87: 0F B6 47 14                    - movzx eax,byte ptr [rdi+14]
+25DD3758D8B: 85 C0                          - test eax,eax
+25DD3758D8D: 0F 85 60 00 00 00              - jne 25DD3758DF3
+25DD3758D93: 48 63 47 18                    - movsxd  rax,dword ptr [rdi+18]
+// ---------- INJECTING HERE ----------
+25DD3758D97: 03 45 E8                       - add eax,[rbp-18]
+// ---------- DONE INJECTING  ----------
+25DD3758D9A: 89 47 18                       - mov [rdi+18],eax
+25DD3758D9D: 48 8B CF                       - mov rcx,rdi
+25DD3758DA0: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+25DD3758DA5: 90                             - nop 
+25DD3758DA6: 49 BB 20 73 FC DE 5E 02 00 00  - mov r11,0000025EDEFC7320
+25DD3758DB0: 41 FF D3                       - call r11
+25DD3758DB3: 4C 8B F8                       - mov r15,rax
+25DD3758DB6: 85 C0                          - test eax,eax
+25DD3758DB8: 0F 8E 35 00 00 00              - jng 25DD3758DF3
+25DD3758DBE: 48 63 47 18                    - movsxd  rax,dword ptr [rdi+18]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>58</ID>
+          <Description>"Count"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_kill_cnt2</Address>
+          <Offsets>
+            <Offset>18</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>59</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_kill_cnt_multi1</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
