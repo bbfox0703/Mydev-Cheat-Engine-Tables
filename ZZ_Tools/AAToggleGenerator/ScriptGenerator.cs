@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Xml;
 using System.Xml.Linq;
 using ScintillaNET;
 
@@ -10,30 +12,71 @@ namespace AAToggleGenerator
 {
     public class ScriptGenerator
     {
+        // Constants for better maintainability
+        private const int DefaultTreeViewDepth = 2;
+        private const int DefaultStringBuilderCapacity = 4096;
+        private const int DefaultFormWidth = 400;
+        private const int DefaultFormHeight = 600;
+        private const int ScriptFormWidth = 800;
+        private const int ScriptFormHeight = 600;
+        private const int TreeViewFontSize = 12;
+        private const int ScintillaFontSize = 12;
+        private const string ScintillaFontName = "Consolas";
+        private const string LuaKeywords = "if then else end function local return for while do in break repeat until and or not synchronize";
+        
+        // Performance optimization: Pre-compiled exclusion patterns
+        private static readonly HashSet<string> ExcludeKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "一鍵開啟",
+            "scripts on/",
+            "Toggle Scripts", 
+            "一鍵切換",
+            "Toggle some scripts"
+        };
         public static void StartScriptGeneration()
         {
             // Show file dialog to select .CT file
-            OpenFileDialog openFileDialog = new OpenFileDialog
+            using (OpenFileDialog openFileDialog = new OpenFileDialog
             {
                 Filter = "Cheat Engine Table (*.CT)|*.CT",
                 Title = "Select a Cheat Engine Table"
-            };
-
-            if (openFileDialog.ShowDialog() != DialogResult.OK)
-                return;
-
-            string ctFilePath = openFileDialog.FileName;
-            var xml = XDocument.Load(ctFilePath);
-            // Define keywords to exclude
-            string[] excludeKeywords = new string[]
+            })
             {
-                "一鍵開啟",
-                "scripts on/",
-                "Toggle Scripts",
-                "一鍵切換",
-                "Toggle some scripts"
-            };
-            // Extract Auto Assembler Script IDs and Descriptions
+                if (openFileDialog.ShowDialog() != DialogResult.OK)
+                    return;
+
+                string ctFilePath = openFileDialog.FileName;
+                
+                // Validate file exists and is accessible
+                if (!File.Exists(ctFilePath))
+                {
+                    MessageBox.Show("Selected file does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                XDocument xml;
+                try
+                {
+                    xml = XDocument.Load(ctFilePath);
+                }
+                catch (XmlException ex)
+                {
+                    MessageBox.Show($"Invalid XML file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error reading file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                ProcessCheatTable(xml);
+            }
+        }
+
+        private static void ProcessCheatTable(XDocument xml)
+        {
+            // Extract Auto Assembler Script IDs and Descriptions with optimized filtering
             var entries = xml.Descendants("CheatEntry")
                 .Select(e => new CheatEntry
                 {
@@ -49,154 +92,172 @@ namespace AAToggleGenerator
                 })
                 .Where(e =>
                     (e.IsAutoAssembler || e.HasOptionsWithMoHideChildren || e.HasChildren) &&
-                    e.Id != null &&
-                    !excludeKeywords.Any(keyword => e.Description != null && e.Description.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0) // Exclude entries containing specific keywords
+                    !string.IsNullOrEmpty(e.Id) &&
+                    !IsDescriptionExcluded(e.Description)
                 )
                 .ToList();
 
+            ShowEntrySelectionDialog(entries);
+        }
+        
+        private static bool IsDescriptionExcluded(string description)
+        {
+            if (string.IsNullOrEmpty(description))
+                return false;
+                
+            // Use HashSet for O(1) lookup performance
+            return ExcludeKeywords.Any(keyword => 
+                description.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
 
+        private static void ShowEntrySelectionDialog(List<CheatEntry> entries)
+        {
             // Create TreeView for user selection
-            TreeView treeView = new TreeView { Dock = DockStyle.Fill, CheckBoxes = true };
-            treeView.Font = new System.Drawing.Font(treeView.Font.FontFamily, 12);
-
-            treeView.AfterCheck += TreeView_AfterCheck;
-            treeView.NodeMouseDoubleClick += (sender, e) => e.Node.Checked = !e.Node.Checked;
-
-
-
-            // Build TreeView nodes
-            // Store the last TreeNode at each Depth level
-            Dictionary<int, TreeNode> depthLastNode = new Dictionary<int, TreeNode>();
-
-            foreach (var entry in entries)
+            using (TreeView treeView = new TreeView { Dock = DockStyle.Fill, CheckBoxes = true })
             {
-                TreeNode currentNode = new TreeNode(entry.Description ?? "Unnamed")
-                {
-                    Tag = entry,
-                    Checked = entry.IsAutoAssembler, // Only Auto Assembler scripts are pre-selected
-                };
+                treeView.Font = new System.Drawing.Font(treeView.Font.FontFamily, TreeViewFontSize);
 
-                if (entry.IsGroup)
-                {
-                    // Group nodes (e.g., #A, #B) cannot be selected
-                    currentNode.NodeFont = new System.Drawing.Font(treeView.Font, System.Drawing.FontStyle.Bold);
-                    currentNode.ForeColor = System.Drawing.Color.Gray; // Differentiate visually
-                }
+                treeView.AfterCheck += TreeView_AfterCheck;
+                treeView.NodeMouseDoubleClick += (sender, e) => e.Node.Checked = !e.Node.Checked;
 
-                // Find the correct parent node
-                if (entry.Depth == 0)
+
+                // Build TreeView nodes
+                // Store the last TreeNode at each Depth level
+                Dictionary<int, TreeNode> depthLastNode = new Dictionary<int, TreeNode>();
+
+                foreach (var entry in entries)
                 {
-                    treeView.Nodes.Add(currentNode);
-                }
-                else
-                {
-                    if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode parentNode))
+                    TreeNode currentNode = new TreeNode(entry.Description ?? "Unnamed")
                     {
-                        parentNode.Nodes.Add(currentNode);
+                        Tag = entry,
+                        Checked = entry.IsAutoAssembler, // Only Auto Assembler scripts are pre-selected
+                    };
+
+                    if (entry.IsGroup)
+                    {
+                        // Group nodes (e.g., #A, #B) cannot be selected
+                        currentNode.NodeFont = new System.Drawing.Font(treeView.Font, System.Drawing.FontStyle.Bold);
+                        currentNode.ForeColor = System.Drawing.Color.Gray; // Differentiate visually
                     }
-                    else
+
+                    // Find the correct parent node
+                    if (entry.Depth == 0)
                     {
                         treeView.Nodes.Add(currentNode);
                     }
+                    else
+                    {
+                        if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode parentNode))
+                        {
+                            parentNode.Nodes.Add(currentNode);
+                        }
+                        else
+                        {
+                            treeView.Nodes.Add(currentNode);
+                        }
+                    }
+
+                    // Update the last node at this depth
+                    depthLastNode[entry.Depth] = currentNode;
                 }
 
-                // Update the last node at this depth
-                depthLastNode[entry.Depth] = currentNode;
+                treeView.AfterCheck += (sender, e) =>
+                {
+                    CheatEntry entry = e.Node.Tag as CheatEntry;
+                    if (entry != null && entry.IsGroup)
+                    {
+                        e.Node.Checked = false;  // Force reset
+                    }
+                };
+
+                treeView.BeforeCheck += (sender, e) =>
+                {
+                    CheatEntry entry = e.Node.Tag as CheatEntry;
+                    if (entry != null && entry.IsGroup)
+                    {
+                        e.Cancel = true; // Prevent checking
+                    }
+                };
+
+                treeView.NodeMouseDoubleClick += (sender, e) =>
+                {
+                    TreeNode node = e.Node;
+                    if (node == null) return;
+
+                    CheatEntry entry = node.Tag as CheatEntry;
+                    if (entry != null && entry.IsGroup)
+                    {
+                        node.Checked = false;  // Ensure it remains unchecked
+                        return;  // Do not process further toggle Checked
+                    }
+
+                    // Only allow non-group nodes to toggle
+                    node.Checked = !node.Checked;
+                };
+
+                ExpandTreeView(treeView, DefaultTreeViewDepth);
+
+                // Create selection form with proper disposal
+                using (Form treeForm = new Form
+                {
+                    Text = "Select Cheat Entries",
+                    Width = DefaultFormWidth,
+                    Height = DefaultFormHeight,
+                    StartPosition = FormStartPosition.CenterScreen
+                })
+                using (Label depthLabel = new Label
+                {
+                    Text = "Expand Depth:",
+                    Dock = DockStyle.Top,
+                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+                })
+                using (NumericUpDown depthSelector = new NumericUpDown
+                {
+                    Minimum = 0,
+                    Maximum = 10,
+                    Value = DefaultTreeViewDepth,
+                    Dock = DockStyle.Top
+                })
+                using (Button confirmButton = new Button
+                {
+                    Text = "Confirm",
+                    Dock = DockStyle.Bottom,
+                    DialogResult = DialogResult.OK
+                })
+                {
+                    depthSelector.ValueChanged += (sender, e) =>
+                    {
+                        int depth = (int)depthSelector.Value;
+                        ExpandTreeView(treeView, depth);
+                    };
+
+                    treeForm.Controls.Add(treeView);
+                    treeForm.Controls.Add(depthSelector);
+                    treeForm.Controls.Add(depthLabel);
+                    treeForm.Controls.Add(confirmButton);
+
+                    if (treeForm.ShowDialog() != DialogResult.OK)
+                        return;
+
+                    // Filter selected entries
+                    var selectedEntries = GetCheckedNodes(treeView.Nodes)
+                        .Select(node => (CheatEntry)node.Tag)
+                        .ToList();
+
+                    // Generate script with selected entries
+                    GenerateAndShowScript(selectedEntries, entries);
+                }
             }
+        }
 
-            treeView.AfterCheck += (sender, e) =>
-            {
-                CheatEntry entry = e.Node.Tag as CheatEntry;
-                if (entry != null && entry.IsGroup)
-                {
-                    e.Node.Checked = false;  // Force reset
-                }
-            };
-
-            treeView.BeforeCheck += (sender, e) =>
-            {
-                CheatEntry entry = e.Node.Tag as CheatEntry;
-                if (entry != null && entry.IsGroup)
-                {
-                    e.Cancel = true; // Prevent checking
-                }
-            };
-            //treeView.AfterCheck -= TreeView_AfterCheck; 
-            treeView.NodeMouseDoubleClick += (sender, e) =>
-            {
-                TreeNode node = e.Node;
-                if (node == null) return;
-
-                CheatEntry entry = node.Tag as CheatEntry;
-                if (entry != null && entry.IsGroup)
-                {
-                    node.Checked = false;  // Ensure it remains unchecked
-                    return;  // Do not process further toggle Checked
-                }
-
-                // Only allow non-group nodes to toggle
-                node.Checked = !node.Checked;
-            };
-
-            ExpandTreeView(treeView, 2);
-
-            // Create selection form
-            Form treeForm = new Form
-            {
-                Text = "Select Cheat Entries",
-                Width = 400,
-                Height = 600,
-                StartPosition = FormStartPosition.CenterScreen
-            };
-
-            Label depthLabel = new Label
-            {
-                Text = "Expand Depth:",
-                Dock = DockStyle.Top,
-                TextAlign = System.Drawing.ContentAlignment.MiddleLeft
-            };
-
-            NumericUpDown depthSelector = new NumericUpDown
-            {
-                Minimum = 0,
-                Maximum = 10,
-                Value = 2,
-                Dock = DockStyle.Top
-            };
-
-            depthSelector.ValueChanged += (sender, e) =>
-            {
-                int depth = (int)depthSelector.Value;
-                ExpandTreeView(treeView, depth);
-            };
-
-            Button confirmButton = new Button
-            {
-                Text = "Confirm",
-                Dock = DockStyle.Bottom,
-                DialogResult = DialogResult.OK
-            };
-
-            treeForm.Controls.Add(treeView);
-            treeForm.Controls.Add(depthSelector);
-            treeForm.Controls.Add(depthLabel);
-            treeForm.Controls.Add(confirmButton);
-
-
-            if (treeForm.ShowDialog() != DialogResult.OK)
-                return;
-
-            // Filter selected entries
-            var selectedEntries = GetCheckedNodes(treeView.Nodes)
-                .Select(node => (CheatEntry)node.Tag)
-                .ToList();
-
+        private static void GenerateAndShowScript(List<CheatEntry> selectedEntries, List<CheatEntry> allEntries)
+        {
             // Ensure correct order
             var enableOrder = GetOrderedEntries(selectedEntries, true);
-            var disableOrder = GetOrderedEntries(entries, false);
+            var disableOrder = GetOrderedEntries(allEntries, false);
 
-            // Generate script
-            StringBuilder scriptBuilder = new StringBuilder();
+            // Generate script with pre-allocated capacity
+            StringBuilder scriptBuilder = new StringBuilder(DefaultStringBuilderCapacity);
 
             scriptBuilder.AppendLine("[ENABLE]");
             scriptBuilder.AppendLine("{$lua}");
@@ -254,7 +315,7 @@ namespace AAToggleGenerator
 
             // Add comments
             scriptBuilder.AppendLine("-- Comments:");
-            foreach (var entry in entries)
+            foreach (var entry in allEntries)
             {
                 string indent = new string(' ', entry.Depth * 2);
                 scriptBuilder.AppendLine($"-- {indent}ID: {entry.Id}, Description: {entry.Description}, Depth: {entry.Depth}");
@@ -263,32 +324,34 @@ namespace AAToggleGenerator
             // Add syntax highlighting using Scintilla
             ShowScriptWithHighlighting(scriptBuilder.ToString());
         }
+
         private static void ShowScriptWithHighlighting(string script)
         {
-            Form scriptForm = new Form { Width = 800, Height = 600, Text = "Generated Lua Script" };
-            Scintilla scintilla = new Scintilla
+            using (Form scriptForm = new Form { Width = ScriptFormWidth, Height = ScriptFormHeight, Text = "Generated Lua Script" })
+            using (Scintilla scintilla = new Scintilla
             {
                 Dock = DockStyle.Fill,
                 Text = script,
                 Lexer = Lexer.Lua
-            };
+            })
+            {
+                // Set Lua syntax highlighting
+                scintilla.Styles[Style.Default].Font = ScintillaFontName;
+                scintilla.Styles[Style.Default].Size = ScintillaFontSize;
+                scintilla.Styles[Style.Default].ForeColor = System.Drawing.Color.Black;
+                scintilla.Styles[Style.Lua.Comment].ForeColor = System.Drawing.Color.Gray;
+                scintilla.Styles[Style.Lua.CommentLine].ForeColor = System.Drawing.Color.Gray;
+                scintilla.Styles[Style.Lua.String].ForeColor = System.Drawing.Color.Brown;
+                scintilla.Styles[Style.Lua.Number].ForeColor = System.Drawing.Color.Purple;
+                scintilla.Styles[Style.Lua.Operator].ForeColor = System.Drawing.Color.DarkOrange;
+                scintilla.Styles[Style.Lua.Word].ForeColor = System.Drawing.Color.Blue;
+                scintilla.Styles[Style.Lua.Word].Bold = true;
 
-            // Set Lua syntax highlighting
-            scintilla.Styles[Style.Default].Font = "Consolas";
-            scintilla.Styles[Style.Default].Size = 12;
-            scintilla.Styles[Style.Default].ForeColor = System.Drawing.Color.Black;
-            scintilla.Styles[Style.Lua.Comment].ForeColor = System.Drawing.Color.Gray;
-            scintilla.Styles[Style.Lua.CommentLine].ForeColor = System.Drawing.Color.Gray;
-            scintilla.Styles[Style.Lua.String].ForeColor = System.Drawing.Color.Brown;
-            scintilla.Styles[Style.Lua.Number].ForeColor = System.Drawing.Color.Purple;
-            scintilla.Styles[Style.Lua.Operator].ForeColor = System.Drawing.Color.DarkOrange;
-            scintilla.Styles[Style.Lua.Word].ForeColor = System.Drawing.Color.Blue;
-            scintilla.Styles[Style.Lua.Word].Bold = true;
+                scintilla.SetKeywords(0, LuaKeywords);
 
-            scintilla.SetKeywords(0, "if then else end function local return for while do in break repeat until and or not synchronize");
-
-            scriptForm.Controls.Add(scintilla);
-            scriptForm.ShowDialog();
+                scriptForm.Controls.Add(scintilla);
+                scriptForm.ShowDialog();
+            }
         }
         private static void TreeView_AfterCheck(object sender, TreeViewEventArgs e)
         {
