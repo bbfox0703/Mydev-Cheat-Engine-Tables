@@ -4,12 +4,12 @@
 
 ### **Repository for Self-Developed Cheat Engine Tables**  
 This repository contains a curated selection of simple, self-developed Cheat Engine tables.  
-All tables are also published on the [<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCT logo">Open Cheat Tables (OCT)](https://opencheattables.com) site.  
+All tables are also published on the [<img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCT logo">Open Cheat Tables (OCT)](https://opencheattables.com) site.  
 
 ---
 
 #### **OpenCheatTables (OCT) Site URL**  
-- <img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCT logo"> **[https://opencheattables.com](https://opencheattables.com)**  
+- <img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCT logo"> **[https://opencheattables.com](https://opencheattables.com)**  
 - To search with keywords, visit the [OCT forum](https://opencheattables.com).
 
 ---
@@ -49,7 +49,7 @@ If you're unsure how to download tables from this repository:
 
 #### **Publishing on Other Websites**  
 If you wish to share these tables on other platforms, please credit the source as:  
-[<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCT logo">Open Cheat Tables (OCT)](https://opencheattables.com).  
+[<img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCT logo">Open Cheat Tables (OCT)](https://opencheattables.com).  
 
 ---
 
@@ -59,12 +59,12 @@ If you wish to share these tables on other platforms, please credit the source a
 
 ### **自作のCheat Engineテーブルリポジトリ**  
 このリポジトリには、シンプルな自作のCheat Engineテーブルがまとめられています。  
-すべてのテーブルは[<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCTロゴ">Open Cheat Tables (OCT)](https://opencheattables.com) サイトにも投稿されています。  
+すべてのテーブルは[<img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCTロゴ">Open Cheat Tables (OCT)](https://opencheattables.com) サイトにも投稿されています。  
 
 ---
 
 #### **OpenCheatTables (OCT) サイトURL**  
-- <img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCTロゴ"> **[https://opencheattables.com](https://opencheattables.com)**  
+- <img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCTロゴ"> **[https://opencheattables.com](https://opencheattables.com)**  
 - キーワードで検索するには、[OCTフォーラム](https://opencheattables.com) にアクセスしてください。  
 
 ---
@@ -105,7 +105,7 @@ If you wish to share these tables on other platforms, please credit the source a
 
 #### **他サイトでの公開について**  
 これらのテーブルを他のプラットフォームで共有する場合は、次のように出典を明記してください：  
-[<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCTロゴ">Open Cheat Tables (OCT)](https://opencheattables.com)  
+[<img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCTロゴ">Open Cheat Tables (OCT)](https://opencheattables.com)  
 
 ---
 
@@ -115,12 +115,12 @@ If you wish to share these tables on other platforms, please credit the source a
 
 ### **自製 Cheat Engine Table 儲存庫**  
 此儲存庫包含了一些簡單的自製 Cheat Engine Table。  
-所有的 Table 也已同步發佈至 [<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCT圖示">Open Cheat Tables (OCT)](https://opencheattables.com) 網站。
+所有的 Table 也已同步發佈至 [<img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCT圖示">Open Cheat Tables (OCT)](https://opencheattables.com) 網站。
 
 ---
 
 #### **OpenCheatTables (OCT) 網站 URL**  
-- <img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCT圖示"> **[https://opencheattables.com](https://opencheattables.com)**  
+- <img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCT圖示"> **[https://opencheattables.com](https://opencheattables.com)**  
 - 如果需要進行全文檢索，請至 [OCT 討論區](https://opencheattables.com) 查詢。  
 
 ---
@@ -160,4 +160,4 @@ If you wish to share these tables on other platforms, please credit the source a
 
 #### **在其他網站上發佈**  
 如果您計劃在其他網站上分享這些 Table，請務必註明來源為：  
-[<img src="https://opencheattables.com/ext/tatiana5/favicon/favicon.png" alt="OCT圖示">Open Cheat Tables (OCT)](https://opencheattables.com)。  
+[<img src="https://opencheattables.com/styles/OCT_Native/theme/images/site_logo.png" alt="OCT圖示">Open Cheat Tables (OCT)](https://opencheattables.com)。  
