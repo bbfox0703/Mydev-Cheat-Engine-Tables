@@ -242,6 +242,9 @@ namespace AAToggleGenerator
                     treeForm.Controls.Add(depthLabel);
                     treeForm.Controls.Add(confirmButton);
 
+                    // Apply theme after adding controls
+                    ApplyThemeToDialog(treeForm, treeView, depthLabel, depthSelector, confirmButton);
+
                     if (treeForm.ShowDialog() != DialogResult.OK)
                         return;
 
@@ -356,9 +359,54 @@ namespace AAToggleGenerator
                 scintilla.SetKeywords(0, LuaKeywords);
 
                 scriptForm.Controls.Add(scintilla);
+                
+                // Apply theme
+                ApplyThemeToScriptDialog(scriptForm, scintilla);
+                
                 scriptForm.ShowDialog();
             }
         }
+        private static void ApplyThemeToDialog(Form form, TreeView treeView, Label label, NumericUpDown numericUpDown, Button button)
+        {
+            if (WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                form.ApplyTheme();
+                treeView.ApplyTheme();
+                label.ApplyTheme();
+                numericUpDown.ApplyTheme();
+                button.ApplyTheme();
+                
+                // Update node themes
+                UpdateNodeThemes(treeView.Nodes);
+            }
+        }
+
+        private static void ApplyThemeToScriptDialog(Form form, Scintilla scintilla)
+        {
+            if (WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                form.ApplyTheme();
+                scintilla.ApplyTheme();
+            }
+        }
+
+        private static void UpdateNodeThemes(TreeNodeCollection nodes)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                if (node.Tag is CheatEntry entry)
+                {
+                    node.UpdateNodeTheme(entry.IsGroup);
+                }
+                
+                // Recursively update child nodes
+                if (node.Nodes.Count > 0)
+                {
+                    UpdateNodeThemes(node.Nodes);
+                }
+            }
+        }
+
         private static void TreeView_AfterCheck(object? sender, TreeViewEventArgs e)
         {
             TreeView? treeView = sender as TreeView;

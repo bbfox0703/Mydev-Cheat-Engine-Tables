@@ -37,10 +37,11 @@ dotnet run -c Release
 
 ### Core Components
 
-1. **MainForm.cs**: The main UI entry point with three primary functions:
+1. **MainForm.cs**: The main UI entry point with three primary functions and Windows theme support:
    - AA Toggle Generator (ScriptGenerator.StartScriptGeneration)
    - ID Renumbering (CTFileIDProcessor.RenumberIDs) 
    - Process Name Replacement (CTRenameEXE2Process.ReplaceProcessName)
+   - Automatic theme detection and UI styling based on Windows theme
 
 2. **ScriptGenerator.cs**: Core logic for parsing .CT files and generating Lua scripts:
    - Parses XML structure of Cheat Engine tables
@@ -52,12 +53,23 @@ dotnet run -c Release
 
 4. **CTRenameEXE2Process.cs**: Utility for replacing executable names with `$process` in aobscanmodule and aobscanregion commands
 
+5. **WindowsThemeHelper.cs**: Windows theme detection and management utility:
+   - Detects Windows 10 1903+ support for theme awareness
+   - Registry-based dark/light theme detection
+   - Provides theme-appropriate colors for UI elements
+
+6. **ThemeExtensions.cs**: Extension methods for applying Windows themes to controls:
+   - Form, Button, Label, TreeView, NumericUpDown theme styling
+   - Scintilla editor dark/light theme with syntax highlighting
+   - Automatic theme application to all UI elements
+
 ### Key Dependencies
 
 - **.NET 8**: Modern cross-platform framework targeting Windows
 - **fernandreu.ScintillaNET 4.2.0**: Provides syntax highlighting for Lua script editor (.NET 6+ compatible)
 - **System.Xml.Linq**: Used for parsing and manipulating .CT file XML structure
 - **Windows Forms**: UI framework for Windows desktop applications
+- **Microsoft.Win32.Registry**: For Windows theme detection via registry access
 
 ### Application Flow
 
@@ -96,6 +108,11 @@ The application specifically looks for entries with:
 - **Upgraded to .NET 8**: Modernized from .NET Framework 4.8 for better performance and long-term support
 - **SDK-style project format**: Simplified project file structure with modern package references
 - **Nullable reference types**: Enhanced with null safety features for better code reliability
+- **Windows Theme Aware**: Supports Windows 10/11 dark and light themes
+  - Automatic theme detection for Windows 10 1903+ (Build 18362+)
+  - Falls back to light theme for older Windows versions
+  - Theme-aware UI styling for all dialogs and controls
+  - Dark mode syntax highlighting for Scintilla code editor
 - Application is DPI-aware for high-resolution displays
 - Uses consistent error handling with MessageBox displays
 - Maintains backwards compatibility with older .CT file formats
