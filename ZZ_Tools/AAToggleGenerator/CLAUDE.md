@@ -117,7 +117,9 @@ The application specifically looks for entries with:
   - Theme-aware UI styling for all dialogs and controls
   - **Dark title bars**: Uses DwmSetWindowAttribute API for native title bar theming
   - Dark mode syntax highlighting for Scintilla code editor
-- Application is DPI-aware for high-resolution displays
+- **DPI Configuration**:
+  - Runtime: SystemAware DPI mode for proper high-resolution display support
+  - Designer: ForceDesignerDpiUnaware for better Visual Studio design experience
 - Uses consistent error handling with MessageBox displays
 - Maintains backwards compatibility with older .CT file formats
 - Supports both Chinese and English interface elements (based on exclusion keywords)
