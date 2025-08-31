@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using AAToggleGenerator;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Windows.Forms;
 
 namespace AAToggleGenerator.Tests
 {
@@ -111,6 +112,95 @@ namespace AAToggleGenerator.Tests
                 Assert.IsFalse(scriptLines.Any(l => l.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
                     $"Generated script should not contain '{keyword}'");
             }
+        }
+
+        [TestMethod]
+        public void TreeView_ChecksPropagateAndGroupsRemainUnchecked()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.Inconclusive("Windows-only test");
+            }
+
+            string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "AAToggleGenerator", "TestData", "sample_simple.CT"));
+            var xml = XDocument.Load(ctPath);
+
+            ScriptGenerator.TestMode = true;
+
+            var processMethod = typeof(ScriptGenerator).GetMethod("ProcessCheatTable", BindingFlags.NonPublic | BindingFlags.Static);
+            processMethod!.Invoke(null, new object[] { xml });
+
+            var entries = ScriptGenerator.LastProcessedEntries!;
+
+            using TreeView tree = BuildTreeView(entries);
+
+            // Find parent node with child
+            TreeNode parent = tree.Nodes.Cast<TreeNode>().First(n => ((CheatEntry)n.Tag!).Description == "Regular Entry");
+            TreeNode child = parent.Nodes[0];
+
+            // Checking parent should check child
+            parent.Checked = true;
+            Assert.IsTrue(child.Checked, "Child node should mirror parent checked state");
+
+            // Unchecking parent should uncheck child
+            parent.Checked = false;
+            Assert.IsFalse(child.Checked, "Child node should mirror parent unchecked state");
+
+            // Attempt to check a group node
+            TreeNode groupNode = tree.Nodes.Cast<TreeNode>().First(n => ((CheatEntry)n.Tag!).Description == "Group Header");
+            groupNode.Checked = true;
+            Assert.IsFalse(groupNode.Checked, "Group nodes should remain unchecked");
+        }
+
+        private static TreeView BuildTreeView(List<CheatEntry> entries)
+        {
+            TreeView tree = new TreeView { CheckBoxes = true };
+            var afterCheckMethod = typeof(ScriptGenerator).GetMethod("TreeView_AfterCheck", BindingFlags.NonPublic | BindingFlags.Static);
+            tree.AfterCheck += (TreeViewEventHandler)Delegate.CreateDelegate(typeof(TreeViewEventHandler), afterCheckMethod!);
+
+            tree.AfterCheck += (sender, e) =>
+            {
+                if (e.Node?.Tag is CheatEntry ce && ce.IsGroup)
+                {
+                    e.Node.Checked = false;
+                }
+            };
+
+            tree.BeforeCheck += (sender, e) =>
+            {
+                if (e.Node?.Tag is CheatEntry ce && ce.IsGroup)
+                {
+                    e.Cancel = true;
+                }
+            };
+
+            Dictionary<int, TreeNode> depthLastNode = new();
+            foreach (var entry in entries)
+            {
+                TreeNode node = new TreeNode(entry.Description)
+                {
+                    Tag = entry,
+                    Checked = entry.IsAutoAssembler
+                };
+
+                if (entry.Depth == 0)
+                {
+                    tree.Nodes.Add(node);
+                }
+                else if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode? parentNode))
+                {
+                    parentNode.Nodes.Add(node);
+                }
+                else
+                {
+                    tree.Nodes.Add(node);
+                }
+
+                depthLastNode[entry.Depth] = node;
+            }
+
+            return tree;
         }
     }
 }
