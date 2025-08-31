@@ -29,10 +29,14 @@ namespace AAToggleGenerator
         {
             "一鍵開啟",
             "scripts on/",
-            "Toggle Scripts", 
+            "Toggle Scripts",
             "一鍵切換",
             "Toggle some scripts"
         };
+
+        // Test hooks
+        internal static bool TestMode { get; set; }
+        internal static List<CheatEntry>? LastProcessedEntries { get; private set; }
         public static void StartScriptGeneration()
         {
             // Show file dialog to select .CT file
@@ -96,6 +100,10 @@ namespace AAToggleGenerator
                     !IsDescriptionExcluded(e.Description)
                 )
                 .ToList();
+
+            LastProcessedEntries = entries;
+            if (TestMode)
+                return;
 
             ShowEntrySelectionDialog(entries);
         }
