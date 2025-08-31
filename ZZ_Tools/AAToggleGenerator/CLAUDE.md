@@ -11,33 +11,37 @@ AAToggleGenerator is a C# WinForms application designed to help users generate L
 ### Building the Application
 ```bash
 # Build Debug version
-msbuild AAToggleGenerator.sln /p:Configuration=Debug
+dotnet build
 
-# Build Release version  
-msbuild AAToggleGenerator.sln /p:Configuration=Release
+# Build Release version
+dotnet build -c Release
 
-# Using Visual Studio
-# Open AAToggleGenerator.sln in Visual Studio 2017 or later
-# Build > Build Solution (Ctrl+Shift+B)
+# Restore dependencies
+dotnet restore
 ```
 
 ### Running the Application
 ```bash
 # Run Debug build
-.\bin\Debug\AAToggleGenerator.exe
+dotnet run
 
 # Run Release build
-.\bin\Release\AAToggleGenerator.exe
+dotnet run -c Release
+
+# Or run directly from output
+.\bin\Debug\net8.0-windows\AAToggleGenerator.exe
+.\bin\Release\net8.0-windows\AAToggleGenerator.exe
 ```
 
 ## Architecture Overview
 
 ### Core Components
 
-1. **MainForm.cs**: The main UI entry point with three primary functions:
+1. **MainForm.cs**: The main UI entry point with three primary functions and Windows theme support:
    - AA Toggle Generator (ScriptGenerator.StartScriptGeneration)
    - ID Renumbering (CTFileIDProcessor.RenumberIDs) 
    - Process Name Replacement (CTRenameEXE2Process.ReplaceProcessName)
+   - Automatic theme detection and UI styling based on Windows theme
 
 2. **ScriptGenerator.cs**: Core logic for parsing .CT files and generating Lua scripts:
    - Parses XML structure of Cheat Engine tables
@@ -49,11 +53,26 @@ msbuild AAToggleGenerator.sln /p:Configuration=Release
 
 4. **CTRenameEXE2Process.cs**: Utility for replacing executable names with `$process` in aobscanmodule and aobscanregion commands
 
+5. **WindowsThemeHelper.cs**: Windows theme detection and management utility:
+   - Detects Windows 10 1903+ support for theme awareness
+   - Registry-based dark/light theme detection
+   - Provides theme-appropriate colors for UI elements
+   - **DWM API integration**: Uses DwmSetWindowAttribute for native title bar theming
+   - Supports both Windows 10 1903-1909 and 2004+ title bar attributes
+
+6. **ThemeExtensions.cs**: Extension methods for applying Windows themes to controls:
+   - Form, Button, Label, TreeView, NumericUpDown theme styling
+   - **Title bar theming**: Automatic dark/light title bar application
+   - Scintilla editor dark/light theme with syntax highlighting
+   - Automatic theme application to all UI elements
+
 ### Key Dependencies
 
-- **.NET Framework 4.8**: Target framework for Windows compatibility
-- **ScintillaNET 3.6.3**: Provides syntax highlighting for Lua script editor
+- **.NET 8**: Modern cross-platform framework targeting Windows
+- **fernandreu.ScintillaNET 4.2.0**: Provides syntax highlighting for Lua script editor (.NET 6+ compatible)
 - **System.Xml.Linq**: Used for parsing and manipulating .CT file XML structure
+- **Windows Forms**: UI framework for Windows desktop applications
+- **Microsoft.Win32.Registry**: For Windows theme detection via registry access
 
 ### Application Flow
 
@@ -89,7 +108,18 @@ The application specifically looks for entries with:
 
 ## Development Notes
 
-- Application is DPI-aware for high-resolution displays
+- **Upgraded to .NET 8**: Modernized from .NET Framework 4.8 for better performance and long-term support
+- **SDK-style project format**: Simplified project file structure with modern package references
+- **Nullable reference types**: Enhanced with null safety features for better code reliability
+- **Windows Theme Aware**: Supports Windows 10/11 dark and light themes
+  - Automatic theme detection for Windows 10 1903+ (Build 18362+)
+  - Falls back to light theme for older Windows versions
+  - Theme-aware UI styling for all dialogs and controls
+  - **Dark title bars**: Uses DwmSetWindowAttribute API for native title bar theming
+  - Dark mode syntax highlighting for Scintilla code editor
+- **DPI Configuration**:
+  - Runtime: SystemAware DPI mode for proper high-resolution display support
+  - Designer: ForceDesignerDpiUnaware for better Visual Studio design experience
 - Uses consistent error handling with MessageBox displays
 - Maintains backwards compatibility with older .CT file formats
 - Supports both Chinese and English interface elements (based on exclusion keywords)
