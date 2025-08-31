@@ -80,8 +80,8 @@ namespace AAToggleGenerator
             var entries = xml.Descendants("CheatEntry")
                 .Select(e => new CheatEntry
                 {
-                    Id = e.Element("ID")?.Value,
-                    Description = e.Element("Description")?.Value,
+                    Id = e.Element("ID")?.Value ?? string.Empty,
+                    Description = e.Element("Description")?.Value ?? string.Empty,
                     Depth = e.Ancestors("CheatEntry").Count(),
                     IsAutoAssembler = e.Element("VariableType")?.Value == "Auto Assembler Script",
                     HasOptionsWithMoHideChildren = e.Element("Options")?.Attributes()
@@ -147,7 +147,7 @@ namespace AAToggleGenerator
                     }
                     else
                     {
-                        if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode parentNode))
+                        if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode? parentNode) && parentNode != null)
                         {
                             parentNode.Nodes.Add(currentNode);
                         }
@@ -163,19 +163,25 @@ namespace AAToggleGenerator
 
                 treeView.AfterCheck += (sender, e) =>
                 {
-                    CheatEntry entry = e.Node.Tag as CheatEntry;
-                    if (entry != null && entry.IsGroup)
+                    if (e.Node != null)
                     {
-                        e.Node.Checked = false;  // Force reset
+                        CheatEntry? entry = e.Node.Tag as CheatEntry;
+                        if (entry != null && entry.IsGroup)
+                        {
+                            e.Node.Checked = false;  // Force reset
+                        }
                     }
                 };
 
                 treeView.BeforeCheck += (sender, e) =>
                 {
-                    CheatEntry entry = e.Node.Tag as CheatEntry;
-                    if (entry != null && entry.IsGroup)
+                    if (e.Node != null)
                     {
-                        e.Cancel = true; // Prevent checking
+                        CheatEntry? entry = e.Node.Tag as CheatEntry;
+                        if (entry != null && entry.IsGroup)
+                        {
+                            e.Cancel = true; // Prevent checking
+                        }
                     }
                 };
 
@@ -184,7 +190,7 @@ namespace AAToggleGenerator
                     TreeNode node = e.Node;
                     if (node == null) return;
 
-                    CheatEntry entry = node.Tag as CheatEntry;
+                    CheatEntry? entry = node.Tag as CheatEntry;
                     if (entry != null && entry.IsGroup)
                     {
                         node.Checked = false;  // Ensure it remains unchecked
@@ -353,18 +359,21 @@ namespace AAToggleGenerator
                 scriptForm.ShowDialog();
             }
         }
-        private static void TreeView_AfterCheck(object sender, TreeViewEventArgs e)
+        private static void TreeView_AfterCheck(object? sender, TreeViewEventArgs e)
         {
-            TreeView treeView = sender as TreeView;
+            TreeView? treeView = sender as TreeView;
             if (treeView == null) return;
 
             treeView.BeginUpdate();
 
             try
             {
-                foreach (TreeNode child in e.Node.Nodes)
+                if (e.Node != null)
                 {
-                    child.Checked = e.Node.Checked;
+                    foreach (TreeNode child in e.Node.Nodes)
+                    {
+                        child.Checked = e.Node.Checked;
+                    }
                 }
             }
             finally
@@ -427,8 +436,8 @@ namespace AAToggleGenerator
 
     public class CheatEntry
     {
-        public string Id { get; set; }
-        public string Description { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public int Depth { get; set; }
         public bool IsAutoAssembler { get; set; }
         public bool HasOptionsWithMoHideChildren { get; set; }

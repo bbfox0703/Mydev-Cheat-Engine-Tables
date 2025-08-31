@@ -11,23 +11,26 @@ AAToggleGenerator is a C# WinForms application designed to help users generate L
 ### Building the Application
 ```bash
 # Build Debug version
-msbuild AAToggleGenerator.sln /p:Configuration=Debug
+dotnet build
 
-# Build Release version  
-msbuild AAToggleGenerator.sln /p:Configuration=Release
+# Build Release version
+dotnet build -c Release
 
-# Using Visual Studio
-# Open AAToggleGenerator.sln in Visual Studio 2017 or later
-# Build > Build Solution (Ctrl+Shift+B)
+# Restore dependencies
+dotnet restore
 ```
 
 ### Running the Application
 ```bash
 # Run Debug build
-.\bin\Debug\AAToggleGenerator.exe
+dotnet run
 
 # Run Release build
-.\bin\Release\AAToggleGenerator.exe
+dotnet run -c Release
+
+# Or run directly from output
+.\bin\Debug\net8.0-windows\AAToggleGenerator.exe
+.\bin\Release\net8.0-windows\AAToggleGenerator.exe
 ```
 
 ## Architecture Overview
@@ -51,9 +54,10 @@ msbuild AAToggleGenerator.sln /p:Configuration=Release
 
 ### Key Dependencies
 
-- **.NET Framework 4.8**: Target framework for Windows compatibility
-- **ScintillaNET 3.6.3**: Provides syntax highlighting for Lua script editor
+- **.NET 8**: Modern cross-platform framework targeting Windows
+- **fernandreu.ScintillaNET 4.2.0**: Provides syntax highlighting for Lua script editor (.NET 6+ compatible)
 - **System.Xml.Linq**: Used for parsing and manipulating .CT file XML structure
+- **Windows Forms**: UI framework for Windows desktop applications
 
 ### Application Flow
 
@@ -89,6 +93,9 @@ The application specifically looks for entries with:
 
 ## Development Notes
 
+- **Upgraded to .NET 8**: Modernized from .NET Framework 4.8 for better performance and long-term support
+- **SDK-style project format**: Simplified project file structure with modern package references
+- **Nullable reference types**: Enhanced with null safety features for better code reliability
 - Application is DPI-aware for high-resolution displays
 - Uses consistent error handling with MessageBox displays
 - Maintains backwards compatibility with older .CT file formats
