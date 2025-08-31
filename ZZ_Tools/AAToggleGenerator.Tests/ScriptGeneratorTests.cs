@@ -70,5 +70,47 @@ namespace AAToggleGenerator.Tests
                 "0 -- Simple AA Script"
             }, disableLines);
         }
+
+        [TestMethod]
+        public void SampleComplexTable_FiltersExcludedDescriptions()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.Inconclusive("Windows-only test");
+            }
+
+            string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "AAToggleGenerator", "TestData", "sample_complex.CT"));
+            var xml = XDocument.Load(ctPath);
+
+            ScriptGenerator.TestMode = true;
+
+            var processMethod = typeof(ScriptGenerator).GetMethod("ProcessCheatTable", BindingFlags.NonPublic | BindingFlags.Static);
+            processMethod!.Invoke(null, new object[] { xml });
+
+            var entries = ScriptGenerator.LastProcessedEntries!;
+
+            var isExcluded = typeof(ScriptGenerator).GetMethod("IsDescriptionExcluded", BindingFlags.NonPublic | BindingFlags.Static);
+            string[] keywords = { "一鍵開啟", "Toggle Scripts" };
+            foreach (var keyword in keywords)
+            {
+                Assert.IsTrue((bool)isExcluded!.Invoke(null, new object[] { keyword })!, $"{keyword} should be excluded");
+                Assert.IsFalse(entries.Any(e => e.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
+                    $"Entry '{keyword}' should not appear");
+            }
+
+            var getOrdered = typeof(ScriptGenerator).GetMethod("GetOrderedEntries", BindingFlags.NonPublic | BindingFlags.Static);
+            var enableOrder = (List<CheatEntry>)getOrdered!.Invoke(null, new object[] { entries.Where(e => e.IsAutoAssembler).ToList(), true })!;
+            var disableOrder = (List<CheatEntry>)getOrdered.Invoke(null, new object[] { entries, false })!;
+
+            var scriptLines = enableOrder.Concat(disableOrder)
+                                         .Select(e => $"{e.Id} -- {e.Description}")
+                                         .ToList();
+            foreach (var keyword in keywords)
+            {
+                Assert.IsFalse(scriptLines.Any(l => l.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
+                    $"Generated script should not contain '{keyword}'");
+            }
+        }
     }
 }
