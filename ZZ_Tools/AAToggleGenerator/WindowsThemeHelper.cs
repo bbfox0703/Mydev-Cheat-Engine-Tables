@@ -13,6 +13,12 @@ namespace AAToggleGenerator
     {
         private const int MinSupportedBuild = 18362; // Windows 10 1903
 
+        // Delegates for testing/mocking
+        internal static Func<string, string, object?, object?> RegistryGetValueFunc = Registry.GetValue;
+        internal static Func<int>? BuildNumberProvider;
+        internal delegate int DwmSetWindowAttributeDelegate(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+        internal static DwmSetWindowAttributeDelegate? DwmSetWindowAttributeOverride;
+
         /// <summary>
         /// Windows version information structure
         /// </summary>
@@ -66,7 +72,7 @@ namespace AAToggleGenerator
             try
             {
                 // Check the registry for app theme preference
-                var registryValue = Registry.GetValue(
+                var registryValue = RegistryGetValueFunc(
                     @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize",
                     "AppsUseLightTheme",
                     1); // Default to light theme
@@ -97,6 +103,11 @@ namespace AAToggleGenerator
         /// </summary>
         public static int GetWindowsBuildNumber()
         {
+            if (BuildNumberProvider != null)
+            {
+                return BuildNumberProvider();
+            }
+
             try
             {
                 // Try using .NET 8's Environment.OSVersion first (more reliable in .NET 5+)
@@ -198,12 +209,13 @@ namespace AAToggleGenerator
                 int darkModeEnabled = 1;
                 
                 // Try the newer attribute first (Windows 10 2004+)
-                int result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkModeEnabled, sizeof(int));
-                
+                var dwm = DwmSetWindowAttributeOverride ?? DwmSetWindowAttribute;
+                int result = dwm(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkModeEnabled, sizeof(int));
+
                 // If that fails, try the older attribute (Windows 10 1903-1909)
                 if (result != 0)
                 {
-                    result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref darkModeEnabled, sizeof(int));
+                    result = dwm(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref darkModeEnabled, sizeof(int));
                 }
                 
                 return result == 0;
@@ -230,12 +242,13 @@ namespace AAToggleGenerator
                 int darkModeEnabled = 0;
                 
                 // Try the newer attribute first (Windows 10 2004+)
-                int result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkModeEnabled, sizeof(int));
-                
+                var dwm = DwmSetWindowAttributeOverride ?? DwmSetWindowAttribute;
+                int result = dwm(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkModeEnabled, sizeof(int));
+
                 // If that fails, try the older attribute (Windows 10 1903-1909)
                 if (result != 0)
                 {
-                    result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref darkModeEnabled, sizeof(int));
+                    result = dwm(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref darkModeEnabled, sizeof(int));
                 }
                 
                 return result == 0;
