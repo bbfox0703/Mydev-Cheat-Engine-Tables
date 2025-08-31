@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace AAToggleGenerator
@@ -8,6 +9,60 @@ namespace AAToggleGenerator
         public MainForm()
         {
             InitializeComponent();
+            ApplyTheme();
+            
+            // Add theme info to title if theme aware is supported
+            if (WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                var currentTheme = WindowsThemeHelper.GetCurrentTheme();
+                this.Text += $" - {currentTheme} Theme";
+            }
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            
+            // Ensure title bar theme is applied after handle is created
+            WindowsThemeHelper.ApplyTitleBarTheme(this.Handle);
+        }
+
+        private void ApplyTheme()
+        {
+            if (!WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                // For Windows versions before 1903, use default system colors
+                return;
+            }
+
+            var backgroundColor = WindowsThemeHelper.GetBackgroundColor();
+            var foregroundColor = WindowsThemeHelper.GetForegroundColor();
+            var buttonBackgroundColor = WindowsThemeHelper.GetButtonBackgroundColor();
+
+            // Apply theme to main form
+            this.BackColor = backgroundColor;
+            this.ForeColor = foregroundColor;
+
+            // Apply theme to all buttons
+            ApplyButtonTheme(btnAAToggleGen, buttonBackgroundColor, foregroundColor);
+            ApplyButtonTheme(btnIDRenumber, buttonBackgroundColor, foregroundColor);
+            ApplyButtonTheme(btnReplaceProcName, buttonBackgroundColor, foregroundColor);
+        }
+
+        private void ApplyButtonTheme(Button button, Color backgroundColor, Color foregroundColor)
+        {
+            button.BackColor = backgroundColor;
+            button.ForeColor = foregroundColor;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderColor = WindowsThemeHelper.GetBorderColor();
+            button.FlatAppearance.BorderSize = 1;
+            
+            // Add hover effects for dark theme
+            if (WindowsThemeHelper.GetCurrentTheme() == WindowsThemeHelper.WindowsTheme.Dark)
+            {
+                button.FlatAppearance.MouseOverBackColor = Color.FromArgb(62, 62, 64);
+                button.FlatAppearance.MouseDownBackColor = Color.FromArgb(75, 75, 75);
+            }
         }
 
         private void btnAAToggleGen_Click(object sender, EventArgs e)

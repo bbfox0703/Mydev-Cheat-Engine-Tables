@@ -29,10 +29,14 @@ namespace AAToggleGenerator
         {
             "一鍵開啟",
             "scripts on/",
-            "Toggle Scripts", 
+            "Toggle Scripts",
             "一鍵切換",
             "Toggle some scripts"
         };
+
+        // Test hooks
+        internal static bool TestMode { get; set; }
+        internal static List<CheatEntry>? LastProcessedEntries { get; private set; }
         public static void StartScriptGeneration()
         {
             // Show file dialog to select .CT file
@@ -80,8 +84,8 @@ namespace AAToggleGenerator
             var entries = xml.Descendants("CheatEntry")
                 .Select(e => new CheatEntry
                 {
-                    Id = e.Element("ID")?.Value,
-                    Description = e.Element("Description")?.Value,
+                    Id = e.Element("ID")?.Value ?? string.Empty,
+                    Description = e.Element("Description")?.Value ?? string.Empty,
                     Depth = e.Ancestors("CheatEntry").Count(),
                     IsAutoAssembler = e.Element("VariableType")?.Value == "Auto Assembler Script",
                     HasOptionsWithMoHideChildren = e.Element("Options")?.Attributes()
@@ -96,6 +100,10 @@ namespace AAToggleGenerator
                     !IsDescriptionExcluded(e.Description)
                 )
                 .ToList();
+
+            LastProcessedEntries = entries;
+            if (TestMode)
+                return;
 
             ShowEntrySelectionDialog(entries);
         }
@@ -147,7 +155,7 @@ namespace AAToggleGenerator
                     }
                     else
                     {
-                        if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode parentNode))
+                        if (depthLastNode.TryGetValue(entry.Depth - 1, out TreeNode? parentNode) && parentNode != null)
                         {
                             parentNode.Nodes.Add(currentNode);
                         }
@@ -163,19 +171,25 @@ namespace AAToggleGenerator
 
                 treeView.AfterCheck += (sender, e) =>
                 {
-                    CheatEntry entry = e.Node.Tag as CheatEntry;
-                    if (entry != null && entry.IsGroup)
+                    if (e.Node != null)
                     {
-                        e.Node.Checked = false;  // Force reset
+                        CheatEntry? entry = e.Node.Tag as CheatEntry;
+                        if (entry != null && entry.IsGroup)
+                        {
+                            e.Node.Checked = false;  // Force reset
+                        }
                     }
                 };
 
                 treeView.BeforeCheck += (sender, e) =>
                 {
-                    CheatEntry entry = e.Node.Tag as CheatEntry;
-                    if (entry != null && entry.IsGroup)
+                    if (e.Node != null)
                     {
-                        e.Cancel = true; // Prevent checking
+                        CheatEntry? entry = e.Node.Tag as CheatEntry;
+                        if (entry != null && entry.IsGroup)
+                        {
+                            e.Cancel = true; // Prevent checking
+                        }
                     }
                 };
 
@@ -184,7 +198,7 @@ namespace AAToggleGenerator
                     TreeNode node = e.Node;
                     if (node == null) return;
 
-                    CheatEntry entry = node.Tag as CheatEntry;
+                    CheatEntry? entry = node.Tag as CheatEntry;
                     if (entry != null && entry.IsGroup)
                     {
                         node.Checked = false;  // Ensure it remains unchecked
@@ -236,6 +250,9 @@ namespace AAToggleGenerator
                     treeForm.Controls.Add(depthLabel);
                     treeForm.Controls.Add(confirmButton);
 
+                    // Apply theme after adding controls
+                    ApplyThemeToDialog(treeForm, treeView, depthLabel, depthSelector, confirmButton);
+
                     if (treeForm.ShowDialog() != DialogResult.OK)
                         return;
 
@@ -251,6 +268,15 @@ namespace AAToggleGenerator
         }
 
         private static void GenerateAndShowScript(List<CheatEntry> selectedEntries, List<CheatEntry> allEntries)
+        {
+            string script = BuildScript(selectedEntries, allEntries);
+            if (!TestMode)
+            {
+                ShowScriptWithHighlighting(script);
+            }
+        }
+
+        internal static string BuildScript(List<CheatEntry> selectedEntries, List<CheatEntry> allEntries)
         {
             // Ensure correct order
             var enableOrder = GetOrderedEntries(selectedEntries, true);
@@ -321,8 +347,7 @@ namespace AAToggleGenerator
                 scriptBuilder.AppendLine($"-- {indent}ID: {entry.Id}, Description: {entry.Description}, Depth: {entry.Depth}");
             }
 
-            // Add syntax highlighting using Scintilla
-            ShowScriptWithHighlighting(scriptBuilder.ToString());
+            return scriptBuilder.ToString();
         }
 
         private static void ShowScriptWithHighlighting(string script)
@@ -350,21 +375,69 @@ namespace AAToggleGenerator
                 scintilla.SetKeywords(0, LuaKeywords);
 
                 scriptForm.Controls.Add(scintilla);
+                
+                // Apply theme
+                ApplyThemeToScriptDialog(scriptForm, scintilla);
+                
                 scriptForm.ShowDialog();
             }
         }
-        private static void TreeView_AfterCheck(object sender, TreeViewEventArgs e)
+        private static void ApplyThemeToDialog(Form form, TreeView treeView, Label label, NumericUpDown numericUpDown, Button button)
         {
-            TreeView treeView = sender as TreeView;
+            if (WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                form.ApplyTheme();
+                treeView.ApplyTheme();
+                label.ApplyTheme();
+                numericUpDown.ApplyTheme();
+                button.ApplyTheme();
+                
+                // Update node themes
+                UpdateNodeThemes(treeView.Nodes);
+            }
+        }
+
+        private static void ApplyThemeToScriptDialog(Form form, Scintilla scintilla)
+        {
+            if (WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                form.ApplyTheme();
+                scintilla.ApplyTheme();
+            }
+        }
+
+        private static void UpdateNodeThemes(TreeNodeCollection nodes)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                if (node.Tag is CheatEntry entry)
+                {
+                    node.UpdateNodeTheme(entry.IsGroup);
+                }
+                
+                // Recursively update child nodes
+                if (node.Nodes.Count > 0)
+                {
+                    UpdateNodeThemes(node.Nodes);
+                }
+            }
+        }
+
+        private static void TreeView_AfterCheck(object? sender, TreeViewEventArgs e)
+        {
+            TreeView? treeView = sender as TreeView;
             if (treeView == null) return;
 
             treeView.BeginUpdate();
 
             try
             {
-                foreach (TreeNode child in e.Node.Nodes)
+                if (e.Node != null)
                 {
-                    child.Checked = e.Node.Checked;
+                    foreach (TreeNode child in e.Node.Nodes)
+                    {
+                        child.Checked = e.Node.Checked;
+                    }
                 }
             }
             finally
@@ -427,8 +500,8 @@ namespace AAToggleGenerator
 
     public class CheatEntry
     {
-        public string Id { get; set; }
-        public string Description { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public int Depth { get; set; }
         public bool IsAutoAssembler { get; set; }
         public bool HasOptionsWithMoHideChildren { get; set; }
