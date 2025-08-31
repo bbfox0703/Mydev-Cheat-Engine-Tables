@@ -126,9 +126,36 @@ The application specifically looks for entries with:
 
 ## Testing
 
-No automated test framework is configured. Manual testing involves:
+### Test Framework
+Comprehensive testing documentation and test cases are available:
+- **TESTING.md**: Detailed testing guide with scenarios and procedures
+- **TestData/**: Sample CT files for various test scenarios
+
+### Test Categories
+1. **Unit Tests**: Component isolation and method validation
+2. **Integration Tests**: End-to-end workflow testing
+3. **UI Theme Tests**: Dark/light mode functionality validation
+4. **Compatibility Tests**: Multi-version Windows testing
+5. **Performance Tests**: Large file processing benchmarks
+
+### Manual Testing Procedures
 1. Loading various .CT files to verify XML parsing
-2. Verifying TreeView hierarchy display
-3. Testing generated Lua script syntax
+2. Verifying TreeView hierarchy display and theme application
+3. Testing generated Lua script syntax and accuracy
 4. Validating ID renumbering functionality
 5. Confirming process name replacement accuracy
+6. Theme switching and UI consistency testing
+7. Error handling and edge case validation
+
+### Test Data
+- **sample_simple.CT**: Basic functionality testing
+- **sample_complex.CT**: Advanced features and performance
+- **sample_corrupted.CT**: Error handling validation
+- **sample_empty.CT**: Edge case testing
+- **sample_unicode.CT**: Internationalization support
+
+### Performance Benchmarks
+- Small CT files (<1MB): <2 seconds processing
+- Medium CT files (1-10MB): <5 seconds processing
+- Large CT files (>10MB): <15 seconds processing
+- Memory usage: <100MB for typical operations
