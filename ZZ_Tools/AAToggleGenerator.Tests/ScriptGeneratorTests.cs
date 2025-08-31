@@ -73,6 +73,63 @@ namespace AAToggleGenerator.Tests
         }
 
         [TestMethod]
+        public void SampleSimpleTable_BuildScriptCreatesOrderedSectionsAndComments()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.Inconclusive("Windows-only test");
+            }
+
+            string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "AAToggleGenerator", "TestData", "sample_simple.CT"));
+            var xml = XDocument.Load(ctPath);
+
+            ScriptGenerator.TestMode = true;
+
+            var processMethod = typeof(ScriptGenerator).GetMethod("ProcessCheatTable", BindingFlags.NonPublic | BindingFlags.Static);
+            processMethod!.Invoke(null, new object[] { xml });
+
+            var entries = ScriptGenerator.LastProcessedEntries!;
+            var buildMethod = typeof(ScriptGenerator).GetMethod("BuildScript", BindingFlags.NonPublic | BindingFlags.Static);
+            string script = (string)buildMethod!.Invoke(null, new object[] { entries.Where(e => e.IsAutoAssembler).ToList(), entries })!;
+
+            List<string> enableLines = ExtractIdLines(script, "local enableBattleScripts");
+            CollectionAssert.AreEqual(new[]
+            {
+                "0, -- Simple AA Script",
+                "2, -- Child AA Script",
+                "4, -- Nested AA Script"
+            }, enableLines);
+
+            List<string> disableLines = ExtractIdLines(script, "local disableBattleScripts");
+            CollectionAssert.AreEqual(new[]
+            {
+                "4, -- Nested AA Script",
+                "2, -- Child AA Script",
+                "3, -- Group Header",
+                "1, -- Regular Entry",
+                "0, -- Simple AA Script"
+            }, disableLines);
+
+            StringAssert.Contains(script, "-- ID: 0, Description: Simple AA Script, Depth: 0");
+            StringAssert.Contains(script, "-- ID: 1, Description: Regular Entry, Depth: 0");
+            StringAssert.Contains(script, "--   ID: 2, Description: Child AA Script, Depth: 1");
+            StringAssert.Contains(script, "-- ID: 3, Description: Group Header, Depth: 0");
+            StringAssert.Contains(script, "--   ID: 4, Description: Nested AA Script, Depth: 1");
+        }
+
+        private static List<string> ExtractIdLines(string script, string marker)
+        {
+            int start = script.IndexOf(marker, StringComparison.Ordinal);
+            int open = script.IndexOf('{', start);
+            int close = script.IndexOf('}', open);
+            string block = script.Substring(open + 1, close - open - 1);
+            return block.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(l => l.Trim())
+                        .ToList();
+        }
+
+        [TestMethod]
         public void SampleComplexTable_FiltersExcludedDescriptions()
         {
             if (!OperatingSystem.IsWindows())

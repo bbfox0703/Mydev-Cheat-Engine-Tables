@@ -269,6 +269,15 @@ namespace AAToggleGenerator
 
         private static void GenerateAndShowScript(List<CheatEntry> selectedEntries, List<CheatEntry> allEntries)
         {
+            string script = BuildScript(selectedEntries, allEntries);
+            if (!TestMode)
+            {
+                ShowScriptWithHighlighting(script);
+            }
+        }
+
+        internal static string BuildScript(List<CheatEntry> selectedEntries, List<CheatEntry> allEntries)
+        {
             // Ensure correct order
             var enableOrder = GetOrderedEntries(selectedEntries, true);
             var disableOrder = GetOrderedEntries(allEntries, false);
@@ -338,8 +347,7 @@ namespace AAToggleGenerator
                 scriptBuilder.AppendLine($"-- {indent}ID: {entry.Id}, Description: {entry.Description}, Depth: {entry.Depth}");
             }
 
-            // Add syntax highlighting using Scintilla
-            ShowScriptWithHighlighting(scriptBuilder.ToString());
+            return scriptBuilder.ToString();
         }
 
         private static void ShowScriptWithHighlighting(string script)
