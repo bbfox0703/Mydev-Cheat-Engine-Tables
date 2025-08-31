@@ -19,6 +19,14 @@ namespace AAToggleGenerator
             }
         }
 
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            
+            // Ensure title bar theme is applied after handle is created
+            WindowsThemeHelper.ApplyTitleBarTheme(this.Handle);
+        }
+
         private void ApplyTheme()
         {
             if (!WindowsThemeHelper.IsThemeAwareSupported())

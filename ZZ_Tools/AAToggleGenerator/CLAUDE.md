@@ -57,9 +57,12 @@ dotnet run -c Release
    - Detects Windows 10 1903+ support for theme awareness
    - Registry-based dark/light theme detection
    - Provides theme-appropriate colors for UI elements
+   - **DWM API integration**: Uses DwmSetWindowAttribute for native title bar theming
+   - Supports both Windows 10 1903-1909 and 2004+ title bar attributes
 
 6. **ThemeExtensions.cs**: Extension methods for applying Windows themes to controls:
    - Form, Button, Label, TreeView, NumericUpDown theme styling
+   - **Title bar theming**: Automatic dark/light title bar application
    - Scintilla editor dark/light theme with syntax highlighting
    - Automatic theme application to all UI elements
 
@@ -112,6 +115,7 @@ The application specifically looks for entries with:
   - Automatic theme detection for Windows 10 1903+ (Build 18362+)
   - Falls back to light theme for older Windows versions
   - Theme-aware UI styling for all dialogs and controls
+  - **Dark title bars**: Uses DwmSetWindowAttribute API for native title bar theming
   - Dark mode syntax highlighting for Scintilla code editor
 - Application is DPI-aware for high-resolution displays
 - Uses consistent error handling with MessageBox displays

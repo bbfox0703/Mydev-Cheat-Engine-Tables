@@ -11,7 +11,7 @@ namespace AAToggleGenerator
     public static class ThemeExtensions
     {
         /// <summary>
-        /// Applies theme to a Form
+        /// Applies theme to a Form including title bar
         /// </summary>
         public static void ApplyTheme(this Form form)
         {
@@ -20,6 +20,23 @@ namespace AAToggleGenerator
 
             form.BackColor = WindowsThemeHelper.GetBackgroundColor();
             form.ForeColor = WindowsThemeHelper.GetForegroundColor();
+
+            // Apply dark title bar if supported and handle is available
+            if (form.IsHandleCreated)
+            {
+                WindowsThemeHelper.ApplyTitleBarTheme(form.Handle);
+            }
+            else
+            {
+                // If handle is not yet created, apply theme when it becomes available
+                form.HandleCreated += (sender, e) =>
+                {
+                    if (sender is Form f)
+                    {
+                        WindowsThemeHelper.ApplyTitleBarTheme(f.Handle);
+                    }
+                };
+            }
 
             // Apply theme to all child controls recursively
             ApplyThemeToControls(form.Controls);

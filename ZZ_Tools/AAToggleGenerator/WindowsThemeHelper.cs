@@ -36,6 +36,13 @@ namespace AAToggleGenerator
         [DllImport("ntdll.dll", SetLastError = true)]
         private static extern int RtlGetVersion(ref OSVERSIONINFOEX versionInfo);
 
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        // Constants for dark title bar
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
         /// <summary>
         /// Theme enumeration
         /// </summary>
@@ -174,6 +181,85 @@ namespace AAToggleGenerator
         public static SolidBrush CreateThemedBrush(bool isBackground = true)
         {
             return new SolidBrush(isBackground ? GetBackgroundColor() : GetForegroundColor());
+        }
+
+        /// <summary>
+        /// Applies dark title bar to the specified window handle if theme aware and dark theme is active
+        /// </summary>
+        public static bool TryApplyDarkTitleBar(IntPtr handle)
+        {
+            if (!IsThemeAwareSupported() || GetCurrentTheme() != WindowsTheme.Dark || handle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                int darkModeEnabled = 1;
+                
+                // Try the newer attribute first (Windows 10 2004+)
+                int result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkModeEnabled, sizeof(int));
+                
+                // If that fails, try the older attribute (Windows 10 1903-1909)
+                if (result != 0)
+                {
+                    result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref darkModeEnabled, sizeof(int));
+                }
+                
+                return result == 0;
+            }
+            catch (Exception)
+            {
+                // If DWM API call fails, return false but don't crash
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Applies light title bar to the specified window handle
+        /// </summary>
+        public static bool TryApplyLightTitleBar(IntPtr handle)
+        {
+            if (!IsThemeAwareSupported() || handle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                int darkModeEnabled = 0;
+                
+                // Try the newer attribute first (Windows 10 2004+)
+                int result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkModeEnabled, sizeof(int));
+                
+                // If that fails, try the older attribute (Windows 10 1903-1909)
+                if (result != 0)
+                {
+                    result = DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref darkModeEnabled, sizeof(int));
+                }
+                
+                return result == 0;
+            }
+            catch (Exception)
+            {
+                // If DWM API call fails, return false but don't crash
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Applies appropriate title bar theme based on current Windows theme
+        /// </summary>
+        public static bool ApplyTitleBarTheme(IntPtr handle)
+        {
+            if (GetCurrentTheme() == WindowsTheme.Dark)
+            {
+                return TryApplyDarkTitleBar(handle);
+            }
+            else
+            {
+                return TryApplyLightTitleBar(handle);
+            }
         }
     }
 }
