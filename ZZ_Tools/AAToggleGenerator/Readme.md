@@ -105,6 +105,32 @@ dotnet run
 - **Languages**: Supports both English and Chinese interface elements
 - **DPI**: SystemAware runtime scaling with designer-friendly development experience
 
+## 🧪 Testing
+
+### Test Documentation
+- **[TESTING.md](TESTING.md)**: Comprehensive testing guide with test cases and scenarios
+- **[TestData/](TestData/)**: Sample CT files for testing various scenarios
+
+### Test Categories
+- **Unit Tests**: Component isolation testing
+- **Integration Tests**: End-to-end workflow validation
+- **UI Theme Tests**: Dark/light mode functionality
+- **Compatibility Tests**: Cross-version Windows testing
+- **Performance Tests**: Large file processing benchmarks
+
+### Quick Test
+```bash
+# Run application with sample data
+dotnet run
+
+# Test files located in:
+# - TestData/sample_simple.CT (basic functionality)
+# - TestData/sample_complex.CT (advanced features)  
+# - TestData/sample_corrupted.CT (error handling)
+# - TestData/sample_empty.CT (edge cases)
+# - TestData/sample_unicode.CT (internationalization)
+```
+
 ## 🤝 Contributing
 
 This tool is part of the Mydev Cheat Engine Tables collection. For bug reports or feature requests, please refer to the main repository documentation.
