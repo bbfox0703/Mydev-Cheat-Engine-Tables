@@ -78,6 +78,7 @@ local enableBattleScripts = {
   27, -- "Battle: player HP: try to keep non-zero"
   28, -- "Battle: full EP after use"
   29, -- "Battle: full CP after use"
+  130,
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -101,6 +102,7 @@ end)
 
 local disableBattleScripts = {
   20, -- "Criteria: player ID must &lt;="
+  130,
   29, -- "Battle: full CP after use"
   28, -- "Battle: full EP after use"
   27, -- "Battle: player HP: try to keep non-zero"
@@ -619,17 +621,20 @@ alloc(newmem,$1000,INJECT_BATTLE_DAMAGE_CTRL)
 
 label(code)
 label(return)
-label(i_play_char_id vf_min_player_hp_ratio is_enemy_1_HP is_full_EP is_full_CP)
+label(i_play_char_id vf_min_player_hp_ratio is_enemy_HP_option is_full_EP is_full_CP i_enemy_HP_limit vf_damage_multi)
 
 newmem:
-  push r15
-  mov r15d, [i_play_char_id]
-  cmp [rsi], r15d
-  pop r15
-  ja to_enemy
+  //push r15
+  //mov r15d, [i_play_char_id]
+  //cmp [rsi], r15d
+  //pop r15
+  //ja to_enemy
 
   cmp dword ptr [rsi+44], 0 // RNG
   je to_enemy
+
+  cmp dword ptr [rsi+78], 0 // STUN
+  jne to_enemy
 
 to_player:
   push r15
@@ -660,12 +665,51 @@ to_player:
   jmp code
 
 to_enemy:
-  cmp dword ptr [is_enemy_1_HP], 1
-  jne code
+  cmp dword ptr [is_enemy_HP_option], 0
+  je code
+  cmp dword ptr [is_enemy_HP_option], 1
+  je to_1HP
+  cmp dword ptr [is_enemy_HP_option], 2
+  je to_1HK
+  cmp dword ptr [is_enemy_HP_option], 3
+  je to_set_limit
+  cmp dword ptr [is_enemy_HP_option], 4
+  je to_damage_multi
+  jmp code
+
+to_1HK:
+  mov edx, 0
+  jmp code
+
+to_1HP:
   cmp edx, 1
   jbe code
   mov edx, 1
+  jmp code
 
+to_set_limit:
+  cmp edx, [i_enemy_HP_limit]
+  jbe code
+  mov edx, [i_enemy_HP_limit]
+  jmp code
+
+to_damage_multi:
+  cmp r14d, 0
+  jge code
+
+  vcvtsi2ss xmm15, xmm15, r14d
+  vmovss xmm14, [vf_damage_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si r14d, xmm15
+
+  mov ecx,[rsi+0C]
+  mov edx,[rsi+10]
+  add ecx,r14d
+  cmp ecx,edx
+  cmovl edx,ecx
+  test edx,edx
+  cmovs edx,ecx
+  // jmp code
 
 code:
   mov [rsi+0C],edx
@@ -675,20 +719,24 @@ align 10 cc
   i_play_char_id:
   dd 7
   vf_min_player_hp_ratio:
-  dd (float)0.5
-  is_enemy_1_HP:
+  dd (float)0.25
+  is_enemy_HP_option:
   dd 0
+  i_enemy_HP_limit:
+  dd #40000
   is_full_EP:
   dd 1
   is_full_CP:
   dd 1
+  vf_damage_multi:
+  dd (float)3.3333333
 
 
 INJECT_BATTLE_DAMAGE_CTRL:
   jmp newmem
   nop 3
 return:
-registersymbol(i_play_char_id vf_min_player_hp_ratio is_enemy_1_HP is_full_EP is_full_CP)
+registersymbol(i_play_char_id vf_min_player_hp_ratio is_enemy_HP_option is_full_EP is_full_CP i_enemy_HP_limit vf_damage_multi)
 registersymbol(INJECT_BATTLE_DAMAGE_CTRL)
 
 [DISABLE]
@@ -696,7 +744,7 @@ registersymbol(INJECT_BATTLE_DAMAGE_CTRL)
 INJECT_BATTLE_DAMAGE_CTRL:
   db 89 56 0C 48 8B 74 24 38
 
-unregistersymbol(i_play_char_id vf_min_player_hp_ratio is_enemy_1_HP is_full_EP is_full_CP)
+unregistersymbol(i_play_char_id vf_min_player_hp_ratio is_enemy_HP_option is_full_EP is_full_CP i_enemy_HP_limit vf_damage_multi)
 unregistersymbol(INJECT_BATTLE_DAMAGE_CTRL)
 dealloc(newmem)
 
@@ -784,20 +832,45 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
             </CheatEntry>
             <CheatEntry>
               <ID>25</ID>
-              <Description>"Enemy 1 HP?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
+              <Description>"Enemy HP option"</Description>
+              <DropDownList DisplayValueAsItem="1">0:None
+1:1 HP
+2:1 hit kill
+3:set limit as below
+4:damage multiplier as below
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>is_enemy_1_HP</Address>
+              <Address>is_enemy_HP_option</Address>
               <CheatEntries>
                 <CheatEntry>
                   <ID>26</ID>
                   <Description>"Warning: may affect friendly NPCs"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>132</ID>
+                  <Description>"friendly NPC may be killed when battle start"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>127</ID>
+                  <Description>"Enemy HP limit:"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_enemy_HP_limit</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>128</ID>
+                  <Description>"damage multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_damage_multi</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -916,14 +989,12 @@ label(code)
 label(return)
 
 newmem:
-  push r15
-  mov r15d, [i_play_char_id]
-  cmp [rsi], r15d
-  pop r15
-  ja code
-
   cmp dword ptr [rsi+44], 0 // RNG
   je code
+
+  cmp dword ptr [rsi+78], 0 // RNG
+  jne code
+
 
   mov edx, [rsi+18]
   mov [rsi+14], edx
@@ -996,14 +1067,10 @@ label(code)
 label(return)
 
 newmem:
-  push r15
-  mov r15d, [i_play_char_id]
-  cmp [rsi], r15d
-  pop r15
-  ja code
-
   cmp dword ptr [rsi+44], 0 // RNG
   je code
+  cmp dword ptr [rsi+78], 0
+  jne code
 
   mov edx, [rsi+20]
   mov [rsi+1C], edx
@@ -1057,6 +1124,98 @@ sora_1st.exe+DBC0B: 48 8B 74 24 38  - mov rsi,[rsp+38]
 sora_1st.exe+DBC10: 48 83 C4 20     - add rsp,20
 }
 </AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>130</ID>
+              <Description>"Battle: Stun multiplier"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_STUN_MULTI,sora_1st.exe,F3 0F 58 C7 F3 0F 5D C8) // should be unique
+alloc(newmem,$1000,INJECT_STUN_MULTI)
+
+label(code)
+label(return)
+label(vf_stun_multi)
+
+newmem:
+  cmp dword ptr [rcx+44], 0 // RNG
+  je code
+  cmp dword ptr [rcx+78], 0
+  jne code
+
+  mulss xmm7, dword ptr [vf_stun_multi]
+
+code:
+  addss xmm0,xmm7
+  minss xmm1,xmm0
+  jmp return
+
+align 10 cc
+  vf_stun_multi:
+  dd (float)3.333333333
+
+INJECT_STUN_MULTI:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_STUN_MULTI)
+registersymbol(vf_stun_multi)
+
+[DISABLE]
+
+INJECT_STUN_MULTI:
+  db F3 0F 58 C7 F3 0F 5D C8
+
+unregistersymbol(vf_stun_multi)
+unregistersymbol(INJECT_STUN_MULTI)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+C6430
+
+sora_1st.exe+C6407: 45 84 F6              - test r14b,r14b
+sora_1st.exe+C640A: F3 44 0F 11 44 24 20  - movss [rsp+20],xmm8
+sora_1st.exe+C6411: 49 0F 44 C7           - cmove rax,r15
+sora_1st.exe+C6415: 4C 8B 7C 24 60        - mov r15,[rsp+60]
+sora_1st.exe+C641A: F3 0F 10 51 78        - movss xmm2,[rcx+78]
+sora_1st.exe+C641F: 44 0F 2F C2           - comiss xmm8,xmm2
+sora_1st.exe+C6423: 73 5E                 - jae sora_1st.exe+C6483
+sora_1st.exe+C6425: F3 0F 10 59 74        - movss xmm3,[rcx+74]
+sora_1st.exe+C642A: 0F 28 CA              - movaps xmm1,xmm2
+sora_1st.exe+C642D: 0F 28 C3              - movaps xmm0,xmm3
+// ---------- INJECTING HERE ----------
+sora_1st.exe+C6430: F3 0F 58 C7           - addss xmm0,xmm7
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+C6434: F3 0F 5D C8           - minss xmm1,xmm0
+sora_1st.exe+C6438: 40 84 F6              - test sil,sil
+sora_1st.exe+C643B: 74 0C                 - je sora_1st.exe+C6449
+sora_1st.exe+C643D: 0F 2F CA              - comiss xmm1,xmm2
+sora_1st.exe+C6440: 72 07                 - jb sora_1st.exe+C6449
+sora_1st.exe+C6442: 0F 28 CA              - movaps xmm1,xmm2
+sora_1st.exe+C6445: F3 0F 5C CC           - subss xmm1,xmm4
+sora_1st.exe+C6449: 48 85 C0              - test rax,rax
+sora_1st.exe+C644C: 74 11                 - je sora_1st.exe+C645F
+sora_1st.exe+C644E: F3 0F 5C CB           - subss xmm1,xmm3
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>131</ID>
+                  <Description>"multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_stun_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
