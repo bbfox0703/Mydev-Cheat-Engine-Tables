@@ -58,42 +58,456 @@ end
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
-{$lua}
-if syntaxcheck then
-    return
-end
+{$asm}
+{
+define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
 
-if process == nil then
-    ShowMessage("Process is not selected.")
-elseif readInteger(process) == 0 then
-    ShowMessage("Process cannot be opened.")
-else
-    if monopipe ~= nil and monopipe.ProcessID ~= getOpenedProcessID() then
+registersymbol(ResourceManagerClearItemCountsProc)
+}
+
+{$lua}
+if syntaxcheck then return end
+-- 📏 SafeMonoDestroy: Clean up all Mono-related state
+if _G.SafeMonoDestroy == nil then
+  _G.SafeMonoDestroy = function()
+    print("🪚 SafeMonoDestroy: Begin cleanup...")
+
+    -- 1. Stop symbol enumeration thread if running
+    if monoSymbolEnum then
+      print("🚬 Terminating monoSymbolEnum thread...")
+      pcall(function()
+        monoSymbolEnum.terminate()
+        if not monoSymbolEnum.waitfor(3000) then
+          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
+        end
+        monoSymbolEnum.destroy()
+        monoSymbolEnum = nil
+      end)
+    end
+
+    -- 2. Stop progressbar timer
+    if monoSymbolList and monoSymbolList.progressbar then
+      monoSymbolList.progressbar.OnTimer = nil
+    end
+
+    -- 3. Unlock pipe (try unlock even if uncertain)
+    print("🔓 Attempting to unlock pipe...")
+    pcall(function()
+      if monopipe and monopipe.unlock then
+        monopipe.unlock()
+      end
+    end)
+
+    -- 4. Delay before destroy to let MonoCollector finish its work
+    print("⌛ Waiting before destroy (sleep 250ms)...")
+    sleep(250)  -- let it flush pipe state
+
+    -- 5. Destroy main pipe
+    local t0 = os.clock()
+    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
+
+    pcall(function()
+      if monopipe then
         monopipe.destroy()
         monopipe = nil
+      end
+    end)
+
+    local t1 = os.clock()
+    print(string.format("👻 monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
+
+
+    -- 6. Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
     end
-    if monopipe == nil then
-        LaunchMonoDataCollector()
+
+    -- 7. Destroy event pipe if exists
+    if monoeventpipe then
+      monoeventpipe.destroy()
+      monoeventpipe = nil
     end
+
+    print("👻 SafeMonoDestroy: Cleanup complete.")
+  end
+end
+
+-- 📏 Register symbol by parameter type array (exact match)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local p = mono_method_get_parameters(m.method)
+        local matched = true
+
+        if #p.parameters ~= #paramTypes then
+          matched = false
+        else
+          for i = 1, #paramTypes do
+            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Method found but failed to compile.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 📏 Register symbol by partial signature match (overload-safe, with excludes and match info)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("💔 Error: No methods found in %s.%s", namespace, classname))
+      return
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local sig = mono_method_getSignature(m.method)
+        local matched = true
+
+        -- Check required substrings
+        for _, kw in ipairs(sigContains) do
+          if not string.find(sig, kw, 1, true) then
+            matched = false
+            break
+          end
+        end
+
+        -- Check excluded substrings (if given)
+        if matched and sigExcludes then
+          for _, ex in ipairs(sigExcludes) do
+            if string.find(sig, ex, 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Signature matched but failed to compile method.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          print(string.format("🔎 Matched Signature: %s", sig))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
+  end
 end
 
 
-{$asm}
-//define(PlayerControllerManagedUpdateProc,"PlayerController.ManagedUpdate")
+-- 📏 Register symbol by simple method name (first match)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = mono_findMethod(namespace, classname, methodname)
+    if m == nil or m == 0 then
+      print(string.format("💔 Error: Method not found - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
 
-//registersymbol(PlayerControllerManagedUpdateProc)
+    local addr = mono_compile_method(m)
+    if addr == 0 then
+      print(string.format("💔 Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+  end
+end
+
+-- 🌀 Attach Mono if needed
+local pid = getOpenedProcessID()
+if pid == 0 then
+  print("⚠ Warning: No process is currently open.")
+  return
+end
+
+if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
+
+if monopipe == nil or _G.lastMonoPID ~= pid then
+  if monopipe ~= nil then
+    pcall(_G.SafeMonoDestroy)
+  end
+  pcall(LaunchMonoDataCollector)
+  _G.lastMonoPID = pid
+end
+
+-- ⚡ Example usage - Register Mono methods to CE symbol table
+-- These functions compile (JIT) a Mono method and register it as a CE symbol
+
+-- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+-- Description: Registers the first matched method with given name.
+-- ⚠ Use this only when there's no overload (or you're fine with the first one).
+-- Params:
+--   symbolname: The name you want to register (used in CE as a label)
+--   namespace:  Mono namespace of the class (can be "" if none)
+--   classname:  Class name that contains the method
+--   methodname: Method name to find (first match will be used)
+-- Example:
+
+--_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
 
 
+-- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+-- Description: Registers a method that exactly matches the provided parameter types.
+-- Use this when there are multiple overloads of a method.
+-- Params:
+--   symbolname: The name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (exact match)
+--   paramTypes: Array of expected parameter type strings (must match count &amp; order)
+--               These are matched using `string.find`, so partial match is allowed.
+-- Example:
+--   UseAbility(string idAct, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+-- Description: Registers the method whose signature contains all given substrings.
+-- Flexible, and suitable when exact type names vary or signature format is uncertain.
+-- Params:
+--   symbolname: The symbol name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (will scan all overloads)
+--   sigContains: Array of strings that should all appear in the method signature
+--                e.g., { "Act", "Card", "Point", "bool" }
+--   sigExcludes: Signatures to exclude
+-- Example:
+--   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  {"Item"},      -- sigContains
+  {"List"}       -- sigExcludes
+)
+
+Signatures above:
+System.Collections.Generic.List&lt;Item&gt;
+Item
+
+** Both have "Item" but first one have "List"
+--]]
+
+--[[
+
+Type Mapping (for overload filtering)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+
+--]]
 [DISABLE]
 {$lua}
-if syntaxcheck then return end;if not syntaxcheck and monopipe then monopipe=nil,monopipe.Destroy()end
-
-
+if syntaxcheck then return end
+--pcall(_G.SafeMonoDestroy)
 {$asm}
-unregistersymbol(*)
+//unregistersymbol(*)
 
 </AssemblerScript>
       <CheatEntries>
+        <CheatEntry>
+          <ID>317</ID>
+          <Description>"Toggle scripts"</Description>
+          <Color>4080FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  30, -- "Compact Mode"
+  10, -- "取得一些數據 / Get stats"
+  138, -- "取得混戰/戰役剩餘人數 / Get group battle remaining NPC #"
+  23, -- "戰．你．娘．親：HP / Battle: HP"
+  38, -- "鍛造：最大消費不減 / Upgrade count no dec."
+  41, -- "修練：最大消費不減 / Skill upgrade # no dec."
+  46, -- "設定擲骰子結果 / Set dice result"
+  50, -- "戰役：HP滿血 / Group Battle: inf HP"
+  65, -- "取得親密度 / Get relationship pt"
+  72, -- "親密度增減時倍率 / relationship multiplier"
+  60, -- "對敵人傷害倍率 / damage multiplier"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  303, -- "#091-#091"
+  292, -- "#041-#050"
+  281, -- "#031-#040"
+  270, -- "#021-#030"
+  259, -- "#011-#020"
+  258, -- "#001-#010"
+  235, -- "#081-#090"
+  224, -- "#071-#080"
+  213, -- "#061-#070"
+  202, -- "#051-#060"
+  191, -- "#041-#050"
+  180, -- "#031-#040"
+  169, -- "#021-#030"
+  158, -- "#011-#020"
+  157, -- "#001-#010"
+  94, -- "各別資料 (點擊展開) / Data+"
+  91, -- "強制顯示全部? / Force active all?"
+  89, -- "手動使用方式：狀態 -&gt; 人際關係"
+  70, -- "手動使用方式：狀態 -&gt; 人際關係"
+  60, -- "對敵人傷害倍率 / damage multiplier"
+  33, -- "道德 / morality"
+  247, -- "汗青書 / Endings record"
+  150, -- "生死簿發生次數 / Types of death"
+  14, -- "心相 / mind's image"
+  136, -- "手動使用方式：狀態 -&gt; 行囊"
+  11, -- "金錢 / Money"
+  88, -- "編輯人際關係顯示或隱藏 (依操作、可能無法復原) / force active relationship"
+  72, -- "親密度增減時倍率 / relationship multiplier"
+  65, -- "取得親密度 / Get relationship pt"
+  50, -- "戰役：HP滿血 / Group Battle: inf HP"
+  46, -- "設定擲骰子結果 / Set dice result"
+  41, -- "修練：最大消費不減 / Skill upgrade # no dec."
+  38, -- "鍛造：最大消費不減 / Upgrade count no dec."
+  315, -- "開新遊戲時：繼承點數 / When new game+: extra pt."
+  23, -- "戰．你．娘．親：HP / Battle: HP"
+  144, -- "講經堂 / stats"
+  138, -- "取得混戰/戰役剩餘人數 / Get group battle remaining NPC #"
+  135, -- "取得所有書籍 / Get all books"
+  10, -- "取得一些數據 / Get stats"
+  30, -- "Compact Mode"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 30, Description: "Compact Mode", Depth: 0
+-- ID: 31, Description: "啟用 (建議啟用二次) / Enable (enable twice)", Depth: 0
+--   ID: 50, Description: "戰役：HP滿血 / Group Battle: inf HP", Depth: 1
+--   ID: 23, Description: "戰．你．娘．親：HP / Battle: HP", Depth: 1
+--     ID: 60, Description: "對敵人傷害倍率 / damage multiplier", Depth: 2
+--   ID: 10, Description: "取得一些數據 / Get stats", Depth: 1
+--     ID: 11, Description: "金錢 / Money", Depth: 2
+--     ID: 14, Description: "心相 / mind's image", Depth: 2
+--     ID: 33, Description: "道德 / morality", Depth: 2
+--   ID: 38, Description: "鍛造：最大消費不減 / Upgrade count no dec.", Depth: 1
+--   ID: 41, Description: "修練：最大消費不減 / Skill upgrade # no dec.", Depth: 1
+--   ID: 65, Description: "取得親密度 / Get relationship pt", Depth: 1
+--     ID: 70, Description: "手動使用方式：狀態 -&gt; 人際關係", Depth: 2
+--   ID: 72, Description: "親密度增減時倍率 / relationship multiplier", Depth: 1
+--   ID: 88, Description: "編輯人際關係顯示或隱藏 (依操作、可能無法復原) / force active relationship", Depth: 1
+--     ID: 89, Description: "手動使用方式：狀態 -&gt; 人際關係", Depth: 2
+--     ID: 91, Description: "強制顯示全部? / Force active all?", Depth: 2
+--     ID: 94, Description: "各別資料 (點擊展開) / Data+", Depth: 2
+--   ID: 144, Description: "講經堂 / stats", Depth: 1
+--     ID: 150, Description: "生死簿發生次數 / Types of death", Depth: 2
+--       ID: 157, Description: "#001-#010", Depth: 3
+--       ID: 158, Description: "#011-#020", Depth: 3
+--       ID: 169, Description: "#021-#030", Depth: 3
+--       ID: 180, Description: "#031-#040", Depth: 3
+--       ID: 191, Description: "#041-#050", Depth: 3
+--       ID: 202, Description: "#051-#060", Depth: 3
+--       ID: 213, Description: "#061-#070", Depth: 3
+--       ID: 224, Description: "#071-#080", Depth: 3
+--       ID: 235, Description: "#081-#090", Depth: 3
+--       ID: 303, Description: "#091-#091", Depth: 3
+--     ID: 247, Description: "汗青書 / Endings record", Depth: 2
+--       ID: 258, Description: "#001-#010", Depth: 3
+--       ID: 259, Description: "#011-#020", Depth: 3
+--       ID: 270, Description: "#021-#030", Depth: 3
+--       ID: 281, Description: "#031-#040", Depth: 3
+--       ID: 292, Description: "#041-#050", Depth: 3
+--   ID: 135, Description: "取得所有書籍 / Get all books", Depth: 1
+--     ID: 136, Description: "手動使用方式：狀態 -&gt; 行囊", Depth: 2
+--   ID: 138, Description: "取得混戰/戰役剩餘人數 / Get group battle remaining NPC #", Depth: 1
+--   ID: 46, Description: "設定擲骰子結果 / Set dice result", Depth: 1
+--   ID: 315, Description: "開新遊戲時：繼承點數 / When new game+: extra pt.", Depth: 1
+
+
+</AssemblerScript>
+        </CheatEntry>
         <CheatEntry>
           <ID>50</ID>
           <Description>"戰役：HP滿血 / Group Battle: inf HP"</Description>
@@ -336,7 +750,7 @@ Mortal.Combat.CombatStatUI+&lt;UpdateHealth&gt;d__14:MoveNext+6b: C7 47 10 01 00
 [ENABLE]
 
 //aobscan(INJECT_DAMAGE_MULTI,8B 48 74 8B 57 14) // should be unique
-aobscanregion(INJECT_DAMAGE_MULTI,Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+20,Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__241:MoveNext+60,8B 48 74 8B 57 14) // should be unique
+aobscanregion(INJECT_DAMAGE_MULTI,Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__267:MoveNext+20,Mortal.Combat.CombatStatController+&lt;ModifyHealth&gt;d__267:MoveNext+60,8B 48 74 8B 57 14) // should be unique
 alloc(newmem,$1000)
 
 label(code)
@@ -4553,11 +4967,102 @@ Mortal.Story.DiceCheckResult:get_ResultCount+a5: C3              - ret
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
+        <CheatEntry>
+          <ID>315</ID>
+          <Description>"開新遊戲時：繼承點數 / When new game+: extra pt."</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Mortal.exe
+  Version: 
+  Date   : 2025-09-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_ADDON_VALUE,Mortal.Core.GameStat:AddValue+a, Mortal.Core.GameStat:AddValue+1a, 8B 43 28 89 45 F8 8B) // should be unique
+alloc(newmem,$1000)
+
+label(code)
+label(return i_base_addon_value_addr)
+
+newmem:
+  cmp dword ptr [ebx+20], 7
+  jne code
+  cmp dword ptr [ebx+24], 0
+  jne code
+
+  mov [i_base_addon_value_addr], ebx
+
+code:
+  mov eax,[ebx+28]
+  mov [ebp-08],eax
+  jmp return
+align 10 cc
+  i_base_addon_value_addr:
+  dq 0
+
+INJECT_GET_ADDON_VALUE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_GET_ADDON_VALUE i_base_addon_value_addr)
+
+[DISABLE]
+
+INJECT_GET_ADDON_VALUE:
+  db 8B 43 28 89 45 F8
+
+unregistersymbol(INJECT_GET_ADDON_VALUE i_base_addon_value_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Mortal.Core.GameStat:AddValue+a
+
+Mortal.Core.LibraryAwardStatItem:Execute+28: C9           - leave 
+Mortal.Core.LibraryAwardStatItem:Execute+29: C3           - ret 
+46B45DEA: 00 00        - add [eax],al
+46B45DEC: 00 00        - add [eax],al
+46B45DEE: 00 00        - add [eax],al
+Mortal.Core.GameStat:AddValue: 55           - push ebp
+Mortal.Core.GameStat:AddValue+1: 8B EC        - mov ebp,esp
+Mortal.Core.GameStat:AddValue+3: 53           - push ebx
+Mortal.Core.GameStat:AddValue+4: 83 EC 24     - sub esp,24
+Mortal.Core.GameStat:AddValue+7: 8B 5D 08     - mov ebx,[ebp+08]
+// ---------- INJECTING HERE ----------
+Mortal.Core.GameStat:AddValue+a: 8B 43 28     - mov eax,[ebx+28]
+// ---------- DONE INJECTING  ----------
+Mortal.Core.GameStat:AddValue+d: 89 45 F8     - mov [ebp-08],eax
+Mortal.Core.GameStat:AddValue+10: 8B 43 28     - mov eax,[ebx+28]
+Mortal.Core.GameStat:AddValue+13: 03 45 0C     - add eax,[ebp+0C]
+Mortal.Core.GameStat:AddValue+16: 89 43 28     - mov [ebx+28],eax
+Mortal.Core.GameStat:AddValue+19: 8B 4B 2C     - mov ecx,[ebx+2C]
+Mortal.Core.GameStat:AddValue+1c: 8B 53 30     - mov edx,[ebx+30]
+Mortal.Core.GameStat:AddValue+1f: 89 54 24 08  - mov [esp+08],edx
+Mortal.Core.GameStat:AddValue+23: 89 4C 24 04  - mov [esp+04],ecx
+Mortal.Core.GameStat:AddValue+27: 89 04 24     - mov [esp],eax
+Mortal.Core.GameStat:AddValue+2a: 90           - nop 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>316</ID>
+              <Description>"Value"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_addon_value_addr</Address>
+              <Offsets>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>32</ID>
-      <Description>"活俠傳 Legend of Mortal v1.0.3300.3  /  https://opencheattables.com"</Description>
+      <Description>"活俠傳 Legend of Mortal v1.0.5000.5  /  https://opencheattables.com"</Description>
       <Color>00AE57</Color>
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
