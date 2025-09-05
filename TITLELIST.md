@@ -210,6 +210,9 @@ ja-JP: 初音ミク Project DIVA MEGA39’s＋
 zh-TW: 霍格華茲的傳承  
 ja-JP: ホグワーツ・レガシー  
 
+## Hollow Knight Silksong  
+[Hollow Knight: Silksong (Steam)](https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/)  
+
 ## Kemono Friends Cellien May Cry  
 [Kemono Friends Cellien May Cry (Steam)](https://store.steampowered.com/app/1962920/_Cellien_May_Cry/)  
 zh-TW: 動物朋友 Cellien May Cry  
