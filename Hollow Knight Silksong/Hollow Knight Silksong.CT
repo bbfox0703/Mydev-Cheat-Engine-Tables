@@ -366,7 +366,7 @@ if syntaxcheck then return end
           <Description>"Toggle scripts"</Description>
           <Color>4080FF</Color>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>[ENABLE]
+          <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
 synchronize(function()
@@ -379,6 +379,7 @@ local enableBattleScripts = {
   1295, -- "HP no change (may die if get big damage)"
   1296, -- "Max silk when get"
   1297, -- "Silk no decrease when use"
+  1304,
   3, -- "PlayerData"
 }
 local addressList = getAddressList()
@@ -408,6 +409,7 @@ local disableBattleScripts = {
   1296, -- "Max silk when get"
   1295, -- "HP no change (may die if get big damage)"
   1301,
+  1304,
   1, -- "Toggle Compact View"
 }
 local addressList = getAddressList()
@@ -9672,7 +9674,7 @@ HeroAnimationController:IsHurt+36: 48 8B 46 38           - mov rax,[rsi+38]
           <ID>1295</ID>
           <Description>"HP no change (may die if get big damage)"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+          <AssemblerScript Async="1">{ Game   : Hollow Knight Silksong.exe
   Version: 
   Date   : 2025-09-05
   Author : bbfox@https://opencheattables.com
@@ -9724,7 +9726,7 @@ PlayerData:TakeHealth+2a4: C3                             - ret
           <ID>1296</ID>
           <Description>"Max silk when get"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+          <AssemblerScript Async="1">{ Game   : Hollow Knight Silksong.exe
   Version: 
   Date   : 2025-09-05
   Author : bbfox@https://opencheattables.com
@@ -9792,7 +9794,7 @@ PlayerData:AddSilk+5b: 89 B7 40 02 00 00              - mov [rdi+00000240],esi
           <ID>1297</ID>
           <Description>"Silk no decrease when use"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+          <AssemblerScript Async="1">{ Game   : Hollow Knight Silksong.exe
   Version: 
   Date   : 2025-09-05
   Author : bbfox@https://opencheattables.com
@@ -9858,7 +9860,8 @@ PlayerData:TakeSilk+30: C3                    - ret
         </CheatEntry>
         <CheatEntry>
           <ID>1301</ID>
-          <Description>"Take no damage in general"</Description>
+          <Description>"Takes no damage, in general"</Description>
+          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
   Version: 
@@ -9921,6 +9924,133 @@ DamageHero:get_CanCauseDamage+50: C3                             - ret
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
+        <CheatEntry>
+          <ID>1304</ID>
+          <Description>"Try to keep sub weapon (i.e. Straight Pin) amount full"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-06
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SET_TOOLS_CNT,PlayerData:SetToolData+8c,PlayerData:SetToolData+bc,89 4D EC 48 8B C8) // should be unique
+alloc(newmem,$1000,INJECT_SET_TOOLS_CNT)
+
+label(code)
+label(return i_cur_tool_amount i_cur_tool_amount2)
+
+newmem:
+  push r15
+  mov r15d, [i_cur_tool_amount]
+  dec r15d
+  cmp ecx, r15d
+  pop r15
+
+  //cmp ecx, B
+  je set_value
+
+nexn2:
+  push r15
+  mov r15d, [i_cur_tool_amount2]
+  dec r15d
+  cmp ecx, r15d
+  pop r15
+
+  //cmp ecx, B
+  je set_value
+  jmp code
+
+set_value:
+  inc ecx
+  //mov ecx, C
+  mov [rbp-24], ecx
+  jmp code
+
+
+code:
+  mov [rbp-14],ecx
+  mov rcx,rax
+  jmp return
+align 10 cc
+  i_cur_tool_amount:
+  dd C
+  i_cur_tool_amount2:
+  dd 6
+
+INJECT_SET_TOOLS_CNT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_TOOLS_CNT i_cur_tool_amount i_cur_tool_amount2)
+
+[DISABLE]
+
+INJECT_SET_TOOLS_CNT:
+  db 89 4D EC 48 8B C8
+
+unregistersymbol(INJECT_SET_TOOLS_CNT i_cur_tool_amount i_cur_tool_amount2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerData:SetToolData+9c
+
+PlayerData:SetToolData+70: 83 38 00                       - cmp dword ptr [rax],00
+PlayerData:SetToolData+73: 66 66 90                       - nop 3
+PlayerData:SetToolData+76: 49 BB D9 B5 23 02 32 02 00 00  - mov r11,000002320223B5D9
+PlayerData:SetToolData+80: 41 FF D3                       - call r11
+PlayerData:SetToolData+83: 48 63 45 E4                    - movsxd  rax,dword ptr [rbp-1C]
+PlayerData:SetToolData+87: 89 45 DC                       - mov [rbp-24],eax
+PlayerData:SetToolData+8a: 48 8B 87 A0 01 00 00           - mov rax,[rdi+000001A0]
+PlayerData:SetToolData+91: 48 63 4D D8                    - movsxd  rcx,dword ptr [rbp-28]
+PlayerData:SetToolData+95: 89 4D E8                       - mov [rbp-18],ecx
+PlayerData:SetToolData+98: 48 63 4D DC                    - movsxd  rcx,dword ptr [rbp-24]
+// ---------- INJECTING HERE ----------
+PlayerData:SetToolData+9c: 89 4D EC                       - mov [rbp-14],ecx
+// ---------- DONE INJECTING  ----------
+PlayerData:SetToolData+9f: 48 8B C8                       - mov rcx,rax
+PlayerData:SetToolData+a2: 48 8B D6                       - mov rdx,rsi
+PlayerData:SetToolData+a5: 4C 8B 45 E8                    - mov r8,[rbp-18]
+PlayerData:SetToolData+a9: 83 38 00                       - cmp dword ptr [rax],00
+PlayerData:SetToolData+ac: 66 90                          - nop 2
+PlayerData:SetToolData+ae: 49 BB 10 8F 27 CB 30 02 00 00  - mov r11,SerializableNamedList`2[ToolItemsData+Data,ToolItemsData+NamedData]:SetData
+PlayerData:SetToolData+b8: 41 FF D3                       - call r11
+PlayerData:SetToolData+bb: 48 8B 75 F0                    - mov rsi,[rbp-10]
+PlayerData:SetToolData+bf: 48 8B 7D F8                    - mov rdi,[rbp-08]
+PlayerData:SetToolData+c3: 48 8D 65 00                    - lea rsp,[rbp+00]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1305</ID>
+              <Description>"only works if cur. amount = settings below"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1306</ID>
+              <Description>"Current amount #1"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">6:6
+12:12
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1307</ID>
+              <Description>"Current amount #2"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount2</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
@@ -9930,5 +10060,30 @@ DamageHero:get_CanCauseDamage+50: C3                             - ret
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :mov [rax+04],ecx</Description>
+      <AddressString>232FD5F4D69</AddressString>
+      <Before>
+        <Byte>8D</Byte>
+        <Byte>5C</Byte>
+        <Byte>FF</Byte>
+        <Byte>FF</Byte>
+        <Byte>FF</Byte>
+      </Before>
+      <Actual>
+        <Byte>89</Byte>
+        <Byte>48</Byte>
+        <Byte>04</Byte>
+      </Actual>
+      <After>
+        <Byte>B8</Byte>
+        <Byte>01</Byte>
+        <Byte>00</Byte>
+        <Byte>00</Byte>
+        <Byte>00</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
   <UserdefinedSymbols/>
 </CheatTable>
