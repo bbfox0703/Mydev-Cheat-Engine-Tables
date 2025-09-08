@@ -380,7 +380,6 @@ local enableBattleScripts = {
   1299, -- "Max silk when get"
   1300, -- "Silk no decrease when use"
   1303, -- "Try to keep sub weapon (i.e. Straight Pin) amount full"
-  1311, -- "Get kill journal"
   3, -- "PlayerData"
 }
 local addressList = getAddressList()
@@ -407,13 +406,16 @@ local disableBattleScripts = {
   34, -- "Others"
   1315, -- "Data"
   3, -- "PlayerData"
-  1311, -- "Get kill journal"
+  1654, -- "Fast kill - after multi hit"
+  1653, -- "Fast kill - after normal / single hit"
+  1311, -- "Get kill journal data"
   1310, -- "Fast Sprint race win"
   1303, -- "Try to keep sub weapon (i.e. Straight Pin) amount full"
   1301, -- "Takes no damage, in general"
   1300, -- "Silk no decrease when use"
   1299, -- "Max silk when get"
   1298, -- "HP no change (may die if get big damage)"
+  1652, -- "Hollow Knight: Silksong  /  https://opencheattables.com"
   0, -- "Toggle Compact View"
 }
 local addressList = getAddressList()
@@ -439,8 +441,11 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 1301, Description: "Takes no damage, in general", Depth: 1
 --   ID: 1303, Description: "Try to keep sub weapon (i.e. Straight Pin) amount full", Depth: 1
 --   ID: 1310, Description: "Fast Sprint race win", Depth: 1
---   ID: 1311, Description: "Get kill journal", Depth: 1
+--   ID: 1653, Description: "Fast kill - after normal / single hit", Depth: 1
+--   ID: 1311, Description: "Get kill journal data", Depth: 1
 --     ID: 1315, Description: "Data", Depth: 2
+-- ID: 1652, Description: "Hollow Knight: Silksong  /  https://opencheattables.com", Depth: 0
+--   ID: 1654, Description: "Fast kill - after multi hit", Depth: 1
 
 </AssemblerScript>
         </CheatEntry>
@@ -10188,6 +10193,95 @@ SprintRaceController:ReportHeroLapMarkerHit+110: 41 FF D3                       
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>1653</ID>
+          <Description>"Fast kill - general / after normal hit"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-08
+  Author : bbfox@https://opencheattables.scom
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_FAST_KILL,DamageEnemies:StartDamage+5d,DamageEnemies:StartDamage+Ad,00 C6 86 50 02 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_KILL)
+
+label(code)
+label(return vf_damage_multi)
+
+newmem:
+  mov eax, [vf_damage_multi]
+  mov dword ptr [rsi+00000254], eax
+
+code:
+  mov byte ptr [rsi+00000250],00
+  jmp return
+align 10 cc
+  vf_damage_multi:
+  dd (float)100
+
+INJECT_FAST_KILL+01:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_KILL vf_damage_multi)
+
+[DISABLE]
+
+INJECT_FAST_KILL+01:
+  db C6 86 50 02 00 00 00
+
+unregistersymbol(INJECT_FAST_KILL vf_damage_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DamageEnemies:StartDamage+7d
+
+DamageEnemies:StartDamage+55: 90                             - nop 
+DamageEnemies:StartDamage+56: 49 BB 80 21 9D 6E 8F 02 00 00  - mov r11,DamageEnemies:HandlesMultiHitsDeath
+DamageEnemies:StartDamage+60: 41 FF D3                       - call r11
+DamageEnemies:StartDamage+63: 48 8B FE                       - mov rdi,rsi
+DamageEnemies:StartDamage+66: 85 C0                          - test eax,eax
+DamageEnemies:StartDamage+68: 75 05                          - jne DamageEnemies:StartDamage+6f
+DamageEnemies:StartDamage+6a: 45 33 FF                       - xor r15d,r15d
+DamageEnemies:StartDamage+6d: EB 07                          - jmp DamageEnemies:StartDamage+76
+DamageEnemies:StartDamage+6f: 4C 63 BE FC 01 00 00           - movsxd  r15,dword ptr [rsi+000001FC]
+DamageEnemies:StartDamage+76: 44 89 BF 38 02 00 00           - mov [rdi+00000238],r15d
+// ---------- INJECTING HERE ----------
+DamageEnemies:StartDamage+7d: C6 86 50 02 00 00 00           - mov byte ptr [rsi+00000250],00
+// ---------- DONE INJECTING  ----------
+DamageEnemies:StartDamage+84: C6 86 51 02 00 00 00           - mov byte ptr [rsi+00000251],00
+DamageEnemies:StartDamage+8b: C6 86 3C 02 00 00 00           - mov byte ptr [rsi+0000023C],00
+DamageEnemies:StartDamage+92: 48 8B 86 48 01 00 00           - mov rax,[rsi+00000148]
+DamageEnemies:StartDamage+99: 48 8B C8                       - mov rcx,rax
+DamageEnemies:StartDamage+9c: 83 38 00                       - cmp dword ptr [rax],00
+DamageEnemies:StartDamage+9f: 48 8D AD 00 00 00 00           - lea rbp,[rbp+00000000]
+DamageEnemies:StartDamage+a6: 49 BB D0 9F 9D 56 8F 02 00 00  - mov r11,System.Collections.Generic.HashSet`1[T_REF]:Clear
+DamageEnemies:StartDamage+b0: 41 FF D3                       - call r11
+DamageEnemies:StartDamage+b3: 48 8B 86 18 01 00 00           - mov rax,[rsi+00000118]
+DamageEnemies:StartDamage+ba: 48 8B C8                       - mov rcx,rax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1657</ID>
+              <Description>"Prmanent in game session"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1655</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>1311</ID>
           <Description>"Get kill journal data"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -13242,8 +13336,101 @@ EnemyJournalKillData:GetKillData+55: 0F 85 1E 00 00 00              - jne EnemyJ
     <CheatEntry>
       <ID>1652</ID>
       <Description>"Hollow Knight: Silksong  /  https://opencheattables.com"</Description>
+      <Options moHideChildren="1"/>
       <Color>00B700</Color>
       <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1654</ID>
+          <Description>"Fast kill - after multi hit"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_FAST_KILL2,DamageEnemies:HandlesMultiHitsDeath+8,DamageEnemies:HandlesMultiHitsDeath+28,48 8B F1 0F B6 86 F4 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_KILL2)
+
+label(code)
+label(return vf_damage_multi2)
+
+newmem:
+  mov esi, [vf_damage_multi2]
+  mov dword ptr [rcx+00000254], esi
+
+code:
+  mov rsi,rcx
+  movzx eax,byte ptr [rsi+000001F4]
+  jmp return
+align 10 cc
+  vf_damage_multi2:
+  dd (float)100
+
+INJECT_FAST_KILL2:
+  jmp newmem
+  nop 5
+return:
+registersymbol(INJECT_FAST_KILL2 vf_damage_multi2)
+
+[DISABLE]
+
+INJECT_FAST_KILL2:
+  db 48 8B F1 0F B6 86 F4 01 00 00
+
+unregistersymbol(INJECT_FAST_KILL2 vf_damage_multi2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DamageEnemies:HandlesMultiHitsDeath+b
+
+28F6E9D2173: 00 00                 - add [rax],al
+28F6E9D2175: 00 00                 - add [rax],al
+28F6E9D2177: 00 00                 - add [rax],al
+28F6E9D2179: 00 00                 - add [rax],al
+28F6E9D217B: 00 00                 - add [rax],al
+28F6E9D217D: 00 00                 - add [rax],al
+28F6E9D217F: 00 48 83              - add [rax-7D],cl
+DamageEnemies:HandlesMultiHitsDeath+2: EC                    - in al,dx
+DamageEnemies:HandlesMultiHitsDeath+3: 08 48 89              - or [rax-77],cl
+DamageEnemies:HandlesMultiHitsDeath+6: 34 24                 - xor al,24
+// ---------- INJECTING HERE ----------
+DamageEnemies:HandlesMultiHitsDeath+8: 48 8B F1              - mov rsi,rcx
+// ---------- DONE INJECTING  ----------
+DamageEnemies:HandlesMultiHitsDeath+b: 0F B6 86 F4 01 00 00  - movzx eax,byte ptr [rsi+000001F4]
+DamageEnemies:HandlesMultiHitsDeath+12: 85 C0                 - test eax,eax
+DamageEnemies:HandlesMultiHitsDeath+14: 74 13                 - je DamageEnemies:HandlesMultiHitsDeath+29
+DamageEnemies:HandlesMultiHitsDeath+16: 48 63 86 FC 01 00 00  - movsxd  rax,dword ptr [rsi+000001FC]
+DamageEnemies:HandlesMultiHitsDeath+1d: 85 C0                 - test eax,eax
+DamageEnemies:HandlesMultiHitsDeath+1f: 40 0F 9F C0           - setg al
+DamageEnemies:HandlesMultiHitsDeath+23: 48 0F B6 C0           - movzx rax,al
+DamageEnemies:HandlesMultiHitsDeath+27: EB 02                 - jmp DamageEnemies:HandlesMultiHitsDeath+2b
+DamageEnemies:HandlesMultiHitsDeath+29: 33 C0                 - xor eax,eax
+DamageEnemies:HandlesMultiHitsDeath+2b: 48 8B 34 24           - mov rsi,[rsp]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1658</ID>
+              <Description>"Prmanent in game session"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1656</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi2</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
@@ -13254,7 +13441,7 @@ If no results are found, open your inventory once and scan again.
 
 Code: Select all
 
-48 83 C0 10 48 63 08 89 4D D8 48 63 48 04 89 4D DC 48 63 40 08 89 45 E0 48 63 45 D8 89 06 48 63 45 DC 89 46 04 48 63 45 E0 89 46 08 B8 01 00 00 00  E9 16 00 00 00 C7 06 00 00 00 00 C7 46 04 00 00 00 00 C7 46 08 00 00 00 00 33 C0 48 8B 75 E8 48 8B 7D F0 4C 8B 7D F8 48 8D 65 00 5D
+48 83 C0 10 48 63 08 89 4D D8 48 63 48 04 89 4D DC 48 63 40 08 89 45 E0 48 63 45 D8 89 06 48 63 45 DC 89
 You should get two results (addresses).
 
 For each result:
