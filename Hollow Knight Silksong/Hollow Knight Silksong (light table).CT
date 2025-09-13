@@ -1,0 +1,3231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Enable mono"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$asm}
+{
+define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+
+registersymbol(ResourceManagerClearItemCountsProc)
+}
+
+{$lua}
+if syntaxcheck then return end
+-- 📏 SafeMonoDestroy: Clean up all Mono-related state
+if _G.SafeMonoDestroy == nil then
+  _G.SafeMonoDestroy = function()
+    print("🪚 SafeMonoDestroy: Begin cleanup...")
+
+    -- 1. Stop symbol enumeration thread if running
+    if monoSymbolEnum then
+      print("🚬 Terminating monoSymbolEnum thread...")
+      pcall(function()
+        monoSymbolEnum.terminate()
+        if not monoSymbolEnum.waitfor(3000) then
+          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
+        end
+        monoSymbolEnum.destroy()
+        monoSymbolEnum = nil
+      end)
+    end
+
+    -- 2. Stop progressbar timer
+    if monoSymbolList and monoSymbolList.progressbar then
+      monoSymbolList.progressbar.OnTimer = nil
+    end
+
+    -- 3. Unlock pipe (try unlock even if uncertain)
+    print("🔓 Attempting to unlock pipe...")
+    pcall(function()
+      if monopipe and monopipe.unlock then
+        monopipe.unlock()
+      end
+    end)
+
+    -- 4. Delay before destroy to let MonoCollector finish its work
+    print("⌛ Waiting before destroy (sleep 250ms)...")
+    sleep(250)  -- let it flush pipe state
+
+    -- 5. Destroy main pipe
+    local t0 = os.clock()
+    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
+
+    pcall(function()
+      if monopipe then
+        monopipe.destroy()
+        monopipe = nil
+      end
+    end)
+
+    local t1 = os.clock()
+    print(string.format("👻 monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
+
+
+    -- 6. Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
+    end
+
+    -- 7. Destroy event pipe if exists
+    if monoeventpipe then
+      monoeventpipe.destroy()
+      monoeventpipe = nil
+    end
+
+    print("👻 SafeMonoDestroy: Cleanup complete.")
+  end
+end
+
+-- 📏 Register symbol by parameter type array (exact match)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local p = mono_method_get_parameters(m.method)
+        local matched = true
+
+        if #p.parameters ~= #paramTypes then
+          matched = false
+        else
+          for i = 1, #paramTypes do
+            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Method found but failed to compile.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 📏 Register symbol by partial signature match (overload-safe, with excludes and match info)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("💔 Error: No methods found in %s.%s", namespace, classname))
+      return
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local sig = mono_method_getSignature(m.method)
+        local matched = true
+
+        -- Check required substrings
+        for _, kw in ipairs(sigContains) do
+          if not string.find(sig, kw, 1, true) then
+            matched = false
+            break
+          end
+        end
+
+        -- Check excluded substrings (if given)
+        if matched and sigExcludes then
+          for _, ex in ipairs(sigExcludes) do
+            if string.find(sig, ex, 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Signature matched but failed to compile method.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          print(string.format("🔎 Matched Signature: %s", sig))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+
+-- 📏 Register symbol by simple method name (first match)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = mono_findMethod(namespace, classname, methodname)
+    if m == nil or m == 0 then
+      print(string.format("💔 Error: Method not found - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    local addr = mono_compile_method(m)
+    if addr == 0 then
+      print(string.format("💔 Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+  end
+end
+
+-- 🌀 Attach Mono if needed
+local pid = getOpenedProcessID()
+if pid == 0 then
+  print("⚠ Warning: No process is currently open.")
+  return
+end
+
+if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
+
+if monopipe == nil or _G.lastMonoPID ~= pid then
+  if monopipe ~= nil then
+    pcall(_G.SafeMonoDestroy)
+  end
+  pcall(LaunchMonoDataCollector)
+  _G.lastMonoPID = pid
+end
+
+-- ⚡ Example usage - Register Mono methods to CE symbol table
+-- These functions compile (JIT) a Mono method and register it as a CE symbol
+
+-- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+-- Description: Registers the first matched method with given name.
+-- ⚠ Use this only when there's no overload (or you're fine with the first one).
+-- Params:
+--   symbolname: The name you want to register (used in CE as a label)
+--   namespace:  Mono namespace of the class (can be "" if none)
+--   classname:  Class name that contains the method
+--   methodname: Method name to find (first match will be used)
+-- Example:
+
+--_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
+
+
+-- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+-- Description: Registers a method that exactly matches the provided parameter types.
+-- Use this when there are multiple overloads of a method.
+-- Params:
+--   symbolname: The name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (exact match)
+--   paramTypes: Array of expected parameter type strings (must match count &amp; order)
+--               These are matched using `string.find`, so partial match is allowed.
+-- Example:
+--   UseAbility(string idAct, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+-- Description: Registers the method whose signature contains all given substrings.
+-- Flexible, and suitable when exact type names vary or signature format is uncertain.
+-- Params:
+--   symbolname: The symbol name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (will scan all overloads)
+--   sigContains: Array of strings that should all appear in the method signature
+--                e.g., { "Act", "Card", "Point", "bool" }
+--   sigExcludes: Signatures to exclude
+-- Example:
+--   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  {"Item"},      -- sigContains
+  {"List"}       -- sigExcludes
+)
+
+Signatures above:
+System.Collections.Generic.List&lt;Item&gt; 
+Item 
+
+** Both have "Item" but first one have "List"
+--]]
+
+--[[
+
+Type Mapping (for overload filtering)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+
+--]]
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+--pcall(_G.SafeMonoDestroy)
+{$asm}
+//unregistersymbol(*)
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"Toggle scripts"</Description>
+          <Color>4080FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  0, -- "Toggle Compact View"
+  1324, -- "Get hero controller data"
+  1299, -- "HP no change (may die if get big damage)"
+  1300, -- "Max silk when get"
+  1301, -- "Silk no decrease when use"
+  1302, -- "Takes no damage, in general"
+  1308, -- "Invulnerable - takes one more death attack"
+  1309, -- "Try to keep sub weapon (i.e. Straight Pin) amount full"
+  1318, -- "Fast kill - multi hit attack"
+  1321, -- "Fast kill - general / single hit attack"
+  3, -- "PlayerData"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  34, -- "Others"
+  1689, -- "Generate list"
+  1326, -- "Data"
+  1307, -- "Takes no damage, type 2"
+  3, -- "PlayerData"
+  1685, -- "Get kill journal data"
+  1324, -- "Get hero controller data"
+  1321, -- "Fast kill - general / single hit attack"
+  1318, -- "Fast kill - multi hit attack"
+  1317, -- "inf. dart game retry"
+  1316, -- "Fast Sprint race win"
+  1309, -- "Try to keep sub weapon (i.e. Straight Pin) amount full"
+  1308, -- "Invulnerable - takes one more death attack"
+  1304, -- "Not recommended:"
+  1302, -- "Takes no damage, in general"
+  1301, -- "Silk no decrease when use"
+  1300, -- "Max silk when get"
+  1299, -- "HP no change (may die if get big damage)"
+  1691, -- "Hollow Knight: Silksong  /  https://opencheattables.com"
+  0, -- "Toggle Compact View"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 0, Description: "Toggle Compact View", Depth: 0
+-- ID: 1, Description: "Enable mono", Depth: 0
+--   ID: 3, Description: "PlayerData", Depth: 1
+--     ID: 34, Description: "Others", Depth: 2
+--   ID: 1299, Description: "HP no change (may die if get big damage)", Depth: 1
+--   ID: 1300, Description: "Max silk when get", Depth: 1
+--   ID: 1301, Description: "Silk no decrease when use", Depth: 1
+--   ID: 1302, Description: "Takes no damage, in general", Depth: 1
+--   ID: 1304, Description: "Not recommended:", Depth: 1
+--     ID: 1307, Description: "Takes no damage, type 2", Depth: 2
+--   ID: 1308, Description: "Invulnerable - takes one more death attack", Depth: 1
+--   ID: 1309, Description: "Try to keep sub weapon (i.e. Straight Pin) amount full", Depth: 1
+--   ID: 1316, Description: "Fast Sprint race win", Depth: 1
+--   ID: 1317, Description: "inf. dart game retry", Depth: 1
+--   ID: 1318, Description: "Fast kill - multi hit attack", Depth: 1
+--   ID: 1321, Description: "Fast kill - general / single hit attack", Depth: 1
+--   ID: 1324, Description: "Get hero controller data", Depth: 1
+--     ID: 1326, Description: "Data", Depth: 2
+--   ID: 1685, Description: "Get kill journal data", Depth: 1
+--     ID: 1689, Description: "Generate list", Depth: 2
+-- ID: 1691, Description: "Hollow Knight: Silksong  /  https://opencheattables.com", Depth: 0
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"PlayerData"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_PLAYER_DATA,HeroAnimationController:IsHurt+f,HeroAnimationController:IsHurt+1f,48 63 80 1C 02 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_PLAYER_DATA)
+
+label(code)
+label(return i_base_playerdata_addr)
+
+newmem:
+  cmp rax, [i_base_playerdata_addr]
+  je code
+  mov [i_base_playerdata_addr], rax
+
+code:
+  movsxd  rax,dword ptr [rax+0000021C]
+  jmp return
+align 10 cc
+  i_base_playerdata_addr:
+  dq 0
+
+INJECT_GET_PLAYER_DATA:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_PLAYER_DATA i_base_playerdata_addr)
+
+[DISABLE]
+
+INJECT_GET_PLAYER_DATA:
+  db 48 63 80 1C 02 00 00
+
+unregistersymbol(INJECT_GET_PLAYER_DATA i_base_playerdata_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: HeroAnimationController:IsHurt+f
+
+1A6A446C9C5: D7                    - xlatb 
+1A6A446C9C6: B2 04                 - mov dl,04
+1A6A446C9C8: A8 01                 - test al,01
+1A6A446C9CA: 00 00                 - add [rax],al
+1A6A446C9CC: 00 00                 - add [rax],al
+1A6A446C9CE: 00 00                 - add [rax],al
+HeroAnimationController:IsHurt: 48 83 EC 08           - sub rsp,08
+HeroAnimationController:IsHurt+4: 48 89 34 24           - mov [rsp],rsi
+HeroAnimationController:IsHurt+8: 48 8B F1              - mov rsi,rcx
+HeroAnimationController:IsHurt+b: 48 8B 46 40           - mov rax,[rsi+40]
+// ---------- INJECTING HERE ----------
+HeroAnimationController:IsHurt+f: 48 63 80 1C 02 00 00  - movsxd  rax,dword ptr [rax+0000021C]
+// ---------- DONE INJECTING  ----------
+HeroAnimationController:IsHurt+16: 83 F8 01              - cmp eax,01
+HeroAnimationController:IsHurt+19: 75 10                 - jne HeroAnimationController:IsHurt+2b
+HeroAnimationController:IsHurt+1b: 48 8B 46 40           - mov rax,[rsi+40]
+HeroAnimationController:IsHurt+1f: 48 63 80 28 02 00 00  - movsxd  rax,dword ptr [rax+00000228]
+HeroAnimationController:IsHurt+26: 83 F8 01              - cmp eax,01
+HeroAnimationController:IsHurt+29: 7C 27                 - jl HeroAnimationController:IsHurt+52
+HeroAnimationController:IsHurt+2b: 0F B6 86 51 01 00 00  - movzx eax,byte ptr [rsi+00000151]
+HeroAnimationController:IsHurt+32: 85 C0                 - test eax,eax
+HeroAnimationController:IsHurt+34: 75 1C                 - jne HeroAnimationController:IsHurt+52
+HeroAnimationController:IsHurt+36: 48 8B 46 38           - mov rax,[rsi+38]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"playTime"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Float</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>1F0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5</ID>
+              <Description>"isInvincible"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>[i_base_playerdata_addr]+3CF</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"infiniteAirJump"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <Color>C080FF</Color>
+              <VariableType>Byte</VariableType>
+              <Address>[i_base_playerdata_addr]+3D0</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>7</ID>
+              <Description>"openingCreditsPlayed"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>1F4</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>8</ID>
+              <Description>"permadeathMode"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>1F8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>9</ID>
+              <Description>"CollectedDockDemoKey"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>1FC</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"PreMemoryState"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>200</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"PreMemoryState"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>204</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>12</ID>
+              <Description>"HasStoredMemoryState"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>218</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>13</ID>
+              <Description>"health"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>21C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>14</ID>
+              <Description>"maxHealth"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>220</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>15</ID>
+              <Description>"maxHealthBase"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>224</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>16</ID>
+              <Description>"healthBlue"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>228</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17</ID>
+              <Description>"damagedBlue"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>22C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>18</ID>
+              <Description>"damagedPurple"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>22D</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"prevHealth"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>230</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>20</ID>
+              <Description>"heartPieces"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>234</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>21</ID>
+              <Description>"SeenBindPrompt"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>238</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>22</ID>
+              <Description>"geo / ロザリー"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>23C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>23</ID>
+              <Description>"ShellShards"</Description>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>[i_base_playerdata_addr]+908</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>24</ID>
+              <Description>"silk"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>240</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"silkMax"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>244</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>26</ID>
+              <Description>"silkRegenMax"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>248</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>27</ID>
+              <Description>"silkParts"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>24C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>28</ID>
+              <Description>"IsSilkSpoolBroken"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>250</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>29</ID>
+              <Description>"UnlockSilkFinalCutscene"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>251</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>30</ID>
+              <Description>"silkSpoolParts"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>254</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>31</ID>
+              <Description>"atBench"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>258</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>32</ID>
+              <Description>"mapZone"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>25C</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>33</ID>
+              <Description>"extraRestZone"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_playerdata_addr</Address>
+              <Offsets>
+                <Offset>260</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>34</ID>
+              <Description>"Others"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>35</ID>
+                  <Description>"respawnType"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_playerdata_addr</Address>
+                  <Offsets>
+                    <Offset>264</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1299</ID>
+          <Description>"HP no change (may die if get big damage)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_HP_NO_CHG,PlayerData:TakeHealth+27a,PlayerData:TakeHealth+2Aa,41 2B C7 41 89 86) // should be unique
+
+INJECT_HP_NO_CHG:
+  nop 3
+
+registersymbol(INJECT_HP_NO_CHG)
+
+[DISABLE]
+INJECT_HP_NO_CHG:
+  db 41 2B C7
+unregistersymbol(INJECT_HP_NO_CHG)
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerData:TakeHealth+281
+
+PlayerData:TakeHealth+254: 7F 24                          - jg PlayerData:TakeHealth+27a
+PlayerData:TakeHealth+256: 48 B8 58 3F B0 0A A8 01 00 00  - mov rax,000001A80AB03F58
+PlayerData:TakeHealth+260: 48 63 10                       - movsxd  rdx,dword ptr [rax]
+PlayerData:TakeHealth+263: B9 01 00 00 00                 - mov ecx,00000001
+PlayerData:TakeHealth+268: 33 C0                          - xor eax,eax
+PlayerData:TakeHealth+26a: 83 FA 03                       - cmp edx,03
+PlayerData:TakeHealth+26d: 48 0F 44 C1                    - cmove rax,rcx
+PlayerData:TakeHealth+271: 41 89 86 1C 02 00 00           - mov [r14+0000021C],eax
+PlayerData:TakeHealth+278: EB 11                          - jmp PlayerData:TakeHealth+28b
+PlayerData:TakeHealth+27a: 49 63 86 1C 02 00 00           - movsxd  rax,dword ptr [r14+0000021C]
+// ---------- INJECTING HERE ----------
+PlayerData:TakeHealth+281: 41 2B C7                       - sub eax,r15d
+// ---------- DONE INJECTING  ----------
+PlayerData:TakeHealth+284: 41 89 86 1C 02 00 00           - mov [r14+0000021C],eax
+PlayerData:TakeHealth+28b: 48 8B 75 D8                    - mov rsi,[rbp-28]
+PlayerData:TakeHealth+28f: 4C 8B 65 E0                    - mov r12,[rbp-20]
+PlayerData:TakeHealth+293: 4C 8B 6D E8                    - mov r13,[rbp-18]
+PlayerData:TakeHealth+297: 4C 8B 75 F0                    - mov r14,[rbp-10]
+PlayerData:TakeHealth+29b: 4C 8B 7D F8                    - mov r15,[rbp-08]
+PlayerData:TakeHealth+29f: 48 8D 65 00                    - lea rsp,[rbp+00]
+PlayerData:TakeHealth+2a3: 5D                             - pop rbp
+PlayerData:TakeHealth+2a4: C3                             - ret 
+1A6A481B805: 00 00                          - add [rax],al
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1300</ID>
+          <Description>"Max silk when get"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_ONE_HIT_MAX_SILK,PlayerData:AddSilk+27,PlayerData:AddSilk+47,89 87 40 02 00 00 48 8B CF) // should be unique
+alloc(newmem,$1000,INJECT_ONE_HIT_MAX_SILK)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, [rdi+00000244]
+
+code:
+  mov [rdi+00000240],eax
+  jmp return
+
+INJECT_ONE_HIT_MAX_SILK:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_ONE_HIT_MAX_SILK)
+
+[DISABLE]
+
+INJECT_ONE_HIT_MAX_SILK:
+  db 89 87 40 02 00 00
+
+unregistersymbol(INJECT_ONE_HIT_MAX_SILK)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerData:AddSilk+29
+
+PlayerData:AddSilk+1: 48 8B EC                       - mov rbp,rsp
+PlayerData:AddSilk+4: 48 83 EC 40                    - sub rsp,40
+PlayerData:AddSilk+8: 48 89 75 F0                    - mov [rbp-10],rsi
+PlayerData:AddSilk+c: 48 89 7D F8                    - mov [rbp-08],rdi
+PlayerData:AddSilk+10: 48 8B F9                       - mov rdi,rcx
+PlayerData:AddSilk+13: 48 8B F2                       - mov rsi,rdx
+PlayerData:AddSilk+16: 48 63 87 40 02 00 00           - movsxd  rax,dword ptr [rdi+00000240]
+PlayerData:AddSilk+1d: 89 45 E8                       - mov [rbp-18],eax
+PlayerData:AddSilk+20: 48 63 87 40 02 00 00           - movsxd  rax,dword ptr [rdi+00000240]
+PlayerData:AddSilk+27: 03 C6                          - add eax,esi
+// ---------- INJECTING HERE ----------
+PlayerData:AddSilk+29: 89 87 40 02 00 00              - mov [rdi+00000240],eax
+// ---------- DONE INJECTING  ----------
+PlayerData:AddSilk+2f: 48 8B CF                       - mov rcx,rdi
+PlayerData:AddSilk+32: 48 8D 6D 00                    - lea rbp,[rbp+00]
+PlayerData:AddSilk+36: 49 BB D0 09 81 A4 A6 01 00 00  - mov r11,PlayerData:get_CurrentSilkMax
+PlayerData:AddSilk+40: 41 FF D3                       - call r11
+PlayerData:AddSilk+43: 48 8B F0                       - mov rsi,rax
+PlayerData:AddSilk+46: 48 63 87 40 02 00 00           - movsxd  rax,dword ptr [rdi+00000240]
+PlayerData:AddSilk+4d: 3B C6                          - cmp eax,esi
+PlayerData:AddSilk+4f: 7C 10                          - jl PlayerData:AddSilk+61
+PlayerData:AddSilk+51: C7 87 4C 02 00 00 00 00 00 00  - mov [rdi+0000024C],00000000
+PlayerData:AddSilk+5b: 89 B7 40 02 00 00              - mov [rdi+00000240],esi
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1301</ID>
+          <Description>"Silk no decrease when use"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_INF_SILK,PlayerData:TakeSilk+1d,PlayerData:TakeSilk+3d,89 87 40 02 00 00) // should be unique
+alloc(newmem,$1000,INJECT_INF_SILK)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, [rdi+00000244]
+
+code:
+  mov [rdi+00000240],eax
+  jmp return
+
+INJECT_INF_SILK:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_INF_SILK)
+
+[DISABLE]
+
+INJECT_INF_SILK:
+  db 89 87 40 02 00 00
+
+unregistersymbol(INJECT_INF_SILK)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerData:TakeSilk+22
+
+1A6A4894F4F: 00 48 83              - add [rax-7D],cl
+PlayerData:TakeSilk+2: EC                    - in al,dx
+PlayerData:TakeSilk+3: 18 48 89              - sbb [rax-77],cl
+PlayerData:TakeSilk+6: 3C 24                 - cmp al,24
+PlayerData:TakeSilk+8: 48 8B F9              - mov rdi,rcx
+PlayerData:TakeSilk+b: 48 89 54 24 08        - mov [rsp+08],rdx
+PlayerData:TakeSilk+10: 48 63 87 40 02 00 00  - movsxd  rax,dword ptr [rdi+00000240]
+PlayerData:TakeSilk+17: 2B 44 24 08           - sub eax,[rsp+08]
+PlayerData:TakeSilk+1b: 33 C9                 - xor ecx,ecx
+PlayerData:TakeSilk+1d: 3B C1                 - cmp eax,ecx
+// ---------- INJECTING HERE ----------
+PlayerData:TakeSilk+1f: 0F 4C C1              - cmovl eax,ecx
+// ---------- DONE INJECTING  ----------
+PlayerData:TakeSilk+22: 89 87 40 02 00 00     - mov [rdi+00000240],eax
+PlayerData:TakeSilk+28: 48 8B 3C 24           - mov rdi,[rsp]
+PlayerData:TakeSilk+2c: 48 83 C4 18           - add rsp,18
+PlayerData:TakeSilk+30: C3                    - ret 
+1A6A4894F81: 00 00                 - add [rax],al
+1A6A4894F83: 00 00                 - add [rax],al
+1A6A4894F85: 00 00                 - add [rax],al
+1A6A4894F87: 00 01                 - add [rcx],al
+1A6A4894F89: 04 01                 - add al,01
+1A6A4894F8B: 00 04 22              - add [rdx],al
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1302</ID>
+          <Description>"Takes no damage, in general"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-06
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SET_CAN_DAMAGE,DamageHero:get_CanCauseDamage+3f,DamageHero:get_CanCauseDamage+6f,40 0F 94 C0 48 0F B6 C0) // should be unique
+
+INJECT_SET_CAN_DAMAGE:
+  db 48 31 c0
+  nop 5
+
+registersymbol(INJECT_SET_CAN_DAMAGE)
+
+[DISABLE]
+
+INJECT_SET_CAN_DAMAGE:
+  db 40 0F 94 C0 48 0F B6 C0
+
+unregistersymbol(INJECT_SET_CAN_DAMAGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DamageHero:get_CanCauseDamage+3f
+
+DamageHero:get_CanCauseDamage+16: 49 BB 10 29 C8 B6 F5 01 00 00  - mov r11,UnityEngine.Time:get_timeAsDouble
+DamageHero:get_CanCauseDamage+20: 41 FF D3                       - call r11
+DamageHero:get_CanCauseDamage+23: F2 0F 10 8E D0 00 00 00        - movsd xmm1,[rsi+000000D0]
+DamageHero:get_CanCauseDamage+2b: 48 33 C0                       - xor rax,rax
+DamageHero:get_CanCauseDamage+2e: 66 0F 2F C8                    - comisd xmm1,xmm0
+DamageHero:get_CanCauseDamage+32: 7A 06                          - jp DamageHero:get_CanCauseDamage+3a
+DamageHero:get_CanCauseDamage+34: 40 0F 97 C0                    - seta al
+DamageHero:get_CanCauseDamage+38: EB 03                          - jmp DamageHero:get_CanCauseDamage+3d
+DamageHero:get_CanCauseDamage+3a: 48 FF C0                       - inc rax
+DamageHero:get_CanCauseDamage+3d: 85 C0                          - test eax,eax
+// ---------- INJECTING HERE ----------
+DamageHero:get_CanCauseDamage+3f: 40 0F 94 C0                    - sete al
+// ---------- DONE INJECTING  ----------
+DamageHero:get_CanCauseDamage+43: 48 0F B6 C0                    - movzx rax,al
+DamageHero:get_CanCauseDamage+47: 48 8B 75 F8                    - mov rsi,[rbp-08]
+DamageHero:get_CanCauseDamage+4b: 48 8D 65 00                    - lea rsp,[rbp+00]
+DamageHero:get_CanCauseDamage+4f: 5D                             - pop rbp
+DamageHero:get_CanCauseDamage+50: C3                             - ret 
+1F66604A8B1: 00 00                          - add [rax],al
+1F66604A8B3: 00 00                          - add [rax],al
+1F66604A8B5: 00 00                          - add [rax],al
+1F66604A8B7: 00 01                          - add [rcx],al
+1F66604A8B9: 04 02                          - add al,02
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1303</ID>
+              <Description>"Disable when hero must die"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1304</ID>
+          <Description>"Not recommended:"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1305</ID>
+              <Description>"Will not die in traps, but may stuck there"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1306</ID>
+              <Description>"Disable this script when stucked"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1307</ID>
+              <Description>"Takes no damage, type 2"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_HERO_TAKE_DAMAGE,HeroController:TakeDamage,HeroController:TakeDamage+10,55 48 8B EC) // should be unique
+INJECT_HERO_TAKE_DAMAGE:
+  ret
+registersymbol(INJECT_HERO_TAKE_DAMAGE)
+
+[DISABLE]
+
+INJECT_HERO_TAKE_DAMAGE:
+  db 55
+
+unregistersymbol(INJECT_HERO_TAKE_DAMAGE)
+
+{
+// ORIGINAL CODE - INJECTION POINT: HeroController:TakeDamage
+
+HutongGames.PlayMaker.Actions.DamageHeroDirectly:OnEnter+2ab: 5D                    - pop rbp
+HutongGames.PlayMaker.Actions.DamageHeroDirectly:OnEnter+2ac: C3                    - ret 
+170530AD53D: 00 00                 - add [rax],al
+170530AD53F: 00 01                 - add [rcx],al
+170530AD541: 04 02                 - add al,02
+170530AD543: 05 04 03 01 50        - add eax,50010304
+170530AD548: 00 00                 - add [rax],al
+170530AD54A: 00 00                 - add [rax],al
+170530AD54C: 00 00                 - add [rax],al
+170530AD54E: 00 00                 - add [rax],al
+// ---------- INJECTING HERE ----------
+HeroController:TakeDamage: 55                    - push rbp
+// ---------- DONE INJECTING  ----------
+HeroController:TakeDamage+1: 48 8B EC              - mov rbp,rsp
+HeroController:TakeDamage+4: 48 81 EC 40 05 00 00  - sub rsp,00000540
+HeroController:TakeDamage+b: 48 89 5D D0           - mov [rbp-30],rbx
+HeroController:TakeDamage+f: 48 89 75 D8           - mov [rbp-28],rsi
+HeroController:TakeDamage+13: 48 89 7D E0           - mov [rbp-20],rdi
+HeroController:TakeDamage+17: 4C 89 65 E8           - mov [rbp-18],r12
+HeroController:TakeDamage+1b: 4C 89 6D F0           - mov [rbp-10],r13
+HeroController:TakeDamage+1f: 4C 89 7D F8           - mov [rbp-08],r15
+HeroController:TakeDamage+23: 4C 8B E1              - mov r12,rcx
+HeroController:TakeDamage+26: 4C 8B EA              - mov r13,rdx
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1308</ID>
+          <Description>"Invulnerable - takes one more death attack"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-09
+  Author :
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SET_INVUL,HeroControllerStates:get_Invulnerable+b,HeroControllerStates:get_Invulnerable+1b,0F B6 46 53 85 C0) // should be unique
+alloc(newmem,$1000,INJECT_SET_INVUL)
+
+label(code)
+label(return)
+
+newmem:
+  mov byte ptr [rsi+53], 1
+  mov byte ptr [rsi+54], 0
+
+code:
+  movzx eax,byte ptr [rsi+53]
+  test eax,eax
+  jmp return
+
+INJECT_SET_INVUL:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_INVUL)
+
+[DISABLE]
+
+INJECT_SET_INVUL:
+  db 0F B6 46 53 85 C0
+
+unregistersymbol(INJECT_SET_INVUL)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: HeroControllerStates:get_Invulnerable+b
+
+170530AA582: 00 00           - add [rax],al
+170530AA584: 00 00           - add [rax],al
+170530AA586: 00 00           - add [rax],al
+170530AA588: 00 00           - add [rax],al
+170530AA58A: 00 00           - add [rax],al
+170530AA58C: 00 00           - add [rax],al
+170530AA58E: 00 00           - add [rax],al
+HeroControllerStates:get_Invulnerable: 48 83 EC 08     - sub rsp,08
+HeroControllerStates:get_Invulnerable+4: 48 89 34 24     - mov [rsp],rsi
+HeroControllerStates:get_Invulnerable+8: 48 8B F1        - mov rsi,rcx
+// ---------- INJECTING HERE ----------
+HeroControllerStates:get_Invulnerable+b: 0F B6 46 53     - movzx eax,byte ptr [rsi+53]
+// ---------- DONE INJECTING  ----------
+HeroControllerStates:get_Invulnerable+f: 85 C0           - test eax,eax
+HeroControllerStates:get_Invulnerable+11: 75 10           - jne HeroControllerStates:get_Invulnerable+23
+HeroControllerStates:get_Invulnerable+13: 48 63 46 54     - movsxd  rax,dword ptr [rsi+54]
+HeroControllerStates:get_Invulnerable+17: 85 C0           - test eax,eax
+HeroControllerStates:get_Invulnerable+19: 40 0F 9F C0     - setg al
+HeroControllerStates:get_Invulnerable+1d: 48 0F B6 C0     - movzx rax,al
+HeroControllerStates:get_Invulnerable+21: EB 05           - jmp HeroControllerStates:get_Invulnerable+28
+HeroControllerStates:get_Invulnerable+23: B8 01 00 00 00  - mov eax,00000001
+HeroControllerStates:get_Invulnerable+28: 48 8B 34 24     - mov rsi,[rsp]
+HeroControllerStates:get_Invulnerable+2c: 48 83 C4 08     - add rsp,08
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1309</ID>
+          <Description>"Try to keep sub weapon (i.e. Straight Pin) amount full"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-06
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_SET_TOOLS_CNT,PlayerData:SetToolData+8c,PlayerData:SetToolData+bc,89 4D EC 48 8B C8) // should be unique
+alloc(newmem,$1000,INJECT_SET_TOOLS_CNT)
+
+label(code)
+label(return)
+label(i_cur_tool_amount i_cur_tool_amount2 i_cur_tool_amount3 i_cur_tool_amount4 i_cur_tool_amount5)
+
+newmem:
+  push r15
+  mov r15d, [i_cur_tool_amount]
+  dec r15d
+  cmp ecx, r15d
+  je set_value
+
+  mov r15d, [i_cur_tool_amount2]
+  dec r15d
+  cmp ecx, r15d
+  je set_value
+
+  mov r15d, [i_cur_tool_amount3]
+  dec r15d
+  cmp ecx, r15d
+  je set_value
+
+  mov r15d, [i_cur_tool_amount4]
+  dec r15d
+  cmp ecx, r15d
+  je set_value
+
+  mov r15d, [i_cur_tool_amount5]
+  dec r15d
+  cmp ecx, r15d
+  je set_value
+
+  jmp endp
+set_value:
+  //inc ecx
+  mov ecx, 40
+  //mov ecx, C
+  mov [rbp-24], ecx
+
+endp:
+  pop r15
+
+code:
+  mov [rbp-14],ecx
+  mov rcx,rax
+  jmp return
+align 10 cc
+  i_cur_tool_amount:
+  dd C
+  i_cur_tool_amount2:
+  dd 6
+  i_cur_tool_amount3:
+  dd 3
+  i_cur_tool_amount4:
+  dd A
+  i_cur_tool_amount5:
+  dd 7
+
+INJECT_SET_TOOLS_CNT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_SET_TOOLS_CNT i_cur_tool_amount i_cur_tool_amount2 i_cur_tool_amount3 i_cur_tool_amount4 i_cur_tool_amount5)
+
+[DISABLE]
+
+INJECT_SET_TOOLS_CNT:
+  db 89 4D EC 48 8B C8
+
+unregistersymbol(INJECT_SET_TOOLS_CNT i_cur_tool_amount i_cur_tool_amount2 i_cur_tool_amount3 i_cur_tool_amount4 i_cur_tool_amount5)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerData:SetToolData+9c
+
+PlayerData:SetToolData+70: 83 38 00                       - cmp dword ptr [rax],00
+PlayerData:SetToolData+73: 66 66 90                       - nop 3
+PlayerData:SetToolData+76: 49 BB D9 B5 23 02 32 02 00 00  - mov r11,000002320223B5D9
+PlayerData:SetToolData+80: 41 FF D3                       - call r11
+PlayerData:SetToolData+83: 48 63 45 E4                    - movsxd  rax,dword ptr [rbp-1C]
+PlayerData:SetToolData+87: 89 45 DC                       - mov [rbp-24],eax
+PlayerData:SetToolData+8a: 48 8B 87 A0 01 00 00           - mov rax,[rdi+000001A0]
+PlayerData:SetToolData+91: 48 63 4D D8                    - movsxd  rcx,dword ptr [rbp-28]
+PlayerData:SetToolData+95: 89 4D E8                       - mov [rbp-18],ecx
+PlayerData:SetToolData+98: 48 63 4D DC                    - movsxd  rcx,dword ptr [rbp-24]
+// ---------- INJECTING HERE ----------
+PlayerData:SetToolData+9c: 89 4D EC                       - mov [rbp-14],ecx
+// ---------- DONE INJECTING  ----------
+PlayerData:SetToolData+9f: 48 8B C8                       - mov rcx,rax
+PlayerData:SetToolData+a2: 48 8B D6                       - mov rdx,rsi
+PlayerData:SetToolData+a5: 4C 8B 45 E8                    - mov r8,[rbp-18]
+PlayerData:SetToolData+a9: 83 38 00                       - cmp dword ptr [rax],00
+PlayerData:SetToolData+ac: 66 90                          - nop 2
+PlayerData:SetToolData+ae: 49 BB 10 8F 27 CB 30 02 00 00  - mov r11,SerializableNamedList`2[ToolItemsData+Data,ToolItemsData+NamedData]:SetData
+PlayerData:SetToolData+b8: 41 FF D3                       - call r11
+PlayerData:SetToolData+bb: 48 8B 75 F0                    - mov rsi,[rbp-10]
+PlayerData:SetToolData+bf: 48 8B 7D F8                    - mov rdi,[rbp-08]
+PlayerData:SetToolData+c3: 48 8D 65 00                    - lea rsp,[rbp+00]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1310</ID>
+              <Description>"only works if cur. amount = settings below"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1311</ID>
+              <Description>"Current amount #1"</Description>
+              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">6:6
+12:12
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1312</ID>
+              <Description>"Current amount #2"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount2</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1313</ID>
+              <Description>"Current amount #3"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount3</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1314</ID>
+              <Description>"Current amount #4"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount4</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1315</ID>
+              <Description>"Current amount #5"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_cur_tool_amount5</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1316</ID>
+          <Description>"Fast Sprint race win"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-07
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_FAST_SPRINT_RACE_WIN,SprintRaceController:ReportHeroLapMarkerHit+d1,SprintRaceController:ReportHeroLapMarkerHit+f1,49 63 46 74 FF C0) // should be unique
+alloc(newmem,$1000,INJECT_FAST_SPRINT_RACE_WIN)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  //movsxd  rax,dword ptr [r14+74]
+  //inc eax
+  mov rax, 3
+  jmp return
+
+INJECT_FAST_SPRINT_RACE_WIN:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_FAST_SPRINT_RACE_WIN)
+
+[DISABLE]
+
+INJECT_FAST_SPRINT_RACE_WIN:
+  db 49 63 46 74 FF C0
+
+unregistersymbol(INJECT_FAST_SPRINT_RACE_WIN)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: SprintRaceController:ReportHeroLapMarkerHit+e1
+
+SprintRaceController:ReportHeroLapMarkerHit+bb: E9 6B 00 00 00                 - jmp SprintRaceController:ReportHeroLapMarkerHit+12b
+SprintRaceController:ReportHeroLapMarkerHit+c0: 49 63 46 78                    - movsxd  rax,dword ptr [r14+78]
+SprintRaceController:ReportHeroLapMarkerHit+c4: FF C0                          - inc eax
+SprintRaceController:ReportHeroLapMarkerHit+c6: 41 89 46 78                    - mov [r14+78],eax
+SprintRaceController:ReportHeroLapMarkerHit+ca: C6 06 01                       - mov byte ptr [rsi],01
+SprintRaceController:ReportHeroLapMarkerHit+cd: 49 63 46 78                    - movsxd  rax,dword ptr [r14+78]
+SprintRaceController:ReportHeroLapMarkerHit+d1: 49 8B 56 38                    - mov rdx,[r14+38]
+SprintRaceController:ReportHeroLapMarkerHit+d5: 48 63 4A 18                    - movsxd  rcx,dword ptr [rdx+18]
+SprintRaceController:ReportHeroLapMarkerHit+d9: 3B C1                          - cmp eax,ecx
+SprintRaceController:ReportHeroLapMarkerHit+db: 0F 8C 4A 00 00 00              - jl SprintRaceController:ReportHeroLapMarkerHit+12b
+// ---------- INJECTING HERE ----------
+SprintRaceController:ReportHeroLapMarkerHit+e1: 49 63 46 74                    - movsxd  rax,dword ptr [r14+74]
+// ---------- DONE INJECTING  ----------
+SprintRaceController:ReportHeroLapMarkerHit+e5: FF C0                          - inc eax
+SprintRaceController:ReportHeroLapMarkerHit+e7: 41 89 46 74                    - mov [r14+74],eax
+SprintRaceController:ReportHeroLapMarkerHit+eb: 41 C7 46 78 00 00 00 00        - mov [r14+78],00000000
+SprintRaceController:ReportHeroLapMarkerHit+f3: 49 8B 46 40                    - mov rax,[r14+40]
+SprintRaceController:ReportHeroLapMarkerHit+f7: 49 63 56 74                    - movsxd  rdx,dword ptr [r14+74]
+SprintRaceController:ReportHeroLapMarkerHit+fb: 48 8B C8                       - mov rcx,rax
+SprintRaceController:ReportHeroLapMarkerHit+fe: 83 38 00                       - cmp dword ptr [rax],00
+SprintRaceController:ReportHeroLapMarkerHit+101: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+SprintRaceController:ReportHeroLapMarkerHit+106: 49 BB 30 F9 2B C6 71 02 00 00  - mov r11,SimpleCounter:SetCurrent
+SprintRaceController:ReportHeroLapMarkerHit+110: 41 FF D3                       - call r11
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1317</ID>
+          <Description>"inf. dart game retry"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_INF_DART_GAME,HutongGames.PlayMaker.Actions.IntAdd:OnEnter+53,HutongGames.PlayMaker.Actions.IntAdd:OnEnter+A3,89 48 30 0F B6 46 58) // should be unique
+alloc(newmem,$1000,INJECT_INF_DART_GAME)
+
+label(code)
+label(return)
+
+newmem:
+  xor ecx, ecx
+
+code:
+  mov [rax+30],ecx
+  movzx eax,byte ptr [rsi+58]
+  jmp return
+
+INJECT_INF_DART_GAME:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_INF_DART_GAME)
+
+[DISABLE]
+
+INJECT_INF_DART_GAME:
+  db 89 48 30 0F B6 46 58
+
+unregistersymbol(INJECT_INF_DART_GAME)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: HutongGames.PlayMaker.Actions.IntAdd:OnEnter+63
+
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+3b: 48 8B C8                       - mov rcx,rax
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+3e: 83 38 00                       - cmp dword ptr [rax],00
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+41: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+46: 49 BB 20 76 FE 43 93 02 00 00  - mov r11,HutongGames.PlayMaker.FsmInt:get_Value
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+50: 41 FF D3                       - call r11
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+53: 48 8B D0                       - mov rdx,rax
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+56: 48 8B 45 F0                    - mov rax,[rbp-10]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+5a: 48 8B 4D E8                    - mov rcx,[rbp-18]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+5e: 03 CA                          - add ecx,edx
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+60: 83 38 00                       - cmp dword ptr [rax],00
+// ---------- INJECTING HERE ----------
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+63: 89 48 30                       - mov [rax+30],ecx
+// ---------- DONE INJECTING  ----------
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+66: 0F B6 46 58                    - movzx eax,byte ptr [rsi+58]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+6a: 85 C0                          - test eax,eax
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+6c: 75 15                          - jne HutongGames.PlayMaker.Actions.IntAdd:OnEnter+83
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+6e: 48 8B CE                       - mov rcx,rsi
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+71: 48 8D 64 24 00                 - lea rsp,[rsp+00]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+76: 49 BB 00 A3 02 58 93 02 00 00  - mov r11,HutongGames.PlayMaker.FsmStateAction:Finish
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+80: 41 FF D3                       - call r11
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+83: 48 8B 75 F8                    - mov rsi,[rbp-08]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+87: 48 8D 65 00                    - lea rsp,[rbp+00]
+HutongGames.PlayMaker.Actions.IntAdd:OnEnter+8b: 5D                             - pop rbp
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1318</ID>
+          <Description>"Fast kill - multi hit attack"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_FAST_KILL2,DamageEnemies:HandlesMultiHitsDeath+8,DamageEnemies:HandlesMultiHitsDeath+28,48 8B F1 0F B6 86 F4 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_KILL2)
+
+label(code)
+label(return vf_damage_multi2)
+
+newmem:
+  mov esi, [vf_damage_multi2]
+  mov dword ptr [rcx+00000254], esi
+
+code:
+  mov rsi,rcx
+  movzx eax,byte ptr [rsi+000001F4]
+  jmp return
+align 10 cc
+  vf_damage_multi2:
+  dd (float)100
+
+INJECT_FAST_KILL2:
+  jmp newmem
+  nop 5
+return:
+registersymbol(INJECT_FAST_KILL2 vf_damage_multi2)
+
+[DISABLE]
+
+INJECT_FAST_KILL2:
+  db 48 8B F1 0F B6 86 F4 01 00 00
+
+unregistersymbol(INJECT_FAST_KILL2 vf_damage_multi2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DamageEnemies:HandlesMultiHitsDeath+b
+
+28F6E9D2173: 00 00                 - add [rax],al
+28F6E9D2175: 00 00                 - add [rax],al
+28F6E9D2177: 00 00                 - add [rax],al
+28F6E9D2179: 00 00                 - add [rax],al
+28F6E9D217B: 00 00                 - add [rax],al
+28F6E9D217D: 00 00                 - add [rax],al
+28F6E9D217F: 00 48 83              - add [rax-7D],cl
+DamageEnemies:HandlesMultiHitsDeath+2: EC                    - in al,dx
+DamageEnemies:HandlesMultiHitsDeath+3: 08 48 89              - or [rax-77],cl
+DamageEnemies:HandlesMultiHitsDeath+6: 34 24                 - xor al,24
+// ---------- INJECTING HERE ----------
+DamageEnemies:HandlesMultiHitsDeath+8: 48 8B F1              - mov rsi,rcx
+// ---------- DONE INJECTING  ----------
+DamageEnemies:HandlesMultiHitsDeath+b: 0F B6 86 F4 01 00 00  - movzx eax,byte ptr [rsi+000001F4]
+DamageEnemies:HandlesMultiHitsDeath+12: 85 C0                 - test eax,eax
+DamageEnemies:HandlesMultiHitsDeath+14: 74 13                 - je DamageEnemies:HandlesMultiHitsDeath+29
+DamageEnemies:HandlesMultiHitsDeath+16: 48 63 86 FC 01 00 00  - movsxd  rax,dword ptr [rsi+000001FC]
+DamageEnemies:HandlesMultiHitsDeath+1d: 85 C0                 - test eax,eax
+DamageEnemies:HandlesMultiHitsDeath+1f: 40 0F 9F C0           - setg al
+DamageEnemies:HandlesMultiHitsDeath+23: 48 0F B6 C0           - movzx rax,al
+DamageEnemies:HandlesMultiHitsDeath+27: EB 02                 - jmp DamageEnemies:HandlesMultiHitsDeath+2b
+DamageEnemies:HandlesMultiHitsDeath+29: 33 C0                 - xor eax,eax
+DamageEnemies:HandlesMultiHitsDeath+2b: 48 8B 34 24           - mov rsi,[rsp]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1319</ID>
+              <Description>"Prmanent in game session"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1320</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi2</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1321</ID>
+          <Description>"Fast kill - general / single hit attack"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-08
+  Author : bbfox@https://opencheattables.scom
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_FAST_KILL,DamageEnemies:StartDamage+5d,DamageEnemies:StartDamage+Ad,00 C6 86 50 02 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_KILL)
+
+label(code)
+label(return vf_damage_multi)
+
+newmem:
+  mov eax, [vf_damage_multi]
+  mov dword ptr [rsi+00000254], eax
+
+code:
+  mov byte ptr [rsi+00000250],00
+  jmp return
+align 10 cc
+  vf_damage_multi:
+  dd (float)100
+
+INJECT_FAST_KILL+01:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_KILL vf_damage_multi)
+
+[DISABLE]
+
+INJECT_FAST_KILL+01:
+  db C6 86 50 02 00 00 00
+
+unregistersymbol(INJECT_FAST_KILL vf_damage_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DamageEnemies:StartDamage+7d
+
+DamageEnemies:StartDamage+55: 90                             - nop 
+DamageEnemies:StartDamage+56: 49 BB 80 21 9D 6E 8F 02 00 00  - mov r11,DamageEnemies:HandlesMultiHitsDeath
+DamageEnemies:StartDamage+60: 41 FF D3                       - call r11
+DamageEnemies:StartDamage+63: 48 8B FE                       - mov rdi,rsi
+DamageEnemies:StartDamage+66: 85 C0                          - test eax,eax
+DamageEnemies:StartDamage+68: 75 05                          - jne DamageEnemies:StartDamage+6f
+DamageEnemies:StartDamage+6a: 45 33 FF                       - xor r15d,r15d
+DamageEnemies:StartDamage+6d: EB 07                          - jmp DamageEnemies:StartDamage+76
+DamageEnemies:StartDamage+6f: 4C 63 BE FC 01 00 00           - movsxd  r15,dword ptr [rsi+000001FC]
+DamageEnemies:StartDamage+76: 44 89 BF 38 02 00 00           - mov [rdi+00000238],r15d
+// ---------- INJECTING HERE ----------
+DamageEnemies:StartDamage+7d: C6 86 50 02 00 00 00           - mov byte ptr [rsi+00000250],00
+// ---------- DONE INJECTING  ----------
+DamageEnemies:StartDamage+84: C6 86 51 02 00 00 00           - mov byte ptr [rsi+00000251],00
+DamageEnemies:StartDamage+8b: C6 86 3C 02 00 00 00           - mov byte ptr [rsi+0000023C],00
+DamageEnemies:StartDamage+92: 48 8B 86 48 01 00 00           - mov rax,[rsi+00000148]
+DamageEnemies:StartDamage+99: 48 8B C8                       - mov rcx,rax
+DamageEnemies:StartDamage+9c: 83 38 00                       - cmp dword ptr [rax],00
+DamageEnemies:StartDamage+9f: 48 8D AD 00 00 00 00           - lea rbp,[rbp+00000000]
+DamageEnemies:StartDamage+a6: 49 BB D0 9F 9D 56 8F 02 00 00  - mov r11,System.Collections.Generic.HashSet`1[T_REF]:Clear
+DamageEnemies:StartDamage+b0: 41 FF D3                       - call r11
+DamageEnemies:StartDamage+b3: 48 8B 86 18 01 00 00           - mov rax,[rsi+00000118]
+DamageEnemies:StartDamage+ba: 48 8B C8                       - mov rcx,rax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1322</ID>
+              <Description>"Prmanent in game session"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1323</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1324</ID>
+          <Description>"Get hero controller data"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-12
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_HERO_CTRL,HeroController:Move+57,HeroController:Move+A7,48 8B 87 48 02 00 00) // should be unique
+alloc(newmem,$1000,INJECT_GET_HERO_CTRL)
+
+label(code)
+label(return i_base_hero_ctrl_addr)
+
+newmem:
+  mov [i_base_hero_ctrl_addr],rdi
+
+code:
+  mov rax,[rdi+00000248]
+  jmp return
+align 10 cc
+  i_base_hero_ctrl_addr:
+  dq 0
+
+INJECT_GET_HERO_CTRL:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_HERO_CTRL i_base_hero_ctrl_addr)
+
+[DISABLE]
+
+INJECT_GET_HERO_CTRL:
+  db 48 8B 87 48 02 00 00
+
+unregistersymbol(INJECT_GET_HERO_CTRL i_base_hero_ctrl_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: HeroController:Move+67
+
+HeroController:Move+3b: 48 89 85 68 FF FF FF           - mov [rbp-00000098],rax
+HeroController:Move+42: 48 89 85 70 FF FF FF           - mov [rbp-00000090],rax
+HeroController:Move+49: 48 89 85 78 FF FF FF           - mov [rbp-00000088],rax
+HeroController:Move+50: 48 89 45 80                    - mov [rbp-80],rax
+HeroController:Move+54: 48 89 45 88                    - mov [rbp-78],rax
+HeroController:Move+58: 89 45 90                       - mov [rbp-70],eax
+HeroController:Move+5b: 89 45 94                       - mov [rbp-6C],eax
+HeroController:Move+5e: 89 45 98                       - mov [rbp-68],eax
+HeroController:Move+61: 89 45 9C                       - mov [rbp-64],eax
+HeroController:Move+64: 89 45 A0                       - mov [rbp-60],eax
+// ---------- INJECTING HERE ----------
+HeroController:Move+67: 48 8B 87 48 02 00 00           - mov rax,[rdi+00000248]
+// ---------- DONE INJECTING  ----------
+HeroController:Move+6e: 0F B6 40 19                    - movzx eax,byte ptr [rax+19]
+HeroController:Move+72: 85 C0                          - test eax,eax
+HeroController:Move+74: 74 15                          - je HeroController:Move+8b
+HeroController:Move+76: 48 8B CF                       - mov rcx,rdi
+HeroController:Move+79: 33 D2                          - xor edx,edx
+HeroController:Move+7b: 66 66 90                       - nop 3
+HeroController:Move+7e: 49 BB F0 9D 69 7F 6A 02 00 00  - mov r11,HeroController:SetState
+HeroController:Move+88: 41 FF D3                       - call r11
+HeroController:Move+8b: 48 8B 87 48 02 00 00           - mov rax,[rdi+00000248]
+HeroController:Move+92: 0F B6 40 46                    - movzx eax,byte ptr [rax+46]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1325</ID>
+              <Description>"addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_hero_ctrl_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1326</ID>
+              <Description>"Data"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>1327</ID>
+                  <Description>"verboseMode"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+758</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1328</ID>
+                  <Description>"RUN_SPEED"</Description>
+                  <Color>FF80FF</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+75C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1329</ID>
+                  <Description>"WALK_SPEED"</Description>
+                  <Color>FF80FF</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+760</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1330</ID>
+                  <Description>"JUMP_SPEED"</Description>
+                  <Color>FF80FF</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+764</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1331</ID>
+                  <Description>"MIN_JUMP_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+768</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1332</ID>
+                  <Description>"JUMP_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+76C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1333</ID>
+                  <Description>"JUMP_STEPS_MIN"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+770</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1334</ID>
+                  <Description>"AIR_HANG_GRAVITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+774</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1335</ID>
+                  <Description>"AIR_HANG_ACCEL"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+778</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1336</ID>
+                  <Description>"SHUTTLECOCK_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+77C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1337</ID>
+                  <Description>"FLOAT_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+780</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1338</ID>
+                  <Description>"DOUBLE_JUMP_RISE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+784</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1339</ID>
+                  <Description>"DOUBLE_JUMP_FALL_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+788</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1340</ID>
+                  <Description>"JUMP_ABILITY_GROUND_RAY_LENGTH"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+78C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1341</ID>
+                  <Description>"WALLJUMP_RAY_LENGTH"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+790</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1342</ID>
+                  <Description>"WALLJUMP_BROLLY_RAY_LENGTH"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+794</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1343</ID>
+                  <Description>"WJLOCK_STEPS_SHORT"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+798</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1344</ID>
+                  <Description>"WJLOCK_STEPS_LONG"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+79C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1345</ID>
+                  <Description>"WJLOCK_CHAIN_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7A0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1346</ID>
+                  <Description>"WJ_KICKOFF_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7A4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1347</ID>
+                  <Description>"WALL_STICKY_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7A8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1348</ID>
+                  <Description>"DASH_SPEED"</Description>
+                  <Color>FF80FF</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7AC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1349</ID>
+                  <Description>"DASH_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7B0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1350</ID>
+                  <Description>"AIR_DASH_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7B4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1351</ID>
+                  <Description>"DOWN_DASH_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7B8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1352</ID>
+                  <Description>"DASH_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7BC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1353</ID>
+                  <Description>"DASH_COOLDOWN"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7C0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1354</ID>
+                  <Description>"WALLSLIDE_STICK_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7C4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1355</ID>
+                  <Description>"WALLSLIDE_ACCEL"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7C8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1356</ID>
+                  <Description>"WALLSLIDE_SHUTTLECOCK_VEL"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7CC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1357</ID>
+                  <Description>"WALLCLING_DECEL"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7D0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1358</ID>
+                  <Description>"WALLCLING_COOLDOWN"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7D4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1359</ID>
+                  <Description>"NAIL_CHARGE_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7D8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1360</ID>
+                  <Description>"NAIL_CHARGE_TIME_QUICK"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7DC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1361</ID>
+                  <Description>"NAIL_CHARGE_BEGIN_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1362</ID>
+                  <Description>"NAIL_CHARGE_BEGIN_TIME_QUICK"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7E4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1363</ID>
+                  <Description>"TIME_TO_ENTER_SCENE_BOT"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7E8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1364</ID>
+                  <Description>"SPEED_TO_ENTER_SCENE_HOR"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7EC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1365</ID>
+                  <Description>"SPEED_TO_ENTER_SCENE_UP"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1366</ID>
+                  <Description>"SPEED_TO_ENTER_SCENE_DOWN"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1367</ID>
+                  <Description>"DEFAULT_GRAVITY"</Description>
+                  <Color>FF80FF</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1368</ID>
+                  <Description>"UNDERWATER_GRAVITY"</Description>
+                  <Color>FF80FF</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+7FC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1369</ID>
+                  <Description>"ALT_ATTACK_RESET"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+800</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1370</ID>
+                  <Description>"DOWNSPIKE_REBOUND_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+804</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1371</ID>
+                  <Description>"DOWNSPIKE_REBOUND_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+808</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1372</ID>
+                  <Description>"DOWNSPIKE_LAND_RECOVERY_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+80C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1373</ID>
+                  <Description>"DOWNSPIKE_ANTIC_DECELERATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+810</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1374</ID>
+                  <Description>"DOWNSPIKE_ANTIC_CLAMP_VEL_Y"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+814</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1375</ID>
+                  <Description>"DOWNSPIKE_ANTIC_CLAMP_VEL_?"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+818</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1376</ID>
+                  <Description>"JUMP_SPEED_UPDRAFT_EXIT"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+81C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1377</ID>
+                  <Description>"DOWNSPIKE_INVULNERABILITY_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+820</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1378</ID>
+                  <Description>"DOWNSPIKE_INVULNERABILITY_STEPS_LONG"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+824</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1379</ID>
+                  <Description>"BOUNCE_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+828</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1380</ID>
+                  <Description>"BOUNCE_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+82C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1381</ID>
+                  <Description>"SHROOM_BOUNCE_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+830</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1382</ID>
+                  <Description>"RECOIL_HOR_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+834</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1383</ID>
+                  <Description>"RECOIL_HOR_VELOCITY_LONG"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+838</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1384</ID>
+                  <Description>"RECOIL_HOR_VELOCITY_DRILLDASH"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+83C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1385</ID>
+                  <Description>"RECOIL_HOR_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+840</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1386</ID>
+                  <Description>"RECOIL_DOWN_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+844</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1387</ID>
+                  <Description>"BIG_FALL_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+848</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1388</ID>
+                  <Description>"HARD_LANDING_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+84C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1389</ID>
+                  <Description>"DOWN_DASH_RECOVER_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+850</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1390</ID>
+                  <Description>"MAX_FALL_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+854</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1391</ID>
+                  <Description>"MAX_FALL_VELOCITY_WEIGHTED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+858</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1392</ID>
+                  <Description>"MAX_FALL_VELOCITY_DJUMP"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+85C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1393</ID>
+                  <Description>"RECOIL_DURATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+860</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1394</ID>
+                  <Description>"RECOIL_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+864</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1395</ID>
+                  <Description>"DAMAGE_FREEZE_DOWN"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+868</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1396</ID>
+                  <Description>"DAMAGE_FREEZE_WAIT"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+86C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1397</ID>
+                  <Description>"DAMAGE_FREEZE_UP"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+870</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1398</ID>
+                  <Description>"DAMAGE_FREEZE_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+874</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1399</ID>
+                  <Description>"INVUL_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+878</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1400</ID>
+                  <Description>"INVUL_TIME_PARRY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+87C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1401</ID>
+                  <Description>"INVUL_TIME_QUAKE"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+880</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1402</ID>
+                  <Description>"INVUL_TIME_CROSS_STITCH"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+884</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1403</ID>
+                  <Description>"INVUL_TIME_SILKDASH"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+888</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1404</ID>
+                  <Description>"REVENGE_WINDOW_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+88C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1405</ID>
+                  <Description>"DASHCOMBO_WINDOW_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+890</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1406</ID>
+                  <Description>"CAST_RECOIL_VELOCITY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+894</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1407</ID>
+                  <Description>"WALLSLIDE_CLIP_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+898</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1408</ID>
+                  <Description>"QUICKENING_DURATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+89C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1409</ID>
+                  <Description>"QUICKENING_RUN_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8A0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1410</ID>
+                  <Description>"QUICKENING_WALK_SPEED"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8A4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1411</ID>
+                  <Description>"FIRST_SILK_REGEN_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8A8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1412</ID>
+                  <Description>"FIRST_SILK_REGEN_DURATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8AC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1413</ID>
+                  <Description>"SILK_REGEN_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8B0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1414</ID>
+                  <Description>"SILK_REGEN_DURATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8B4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1415</ID>
+                  <Description>"CURSED_SILK_EAT_DELAY_FIRST"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8B8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1416</ID>
+                  <Description>"CURSED_SILK_EAT_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8BC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1417</ID>
+                  <Description>"CURSED_SILK_EAT_DURATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8C0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1418</ID>
+                  <Description>"MAGGOTED_SILK_EAT_DELAY_FIRST"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8C4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1419</ID>
+                  <Description>"MAGGOTED_SILK_EAT_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8C8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1420</ID>
+                  <Description>"MAGGOTED_SILK_EAT_DURATION"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8CC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1421</ID>
+                  <Description>"JUMP_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8D0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1422</ID>
+                  <Description>"JUMP_RELEASE_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8D4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1423</ID>
+                  <Description>"DOUBLE_JUMP_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8D8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1424</ID>
+                  <Description>"ATTACK_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8DC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1425</ID>
+                  <Description>"TOOLTHROW_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8E0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1426</ID>
+                  <Description>"HARPOON_QUEUE_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8E4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1427</ID>
+                  <Description>"LOOK_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8E8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1428</ID>
+                  <Description>"LOOK_ANIM_DELAY"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8EC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1429</ID>
+                  <Description>"DEATH_WAIT"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8F0</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1430</ID>
+                  <Description>"HAZARD_DEATH_CHECK_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8F4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1431</ID>
+                  <Description>"FLOATING_CHECK_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8F8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1432</ID>
+                  <Description>"LANDING_BUFFER_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+8FC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1433</ID>
+                  <Description>"LEDGE_BUFFER_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+900</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1434</ID>
+                  <Description>"HEAD_BUMP_STEPS"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+904</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1435</ID>
+                  <Description>"FIND_GROUND_POINT_DISTANCE"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+908</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1436</ID>
+                  <Description>"FIND_GROUND_POINT_DISTANCE_EXT"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+90C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1437</ID>
+                  <Description>"HARPOON_DASH_TIME"</Description>
+                  <Color>FF8080</Color>
+                  <VariableType>Double</VariableType>
+                  <Address>[i_base_hero_ctrl_addr]+910</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1685</ID>
+          <Description>"Get kill journal data"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Hollow Knight Silksong.exe
+  Version: 
+  Date   : 2025-09-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_KILL_DATA_JOURNAL,EnemyJournalKillData:GetKillData+21,EnemyJournalKillData:GetKillData+4f,48 8B 47 18 48 8B C8) // should be unique
+alloc(newmem,$1000,INJECT_GET_KILL_DATA_JOURNAL)
+
+label(code)
+label(return)
+label(i_base_killdata_addr i_killdata_size i_killdata_count)
+
+newmem:
+  push r15
+  push r14
+
+  mov r15, [rdi+18] // dictionary
+  test r15, r15
+  jz endp
+
+  mov r14d, [r15+40] // _count
+  mov [i_killdata_count], r14d
+
+  mov r15, [r15+18] // _entries
+  test r15, r15
+  jz endp
+
+  mov r14d, [r15+18] // Count
+  mov [i_killdata_size], r14d
+
+  mov [i_base_killdata_addr], r15
+
+endp:
+  pop r14
+  pop r15
+
+code:
+  mov rax,[rdi+18]
+  mov rcx,rax
+  jmp return
+align 10 cc
+  i_base_killdata_addr:
+  dq 0
+  i_killdata_size:
+  dd 0
+  i_killdata_count:
+  dd 0
+
+INJECT_GET_KILL_DATA_JOURNAL:
+  jmp newmem
+  nop 2
+return:
+registersymbol(i_base_killdata_addr i_killdata_size i_killdata_count)
+registersymbol(INJECT_GET_KILL_DATA_JOURNAL)
+
+[DISABLE]
+
+INJECT_GET_KILL_DATA_JOURNAL:
+  db 48 8B 47 18 48 8B C8
+
+unregistersymbol(i_base_killdata_addr i_killdata_size i_killdata_count)
+unregistersymbol(INJECT_GET_KILL_DATA_JOURNAL)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: EnemyJournalKillData:GetKillData+2f
+
+EnemyJournalKillData:GetKillData: 55                             - push rbp
+EnemyJournalKillData:GetKillData+1: 48 8B EC                       - mov rbp,rsp
+EnemyJournalKillData:GetKillData+4: 48 83 EC 50                    - sub rsp,50
+EnemyJournalKillData:GetKillData+8: 48 89 7D F8                    - mov [rbp-08],rdi
+EnemyJournalKillData:GetKillData+c: 48 8B F9                       - mov rdi,rcx
+EnemyJournalKillData:GetKillData+f: 48 89 55 D8                    - mov [rbp-28],rdx
+EnemyJournalKillData:GetKillData+13: C7 45 E0 00 00 00 00           - mov [rbp-20],00000000
+EnemyJournalKillData:GetKillData+1a: C7 45 E4 00 00 00 00           - mov [rbp-1C],00000000
+EnemyJournalKillData:GetKillData+21: C7 45 E8 00 00 00 00           - mov [rbp-18],00000000
+EnemyJournalKillData:GetKillData+28: C7 45 EC 00 00 00 00           - mov [rbp-14],00000000
+// ---------- INJECTING HERE ----------
+EnemyJournalKillData:GetKillData+2f: 48 8B 47 18                    - mov rax,[rdi+18]
+// ---------- DONE INJECTING  ----------
+EnemyJournalKillData:GetKillData+33: 48 8B C8                       - mov rcx,rax
+EnemyJournalKillData:GetKillData+36: 48 8B 55 D8                    - mov rdx,[rbp-28]
+EnemyJournalKillData:GetKillData+3a: 4C 8B C5                       - mov r8,rbp
+EnemyJournalKillData:GetKillData+3d: 49 83 C0 E0                    - add r8,-20
+EnemyJournalKillData:GetKillData+41: 83 38 00                       - cmp dword ptr [rax],00
+EnemyJournalKillData:GetKillData+44: 66 90                          - nop 2
+EnemyJournalKillData:GetKillData+46: 49 BB C0 9B 72 E7 55 02 00 00  - mov r11,System.Collections.Generic.Dictionary`2[System.String,EnemyJournalKillData+KillData]:TryGetValue
+EnemyJournalKillData:GetKillData+50: 41 FF D3                       - call r11
+EnemyJournalKillData:GetKillData+53: 85 C0                          - test eax,eax
+EnemyJournalKillData:GetKillData+55: 0F 85 1E 00 00 00              - jne EnemyJournalKillData:GetKillData+79
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1692</ID>
+              <Description>"Usage: open monster journal book after enabled"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1686</ID>
+              <Description>"base"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_killdata_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1687</ID>
+              <Description>"_size"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_killdata_size</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1688</ID>
+              <Description>"Count"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_killdata_count</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1689</ID>
+              <Description>"Generate list ("base" must be non-zero)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+closeLuaEngine2()
+
+local PARENT_NAME = "+List (do not delete this)"
+local baseSym = "i_base_killdata_addr"
+local cntSym  = "i_killdata_count"
+
+local STRIDE          = 0x18
+local NAME_SLOT_OFF   = 0x28
+local NAME_INNER_OFF  = 0x14
+local KILL_OFF        = 0x30
+local UNK_OFF         = 0x34
+local MAX_CAP         = 256
+
+local evenColor = 0xFF8000 -- 水藍
+local evenColor2 = 0xAA8044
+local color_index = 0
+
+local addressList = getAddressList()
+
+-- 先解一次指標：[[i_base_killdata_addr]]
+local basePtr = readPointer(baseSym)
+if not basePtr or basePtr == 0 then
+  print("i_base_killdata_addr read error: " .. baseSym)
+  return
+end
+
+-- [i_killdata_count] 裡是 32-bit 筆數
+local totalCount = readInteger(cntSym)
+if not totalCount then
+  print("i_killdata_count read error: " .. cntSym)
+  return
+end
+if totalCount &lt; 0 then totalCount = 0 end
+if totalCount &gt; MAX_CAP then
+  print(string.format("Too many records (&gt;256)", totalCount, MAX_CAP))
+  totalCount = MAX_CAP
+end
+
+synchronize(function()
+  -- 取得/建立父節點
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    parent = addressList.createMemoryRecord()
+    parent.Description = PARENT_NAME
+    parent.IsGroupHeader = true
+    parent.Options = "[moHideChildren]"
+  end
+
+  -- 清掉舊子節點
+  for i = addressList.Count - 1, 0, -1 do
+    local mr = addressList[i]
+    if mr.Parent == parent then mr.delete() end
+  end
+
+  -- 逐筆建立
+  for n = 0, totalCount - 1 do
+    local row = addressList.createMemoryRecord()
+    row.Description = string.format("Row[%03d]", n + 1)
+    row.IsGroupHeader = true
+    row.Parent = parent
+    row.Color = (n % 2 == 0) and evenColor or evenColor2
+
+    -- [[base]+0x28+stride] + 0x14 → Unicode 名稱
+    local nameSlotPtr = readPointer(basePtr + NAME_SLOT_OFF + STRIDE * n) or 0
+    local nameAddr    = (nameSlotPtr ~= 0) and (nameSlotPtr + NAME_INNER_OFF) or 0
+
+    local nameRec = addressList.createMemoryRecord()
+    nameRec.Description = string.format("Name.%03d", n + 1)
+    nameRec.Address = string.format("%X", nameAddr)
+    nameRec.Vartype = vtString
+    nameRec.String.Size = 32
+    nameRec.String.Unicode = true
+    nameRec.String.ZeroTerminate = true
+    nameRec.Parent = row
+    nameRec.Color = (n % 2 == 0) and evenColor or evenColor2
+
+    -- [base + 0x30 + stride] → Kill count (uint32)
+    local killRec = addressList.createMemoryRecord()
+    killRec.Description = "Kill count"
+    killRec.Address = string.format("%X", basePtr + KILL_OFF + STRIDE * n)
+    killRec.Vartype = vtDword
+    killRec.ShowAsHex = false
+    killRec.Parent = row
+
+    -- [base + 0x34 + stride] → ?? (uint32)
+    local unkRec = addressList.createMemoryRecord()
+    unkRec.Description = "??"
+    unkRec.Address = string.format("%X", basePtr + UNK_OFF + STRIDE * n)
+    unkRec.Vartype = vtDword
+    unkRec.ShowAsHex = false
+    unkRec.Parent = row
+  end
+
+  parent.IsExpanded = true
+end)
+
+print(string.format("%d records built to '%s'.", totalCount, PARENT_NAME))
+closeLuaEngine()
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+local PARENT_NAME = "+List (do not delete this)"
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Cannot find partnt node: " .. PARENT_NAME)
+    return
+  end
+  for i = addressList.Count - 1, 0, -1 do
+    local mr = addressList[i]
+    if mr.Parent == parent then mr.delete() end
+  end
+  parent.Active = false
+end)
+
+print("Nodes cleared.")
+closeLuaEngine()
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1690</ID>
+              <Description>"+List (do not delete this)"</Description>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1691</ID>
+      <Description>"Hollow Knight: Silksong  /  https://opencheattables.com"</Description>
+      <Options moHideChildren="1"/>
+      <Color>00B700</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <Comments>Modify item amount:
+
+Load the game and scan for the following AOB pattern.
+If no results are found, open your inventory once and scan again.
+
+Code: Select all
+
+48 83 C0 10 48 63 08 89 4D D8 48 63 48 04 89 4D DC 48 63 40 08 89 45 E0 48 63 45 D8 89 06 48 63 45 DC 89
+You should get two results (addresses).
+
+For each result:
+
+Right-click on the address.
+
+Select "Disassemble this memory region".
+
+In the memory viewer:
+
+Locate the instruction movsxd rcx,dword ptr [rax].
+
+Right-click on that line and choose "Find out what addresses this instruction accesses".
+
+Wait for Cheat Engine to complete the analysis.
+
+In-game: go to a rest area and open your inventory.
+
+In the value list window:
+
+If all values are above 255, it's likely the wrong address.
+Try the other address from step 2 and repeat from step 3.
+
+If the values look correct, right-click on one and choose "Change value" to edit it.
+</Comments>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
+</CheatTable>
