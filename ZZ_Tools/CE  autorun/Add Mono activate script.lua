@@ -104,6 +104,107 @@ if _G.SafeMonoDestroy == nil then
   end
 end
 
+-- 列出指定 class 中、同名方法的所有 overload，回傳詳盡資訊（不註冊符號）
+if _G.mono_listMethodsByName == nil then
+  _G.mono_listMethodsByName = function(namespace, classname, methodname)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Class not found: %s.%s", namespace, classname))
+      return {}
+    end
+
+    local mtds = mono_class_enumMethods(cls)
+    if not mtds then
+      print(string.format("💔 No methods in: %s.%s", namespace, classname))
+      return {}
+    end
+
+    local out = {}
+    local cnt = 0
+    for _, v in ipairs(mtds) do
+      if v.name == methodname then
+        local entry = { name = v.name, method = v.method }
+
+        -- 參數/回傳型別（用 CE 提供的 parameters API，比較穩）
+        local okP, p = pcall(mono_method_get_parameters, v.method)
+        if okP and p and p.parameters then
+          entry.params = p.parameters         -- array of {typename=..., name=...}
+          entry.paramnames = {}
+          for i, pi in ipairs(p.parameters) do
+            entry.paramnames[i] = pi.name
+          end
+          entry.returntype = p.returntype and p.returntype.name or nil
+        else
+          -- 後備：某些版本 mono_method_getSignature 可能回傳字串或多返回值
+          local okS, a, b, c = pcall(mono_method_getSignature, v.method)
+          if okS then
+            -- 嘗試相容 ijm_mtd_by_sig 的 (params, paramnames, returntype)
+            entry.params      = a
+            entry.paramnames  = b
+            entry.returntype  = c
+            entry.signature   = type(a) == "string" and a or nil
+          end
+        end
+
+        -- 編譯 JIT 取得地址
+        local addr = mono_compile_method(v.method)
+        entry.address = addr
+
+        cnt = cnt + 1
+        out[cnt] = entry
+      end
+    end
+
+    print(string.format("🔎 Found %d overload(s) for %s.%s.%s", cnt, namespace, classname, methodname))
+    return out
+  end
+end
+
+-- 產生欄位 offset 對照表（若 CE 版本支援欄位列舉/offset 取得）
+if _G.mono_offsetsTable == nil then
+  _G.mono_offsetsTable = function(cacheTable, classname, namespace, opts)
+    -- 行為與 ijm_offset_table 類似：若已有表且非空就直接回傳
+    if cacheTable and type(cacheTable) == "table" then
+      local hasAny = next(cacheTable) ~= nil
+      if hasAny then return cacheTable end
+    end
+
+    local t = {}
+    local cls = mono_findClass(namespace or "", classname)
+    if not cls then
+      print(string.format("💔 Class not found: %s.%s", namespace or "", classname))
+      return t
+    end
+
+    -- 嘗試列舉欄位
+    local fields = nil
+    if mono_class_enumFields then
+      local okF, res = pcall(mono_class_enumFields, cls)
+      if okF then fields = res end
+    end
+
+    if not fields or #fields == 0 then
+      print("⚠ 無法列舉欄位（當前 CE/Mono 外掛可能不支援 mono_class_enumFields）。")
+      return t
+    end
+
+    for _, f in ipairs(fields) do
+      local fname = f.name or ("<noname_"..tostring(_)..">")
+      local off = nil
+      if mono_field_get_offset then
+        local okO, o = pcall(mono_field_get_offset, f.field)
+        if okO then off = o end
+      end
+      t[fname] = off
+    end
+
+    -- 若需要標註是 Mono 單例/IL2CPP Enum 等，可透過 opts 設定，這裡僅示意保留
+    if opts and opts.meta then t.__meta = opts.meta end
+
+    return t
+  end
+end
+
 -- 📏 Register symbol by parameter type array (exact match)
 if _G.mono_registerSymbolEx == nil then
   _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
