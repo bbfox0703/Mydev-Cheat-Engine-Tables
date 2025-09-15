@@ -205,6 +205,15 @@ if _G.mono_offsetsTable == nil then
   end
 end
 
+--[[
+Example: 
+PlayerDataC     = _G.mono_offsetsTable(PlayerDataC,     "PlayerData",     "")
+HeroControllerC = _G.mono_offsetsTable(HeroControllerC, "HeroController", "")
+GameManagerC    = _G.mono_offsetsTable(GameManagerC,    "GameManager",    "")
+HealthManagerC  = _G.mono_offsetsTable(HealthManagerC,  "HealthManager",  "")
+GameplayC       = _G.mono_offsetsTable(GameplayC,       "Gameplay",       "GlobalSettings")
+--]]
+
 -- 📏 Register symbol by parameter type array (exact match)
 if _G.mono_registerSymbolEx == nil then
   _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
@@ -219,7 +228,7 @@ if _G.mono_registerSymbolEx == nil then
       if m.name == methodname then
         local p = mono_method_get_parameters(m.method)
         local matched = true
-
+	
         if #p.parameters ~= #paramTypes then
           matched = false
         else
