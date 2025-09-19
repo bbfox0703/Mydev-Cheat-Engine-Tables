@@ -56,7 +56,7 @@ end
       <Description>"Toggle scripts"</Description>
       <Color>4080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
 synchronize(function()
@@ -252,7 +252,7 @@ closeLuaEngine2()
       <CheatEntries>
         <CheatEntry>
           <ID>3</ID>
-          <Description>"取得Mira和晶石 / Get Mira"</Description>
+          <Description>"取得Mira和耀晶石 / Get Mira"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : sora_1st.exe
@@ -425,7 +425,7 @@ sora_1st.exe+1AED4F: 0F 85 BD 00 00 00     - jne sora_1st.exe+1AEE12
             </CheatEntry>
             <CheatEntry>
               <ID>11</ID>
-              <Description>"Exchange"</Description>
+              <Description>"耀晶石塊 / Exchange"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -478,6 +478,8 @@ sora_1st.exe+1AED4F: 0F 85 BD 00 00 00     - jne sora_1st.exe+1AEE12
   Version: 
   Date   : 2025-09-19
   Author : bbfox@https://opencheattables.com
+  Note:
+    quartz: RBX = E74 - 1100
 }
 
 [ENABLE]
@@ -489,7 +491,7 @@ alloc(INJECT_BROWSE_ITEM_N_SETo, 8)
 
 label(code)
 label(return)
-label(iw_min_threshold iw_set_item_cnt_to i_item_addr_offset)
+label(iw_min_threshold iw_set_item_cnt_to i_item_addr_offset is_get_all_quartz is_get_all_accessory)
 
 INJECT_BROWSE_ITEM_N_SETo:
   readmem(INJECT_BROWSE_ITEM_N_SET, 8)
@@ -507,9 +509,50 @@ newmem:
 next1:
   push r15
   push r14
+
   mov r14, [i_item_addr_offset]
   lea r15, [rax+rbx*4]
   lea r15, [r15+r14]
+
+  {
+  // rbx check
+  mov r14, 21445A283C8
+  cmp r15, r14
+  jne @F
+  nop
+  }
+
+@@:
+  // check fill quartz
+  cmp dword ptr [is_get_all_quartz], 1 // is force all quartz?
+  jne next_accessory
+  mov r14, E74
+  cmp rbx, r14
+  jb next_accessory
+  mov r14, 1100
+  cmp rbx, r14
+  ja next_normal // accessory high watermark = 71D, so ignore all
+
+  mov r14w, [iw_set_item_cnt_to]
+  mov [r15], r14w
+  jmp endp
+
+next_accessory:
+  // check fill quartz
+  cmp dword ptr [is_get_all_accessory], 1 // is force all accessory?
+  jne next_normal
+  mov r14, 640
+  cmp rbx, r14
+  jb next_normal
+  mov r14, 71D
+  cmp rbx, r14
+  ja next_normal
+
+  mov r14w, [iw_set_item_cnt_to]
+  mov [r15], r14w
+  jmp endp
+
+next_normal:
   mov r14w, [r15]
   cmp r14w, [iw_min_threshold]
   jb endp
@@ -534,6 +577,10 @@ align 10 cc
   dw 46
   i_item_addr_offset:
   dq 0
+  is_get_all_quartz:
+  dd 0
+  is_get_all_accessory:
+  dd 0
 
 
 INJECT_BROWSE_ITEM_N_SET:
@@ -542,14 +589,14 @@ INJECT_BROWSE_ITEM_N_SET:
 return:
 registersymbol(INJECT_BROWSE_ITEM_N_SET)
 registersymbol(INJECT_BROWSE_ITEM_N_SETo)
-registersymbol(iw_min_threshold iw_set_item_cnt_to i_item_addr_offset)
+registersymbol(iw_min_threshold iw_set_item_cnt_to i_item_addr_offset is_get_all_quartz is_get_all_accessory)
 [DISABLE]
 
 INJECT_BROWSE_ITEM_N_SET:
   //db 0F B7 94 98 24 67 11 00
   readmem(INJECT_BROWSE_ITEM_N_SETo, 8)
 
-unregistersymbol(iw_min_threshold iw_min_threshold)
+unregistersymbol(iw_min_threshold iw_set_item_cnt_to i_item_addr_offset is_get_all_quartz is_get_all_accessory)
 unregistersymbol(INJECT_BROWSE_ITEM_N_SET)
 dealloc(newmem)
 unregistersymbol(INJECT_BROWSE_ITEM_N_SETo)
@@ -584,37 +631,63 @@ sora_1st.exe+131D7F: 74 10                    - je sora_1st.exe+131D91
 }
 </AssemblerScript>
           <CheatEntries>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>133</ID>
               <Description>"道具目前數量必須大於等於："</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>2 Bytes</VariableType>
               <Address>iw_min_threshold</Address>
+              <CheatEntries>
+                <CheatEntry NoCheckbox="1">
+                  <ID>16</ID>
+                  <Description>"Avail. item amount must &gt;="</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>iw_min_threshold</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>134</ID>
               <Description>"設定數量為："</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>2 Bytes</VariableType>
               <Address>iw_set_item_cnt_to</Address>
+              <CheatEntries>
+                <CheatEntry NoCheckbox="1">
+                  <ID>17</ID>
+                  <Description>"Set amount to"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>iw_set_item_cnt_to</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-            <CheatEntry>
-              <ID>16</ID>
-              <Description>"Avail. item amount must &gt;="</Description>
+            <CheatEntry NoCheckbox="1">
+              <ID>146</ID>
+              <Description>"強制結晶迴路? / Force quartz?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>iw_min_threshold</Address>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_get_all_quartz</Address>
             </CheatEntry>
-            <CheatEntry>
-              <ID>17</ID>
-              <Description>"Set amount to"</Description>
+            <CheatEntry NoCheckbox="1">
+              <ID>148</ID>
+              <Description>"強制配件? / force all accessories?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
-              <VariableType>2 Bytes</VariableType>
-              <Address>iw_set_item_cnt_to</Address>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_get_all_accessory</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -794,18 +867,18 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
           <CheatEntries>
             <CheatEntry>
               <ID>19</ID>
-              <Description>"Global setting"</Description>
+              <Description>"一般設定 / Global setting"</Description>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>22</ID>
-                  <Description>"最小玩家HP比率"</Description>
+                  <Description>"最小玩家HP保持比率"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
                   <VariableType>Float</VariableType>
                   <Address>vf_min_player_hp_ratio</Address>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>135</ID>
                   <Description>"Min player HP ratio after hit"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -815,7 +888,7 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>23</ID>
               <Description>"被擊中後回EP?"</Description>
               <DropDownList DisplayValueAsItem="1">0:No
@@ -825,8 +898,21 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>is_full_EP</Address>
+              <CheatEntries>
+                <CheatEntry NoCheckbox="1">
+                  <ID>136</ID>
+                  <Description>"Full EP after get hit?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_full_EP</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>24</ID>
               <Description>"被擊中後回CP?"</Description>
               <DropDownList DisplayValueAsItem="1">0:No
@@ -836,68 +922,59 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>is_full_CP</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>136</ID>
-              <Description>"Full EP after get hit?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
+              <CheatEntries>
+                <CheatEntry NoCheckbox="1">
+                  <ID>137</ID>
+                  <Description>"Full CP after get hit?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
 1:Yes
 </DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>is_full_EP</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>137</ID>
-              <Description>"Full CP after get hit?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>is_full_CP</Address>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_full_CP</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>25</ID>
-              <Description>"Enemy HP option"</Description>
-              <DropDownList DisplayValueAsItem="1">0:None
+              <Description>"敵方HP選項 / Enemy HP option"</Description>
+              <DropDownList DisplayValueAsItem="1">0:無 / None
 1:1 HP
-2:1 hit kill
-3:set limit as below
-4:damage multiplier as below
+2:一擊 / 1 hit kill
+3:設為下列上限 / set limit as below
+4:下列傷害倍率 / damage multiplier as below
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>is_enemy_HP_option</Address>
               <CheatEntries>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>140</ID>
-                  <Description>"警告：可能影響友方NPC"</Description>
+                  <Description>"※警告：可能影響友方NPC"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>141</ID>
-                  <Description>"友方NPC可能因此中一招即亡"</Description>
+                  <Description>"※友方NPC可能因此中一招即亡"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>26</ID>
                   <Description>"Warning: may affect friendly NPCs"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>132</ID>
                   <Description>"friendly NPC may be killed when battle start"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>127</ID>
                   <Description>"敵方HP上限"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -905,7 +982,7 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
                   <VariableType>4 Bytes</VariableType>
                   <Address>i_enemy_HP_limit</Address>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>128</ID>
                   <Description>"傷害倍率"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -913,7 +990,7 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
                   <VariableType>Float</VariableType>
                   <Address>vf_damage_multi</Address>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>138</ID>
                   <Description>"Enemy HP limit:"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -921,7 +998,7 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
                   <VariableType>4 Bytes</VariableType>
                   <Address>i_enemy_HP_limit</Address>
                 </CheatEntry>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>139</ID>
                   <Description>"damage multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1262,7 +1339,7 @@ sora_1st.exe+C8B46: F3 0F 5C CB           - subss xmm1,xmm3
 }
 </AssemblerScript>
               <CheatEntries>
-                <CheatEntry>
+                <CheatEntry NoCheckbox="1">
                   <ID>131</ID>
                   <Description>"multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -1611,7 +1688,7 @@ sora_1st.exe+C38DD: 49 C7 80 80 00 00 00 CD CC 4C 3E  - mov qword ptr [r8+000000
 }
 </AssemblerScript>
           <CheatEntries>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>37</ID>
               <Description>"multiplier"</Description>
               <ShowAsSigned>0</ShowAsSigned>
@@ -1754,13 +1831,13 @@ sora_1st.exe+33D4F3: 8D 04 8D 00 00 00 00  - lea eax,[rcx*4+00000000]
 }
 </AssemblerScript>
           <CheatEntries>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>40</ID>
-              <Description>"使用：開啟記錄"</Description>
+              <Description>"※使用：開啟記錄"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
-            <CheatEntry>
+            <CheatEntry NoCheckbox="1">
               <ID>142</ID>
               <Description>"Usage: Open memo menu"</Description>
               <Color>8000FF</Color>
@@ -2946,7 +3023,7 @@ sora_1st.exe+23A05: 8D 04 8D 00 00 00 00  - lea eax,[rcx*4+00000000]
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
-    <CheatEntry>
+    <CheatEntry NoCheckbox="1">
       <ID>126</ID>
       <Description>"空之軌跡 the 1st  /  https://opencheattables.com"</Description>
       <Options moHideChildren="1"/>
