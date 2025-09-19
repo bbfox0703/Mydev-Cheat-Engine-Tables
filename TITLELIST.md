@@ -476,3 +476,6 @@ ja-JP: 無双OROCHI２ Ultimate
 
 ## Warpips  
 [Warpips (Steam)](https://store.steampowered.com/app/1291010/__Warpips/)  
+
+## 空之軌跡 the 1st  
+[空之軌跡 the 1st (Steam)](https://store.steampowered.com/app/3447040/_the_1st/)  
