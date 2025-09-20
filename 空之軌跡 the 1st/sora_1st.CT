@@ -68,13 +68,15 @@ local enableBattleScripts = {
   0, -- "Toggle Compact View"
   1, -- "啟用 / Enable"
   15, -- "瀏覽道具後設定個數 / Browse &amp; set item amount"
-  156, -- "取得全部任務進度資料 / Get all quests progress"
   167, -- "單一任務資料檢視 / Quest viewer"
   18, -- "戰鬥：傷害控制 / Battle: damage control"
   3, -- "取得Mira和耀晶石 / Get Mira"
   30, -- "戰鬥中道具無限 / Battle: inf item use"
   31, -- "戰鬥：快速破防 / Battle: fast break gauge"
   3481, -- "瀏覽食譜時自動設定食材量 / Auto set ingredient amt. when browsing recipes"
+  3487, -- "支援經驗值倍率 / Support XP multiplier"
+  3491, -- "快速超能驅動 / Fast overdrive (OD)"
+  3492, -- "超能驅動值不減 / inf. OD gauge"
   35, -- "戰鬥結束後恢復BP / Restore break gauge after battle"
   36, -- "原野無限戰技攻擊條倍率 / Field charge gauge multiplier"
   38, -- "原野無限戰技攻擊條 / Field charge: inf charge use"
@@ -123,6 +125,9 @@ local disableBattleScripts = {
   38, -- "原野無限戰技攻擊條 / Field charge: inf charge use"
   36, -- "原野無限戰技攻擊條倍率 / Field charge gauge multiplier"
   35, -- "戰鬥結束後恢復BP / Restore break gauge after battle"
+  3492, -- "超能驅動值不減 / inf. OD gauge"
+  3491, -- "快速超能驅動 / Fast overdrive (OD)"
+  3487, -- "支援經驗值倍率 / Support XP multiplier"
   3481, -- "瀏覽食譜時自動設定食材量 / Auto set ingredient amt. when browsing recipes"
   31, -- "戰鬥：快速破防 / Battle: fast break gauge"
   30, -- "戰鬥中道具無限 / Battle: inf item use"
@@ -168,6 +173,9 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 30, Description: "戰鬥中道具無限 / Battle: inf item use", Depth: 1
 --   ID: 31, Description: "戰鬥：快速破防 / Battle: fast break gauge", Depth: 1
 --   ID: 35, Description: "戰鬥結束後恢復BP / Restore break gauge after battle", Depth: 1
+--   ID: 3487, Description: "支援經驗值倍率 / Support XP multiplier", Depth: 1
+--   ID: 3491, Description: "快速超能驅動 / Fast overdrive (OD)", Depth: 1
+--   ID: 3492, Description: "超能驅動值不減 / inf. OD gauge", Depth: 1
 --   ID: 36, Description: "原野無限戰技攻擊條倍率 / Field charge gauge multiplier", Depth: 1
 --   ID: 38, Description: "原野無限戰技攻擊條 / Field charge: inf charge use", Depth: 1
 --   ID: 39, Description: "取得擊殺數 / Get kill count", Depth: 1
@@ -277,12 +285,21 @@ end
 
 local processName = "sora_1st.exe"
 local pid = getProcessIDFromProcessName(processName)
-if pid ~= nil and pid &gt; 0 then
-  openProcess(processName)
-  print("Attached to: " .. processName)
-  closeLuaEngine()
-end
 
+if pid ~= nil and pid &gt; 0 then
+  -- 取得目前已經附加的 PID
+  local currentPid = getOpenedProcessID() or 0
+
+  if currentPid ~= pid then
+    -- 目前沒附加，或附加到別的 process → 執行 attach
+    openProcess(processName)
+    print("Attached to: " .. processName)
+  else
+    -- 已經附加在正確的 process → 不重複 attach
+    print("Already attached to: " .. processName)
+  end
+end
+closeLuaEngine()
 
 [DISABLE]
 {$lua}
@@ -1710,6 +1727,220 @@ sora_1st.exe+353096: 0F 57 C0                    - xorps xmm0,xmm0
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>3487</ID>
+          <Description>"支援經驗值倍率 / Support XP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SUPPORT_EXP_MULTI,sora_1st.exe,03 D6 3B D7 0F 4C FA 85) // should be unique
+alloc(newmem,$1000,INJECT_SUPPORT_EXP_MULTI)
+
+label(code)
+label(return vf_support_exp_multi)
+
+newmem:
+  vmovss xmm14, [vf_support_exp_multi]
+  vcvtsi2ss xmm15, xmm15, esi
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si esi, xmm15
+
+code:
+  add edx,esi
+  cmp edx,edi
+  cmovl edi,edx
+  jmp return
+align 10 cc
+  vf_support_exp_multi:
+  dd (float)3.3333333
+
+INJECT_SUPPORT_EXP_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SUPPORT_EXP_MULTI vf_support_exp_multi)
+
+[DISABLE]
+
+INJECT_SUPPORT_EXP_MULTI:
+  db 03 D6 3B D7 0F 4C FA
+
+unregistersymbol(INJECT_SUPPORT_EXP_MULTI vf_support_exp_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+D6870
+
+sora_1st.exe+D6849: 8B F8                 - mov edi,eax
+sora_1st.exe+D684B: 8B 93 8C 02 00 00     - mov edx,[rbx+0000028C]
+sora_1st.exe+D6851: 8B 0B                 - mov ecx,[rbx]
+sora_1st.exe+D6853: E8 A8 AF 00 00        - call sora_1st.exe+E1800
+sora_1st.exe+D6858: 8B D8                 - mov ebx,eax
+sora_1st.exe+D685A: 83 FE 01              - cmp esi,01
+sora_1st.exe+D685D: B8 01 00 00 00        - mov eax,00000001
+sora_1st.exe+D6862: 0F 4C F0              - cmovl esi,eax
+sora_1st.exe+D6865: 48 8B 44 24 70        - mov rax,[rsp+70]
+sora_1st.exe+D686A: 8B 90 8C 02 00 00     - mov edx,[rax+0000028C]
+// ---------- INJECTING HERE ----------
+sora_1st.exe+D6870: 03 D6                 - add edx,esi
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+D6872: 3B D7                 - cmp edx,edi
+sora_1st.exe+D6874: 0F 4C FA              - cmovl edi,edx
+sora_1st.exe+D6877: 85 FF                 - test edi,edi
+sora_1st.exe+D6879: B8 00 00 00 00        - mov eax,00000000
+sora_1st.exe+D687E: 0F 48 F8              - cmovs edi,eax
+sora_1st.exe+D6881: 48 8B 74 24 70        - mov rsi,[rsp+70]
+sora_1st.exe+D6886: 89 BE 8C 02 00 00     - mov [rsi+0000028C],edi
+sora_1st.exe+D688C: 44 8B 06              - mov r8d,[rsi]
+sora_1st.exe+D688F: BA 3A 00 00 00        - mov edx,0000003A
+sora_1st.exe+D6894: 48 8B 0D CD 4E 82 00  - mov rcx,[sora_1st.exe+8FB768]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>3488</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_support_exp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3491</ID>
+          <Description>"快速超能驅動 / Fast overdrive (OD)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_OVERDRIVE,sora_1st.exe,03 CF 3B CA 0F 4C D1) // should be unique
+alloc(newmem,$1000,INJECT_FAST_OVERDRIVE)
+
+label(code)
+label(return)
+
+newmem:
+  mov edi, 64
+
+code:
+  add ecx,edi
+  cmp ecx,edx
+  cmovl edx,ecx
+  jmp return
+
+INJECT_FAST_OVERDRIVE:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_OVERDRIVE)
+
+[DISABLE]
+
+INJECT_FAST_OVERDRIVE:
+  db 03 CF 3B CA 0F 4C D1
+
+unregistersymbol(INJECT_FAST_OVERDRIVE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+CFE8E
+
+sora_1st.exe+CFE6A: 74 12                    - je sora_1st.exe+CFE7E
+sora_1st.exe+CFE6C: 0F 1F 40 00              - nop dword ptr [rax+00]
+sora_1st.exe+CFE70: 83 38 35                 - cmp dword ptr [rax],35
+sora_1st.exe+CFE73: 74 31                    - je sora_1st.exe+CFEA6
+sora_1st.exe+CFE75: 48 83 C0 48              - add rax,48
+sora_1st.exe+CFE79: 48 3B C1                 - cmp rax,rcx
+sora_1st.exe+CFE7C: 75 F2                    - jne sora_1st.exe+CFE70
+sora_1st.exe+CFE7E: 4D 8B 00                 - mov r8,[r8]
+sora_1st.exe+CFE81: BA 64 00 00 00           - mov edx,00000064
+sora_1st.exe+CFE86: 41 0F B6 88 8B 02 00 00  - movzx ecx,byte ptr [r8+0000028B]
+// ---------- INJECTING HERE ----------
+sora_1st.exe+CFE8E: 03 CF                    - add ecx,edi
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+CFE90: 3B CA                    - cmp ecx,edx
+sora_1st.exe+CFE92: 0F 4C D1                 - cmovl edx,ecx
+sora_1st.exe+CFE95: 33 C9                    - xor ecx,ecx
+sora_1st.exe+CFE97: 85 D2                    - test edx,edx
+sora_1st.exe+CFE99: 0F B6 C2                 - movzx eax,dl
+sora_1st.exe+CFE9C: 0F 48 C1                 - cmovs eax,ecx
+sora_1st.exe+CFE9F: 41 88 80 8B 02 00 00     - mov [r8+0000028B],al
+sora_1st.exe+CFEA6: 48 8B 5C 24 30           - mov rbx,[rsp+30]
+sora_1st.exe+CFEAB: 48 83 C4 20              - add rsp,20
+sora_1st.exe+CFEAF: 5F                       - pop rdi
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3492</ID>
+          <Description>"超能驅動值不減 / inf. OD gauge"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_OVERDRIVE_NO_DEC,sora_1st.exe,C6 81 8B 02 00 00 00) // should be unique
+
+
+INJECT_OVERDRIVE_NO_DEC+6:
+  db 64
+
+registersymbol(INJECT_OVERDRIVE_NO_DEC)
+
+[DISABLE]
+
+INJECT_OVERDRIVE_NO_DEC+6:
+  db 00
+
+unregistersymbol(INJECT_OVERDRIVE_NO_DEC)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+CF59D
+
+sora_1st.exe+CF57D: EB 0B                 - jmp sora_1st.exe+CF58A
+sora_1st.exe+CF57F: 41 B0 01              - mov r8b,01
+sora_1st.exe+CF582: 48 8B CF              - mov rcx,rdi
+sora_1st.exe+CF585: E8 F6 69 FA FF        - call sora_1st.exe+75F80
+sora_1st.exe+CF58A: 48 FF C3              - inc rbx
+sora_1st.exe+CF58D: 48 3B DE              - cmp rbx,rsi
+sora_1st.exe+CF590: 75 BE                 - jne sora_1st.exe+CF550
+sora_1st.exe+CF592: 49 8B 06              - mov rax,[r14]
+sora_1st.exe+CF595: 48 8B 74 24 78        - mov rsi,[rsp+78]
+sora_1st.exe+CF59A: 48 8B 08              - mov rcx,[rax]
+// ---------- INJECTING HERE ----------
+sora_1st.exe+CF59D: C6 81 8B 02 00 00 00  - mov byte ptr [rcx+0000028B],00
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+CF5A4: 49 8B 1E              - mov rbx,[r14]
+sora_1st.exe+CF5A7: 48 8B 8B 60 05 00 00  - mov rcx,[rbx+00000560]
+sora_1st.exe+CF5AE: 48 85 C9              - test rcx,rcx
+sora_1st.exe+CF5B1: 74 71                 - je sora_1st.exe+CF624
+sora_1st.exe+CF5B3: 48 8B 01              - mov rax,[rcx]
+sora_1st.exe+CF5B6: FF 50 10              - call qword ptr [rax+10]
+sora_1st.exe+CF5B9: 3D 3A 1E B5 B6        - cmp eax,B6B51E3A
+sora_1st.exe+CF5BE: 75 64                 - jne sora_1st.exe+CF624
+sora_1st.exe+CF5C0: 48 8B 93 60 05 00 00  - mov rdx,[rbx+00000560]
+sora_1st.exe+CF5C7: 48 85 D2              - test rdx,rdx
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>36</ID>
           <Description>"原野無限戰技攻擊條倍率 / Field charge gauge multiplier"</Description>
           <Options moHideChildren="1"/>
@@ -2388,6 +2619,39 @@ sora_1st.exe+445411: 75 10              - jne sora_1st.exe+445423
               <Address>i_base_char_stat_addr</Address>
               <Offsets>
                 <Offset>70</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3485</ID>
+              <Description>"??"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_char_stat_addr</Address>
+              <Offsets>
+                <Offset>28A</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3489</ID>
+              <Description>"Overdrive"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_char_stat_addr</Address>
+              <Offsets>
+                <Offset>28B</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3486</ID>
+              <Description>"Support EXP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_char_stat_addr</Address>
+              <Offsets>
+                <Offset>28C</Offset>
               </Offsets>
             </CheatEntry>
           </CheatEntries>
