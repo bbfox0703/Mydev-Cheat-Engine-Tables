@@ -68,11 +68,13 @@ local enableBattleScripts = {
   0, -- "Toggle Compact View"
   1, -- "啟用 / Enable"
   15, -- "瀏覽道具後設定個數 / Browse &amp; set item amount"
-  156, -- "取得任務進度資料 / Get quests progress"
+  156, -- "取得全部任務進度資料 / Get all quests progress"
+  167, -- "單一任務資料檢視 / Quest viewer"
   18, -- "戰鬥：傷害控制 / Battle: damage control"
   3, -- "取得Mira和耀晶石 / Get Mira"
   30, -- "戰鬥中道具無限 / Battle: inf item use"
   31, -- "戰鬥：快速破防 / Battle: fast break gauge"
+  3481, -- "瀏覽食譜時自動設定食材量 / Auto set ingredient amt. when browsing recipes"
   35, -- "戰鬥結束後恢復BP / Restore break gauge after battle"
   36, -- "原野無限戰技攻擊條倍率 / Field charge gauge multiplier"
   38, -- "原野無限戰技攻擊條 / Field charge: inf charge use"
@@ -121,11 +123,13 @@ local disableBattleScripts = {
   38, -- "原野無限戰技攻擊條 / Field charge: inf charge use"
   36, -- "原野無限戰技攻擊條倍率 / Field charge gauge multiplier"
   35, -- "戰鬥結束後恢復BP / Restore break gauge after battle"
+  3481, -- "瀏覽食譜時自動設定食材量 / Auto set ingredient amt. when browsing recipes"
   31, -- "戰鬥：快速破防 / Battle: fast break gauge"
   30, -- "戰鬥中道具無限 / Battle: inf item use"
   3, -- "取得Mira和耀晶石 / Get Mira"
   18, -- "戰鬥：傷害控制 / Battle: damage control"
-  156, -- "取得任務進度資料 / Get quests progress"
+  167, -- "單一任務資料檢視 / Quest viewer"
+  156, -- "取得全部任務進度資料 / Get all quests progress"
   15, -- "瀏覽道具後設定個數 / Browse &amp; set item amount"
   126, -- "空之軌跡 the 1st  /  https://opencheattables.com"
   1, -- "啟用 / Enable"
@@ -169,7 +173,9 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 39, Description: "取得擊殺數 / Get kill count", Depth: 1
 --   ID: 45, Description: "角色數值檢視器 / Char. stats viewer", Depth: 1
 --   ID: 75, Description: "取得進行中Rewards / Get on-going reward data / max 50", Depth: 1
---   ID: 156, Description: "取得任務進度資料 / Get quests progress", Depth: 1
+--   ID: 3481, Description: "瀏覽食譜時自動設定食材量 / Auto set ingredient amt. when browsing recipes", Depth: 1
+--   ID: 167, Description: "單一任務資料檢視 / Quest viewer", Depth: 1
+--   ID: 156, Description: "取得全部任務進度資料 / Get all quests progress", Depth: 1
 --     ID: 159, Description: "產生任務狀態列表 / Generate quests status", Depth: 2
 -- ID: 126, Description: "空之軌跡 the 1st  /  https://opencheattables.com", Depth: 0
 
@@ -195,6 +201,15 @@ if not closeLuaEngine2 then
     end
 end
 registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
 
 synchronize(function()
   getLuaEngine().MenuItem5.doClick()
@@ -259,6 +274,15 @@ registersymbol($process)
 closeLuaEngine2()
 
 end
+
+local processName = "sora_1st.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  openProcess(processName)
+  print("Attached to: " .. processName)
+  closeLuaEngine()
+end
+
 
 [DISABLE]
 {$lua}
@@ -832,6 +856,8 @@ to_enemy:
   je to_set_limit
   cmp dword ptr [is_enemy_HP_option], 4
   je to_damage_multi
+  cmp dword ptr [is_enemy_HP_option], 5
+  je to_1000_hp
   jmp code
 
 to_1HK:
@@ -866,7 +892,13 @@ to_damage_multi:
   cmovl edx,ecx
   test edx,edx
   cmovs edx,ecx
-  // jmp code
+  jmp code
+
+to_1000_hp:
+  cmp edx, #800
+  jbe code
+  mov edx, #800
+  //jmp code
 
 code:
   mov [rsi+0C],edx
@@ -1005,7 +1037,7 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
-            <CheatEntry NoCheckbox="1">
+            <CheatEntry>
               <ID>25</ID>
               <Description>"敵方HP選項 / Enemy HP option"</Description>
               <DropDownList DisplayValueAsItem="1">0:無 / None
@@ -1013,6 +1045,7 @@ sora_1st.exe+DBB9D: 0F 48 C1        - cmovs eax,ecx
 2:一擊 / 1 hit kill
 3:設為下列上限 / set limit as below
 4:下列傷害倍率 / damage multiplier as below
+5:hit to HP 800
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -1408,7 +1441,7 @@ sora_1st.exe+C8B46: F3 0F 5C CB           - subss xmm1,xmm3
 }
 </AssemblerScript>
               <CheatEntries>
-                <CheatEntry NoCheckbox="1">
+                <CheatEntry>
                   <ID>131</ID>
                   <Description>"multiplier"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
@@ -3091,8 +3124,241 @@ sora_1st.exe+23A05: 8D 04 8D 00 00 00 00  - lea eax,[rcx*4+00000000]
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>3481</ID>
+          <Description>"瀏覽食譜時自動設定食材量 / Auto set ingredient amt. when browsing recipes"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_AUTO_COOKING_INGREDIENTS,sora_1st.exe,44 0F B7 A4 88 24 67 11 00 49) // should be unique
+alloc(newmem,$1000,INJECT_AUTO_COOKING_INGREDIENTS)
+
+label(code)
+label(return iw_ingredient_set_to)
+
+newmem:
+  mov bx, [iw_ingredient_set_to]
+  cmp word ptr [rax+rcx*4+00116724], bx
+  jae code
+  mov [rax+rcx*4+00116724], bx
+
+code:
+  movzx r12d,word ptr [rax+rcx*4+00116724]
+  jmp return
+align 10 cc
+  iw_ingredient_set_to:
+  dw #70
+
+INJECT_AUTO_COOKING_INGREDIENTS:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_AUTO_COOKING_INGREDIENTS iw_ingredient_set_to)
+
+[DISABLE]
+
+INJECT_AUTO_COOKING_INGREDIENTS:
+  db 44 0F B7 A4 88 24 67 11 00
+
+unregistersymbol(INJECT_AUTO_COOKING_INGREDIENTS iw_ingredient_set_to)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+33AB89
+
+sora_1st.exe+33AB5C: E8 0F 6C 11 00              - call sora_1st.exe+451770
+sora_1st.exe+33AB61: EB 2F                       - jmp sora_1st.exe+33AB92
+sora_1st.exe+33AB63: 8D 88 CA FE FF FF           - lea ecx,[rax-00000136]
+sora_1st.exe+33AB69: 83 F9 07                    - cmp ecx,07
+sora_1st.exe+33AB6C: 77 11                       - ja sora_1st.exe+33AB7F
+sora_1st.exe+33AB6E: 48 8B 05 BB 41 5C 00        - mov rax,[sora_1st.exe+8FED30]
+sora_1st.exe+33AB75: 44 8B A4 88 E0 38 1F 00     - mov r12d,[rax+rcx*4+001F38E0]
+sora_1st.exe+33AB7D: EB 13                       - jmp sora_1st.exe+33AB92
+sora_1st.exe+33AB7F: 48 8B C8                    - mov rcx,rax
+sora_1st.exe+33AB82: 48 8B 05 A7 41 5C 00        - mov rax,[sora_1st.exe+8FED30]
+// ---------- INJECTING HERE ----------
+sora_1st.exe+33AB89: 44 0F B7 A4 88 24 67 11 00  - movzx r12d,word ptr [rax+rcx*4+00116724]
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+33AB92: 49 8B 9E 58 02 00 00        - mov rbx,[r14+00000258]
+sora_1st.exe+33AB99: 49 8B 86 60 02 00 00        - mov rax,[r14+00000260]
+sora_1st.exe+33ABA0: 48 8D 3C C3                 - lea rdi,[rbx+rax*8]
+sora_1st.exe+33ABA4: 48 3B DF                    - cmp rbx,rdi
+sora_1st.exe+33ABA7: 74 2D                       - je sora_1st.exe+33ABD6
+sora_1st.exe+33ABA9: 0F 1F 80 00 00 00 00        - nop dword ptr [rax+00000000]
+sora_1st.exe+33ABB0: 48 8B 0B                    - mov rcx,[rbx]
+sora_1st.exe+33ABB3: 48 8D 15 BE DC 4B 00        - lea rdx,[sora_1st.exe+7F8878]
+sora_1st.exe+33ABBA: 41 B1 01                    - mov r9b,01
+sora_1st.exe+33ABBD: 45 33 C0                    - xor r8d,r8d
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry NoCheckbox="1">
+              <ID>3483</ID>
+              <Description>"使用：瀏覽相關食譜後、重開料理選單"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry NoCheckbox="1">
+              <ID>3484</ID>
+              <Description>"Usage: Browse the related recipe, then reopen the cooking menu
+"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry NoCheckbox="1">
+              <ID>3482</ID>
+              <Description>"最小值 / min. value"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>iw_ingredient_set_to</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>167</ID>
+          <Description>"單一任務資料檢視 / Quest viewer"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-20
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SINGLE_QUEST_VIEWER,sora_1st.exe,0F B6 44 D5 0A) // should be unique
+alloc(newmem,$1000,INJECT_SINGLE_QUEST_VIEWER)
+
+label(code)
+label(return)
+label(i_base_quest_addr)
+
+newmem:
+  push r15
+  lea r15, [rbp+rdx*8]
+  mov [i_base_quest_addr], r15
+  pop r15
+
+code:
+  movzx eax,byte ptr [rbp+rdx*8+0A]
+  jmp return
+align 10 cc
+  i_base_quest_addr:
+  dq 0
+
+INJECT_SINGLE_QUEST_VIEWER:
+  jmp newmem
+return:
+registersymbol(INJECT_SINGLE_QUEST_VIEWER)
+registersymbol(i_base_quest_addr)
+
+[DISABLE]
+
+INJECT_SINGLE_QUEST_VIEWER:
+  db 0F B6 44 D5 0A
+
+unregistersymbol(i_base_quest_addr)
+unregistersymbol(INJECT_SINGLE_QUEST_VIEWER)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+346618
+
+sora_1st.exe+3465D2: C7 84 24 A8 00 00 00 02 00 00 00  - mov [rsp+000000A8],00000002
+sora_1st.exe+3465DD: C7 84 24 AC 00 00 00 29 2C E0 A2  - mov [rsp+000000AC],A2E02C29
+sora_1st.exe+3465E8: C7 84 24 B0 00 00 00 20 00 00 00  - mov [rsp+000000B0],00000020
+sora_1st.exe+3465F3: C7 84 24 B4 00 00 00 A0 88 28 D8  - mov [rsp+000000B4],D82888A0
+sora_1st.exe+3465FE: E8 5D C1 D2 FF                    - call sora_1st.exe+72760
+sora_1st.exe+346603: 41 8B CF                          - mov ecx,r15d
+sora_1st.exe+346606: 4C 8D 84 24 98 00 00 00           - lea r8,[rsp+00000098]
+sora_1st.exe+34660E: 44 8B C8                          - mov r9d,eax
+sora_1st.exe+346611: 48 8D 14 89                       - lea rdx,[rcx+rcx*4]
+sora_1st.exe+346615: 48 03 D2                          - add rdx,rdx
+// ---------- INJECTING HERE ----------
+sora_1st.exe+346618: 0F B6 44 D5 0A                    - movzx eax,byte ptr [rbp+rdx*8+0A]
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+34661D: 0F 1F 00                          - nop dword ptr [rax]
+sora_1st.exe+346620: 49 8B 08                          - mov rcx,[r8]
+sora_1st.exe+346623: 85 C1                             - test ecx,eax
+sora_1st.exe+346625: 75 13                             - jne sora_1st.exe+34663A
+sora_1st.exe+346627: 49 83 C0 08                       - add r8,08
+sora_1st.exe+34662B: 48 8D 8C 24 B8 00 00 00           - lea rcx,[rsp+000000B8]
+sora_1st.exe+346633: 4C 3B C1                          - cmp r8,rcx
+sora_1st.exe+346636: 75 E8                             - jne sora_1st.exe+346620
+sora_1st.exe+346638: EB 07                             - jmp sora_1st.exe+346641
+sora_1st.exe+34663A: 4C 8B C9                          - mov r9,rcx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry NoCheckbox="1">
+              <ID>3478</ID>
+              <Description>"使用：查看委託"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry NoCheckbox="1">
+              <ID>3479</ID>
+              <Description>"Usage: View quests"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry NoCheckbox="1">
+              <ID>168</ID>
+              <Description>"base"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_quest_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3475</ID>
+              <Description>"任務狀態 / Status"</Description>
+              <DropDownListLink>Quest.StatusID</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_quest_addr</Address>
+              <Offsets>
+                <Offset>A</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3476</ID>
+              <Description>"是否回報 / Reported"</Description>
+              <DropDownListLink>Quest.Completed</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_quest_addr</Address>
+              <Offsets>
+                <Offset>B</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>3477</ID>
+              <Description>"BP獎勵 / Bonus BP"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_quest_addr</Address>
+              <Offsets>
+                <Offset>4C</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>156</ID>
-          <Description>"取得任務進度資料 / Get quests progress"</Description>
+          <Description>"取得全部任務進度資料 / Get all quests progress"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : sora_1st.exe
@@ -3322,7 +3588,7 @@ synchronize(function()
     end
 
     -- Completed or not (1 byte)
-    addRec("是否完成 / Completed", questPtr + OFF_COMPLETED, vtByte, row, {ddLinked = true, ddMemrec = "Quest.Completed"})
+    addRec("是否回報 / Reported", questPtr + OFF_COMPLETED, vtByte, row, {ddLinked = true, ddMemrec = "Quest.Completed"})
 
     -- Bonus BP (2 bytes)
     addRec("BP獎勵 / Bonus BP", questPtr + OFF_BONUS_BP, vtWord, row, {color = row.Color})
@@ -3417,9 +3683,11 @@ closeLuaEngine()
           <ID>162</ID>
           <Description>"Quest.StatusID"</Description>
           <DropDownList DisplayValueAsItem="1">0:尚未開始 / not started
-4:待回報 / not reported
+4:(未確認) 失敗? / Failed?
+16:承接前 / before accept
 48:進行中 / in progress
-54:已經回報 / reported
+50:已達成 / completed
+54:已回報 / reported
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
@@ -3461,9 +3729,7 @@ closeLuaEngine()
     </CodeEntry>
   </CheatCodes>
   <UserdefinedSymbols/>
-  <LuaScript>
-
---[[
+  <LuaScript>--[[
 [ENABLE]
 {$lua}
 if syntaxcheck then return end
