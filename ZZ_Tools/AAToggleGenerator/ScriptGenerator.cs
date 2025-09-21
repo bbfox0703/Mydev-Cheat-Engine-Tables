@@ -37,6 +37,9 @@ namespace AAToggleGenerator
         // Test hooks
         internal static bool TestMode { get; set; }
         internal static List<CheatEntry>? LastProcessedEntries { get; private set; }
+
+        // Prevent recursive AfterCheck events
+        private static bool _isUpdatingChildren = false;
         public static void StartScriptGeneration()
         {
             // Show file dialog to select .CT file
@@ -178,17 +181,7 @@ namespace AAToggleGenerator
                     depthLastNode[entry.Depth] = currentNode;
                 }
 
-                treeView.AfterCheck += (sender, e) =>
-                {
-                    if (e.Node != null)
-                    {
-                        CheatEntry? entry = e.Node.Tag as CheatEntry;
-                        if (entry != null && entry.IsGroup)
-                        {
-                            e.Node.Checked = false;  // Force reset
-                        }
-                    }
-                };
+                // Group node handling is now integrated into the main TreeView_AfterCheck method
 
                 treeView.BeforeCheck += (sender, e) =>
                 {
@@ -472,23 +465,62 @@ namespace AAToggleGenerator
         private static void TreeView_AfterCheck(object? sender, TreeViewEventArgs e)
         {
             TreeView? treeView = sender as TreeView;
-            if (treeView == null) return;
+            if (treeView == null || e.Node == null || _isUpdatingChildren) return;
 
+            // Check if this is a group node
+            CheatEntry? entry = e.Node.Tag as CheatEntry;
+            if (entry != null && entry.IsGroup)
+            {
+                // Group nodes cannot be checked, force reset
+                _isUpdatingChildren = true;
+                try
+                {
+                    e.Node.Checked = false;
+                }
+                finally
+                {
+                    _isUpdatingChildren = false;
+                }
+                return;
+            }
+
+            _isUpdatingChildren = true;
             treeView.BeginUpdate();
 
             try
             {
-                if (e.Node != null)
-                {
-                    foreach (TreeNode child in e.Node.Nodes)
-                    {
-                        child.Checked = e.Node.Checked;
-                    }
-                }
+                // Recursively update all child nodes to match parent's checked state
+                UpdateChildNodes(e.Node, e.Node.Checked);
             }
             finally
             {
                 treeView.EndUpdate();
+                _isUpdatingChildren = false;
+            }
+        }
+
+        private static void UpdateChildNodes(TreeNode parentNode, bool isChecked)
+        {
+            foreach (TreeNode child in parentNode.Nodes)
+            {
+                // Check if child is a group node
+                CheatEntry? childEntry = child.Tag as CheatEntry;
+                if (childEntry != null && childEntry.IsGroup)
+                {
+                    // Group nodes should remain unchecked, but still process their children
+                    child.Checked = false;
+                }
+                else
+                {
+                    // Regular nodes follow parent's state
+                    child.Checked = isChecked;
+                }
+
+                // Recursively update child's children
+                if (child.Nodes.Count > 0)
+                {
+                    UpdateChildNodes(child, isChecked);
+                }
             }
         }
 
