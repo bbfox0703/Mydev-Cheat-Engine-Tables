@@ -45,8 +45,8 @@ namespace AAToggleGenerator
             // Show file dialog to select .CT file
             using (OpenFileDialog openFileDialog = new OpenFileDialog
             {
-                Filter = "Cheat Engine Table (*.CT)|*.CT",
-                Title = "Select a Cheat Engine Table"
+                Filter = LocalizationManager.GetString("ScriptGenerator.FileDialogFilter"),
+                Title = LocalizationManager.GetString("ScriptGenerator.FileDialogTitle")
             })
             {
                 if (openFileDialog.ShowDialog() != DialogResult.OK)
@@ -57,7 +57,8 @@ namespace AAToggleGenerator
                 // Validate file exists and is accessible
                 if (!File.Exists(ctFilePath))
                 {
-                    MessageBox.Show("Selected file does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(LocalizationManager.GetString("ScriptGenerator.Error.FileNotExist"),
+                        LocalizationManager.GetString("Message.Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -68,12 +69,14 @@ namespace AAToggleGenerator
                 }
                 catch (XmlException ex)
                 {
-                    MessageBox.Show($"Invalid XML file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(LocalizationManager.GetString("ScriptGenerator.Error.InvalidXML", ex.Message),
+                        LocalizationManager.GetString("Message.Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error reading file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(LocalizationManager.GetString("ScriptGenerator.Error.ReadingFile", ex.Message),
+                        LocalizationManager.GetString("Message.Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -218,7 +221,7 @@ namespace AAToggleGenerator
                 // Create selection form with proper disposal and DPI awareness
                 using (Form treeForm = new Form
                 {
-                    Text = "Select Cheat Entries",
+                    Text = LocalizationManager.GetString("ScriptGenerator.SelectEntries"),
                     Width = DefaultFormWidth,
                     Height = DefaultFormHeight,
                     StartPosition = FormStartPosition.CenterScreen,
@@ -226,7 +229,7 @@ namespace AAToggleGenerator
                 })
                 using (Label depthLabel = new Label
                 {
-                    Text = "Expand Depth:",
+                    Text = LocalizationManager.GetString("ScriptGenerator.ExpandDepth"),
                     Dock = DockStyle.Top,
                     Height = 30,
                     TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
@@ -243,7 +246,7 @@ namespace AAToggleGenerator
                 })
                 using (Button confirmButton = new Button
                 {
-                    Text = "Confirm",
+                    Text = LocalizationManager.GetString("ScriptGenerator.Confirm"),
                     Dock = DockStyle.Bottom,
                     Height = 40,
                     Margin = new Padding(10, 15, 10, 10),
@@ -397,7 +400,7 @@ namespace AAToggleGenerator
             {
                 Width = ScriptFormWidth,
                 Height = ScriptFormHeight,
-                Text = "Generated Lua Script",
+                Text = LocalizationManager.GetString("ScriptGenerator.GeneratedScript"),
                 StartPosition = FormStartPosition.CenterScreen,
                 AutoScaleMode = AutoScaleMode.Dpi
             })

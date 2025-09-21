@@ -11,14 +11,6 @@
         /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
 
         #region Windows Form Designer generated code
 
@@ -32,6 +24,7 @@
             btnAAToggleGen = new System.Windows.Forms.Button();
             btnIDRenumber = new System.Windows.Forms.Button();
             btnReplaceProcName = new System.Windows.Forms.Button();
+            btnLanguage = new System.Windows.Forms.Button();
             SuspendLayout();
             // 
             // btnAAToggleGen
@@ -65,11 +58,22 @@
             btnReplaceProcName.UseVisualStyleBackColor = true;
             btnReplaceProcName.Click += btnReplaceProcName_Click;
             // 
+            // btnLanguage
+            // 
+            btnLanguage.Location = new System.Drawing.Point(13, 110);
+            btnLanguage.Name = "btnLanguage";
+            btnLanguage.Size = new System.Drawing.Size(300, 26);
+            btnLanguage.TabIndex = 3;
+            btnLanguage.Text = "Language";
+            btnLanguage.UseVisualStyleBackColor = true;
+            btnLanguage.Click += btnLanguage_Click;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             ClientSize = new System.Drawing.Size(322, 157);
+            Controls.Add(btnLanguage);
             Controls.Add(btnReplaceProcName);
             Controls.Add(btnIDRenumber);
             Controls.Add(btnAAToggleGen);
@@ -89,5 +93,6 @@
         private System.Windows.Forms.Button btnAAToggleGen;
         private System.Windows.Forms.Button btnIDRenumber;
         private System.Windows.Forms.Button btnReplaceProcName;
+        private System.Windows.Forms.Button btnLanguage;
     }
 }

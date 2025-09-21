@@ -161,6 +161,22 @@ namespace AAToggleGenerator
             }
         }
 
+        /// <summary>
+        /// Applies theme to ComboBox
+        /// </summary>
+        public static void ApplyTheme(this ComboBox comboBox)
+        {
+            if (!WindowsThemeHelper.IsThemeAwareSupported())
+                return;
+
+            var backgroundColor = WindowsThemeHelper.GetBackgroundColor();
+            var foregroundColor = WindowsThemeHelper.GetForegroundColor();
+
+            comboBox.BackColor = backgroundColor;
+            comboBox.ForeColor = foregroundColor;
+            comboBox.FlatStyle = FlatStyle.Flat;
+        }
+
         private static void ApplyDarkThemeToScintilla(Scintilla scintilla)
         {
             // Dark theme colors for Scintilla (Lua syntax highlighting)
@@ -245,6 +261,9 @@ namespace AAToggleGenerator
                         break;
                     case NumericUpDown numericUpDown:
                         numericUpDown.ApplyTheme();
+                        break;
+                    case ComboBox comboBox:
+                        comboBox.ApplyTheme();
                         break;
                     case Scintilla scintilla:
                         scintilla.ApplyTheme();

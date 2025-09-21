@@ -13,6 +13,9 @@ namespace AAToggleGenerator
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            // Initialize localization system
+            LocalizationManager.Initialize();
+
             Application.Run(new MainForm());
         }
     }
