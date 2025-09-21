@@ -127,12 +127,14 @@ namespace AAToggleGenerator
             using (Panel treePanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(10, 20, 10, 10)
+                Padding = new Padding(10, 20, 10, 25)
             })
             using (TreeView treeView = new TreeView
             {
                 Dock = DockStyle.Fill,
-                CheckBoxes = true
+                CheckBoxes = true,
+                Scrollable = true,
+                HideSelection = false
             })
             {
                 treeView.Font = new System.Drawing.Font(treeView.Font.FontFamily, TreeViewFontSize);
@@ -244,7 +246,7 @@ namespace AAToggleGenerator
                     Text = "Confirm",
                     Dock = DockStyle.Bottom,
                     Height = 40,
-                    Margin = new Padding(10, 5, 10, 10),
+                    Margin = new Padding(10, 15, 10, 10),
                     DialogResult = DialogResult.OK
                 })
                 {
