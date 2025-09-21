@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Linq;
+using System.Text;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace AAToggleGenerator
 {
@@ -79,31 +81,50 @@ namespace AAToggleGenerator
                 File.WriteAllText(backupFilePath, originalContent);
                 ShowMessage($"Backup created: {backupFilePath}", "Backup Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // Perform regex replacement to renumber <ID> nodes
-                int idCounter = 0;
-                string modifiedContent = Regex.Replace(originalContent, @"<ID>\d+</ID>", match =>
+                // Parse XML to preserve attributes and structure
+                XDocument xmlDoc;
+                try
                 {
-                    return $"<ID>{idCounter++}</ID>";
-                });
+                    xmlDoc = XDocument.Parse(originalContent);
+                }
+                catch (Exception ex)
+                {
+                    ShowMessage($"Invalid XML format: {ex.Message}", "XML Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
 
-                // Verify changes were made
-                if (modifiedContent == originalContent)
+                // Renumber <ID> nodes while preserving all XML attributes and structure
+                int idCounter = 0;
+                var idElements = xmlDoc.Descendants("ID").ToList();
+
+                if (idElements.Count == 0)
                 {
                     ShowMessage("No ID tags found to renumber.", "No Changes", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                // Write the modified content back to the original file
-                File.WriteAllText(filePath, modifiedContent);
+                foreach (var idElement in idElements)
+                {
+                    idElement.Value = idCounter++.ToString();
+                }
+
+                // Write the modified XML content back to the original file without BOM
+                var settings = new System.Xml.XmlWriterSettings
+                {
+                    Encoding = new UTF8Encoding(false), // false = no BOM
+                    Indent = true,
+                    IndentChars = "  "
+                };
+
+                using (var xmlWriter = System.Xml.XmlWriter.Create(filePath, settings))
+                {
+                    xmlDoc.Save(xmlWriter);
+                }
                 ShowMessage($"IDs successfully renumbered and saved!\nTotal IDs: {idCounter}", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (IOException ex)
             {
                 ShowMessage($"File I/O error: {ex.Message}", "I/O Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                ShowMessage("Operation timed out. The file may be too large.", "Timeout Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {

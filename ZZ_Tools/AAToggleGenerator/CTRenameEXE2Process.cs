@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Xml.Linq;
 #if EXCLUDE_WINFORMS
 // Minimal stubs for cross-platform testing
 namespace System.Windows.Forms
@@ -90,6 +92,22 @@ namespace AAToggleGenerator
 
                 string originalContent = fileContent;
 
+                // Parse XML to preserve attributes and structure
+                XDocument xmlDoc;
+                try
+                {
+                    xmlDoc = XDocument.Parse(fileContent);
+                }
+                catch (Exception ex)
+                {
+                    messageService.Show($"Invalid XML format: {ex.Message}", "XML Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Find all AssemblerScript elements and replace exe names with $process
+                var assemblerScripts = xmlDoc.Descendants("AssemblerScript").ToList();
+                int replacementCount = 0;
+
                 // Define regex patterns for aobscanmodule and aobscanregion with timeout
                 var regexOptions = RegexOptions.IgnoreCase | RegexOptions.Compiled;
                 var timeout = TimeSpan.FromSeconds(5);
@@ -99,25 +117,40 @@ namespace AAToggleGenerator
                     string patternModule = @"aobscanmodule\(([^,]+),([^\),]+),([^)]+)\)";
                     string patternRegion = @"aobscanregion\(([^,]+),([^\+]+)\+([^,]+),([^\+]+)\+([^,]+),([^)]+)\)";
 
-                    // Replace exe_name with $process
-                    fileContent = Regex.Replace(fileContent, patternModule, match =>
+                    foreach (var scriptElement in assemblerScripts)
                     {
-                        string label = match.Groups[1].Value;
-                        string exeName = match.Groups[2].Value.Trim();
-                        string aob = match.Groups[3].Value.Trim();
-                        return $"aobscanmodule({label},$process,{aob})";
-                    }, regexOptions, timeout);
+                        string scriptContent = scriptElement.Value;
+                        string originalScriptContent = scriptContent;
 
-                    fileContent = Regex.Replace(fileContent, patternRegion, match =>
-                    {
-                        string label = match.Groups[1].Value;
-                        string exeNameStart = match.Groups[2].Value.Trim();
-                        string offset1 = match.Groups[3].Value.Trim();
-                        string exeNameEnd = match.Groups[4].Value.Trim();
-                        string offset2 = match.Groups[5].Value.Trim();
-                        string aob = match.Groups[6].Value.Trim();
-                        return $"aobscanregion({label},$process+{offset1},$process+{offset2},{aob})";
-                    }, regexOptions, timeout);
+                        // Replace exe_name with $process in aobscanmodule calls
+                        scriptContent = Regex.Replace(scriptContent, patternModule, match =>
+                        {
+                            string label = match.Groups[1].Value;
+                            string exeName = match.Groups[2].Value.Trim();
+                            string aob = match.Groups[3].Value.Trim();
+                            replacementCount++;
+                            return $"aobscanmodule({label},$process,{aob})";
+                        }, regexOptions, timeout);
+
+                        // Replace exe_name with $process in aobscanregion calls
+                        scriptContent = Regex.Replace(scriptContent, patternRegion, match =>
+                        {
+                            string label = match.Groups[1].Value;
+                            string exeNameStart = match.Groups[2].Value.Trim();
+                            string offset1 = match.Groups[3].Value.Trim();
+                            string exeNameEnd = match.Groups[4].Value.Trim();
+                            string offset2 = match.Groups[5].Value.Trim();
+                            string aob = match.Groups[6].Value.Trim();
+                            replacementCount++;
+                            return $"aobscanregion({label},$process+{offset1},$process+{offset2},{aob})";
+                        }, regexOptions, timeout);
+
+                        // Update the element value if changes were made
+                        if (scriptContent != originalScriptContent)
+                        {
+                            scriptElement.Value = scriptContent;
+                        }
+                    }
                 }
                 catch (RegexMatchTimeoutException)
                 {
@@ -126,7 +159,7 @@ namespace AAToggleGenerator
                 }
 
                 // Check if any changes were made
-                if (fileContent == originalContent)
+                if (replacementCount == 0)
                 {
                     messageService.Show("No aobscanmodule or aobscanregion patterns found to replace.", "No Changes", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
@@ -136,11 +169,21 @@ namespace AAToggleGenerator
                 string backupFilePath = GenerateBackupPath(filePath);
                 File.Copy(filePath, backupFilePath, overwrite: false);
 
-                // Write the modified content back to the .CT file
-                File.WriteAllText(filePath, fileContent);
+                // Write the modified XML content back to the .CT file without BOM
+                var settings = new System.Xml.XmlWriterSettings
+                {
+                    Encoding = new UTF8Encoding(false), // false = no BOM
+                    Indent = true,
+                    IndentChars = "  "
+                };
+
+                using (var xmlWriter = System.Xml.XmlWriter.Create(filePath, settings))
+                {
+                    xmlDoc.Save(xmlWriter);
+                }
 
                 // Display success message
-                messageService.Show($"Process name replaced successfully.\nBackup created: {backupFilePath}",
+                messageService.Show($"Process name replaced successfully ({replacementCount} replacements).\nBackup created: {backupFilePath}",
                     "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (IOException ex)

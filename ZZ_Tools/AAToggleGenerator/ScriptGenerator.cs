@@ -15,8 +15,8 @@ namespace AAToggleGenerator
         // Constants for better maintainability
         private const int DefaultTreeViewDepth = 2;
         private const int DefaultStringBuilderCapacity = 4096;
-        private const int DefaultFormWidth = 400;
-        private const int DefaultFormHeight = 600;
+        private const int DefaultFormWidth = 500;
+        private const int DefaultFormHeight = 700;
         private const int ScriptFormWidth = 800;
         private const int ScriptFormHeight = 600;
         private const int TreeViewFontSize = 12;
@@ -120,8 +120,17 @@ namespace AAToggleGenerator
 
         private static void ShowEntrySelectionDialog(List<CheatEntry> entries)
         {
-            // Create TreeView for user selection
-            using (TreeView treeView = new TreeView { Dock = DockStyle.Fill, CheckBoxes = true })
+            // Create TreeView for user selection with proper spacing
+            using (Panel treePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10, 20, 10, 10)
+            })
+            using (TreeView treeView = new TreeView
+            {
+                Dock = DockStyle.Fill,
+                CheckBoxes = true
+            })
             {
                 treeView.Font = new System.Drawing.Font(treeView.Font.FontFamily, TreeViewFontSize);
 
@@ -211,31 +220,38 @@ namespace AAToggleGenerator
 
                 ExpandTreeView(treeView, DefaultTreeViewDepth);
 
-                // Create selection form with proper disposal
+                // Create selection form with proper disposal and DPI awareness
                 using (Form treeForm = new Form
                 {
                     Text = "Select Cheat Entries",
                     Width = DefaultFormWidth,
                     Height = DefaultFormHeight,
-                    StartPosition = FormStartPosition.CenterScreen
+                    StartPosition = FormStartPosition.CenterScreen,
+                    AutoScaleMode = AutoScaleMode.Dpi
                 })
                 using (Label depthLabel = new Label
                 {
                     Text = "Expand Depth:",
                     Dock = DockStyle.Top,
-                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+                    Height = 30,
+                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
+                    Padding = new Padding(10, 5, 10, 0)
                 })
                 using (NumericUpDown depthSelector = new NumericUpDown
                 {
                     Minimum = 0,
                     Maximum = 10,
                     Value = DefaultTreeViewDepth,
-                    Dock = DockStyle.Top
+                    Dock = DockStyle.Top,
+                    Height = 30,
+                    Margin = new Padding(10, 0, 10, 10)
                 })
                 using (Button confirmButton = new Button
                 {
                     Text = "Confirm",
                     Dock = DockStyle.Bottom,
+                    Height = 40,
+                    Margin = new Padding(10, 5, 10, 10),
                     DialogResult = DialogResult.OK
                 })
                 {
@@ -245,13 +261,23 @@ namespace AAToggleGenerator
                         ExpandTreeView(treeView, depth);
                     };
 
-                    treeForm.Controls.Add(treeView);
-                    treeForm.Controls.Add(depthSelector);
-                    treeForm.Controls.Add(depthLabel);
-                    treeForm.Controls.Add(confirmButton);
+                    // Add TreeView to its panel
+                    treePanel.Controls.Add(treeView);
+
+                    // Add controls in correct order for proper docking
+                    treeForm.Controls.Add(confirmButton);    // Bottom control first
+                    treeForm.Controls.Add(depthSelector);    // Top controls
+                    treeForm.Controls.Add(depthLabel);       // Top controls
+                    treeForm.Controls.Add(treePanel);        // Fill remaining space with panel
 
                     // Apply theme after adding controls
                     ApplyThemeToDialog(treeForm, treeView, depthLabel, depthSelector, confirmButton);
+
+                    // Apply theme to the panel as well
+                    if (WindowsThemeHelper.IsThemeAwareSupported())
+                    {
+                        treePanel.BackColor = WindowsThemeHelper.GetBackgroundColor();
+                    }
 
                     if (treeForm.ShowDialog() != DialogResult.OK)
                         return;
@@ -293,6 +319,26 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("  getLuaEngine().Close()");
             scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
+
+            scriptBuilder.AppendLine("\n--[[");
+            scriptBuilder.AppendLine("-- attach process");
+            scriptBuilder.AppendLine("local processName = \"game_exe.exe\"");
+            scriptBuilder.AppendLine("local pid = getProcessIDFromProcessName(processName)");
+            scriptBuilder.AppendLine("if pid ~= nil and pid > 0 then");
+            scriptBuilder.AppendLine("  local currentPid = getOpenedProcessID() or 0");
+            scriptBuilder.AppendLine("  if currentPid ~= pid then");
+            scriptBuilder.AppendLine("    openProcess(processName)");
+            scriptBuilder.AppendLine("  if currentPid ~= pid then");
+            scriptBuilder.AppendLine("    openProcess(processName)");
+            scriptBuilder.AppendLine("    print(\"Attached to: \" .. processName)");
+            scriptBuilder.AppendLine("  else");
+            scriptBuilder.AppendLine("    print(\"Already attached to: \" .. processName)");
+            scriptBuilder.AppendLine("  end");
+            scriptBuilder.AppendLine("end");
+            scriptBuilder.AppendLine("synchronize(function()");
+            scriptBuilder.AppendLine("  getLuaEngine().Close()");
+            scriptBuilder.AppendLine("end)");
+            scriptBuilder.AppendLine("--]]\n");
 
             foreach (var entry in enableOrder)
             {
@@ -352,7 +398,14 @@ namespace AAToggleGenerator
 
         private static void ShowScriptWithHighlighting(string script)
         {
-            using (Form scriptForm = new Form { Width = ScriptFormWidth, Height = ScriptFormHeight, Text = "Generated Lua Script" })
+            using (Form scriptForm = new Form
+            {
+                Width = ScriptFormWidth,
+                Height = ScriptFormHeight,
+                Text = "Generated Lua Script",
+                StartPosition = FormStartPosition.CenterScreen,
+                AutoScaleMode = AutoScaleMode.Dpi
+            })
             using (Scintilla scintilla = new Scintilla
             {
                 Dock = DockStyle.Fill,
@@ -360,25 +413,18 @@ namespace AAToggleGenerator
                 Lexer = Lexer.Lua
             })
             {
-                // Set Lua syntax highlighting
+                // Set basic font properties
                 scintilla.Styles[Style.Default].Font = ScintillaFontName;
                 scintilla.Styles[Style.Default].Size = ScintillaFontSize;
-                scintilla.Styles[Style.Default].ForeColor = System.Drawing.Color.Black;
-                scintilla.Styles[Style.Lua.Comment].ForeColor = System.Drawing.Color.Gray;
-                scintilla.Styles[Style.Lua.CommentLine].ForeColor = System.Drawing.Color.Gray;
-                scintilla.Styles[Style.Lua.String].ForeColor = System.Drawing.Color.Brown;
-                scintilla.Styles[Style.Lua.Number].ForeColor = System.Drawing.Color.Purple;
-                scintilla.Styles[Style.Lua.Operator].ForeColor = System.Drawing.Color.DarkOrange;
-                scintilla.Styles[Style.Lua.Word].ForeColor = System.Drawing.Color.Blue;
                 scintilla.Styles[Style.Lua.Word].Bold = true;
 
                 scintilla.SetKeywords(0, LuaKeywords);
 
                 scriptForm.Controls.Add(scintilla);
-                
-                // Apply theme
+
+                // Apply theme (this will set all colors appropriately)
                 ApplyThemeToScriptDialog(scriptForm, scintilla);
-                
+
                 scriptForm.ShowDialog();
             }
         }
