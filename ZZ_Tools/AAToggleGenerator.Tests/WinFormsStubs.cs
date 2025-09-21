@@ -71,6 +71,11 @@ namespace System.Windows.Forms
         FixedSingle
     }
 
+    public class ComboBox : Control
+    {
+        public FlatStyle FlatStyle { get; set; }
+    }
+
     public class TreeView : Control
     {
         public List<TreeNode> Nodes { get; } = new();

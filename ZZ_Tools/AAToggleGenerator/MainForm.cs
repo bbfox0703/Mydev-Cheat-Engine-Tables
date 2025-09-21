@@ -10,8 +10,48 @@ namespace AAToggleGenerator
         {
             InitializeComponent();
             ApplyTheme();
-            
+            UpdateLocalization();
+
+            // Subscribe to language changes
+            LocalizationManager.LanguageChanged += OnLanguageChanged;
+
             // Add theme info to title if theme aware is supported
+            if (WindowsThemeHelper.IsThemeAwareSupported())
+            {
+                var currentTheme = WindowsThemeHelper.GetCurrentTheme();
+                this.Text += $" - {currentTheme} Theme";
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+
+            // Unsubscribe from language changes
+            LocalizationManager.LanguageChanged -= OnLanguageChanged;
+            base.Dispose(disposing);
+        }
+
+        private void OnLanguageChanged(object? sender, SupportedLanguage newLanguage)
+        {
+            UpdateLocalization();
+        }
+
+        private void UpdateLocalization()
+        {
+            // Update form title
+            this.Text = LocalizationManager.GetString("MainForm.Title");
+
+            // Update button texts
+            btnAAToggleGen.Text = LocalizationManager.GetString("MainForm.GenerateScript");
+            btnIDRenumber.Text = LocalizationManager.GetString("MainForm.RenumberIDs");
+            btnReplaceProcName.Text = LocalizationManager.GetString("MainForm.ReplaceProcessName");
+            btnLanguage.Text = LocalizationManager.GetString("MainForm.ChangeLanguage");
+
+            // Re-add theme info to title if theme aware is supported
             if (WindowsThemeHelper.IsThemeAwareSupported())
             {
                 var currentTheme = WindowsThemeHelper.GetCurrentTheme();
@@ -47,6 +87,7 @@ namespace AAToggleGenerator
             ApplyButtonTheme(btnAAToggleGen, buttonBackgroundColor, foregroundColor);
             ApplyButtonTheme(btnIDRenumber, buttonBackgroundColor, foregroundColor);
             ApplyButtonTheme(btnReplaceProcName, buttonBackgroundColor, foregroundColor);
+            ApplyButtonTheme(btnLanguage, buttonBackgroundColor, foregroundColor);
         }
 
         private void ApplyButtonTheme(Button button, Color backgroundColor, Color foregroundColor)
@@ -124,6 +165,34 @@ namespace AAToggleGenerator
             {
                 MessageBox.Show($"An unexpected error occurred: {ex.Message}", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnLanguage_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var languageDialog = new LanguageSelectionDialog())
+                {
+                    if (languageDialog.ShowDialog(this) == DialogResult.OK)
+                    {
+                        if (languageDialog.SelectedLanguage != LocalizationManager.CurrentLanguage)
+                        {
+                            LocalizationManager.ChangeLanguage(languageDialog.SelectedLanguage);
+
+                            var languageName = LocalizationManager.GetLanguageDisplayName(languageDialog.SelectedLanguage);
+                            var message = LocalizationManager.GetString("Message.LanguageChanged", languageName);
+                            var title = LocalizationManager.GetString("Message.Information");
+
+                            MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var title = LocalizationManager.GetString("Message.Error");
+                MessageBox.Show($"An error occurred: {ex.Message}", title, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

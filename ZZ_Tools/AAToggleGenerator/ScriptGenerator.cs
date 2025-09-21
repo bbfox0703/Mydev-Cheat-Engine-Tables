@@ -15,8 +15,8 @@ namespace AAToggleGenerator
         // Constants for better maintainability
         private const int DefaultTreeViewDepth = 2;
         private const int DefaultStringBuilderCapacity = 4096;
-        private const int DefaultFormWidth = 400;
-        private const int DefaultFormHeight = 600;
+        private const int DefaultFormWidth = 500;
+        private const int DefaultFormHeight = 700;
         private const int ScriptFormWidth = 800;
         private const int ScriptFormHeight = 600;
         private const int TreeViewFontSize = 12;
@@ -37,13 +37,16 @@ namespace AAToggleGenerator
         // Test hooks
         internal static bool TestMode { get; set; }
         internal static List<CheatEntry>? LastProcessedEntries { get; private set; }
+
+        // Prevent recursive AfterCheck events
+        private static bool _isUpdatingChildren = false;
         public static void StartScriptGeneration()
         {
             // Show file dialog to select .CT file
             using (OpenFileDialog openFileDialog = new OpenFileDialog
             {
-                Filter = "Cheat Engine Table (*.CT)|*.CT",
-                Title = "Select a Cheat Engine Table"
+                Filter = LocalizationManager.GetString("ScriptGenerator.FileDialogFilter"),
+                Title = LocalizationManager.GetString("ScriptGenerator.FileDialogTitle")
             })
             {
                 if (openFileDialog.ShowDialog() != DialogResult.OK)
@@ -54,7 +57,8 @@ namespace AAToggleGenerator
                 // Validate file exists and is accessible
                 if (!File.Exists(ctFilePath))
                 {
-                    MessageBox.Show("Selected file does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(LocalizationManager.GetString("ScriptGenerator.Error.FileNotExist"),
+                        LocalizationManager.GetString("Message.Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -65,12 +69,14 @@ namespace AAToggleGenerator
                 }
                 catch (XmlException ex)
                 {
-                    MessageBox.Show($"Invalid XML file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(LocalizationManager.GetString("ScriptGenerator.Error.InvalidXML", ex.Message),
+                        LocalizationManager.GetString("Message.Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error reading file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(LocalizationManager.GetString("ScriptGenerator.Error.ReadingFile", ex.Message),
+                        LocalizationManager.GetString("Message.Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
@@ -120,8 +126,19 @@ namespace AAToggleGenerator
 
         private static void ShowEntrySelectionDialog(List<CheatEntry> entries)
         {
-            // Create TreeView for user selection
-            using (TreeView treeView = new TreeView { Dock = DockStyle.Fill, CheckBoxes = true })
+            // Create TreeView for user selection with proper spacing
+            using (Panel treePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(10, 20, 10, 25)
+            })
+            using (TreeView treeView = new TreeView
+            {
+                Dock = DockStyle.Fill,
+                CheckBoxes = true,
+                Scrollable = true,
+                HideSelection = false
+            })
             {
                 treeView.Font = new System.Drawing.Font(treeView.Font.FontFamily, TreeViewFontSize);
 
@@ -169,17 +186,7 @@ namespace AAToggleGenerator
                     depthLastNode[entry.Depth] = currentNode;
                 }
 
-                treeView.AfterCheck += (sender, e) =>
-                {
-                    if (e.Node != null)
-                    {
-                        CheatEntry? entry = e.Node.Tag as CheatEntry;
-                        if (entry != null && entry.IsGroup)
-                        {
-                            e.Node.Checked = false;  // Force reset
-                        }
-                    }
-                };
+                // Group node handling is now integrated into the main TreeView_AfterCheck method
 
                 treeView.BeforeCheck += (sender, e) =>
                 {
@@ -211,31 +218,38 @@ namespace AAToggleGenerator
 
                 ExpandTreeView(treeView, DefaultTreeViewDepth);
 
-                // Create selection form with proper disposal
+                // Create selection form with proper disposal and DPI awareness
                 using (Form treeForm = new Form
                 {
-                    Text = "Select Cheat Entries",
+                    Text = LocalizationManager.GetString("ScriptGenerator.SelectEntries"),
                     Width = DefaultFormWidth,
                     Height = DefaultFormHeight,
-                    StartPosition = FormStartPosition.CenterScreen
+                    StartPosition = FormStartPosition.CenterScreen,
+                    AutoScaleMode = AutoScaleMode.Dpi
                 })
                 using (Label depthLabel = new Label
                 {
-                    Text = "Expand Depth:",
+                    Text = LocalizationManager.GetString("ScriptGenerator.ExpandDepth"),
                     Dock = DockStyle.Top,
-                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft
+                    Height = 30,
+                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
+                    Padding = new Padding(10, 5, 10, 0)
                 })
                 using (NumericUpDown depthSelector = new NumericUpDown
                 {
                     Minimum = 0,
                     Maximum = 10,
                     Value = DefaultTreeViewDepth,
-                    Dock = DockStyle.Top
+                    Dock = DockStyle.Top,
+                    Height = 30,
+                    Margin = new Padding(10, 0, 10, 10)
                 })
                 using (Button confirmButton = new Button
                 {
-                    Text = "Confirm",
+                    Text = LocalizationManager.GetString("ScriptGenerator.Confirm"),
                     Dock = DockStyle.Bottom,
+                    Height = 40,
+                    Margin = new Padding(10, 15, 10, 10),
                     DialogResult = DialogResult.OK
                 })
                 {
@@ -245,13 +259,23 @@ namespace AAToggleGenerator
                         ExpandTreeView(treeView, depth);
                     };
 
-                    treeForm.Controls.Add(treeView);
-                    treeForm.Controls.Add(depthSelector);
-                    treeForm.Controls.Add(depthLabel);
-                    treeForm.Controls.Add(confirmButton);
+                    // Add TreeView to its panel
+                    treePanel.Controls.Add(treeView);
+
+                    // Add controls in correct order for proper docking
+                    treeForm.Controls.Add(confirmButton);    // Bottom control first
+                    treeForm.Controls.Add(depthSelector);    // Top controls
+                    treeForm.Controls.Add(depthLabel);       // Top controls
+                    treeForm.Controls.Add(treePanel);        // Fill remaining space with panel
 
                     // Apply theme after adding controls
                     ApplyThemeToDialog(treeForm, treeView, depthLabel, depthSelector, confirmButton);
+
+                    // Apply theme to the panel as well
+                    if (WindowsThemeHelper.IsThemeAwareSupported())
+                    {
+                        treePanel.BackColor = WindowsThemeHelper.GetBackgroundColor();
+                    }
 
                     if (treeForm.ShowDialog() != DialogResult.OK)
                         return;
@@ -293,6 +317,26 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("  getLuaEngine().Close()");
             scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
+
+            scriptBuilder.AppendLine("\n--[[");
+            scriptBuilder.AppendLine("-- attach process");
+            scriptBuilder.AppendLine("local processName = \"game_exe.exe\"");
+            scriptBuilder.AppendLine("local pid = getProcessIDFromProcessName(processName)");
+            scriptBuilder.AppendLine("if pid ~= nil and pid > 0 then");
+            scriptBuilder.AppendLine("  local currentPid = getOpenedProcessID() or 0");
+            scriptBuilder.AppendLine("  if currentPid ~= pid then");
+            scriptBuilder.AppendLine("    openProcess(processName)");
+            scriptBuilder.AppendLine("  if currentPid ~= pid then");
+            scriptBuilder.AppendLine("    openProcess(processName)");
+            scriptBuilder.AppendLine("    print(\"Attached to: \" .. processName)");
+            scriptBuilder.AppendLine("  else");
+            scriptBuilder.AppendLine("    print(\"Already attached to: \" .. processName)");
+            scriptBuilder.AppendLine("  end");
+            scriptBuilder.AppendLine("end");
+            scriptBuilder.AppendLine("synchronize(function()");
+            scriptBuilder.AppendLine("  getLuaEngine().Close()");
+            scriptBuilder.AppendLine("end)");
+            scriptBuilder.AppendLine("--]]\n");
 
             foreach (var entry in enableOrder)
             {
@@ -352,7 +396,14 @@ namespace AAToggleGenerator
 
         private static void ShowScriptWithHighlighting(string script)
         {
-            using (Form scriptForm = new Form { Width = ScriptFormWidth, Height = ScriptFormHeight, Text = "Generated Lua Script" })
+            using (Form scriptForm = new Form
+            {
+                Width = ScriptFormWidth,
+                Height = ScriptFormHeight,
+                Text = LocalizationManager.GetString("ScriptGenerator.GeneratedScript"),
+                StartPosition = FormStartPosition.CenterScreen,
+                AutoScaleMode = AutoScaleMode.Dpi
+            })
             using (Scintilla scintilla = new Scintilla
             {
                 Dock = DockStyle.Fill,
@@ -360,25 +411,18 @@ namespace AAToggleGenerator
                 Lexer = Lexer.Lua
             })
             {
-                // Set Lua syntax highlighting
+                // Set basic font properties
                 scintilla.Styles[Style.Default].Font = ScintillaFontName;
                 scintilla.Styles[Style.Default].Size = ScintillaFontSize;
-                scintilla.Styles[Style.Default].ForeColor = System.Drawing.Color.Black;
-                scintilla.Styles[Style.Lua.Comment].ForeColor = System.Drawing.Color.Gray;
-                scintilla.Styles[Style.Lua.CommentLine].ForeColor = System.Drawing.Color.Gray;
-                scintilla.Styles[Style.Lua.String].ForeColor = System.Drawing.Color.Brown;
-                scintilla.Styles[Style.Lua.Number].ForeColor = System.Drawing.Color.Purple;
-                scintilla.Styles[Style.Lua.Operator].ForeColor = System.Drawing.Color.DarkOrange;
-                scintilla.Styles[Style.Lua.Word].ForeColor = System.Drawing.Color.Blue;
                 scintilla.Styles[Style.Lua.Word].Bold = true;
 
                 scintilla.SetKeywords(0, LuaKeywords);
 
                 scriptForm.Controls.Add(scintilla);
-                
-                // Apply theme
+
+                // Apply theme (this will set all colors appropriately)
                 ApplyThemeToScriptDialog(scriptForm, scintilla);
-                
+
                 scriptForm.ShowDialog();
             }
         }
@@ -426,23 +470,62 @@ namespace AAToggleGenerator
         private static void TreeView_AfterCheck(object? sender, TreeViewEventArgs e)
         {
             TreeView? treeView = sender as TreeView;
-            if (treeView == null) return;
+            if (treeView == null || e.Node == null || _isUpdatingChildren) return;
 
+            // Check if this is a group node
+            CheatEntry? entry = e.Node.Tag as CheatEntry;
+            if (entry != null && entry.IsGroup)
+            {
+                // Group nodes cannot be checked, force reset
+                _isUpdatingChildren = true;
+                try
+                {
+                    e.Node.Checked = false;
+                }
+                finally
+                {
+                    _isUpdatingChildren = false;
+                }
+                return;
+            }
+
+            _isUpdatingChildren = true;
             treeView.BeginUpdate();
 
             try
             {
-                if (e.Node != null)
-                {
-                    foreach (TreeNode child in e.Node.Nodes)
-                    {
-                        child.Checked = e.Node.Checked;
-                    }
-                }
+                // Recursively update all child nodes to match parent's checked state
+                UpdateChildNodes(e.Node, e.Node.Checked);
             }
             finally
             {
                 treeView.EndUpdate();
+                _isUpdatingChildren = false;
+            }
+        }
+
+        private static void UpdateChildNodes(TreeNode parentNode, bool isChecked)
+        {
+            foreach (TreeNode child in parentNode.Nodes)
+            {
+                // Check if child is a group node
+                CheatEntry? childEntry = child.Tag as CheatEntry;
+                if (childEntry != null && childEntry.IsGroup)
+                {
+                    // Group nodes should remain unchecked, but still process their children
+                    child.Checked = false;
+                }
+                else
+                {
+                    // Regular nodes follow parent's state
+                    child.Checked = isChecked;
+                }
+
+                // Recursively update child's children
+                if (child.Nodes.Count > 0)
+                {
+                    UpdateChildNodes(child, isChecked);
+                }
             }
         }
 

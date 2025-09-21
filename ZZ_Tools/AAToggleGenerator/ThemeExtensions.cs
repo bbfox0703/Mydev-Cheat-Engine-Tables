@@ -150,7 +150,7 @@ namespace AAToggleGenerator
                 return;
 
             var currentTheme = WindowsThemeHelper.GetCurrentTheme();
-            
+
             if (currentTheme == WindowsThemeHelper.WindowsTheme.Dark)
             {
                 ApplyDarkThemeToScintilla(scintilla);
@@ -161,11 +161,33 @@ namespace AAToggleGenerator
             }
         }
 
+        /// <summary>
+        /// Applies theme to ComboBox
+        /// </summary>
+        public static void ApplyTheme(this ComboBox comboBox)
+        {
+            if (!WindowsThemeHelper.IsThemeAwareSupported())
+                return;
+
+            var backgroundColor = WindowsThemeHelper.GetBackgroundColor();
+            var foregroundColor = WindowsThemeHelper.GetForegroundColor();
+
+            comboBox.BackColor = backgroundColor;
+            comboBox.ForeColor = foregroundColor;
+            comboBox.FlatStyle = FlatStyle.Flat;
+        }
+
         private static void ApplyDarkThemeToScintilla(Scintilla scintilla)
         {
             // Dark theme colors for Scintilla (Lua syntax highlighting)
             scintilla.Styles[Style.Default].BackColor = Color.FromArgb(30, 30, 30);
             scintilla.Styles[Style.Default].ForeColor = Color.FromArgb(220, 220, 220);
+
+            // Ensure all styles inherit the background color
+            for (int i = 0; i < 256; i++)
+            {
+                scintilla.Styles[i].BackColor = Color.FromArgb(30, 30, 30);
+            }
             
             // Lua-specific styles for dark theme
             scintilla.Styles[Style.Lua.Default].BackColor = Color.FromArgb(30, 30, 30);
@@ -195,6 +217,12 @@ namespace AAToggleGenerator
             // Light theme (default) colors for Scintilla
             scintilla.Styles[Style.Default].BackColor = Color.White;
             scintilla.Styles[Style.Default].ForeColor = Color.Black;
+
+            // Ensure all styles inherit the background color
+            for (int i = 0; i < 256; i++)
+            {
+                scintilla.Styles[i].BackColor = Color.White;
+            }
             
             // Lua-specific styles for light theme
             scintilla.Styles[Style.Lua.Comment].ForeColor = Color.FromArgb(0, 128, 0);        // Green comments
@@ -233,6 +261,9 @@ namespace AAToggleGenerator
                         break;
                     case NumericUpDown numericUpDown:
                         numericUpDown.ApplyTheme();
+                        break;
+                    case ComboBox comboBox:
+                        comboBox.ApplyTheme();
                         break;
                     case Scintilla scintilla:
                         scintilla.ApplyTheme();
