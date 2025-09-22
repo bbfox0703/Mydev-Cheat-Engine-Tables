@@ -326,9 +326,8 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("  local currentPid = getOpenedProcessID() or 0");
             scriptBuilder.AppendLine("  if currentPid ~= pid then");
             scriptBuilder.AppendLine("    openProcess(processName)");
-            scriptBuilder.AppendLine("  if currentPid ~= pid then");
-            scriptBuilder.AppendLine("    openProcess(processName)");
             scriptBuilder.AppendLine("    print(\"Attached to: \" .. processName)");
+            scriptBuilder.AppendLine("    Sleep(333)");
             scriptBuilder.AppendLine("  else");
             scriptBuilder.AppendLine("    print(\"Already attached to: \" .. processName)");
             scriptBuilder.AppendLine("  end");
