@@ -91,7 +91,7 @@ end)
   15, -- "瀏覽道具後設定個數 / Browse &amp; set item amount"
   26, -- "戰鬥：傷害控制 / Battle: damage control"
   50, -- "道具無限 / inf item use"
-  51, -- "戰鬥：快速破防 / Battle: fast break gauge"
+  51, -- "戰鬥：快速BP / Battle: fast BP"
   55, -- "戰鬥結束後恢復BP / Restore break gauge after battle"
   56, -- "支援經驗值倍率 / Support XP multiplier"
   58, -- "快速超能驅動 / Fast overdrive (OD)"
@@ -102,6 +102,9 @@ end)
   161, -- "單一任務資料檢視 / Quest viewer"
   185, -- "ORBMENT - 目前選擇之結晶迴路 / Cur. quartz"
   260, -- "變更視角 / Change POV [credit to amorrow28]"
+  273, -- "戰鬥：命中% 最大 / Battle: max HIT%"
+  275, -- "戰鬥：設定迴避% / Battle: set evade%"
+  277, -- "戰鬥：設定魔法迴避% / Battle: set magic evade%"
   45, -- "戰鬥：試著HP不變0 / Battle: player HP: try to keep non-zero"
   46, -- "戰鬥：EP使用後回滿 / Battle: full EP after use"
   47, -- "戰鬥：CP使用後回滿 / Battle: full CP after use"
@@ -147,6 +150,10 @@ local disableBattleScripts = {
   20, -- "如果數量 &gt;="
   18, -- "設定數量為："
   16, -- "道具目前數量必須 &gt;="
+  277, -- "戰鬥：設定魔法迴避% / Battle: set magic evade%"
+  275, -- "戰鬥：設定迴避% / Battle: set evade%"
+  273, -- "戰鬥：命中% 最大 / Battle: max HIT%"
+  272, -- "戰鬥：設定爆擊% / Battle: set crit%"
   260, -- "變更視角 / Change POV [credit to amorrow28]"
   185, -- "ORBMENT - 目前選擇之結晶迴路 / Cur. quartz"
   168, -- "取得全部任務進度資料 / Get all quests progress"
@@ -161,7 +168,7 @@ local disableBattleScripts = {
   58, -- "快速超能驅動 / Fast overdrive (OD)"
   56, -- "支援經驗值倍率 / Support XP multiplier"
   55, -- "戰鬥結束後恢復BP / Restore break gauge after battle"
-  51, -- "戰鬥：快速破防 / Battle: fast break gauge"
+  51, -- "戰鬥：快速BP / Battle: fast BP"
   50, -- "道具無限 / inf item use"
   26, -- "戰鬥：傷害控制 / Battle: damage control"
   15, -- "瀏覽道具後設定個數 / Browse &amp; set item amount"
@@ -201,7 +208,11 @@ synchronize(function() getLuaEngine().Close() end)
 --     ID: 47, Description: "戰鬥：CP使用後回滿 / Battle: full CP after use", Depth: 2
 --     ID: 48, Description: "戰鬥：擊暈倍率 / Battle: Stun multiplier", Depth: 2
 --   ID: 50, Description: "道具無限 / inf item use", Depth: 1
---   ID: 51, Description: "戰鬥：快速破防 / Battle: fast break gauge", Depth: 1
+--   ID: 272, Description: "戰鬥：設定爆擊% / Battle: set crit%", Depth: 1
+--   ID: 273, Description: "戰鬥：命中% 最大 / Battle: max HIT%", Depth: 1
+--   ID: 275, Description: "戰鬥：設定迴避% / Battle: set evade%", Depth: 1
+--   ID: 277, Description: "戰鬥：設定魔法迴避% / Battle: set magic evade%", Depth: 1
+--   ID: 51, Description: "戰鬥：快速BP / Battle: fast BP", Depth: 1
 --   ID: 55, Description: "戰鬥結束後恢復BP / Restore break gauge after battle", Depth: 1
 --   ID: 56, Description: "支援經驗值倍率 / Support XP multiplier", Depth: 1
 --   ID: 58, Description: "快速超能驅動 / Fast overdrive (OD)", Depth: 1
@@ -1637,6 +1648,363 @@ sora_1st.exe+353C4F: 48 8B D6                 - mov rdx,rsi
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
+          <ID>272</ID>
+          <Description>"戰鬥：設定爆擊% / Battle: set crit%"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CRIT_MAX,sora_1st.exe,8B 46 6C EB 03) // should be unique
+alloc(newmem,$1000,INJECT_CRIT_MAX)
+
+label(code)
+label(return i_hitp_target)
+
+newmem:
+
+code:
+  mov eax,[rsi+6C]
+  //
+  // check if enemy
+  cmp dword ptr [rsi+44], 0 // RNG
+  je @F
+  cmp dword ptr [rsi+78], 0 // max stun value
+  jne @F
+
+  mov eax, [i_hitp_target]
+@@:
+  //
+  reassemble(INJECT_CRIT_MAX+3)
+  //jmp sora_1st.exe+C2260
+  jmp return
+align 10 cc
+  i_hitp_target:
+  dd C8
+
+INJECT_CRIT_MAX:
+  jmp newmem
+return:
+registersymbol(INJECT_CRIT_MAX i_hitp_target)
+
+[DISABLE]
+
+INJECT_CRIT_MAX:
+  db 8B 46 6C EB 03
+
+unregistersymbol(INJECT_CRIT_MAX i_hitp_target)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+C2258
+
+sora_1st.exe+C223E: 44 8B C3        - mov r8d,ebx
+sora_1st.exe+C2241: 8B 4E 60        - mov ecx,[rsi+60]
+sora_1st.exe+C2244: 41 03 C8        - add ecx,r8d
+sora_1st.exe+C2247: 0F 48 CB        - cmovs ecx,ebx
+sora_1st.exe+C224A: 8B D9           - mov ebx,ecx
+sora_1st.exe+C224C: EB 19           - jmp sora_1st.exe+C2267
+sora_1st.exe+C224E: 8B 46 64        - mov eax,[rsi+64]
+sora_1st.exe+C2251: EB 0D           - jmp sora_1st.exe+C2260
+sora_1st.exe+C2253: 8B 46 68        - mov eax,[rsi+68]
+sora_1st.exe+C2256: EB 08           - jmp sora_1st.exe+C2260
+// ---------- INJECTING HERE ----------
+sora_1st.exe+C2258: 8B 46 6C        - mov eax,[rsi+6C]
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+C225B: EB 03           - jmp sora_1st.exe+C2260
+sora_1st.exe+C225D: 8B 46 70        - mov eax,[rsi+70]
+sora_1st.exe+C2260: 85 C0           - test eax,eax
+sora_1st.exe+C2262: 0F 48 C3        - cmovs eax,ebx
+sora_1st.exe+C2265: 8B D8           - mov ebx,eax
+sora_1st.exe+C2267: 48 8B 6C 24 38  - mov rbp,[rsp+38]
+sora_1st.exe+C226C: 8B C3           - mov eax,ebx
+sora_1st.exe+C226E: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+sora_1st.exe+C2273: 48 8B 74 24 40  - mov rsi,[rsp+40]
+sora_1st.exe+C2278: 48 83 C4 20     - add rsp,20
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>274</ID>
+              <Description>"target"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_hitp_target</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>273</ID>
+          <Description>"戰鬥：命中% 最大 / Battle: max HIT%"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_HIT_MAX,sora_1st.exe,C3 8B 4E 60 41 03 C8) // should be unique
+alloc(newmem,$1000,INJECT_BATT_HIT_MAX)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov ecx,[rsi+60]
+  //
+  // check if enemy
+  cmp dword ptr [rsi+44], 0 // RNG
+  je @F
+  cmp dword ptr [rsi+78], 0 // max stun value
+  jne @F
+  mov ecx, C8
+  //
+
+@@:
+  add ecx,r8d
+  jmp return
+
+INJECT_BATT_HIT_MAX+01:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATT_HIT_MAX)
+
+[DISABLE]
+
+INJECT_BATT_HIT_MAX+01:
+  db 8B 4E 60 41 03 C8
+
+unregistersymbol(INJECT_BATT_HIT_MAX)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+C2241
+
+sora_1st.exe+C2221: 4C 8B 81 F8 00 00 00  - mov r8,[rcx+000000F8]
+sora_1st.exe+C2228: 4D 85 C0              - test r8,r8
+sora_1st.exe+C222B: 74 11                 - je sora_1st.exe+C223E
+sora_1st.exe+C222D: 8B 4E 60              - mov ecx,[rsi+60]
+sora_1st.exe+C2230: 45 8B 40 04           - mov r8d,[r8+04]
+sora_1st.exe+C2234: 41 03 C8              - add ecx,r8d
+sora_1st.exe+C2237: 0F 48 CB              - cmovs ecx,ebx
+sora_1st.exe+C223A: 8B D9                 - mov ebx,ecx
+sora_1st.exe+C223C: EB 29                 - jmp sora_1st.exe+C2267
+sora_1st.exe+C223E: 44 8B C3              - mov r8d,ebx
+// ---------- INJECTING HERE ----------
+sora_1st.exe+C2241: 8B 4E 60              - mov ecx,[rsi+60]
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+C2244: 41 03 C8              - add ecx,r8d
+sora_1st.exe+C2247: 0F 48 CB              - cmovs ecx,ebx
+sora_1st.exe+C224A: 8B D9                 - mov ebx,ecx
+sora_1st.exe+C224C: EB 19                 - jmp sora_1st.exe+C2267
+sora_1st.exe+C224E: 8B 46 64              - mov eax,[rsi+64]
+sora_1st.exe+C2251: EB 0D                 - jmp sora_1st.exe+C2260
+sora_1st.exe+C2253: 8B 46 68              - mov eax,[rsi+68]
+sora_1st.exe+C2256: EB 08                 - jmp sora_1st.exe+C2260
+INJECT_CRIT_MAX: E9 A3 DD E1 FF        - jmp 7FF63FFB0000
+sora_1st.exe+C225D: 8B 46 70              - mov eax,[rsi+70]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>275</ID>
+          <Description>"戰鬥：設定迴避% / Battle: set evade%"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_EVADEP,sora_1st.exe,8B 46 64 EB 0D) // should be unique
+alloc(newmem,$1000,INJECT_SET_EVADEP)
+
+label(code)
+label(return i_evade_target)
+
+newmem:
+
+code:
+  mov eax,[rsi+64]
+
+  //
+  // check if enemy
+  cmp dword ptr [rsi+44], 0 // RNG
+  je @F
+  cmp dword ptr [rsi+78], 0 // max stun value
+  jne @F
+
+  mov eax, [i_evade_target]
+
+@@:
+  //
+  reassemble(INJECT_SET_EVADEP+3)
+  //jmp sora_1st.exe+C2260
+  jmp return
+align 10 cc
+  i_evade_target:
+  dd 21
+
+INJECT_SET_EVADEP:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_EVADEP i_evade_target)
+
+[DISABLE]
+
+INJECT_SET_EVADEP:
+  db 8B 46 64 EB 0D
+
+unregistersymbol(INJECT_SET_EVADEP i_evade_target)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+C224E
+
+sora_1st.exe+C2234: 41 03 C8        - add ecx,r8d
+sora_1st.exe+C2237: 0F 48 CB        - cmovs ecx,ebx
+sora_1st.exe+C223A: 8B D9           - mov ebx,ecx
+sora_1st.exe+C223C: EB 29           - jmp sora_1st.exe+C2267
+sora_1st.exe+C223E: 44 8B C3        - mov r8d,ebx
+sora_1st.exe+C2241: E9 BA DD E1 FF  - jmp 7FF63FFB0000
+sora_1st.exe+C2246: 90              - nop 
+sora_1st.exe+C2247: 0F 48 CB        - cmovs ecx,ebx
+sora_1st.exe+C224A: 8B D9           - mov ebx,ecx
+sora_1st.exe+C224C: EB 19           - jmp sora_1st.exe+C2267
+// ---------- INJECTING HERE ----------
+sora_1st.exe+C224E: 8B 46 64        - mov eax,[rsi+64]
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+C2251: EB 0D           - jmp sora_1st.exe+C2260
+sora_1st.exe+C2253: 8B 46 68        - mov eax,[rsi+68]
+sora_1st.exe+C2256: EB 08           - jmp sora_1st.exe+C2260
+INJECT_CRIT_MAX: E9 A3 DD E0 FF  - jmp 7FF63FFA0000
+sora_1st.exe+C225D: 8B 46 70        - mov eax,[rsi+70]
+sora_1st.exe+C2260: 85 C0           - test eax,eax
+sora_1st.exe+C2262: 0F 48 C3        - cmovs eax,ebx
+sora_1st.exe+C2265: 8B D8           - mov ebx,eax
+sora_1st.exe+C2267: 48 8B 6C 24 38  - mov rbp,[rsp+38]
+sora_1st.exe+C226C: 8B C3           - mov eax,ebx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>276</ID>
+              <Description>"target"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_evade_target</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>277</ID>
+          <Description>"戰鬥：設定魔法迴避% / Battle: set magic evade%"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : sora_1st.exe
+  Version: 
+  Date   : 2025-09-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_M_EVADEP,sora_1st.exe,8B 46 68 EB 08) // should be unique
+alloc(newmem,$1000,INJECT_SET_M_EVADEP)
+
+label(code)
+label(return i_m_evade_target)
+
+newmem:
+
+code:
+  mov eax,[rsi+68]
+  //
+  // check if enemy
+  cmp dword ptr [rsi+44], 0 // RNG
+  je @F
+  cmp dword ptr [rsi+78], 0 // max stun value
+  jne @F
+
+  mov eax, [i_m_evade_target]
+
+@@:
+  //
+  reassemble(INJECT_SET_M_EVADEP+3)
+  //jmp sora_1st.exe+C2260
+  jmp return
+align 10 cc
+  i_m_evade_target:
+  dd 43
+
+INJECT_SET_M_EVADEP:
+  jmp newmem
+return:
+registersymbol(INJECT_SET_M_EVADEP i_m_evade_target)
+
+[DISABLE]
+
+INJECT_SET_M_EVADEP:
+  db 8B 46 68 EB 08
+
+unregistersymbol(INJECT_SET_M_EVADEP i_m_evade_target)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: sora_1st.exe+C2253
+
+sora_1st.exe+C2237: 0F 48 CB        - cmovs ecx,ebx
+sora_1st.exe+C223A: 8B D9           - mov ebx,ecx
+sora_1st.exe+C223C: EB 29           - jmp sora_1st.exe+C2267
+sora_1st.exe+C223E: 44 8B C3        - mov r8d,ebx
+sora_1st.exe+C2241: E9 BA DD E1 FF  - jmp 7FF63FFB0000
+sora_1st.exe+C2246: 90              - nop 
+sora_1st.exe+C2247: 0F 48 CB        - cmovs ecx,ebx
+sora_1st.exe+C224A: 8B D9           - mov ebx,ecx
+sora_1st.exe+C224C: EB 19           - jmp sora_1st.exe+C2267
+INJECT_SET_EVADEP: E9 AD DD DF FF  - jmp 7FF63FF90000
+// ---------- INJECTING HERE ----------
+sora_1st.exe+C2253: 8B 46 68        - mov eax,[rsi+68]
+// ---------- DONE INJECTING  ----------
+sora_1st.exe+C2256: EB 08           - jmp sora_1st.exe+C2260
+INJECT_CRIT_MAX: E9 A3 DD E0 FF  - jmp 7FF63FFA0000
+sora_1st.exe+C225D: 8B 46 70        - mov eax,[rsi+70]
+sora_1st.exe+C2260: 85 C0           - test eax,eax
+sora_1st.exe+C2262: 0F 48 C3        - cmovs eax,ebx
+sora_1st.exe+C2265: 8B D8           - mov ebx,eax
+sora_1st.exe+C2267: 48 8B 6C 24 38  - mov rbp,[rsp+38]
+sora_1st.exe+C226C: 8B C3           - mov eax,ebx
+sora_1st.exe+C226E: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+sora_1st.exe+C2273: 48 8B 74 24 40  - mov rsi,[rsp+40]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>278</ID>
+              <Description>"target"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_m_evade_target</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>51</ID>
           <Description>"戰鬥：快速BP / Battle: fast BP"</Description>
           <Options moHideChildren="1"/>
@@ -2550,7 +2918,8 @@ sora_1st.exe+445411: 75 10              - jne sora_1st.exe+445423
           <CheatEntries>
             <CheatEntry>
               <ID>74</ID>
-              <Description>"ID?"</Description>
+              <Description>"ID? (勿更改 / do not edit)"</Description>
+              <DropDownListLink>Char.ID</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -5405,14 +5774,32 @@ sora_1st.exe+455E56: F3 0F 11 8D B4 00 00 00  - movss [rbp+000000B4],xmm1
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
+          <ID>270</ID>
+          <Description>"Char.ID"</Description>
+          <DropDownList DisplayValueAsItem="1">0:艾絲芾爾 / エステル / Estelle
+1:約書亞 / ヨシュア / Joshua
+2:シェラザード / Scherazard
+3:オリビエ / Olivier
+4:克蘿賽 / クローゼ / Kloe
+5:阿加特 / アガット / Agate
+6:ティータ / Tita
+7:陣 / ジン / Zin
+</DropDownList>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
           <ID>187</ID>
           <Description>"Quartz.ID"</Description>
           <DropDownList DisplayValueAsItem="1">3740:黃玉之盾/Earth Shld.
 3830:蒼玉之盾/Water Shld.
+3840:治癒
+3850:慈愛
 3940:紅玉之盾/Fire Shld.
 4030:翠玉之盾/Wind Shld.
 4112:驅動3
-4312:EP3
+4212:EP3
+4230:黃金之盾
+4312:省EP3
 4330:白銀之盾/Mirage Shld.
 </DropDownList>
           <GroupHeader>1</GroupHeader>
@@ -5441,7 +5828,20 @@ sora_1st.exe+455E56: F3 0F 11 8D B4 00 00 00  - movss [rbp+000000B4],xmm1
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols/>
+  <UserdefinedSymbols>
+    <SymbolEntry>
+      <Name>speedModifier</Name>
+      <Address>1C8E6A50000</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>useMouse</Name>
+      <Address>1C8E6A50010</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>mouseSensitivity</Name>
+      <Address>1C8E6A50020</Address>
+    </SymbolEntry>
+  </UserdefinedSymbols>
   <Comments>The movement algorithm is based on Cyber's CS4 script, adapted for Kuro's engine by me.  Credit also goes to DhaosCollider for AOB (from Kuro CLE) for FOV, to lock player movement, and for the fantastic idea of using the latter to allow WASD control.  My eternal gratitude to both!
 </Comments>
   <LuaScript>--[[
