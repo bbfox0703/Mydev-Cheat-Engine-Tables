@@ -66,6 +66,23 @@ registersymbol(ResourceManagerClearItemCountsProc)
 
 {$lua}
 if syntaxcheck then return end
+
+local processName = "AtelierReslerianaRW.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+
 -- 📏 SafeMonoDestroy: Clean up all Mono-related state
 if _G.SafeMonoDestroy == nil then
   _G.SafeMonoDestroy = function()
@@ -503,9 +520,9 @@ end)
   20, -- "Battle: TP multiplier"
   24, -- "Battle: break multiplier"
   35, -- "Item Editor"
+  71, -- "Battle: Damage multiplier"
   22, -- "monitor another check point"
   27, -- "Fix HP gauge"
-  40, -- "m_properties+"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -532,6 +549,7 @@ local disableBattleScripts = {
   40, -- "m_properties+"
   27, -- "Fix HP gauge"
   22, -- "monitor another check point"
+  71, -- "Battle: Damage multiplier"
   35, -- "Item Editor"
   24, -- "Battle: break multiplier"
   20, -- "Battle: TP multiplier"
@@ -557,6 +575,7 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 10, Description: "Toggle Compact View", Depth: 0
 -- ID: 0, Description: "Enable mono (waiting IL2CPP to 100% complete)", Depth: 0
 --   ID: 17, Description: "Battle: inf. item use", Depth: 1
+--   ID: 71, Description: "Battle: Damage multiplier", Depth: 1
 --   ID: 5, Description: "Battle: try to keep min HP/AP", Depth: 1
 --     ID: 22, Description: "monitor another check point", Depth: 2
 --     ID: 27, Description: "Fix HP gauge", Depth: 2
@@ -624,6 +643,120 @@ GameAssembly.dll+217DE27: E8 24 E4 11 00        - call TraitUtility.BMOLBBIBKPE
 GameAssembly.dll+217DE2C: 48 8B E8              - mov rbp,rax
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>71</ID>
+          <Description>"Battle: Damage multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_DAMAGE_MULTI,GameAssembly.dll,44 2B AD F0 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
+
+label(code)
+label(return vf_damage_multi vf_damage_multi_2_player)
+
+newmem:
+  cmp dword ptr [rbp+000000F0], 0
+  jle code
+
+  vmovaps xmm14, [vf_damage_multi]
+  vcvtsi2ss xmm15, xmm15, dword ptr [rbp+000000F0]
+  vshufps xmm15, xmm15, xmm15, 0
+  vmulps xmm15, xmm14, xmm15
+
+  cmp dword ptr [edi+1C], 0
+  je to_enemy
+
+  vshufps xmm15, xmm15, xmm15, 1
+  jmp post_all
+
+
+to_enemy:
+  // do nothing
+
+post_all:
+  vcvttps2dq xmm15, xmm15          // xmm15[0].float -&gt; xmm15[0].int32 (截斷)
+  vmovd dword ptr [rbp+000000F0], xmm15
+
+
+code:
+  sub r13d,[rbp+000000F0]
+  jmp return
+align 10 cc
+  vf_damage_multi:
+  dd (float)1.2
+  vf_damage_multi_2_player:
+  dd (float)0.8
+  dd 0 0
+
+INJECT_DAMAGE_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_DAMAGE_MULTI vf_damage_multi vf_damage_multi_2_player)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI:
+  db 44 2B AD F0 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+15D02D3
+
+GameAssembly.dll+15D02A9: 49 8B 41 30                    - mov rax,[r9+30]
+GameAssembly.dll+15D02AD: 83 78 28 00                    - cmp dword ptr [rax+28],00
+GameAssembly.dll+15D02B1: 48 8D 51 F0                    - lea rdx,[rcx-10]
+GameAssembly.dll+15D02B5: 48 0F 4D D1                    - cmovge rdx,rcx
+GameAssembly.dll+15D02B9: 49 8B CC                       - mov rcx,r12
+GameAssembly.dll+15D02BC: E8 3F 96 D8 FE                 - call GameAssembly.dll+359900
+GameAssembly.dll+15D02C1: 4D 8B C6                       - mov r8,r14
+GameAssembly.dll+15D02C4: 48 8D 8D F0 00 00 00           - lea rcx,[rbp+000000F0]
+GameAssembly.dll+15D02CB: 49 8B D4                       - mov rdx,r12
+GameAssembly.dll+15D02CE: E8 2D 96 D8 FE                 - call GameAssembly.dll+359900
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+15D02D3: 44 2B AD F0 00 00 00           - sub r13d,[rbp+000000F0]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+15D02DA: 49 BC F0 FF FF FF FF FF FF 0F  - mov r12,0FFFFFFFFFFFFFF0
+GameAssembly.dll+15D02E4: 44 89 6F 10                    - mov [rdi+10],r13d
+GameAssembly.dll+15D02E8: 45 33 ED                       - xor r13d,r13d
+GameAssembly.dll+15D02EB: 48 8B 46 48                    - mov rax,[rsi+48]
+GameAssembly.dll+15D02EF: 48 89 45 00                    - mov [rbp+00],rax
+GameAssembly.dll+15D02F3: 48 8B 05 66 BA 75 04           - mov rax,[GameAssembly.dll+5D2BD60]
+GameAssembly.dll+15D02FA: 48 8B 40 20                    - mov rax,[rax+20]
+GameAssembly.dll+15D02FE: F6 80 35 01 00 00 01           - test byte ptr [rax+00000135],01
+GameAssembly.dll+15D0305: 75 08                          - jne GameAssembly.dll+15D030F
+GameAssembly.dll+15D0307: 48 8B C8                       - mov rcx,rax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>72</ID>
+              <Description>"multiplier to enemy"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>73</ID>
+              <Description>"multiplier to player"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_damage_multi_2_player</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>5</ID>
@@ -734,7 +867,7 @@ align 10 cc
   vf_min_enemy_hp_ratio:
   dd (float)0
   vf_max_enemy_hp_ratio:
-  dd (float)1
+  dd (float)0.85
 
 INJECT_BATTLE_CONTROL:
   jmp newmem
@@ -856,7 +989,7 @@ endp_b:
 
 to_enemy:
   cmp dword ptr [vf_min_enemy_hp_ratio], 0
-  je end_all
+  je endp_ea
 
   // HP
   vcvtsi2ss xmm15, xmm15, dword ptr [rcx+14]
@@ -884,6 +1017,9 @@ end_all:
 align 10 cc
   i_tmp1:
   dd 0
+  dd 0 0 0
+  vf_damage_multi:
+  dd (float)3.33333333
 
 INJECT_BATTLE_CONTROL2:
   jmp newmem
@@ -896,7 +1032,7 @@ registersymbol(INJECT_BATTLE_CONTROL2)
 INJECT_BATTLE_CONTROL2:
   db 8B 85 08 01 00 00
 
-unregistersymbol(INJECT_BATTLE_CONTROL2)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
@@ -1472,6 +1608,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                 <CheatEntry>
                   <ID>41</ID>
                   <Description>"m_addTrait0"</Description>
+                  <DropDownListLink>Trait.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1484,6 +1621,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                 <CheatEntry>
                   <ID>42</ID>
                   <Description>"m_addTrait1"</Description>
+                  <DropDownListLink>Trait.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1496,6 +1634,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                 <CheatEntry>
                   <ID>43</ID>
                   <Description>"m_addTrait2"</Description>
+                  <DropDownListLink>Trait.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1508,6 +1647,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                 <CheatEntry>
                   <ID>44</ID>
                   <Description>"m_oldTrait0"</Description>
+                  <DropDownListLink>Trait.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1520,6 +1660,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                 <CheatEntry>
                   <ID>45</ID>
                   <Description>"m_oldTrait1"</Description>
+                  <DropDownListLink>Trait.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1532,6 +1673,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                 <CheatEntry>
                   <ID>46</ID>
                   <Description>"m_oldTrait2"</Description>
+                  <DropDownListLink>Trait.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1596,7 +1738,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
                   <Description>"m_oldLevel"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
+                  <VariableType>2 Bytes</VariableType>
                   <Address>i_base_item_addr</Address>
                   <Offsets>
                     <Offset>42</Offset>
@@ -1791,6 +1933,89 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 553397017:Yellow
 1465702656:Blue
 667823249:Green
+</DropDownList>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>69</ID>
+          <Description>"Trait.ID"</Description>
+          <DropDownList DisplayValueAsItem="1">1117174350:💰高値
+1090454473:💰安值
+490246425:🗡攻撃強化
+20610017:🪽素早さ強化
+1389971177:✨器用さ強化
+1486328248:💪攻速強化
+798007586:💪防速強化
+47750854:💪全能力強化
+852114861:🗡自由な魂
+1611808916:❤ＨＰ強化
+115666646:❤ＨＰ大増量
+1910758976:❤ＨＰ超強化
+501258683:🛡防御強化
+632327955:🛡火耐性上昇
+451035380:🛡氷耐性上昇
+105577073:🛡風耐性上昇
+856505847:🛡雷耐性上昇
+1678706567:🛡物理耐性上昇
+49916355:🛡物理耐性上昇＋
+443791519:🛡魔法耐性上昇
+1205109228:⚔消費AP－１０％
+1140267522:⚔スキル威力＋１０％
+1294472984:🧨破壞力增加
+1027793817:🧨大きな破壊力
+1859122559:♡回復力增加
+1072124231:🧨クリティカル
+906033993:✨使用回数＋１
+1269362583:✨使用回数－１
+692131312:👜アイテムレベル上昇
+951094076:👜アイテムレベル上昇＋＋
+1261834094:🡫火傷を与える
+2030071280:🡫睡眠を与える
+1378696749:🡫毒を与える
+74946987:🡫暗闇を与える
+2012966841:🡫暗黒の猛毒
+493660396:🡫スタンを与える
+1612405935:🡫麻痺を与える
+910293801:🡫カチコチを与える
+2021393459:🡫背筋が凍る
+900200886:🡫磁気を帯びた
+1519182113:♡火傷を治療
+1276165100:♡睡眠を治療
+991398782:♡毒を治療
+764137911:♡暗闇を治療
+1266515955:♡スタンを治療
+1014648677:♡カチコチを治療
+719721902:♡麻痺を治療
+259732645:♡気付けの癒し
+998011272:♡豊穣の恵み
+2131869738:♡目覚める生命
+375391716:♡ヌメリ成分
+1601005557:🡫力の呪い
+1991437565:🡫物理攻撃の呪い
+1949089637:🡫魔法攻撃の呪い
+1565032542:🡫守りの呪い
+23315303:🡫速さ呪い
+940920071:🡫火攻撃の呪い
+1064593050:🡫氷攻撃の呪い
+2001917165:🡫雷攻撃の呪い
+468662373:🡫風攻撃の呪い
+1339726756:🡫剛力の呪詛
+1296353340:🡫魔力の呪詛
+1885465798:🡫火の呪詛
+102502849:🡫氷の呪詛
+80725041:🡫雷の呪詛
+1402706342:🡫風の呪詛
+2020120747:👤物理耐性の祝福
+2062994227:👤魔法耐性の祝福
+1261386590:👤力の祝福
+1274491902:👤守りの祝福
+1462620580:👤速さの祝福
+521583784:👤火耐性の祝福
+833491662:👤氷耐性の祝福
+816055051:👤雷耐性の祝福
+1022151116:👤風耐性の祝福
+1366634800:🧨会心の祝福
+1539045475:💪ぷにぷに
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
