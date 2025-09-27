@@ -1,0 +1,2109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Enable mono (waiting IL2CPP to 100% complete)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$asm}
+{
+define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+
+registersymbol(ResourceManagerClearItemCountsProc)
+}
+
+{$lua}
+if syntaxcheck then return end
+-- 📏 SafeMonoDestroy: Clean up all Mono-related state
+if _G.SafeMonoDestroy == nil then
+  _G.SafeMonoDestroy = function()
+    print("🪚 SafeMonoDestroy: Begin cleanup...")
+
+    -- 1. Stop symbol enumeration thread if running
+    if monoSymbolEnum then
+      print("🚬 Terminating monoSymbolEnum thread...")
+      pcall(function()
+        monoSymbolEnum.terminate()
+        if not monoSymbolEnum.waitfor(3000) then
+          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
+        end
+        monoSymbolEnum.destroy()
+        monoSymbolEnum = nil
+      end)
+    end
+
+    -- 2. Stop progressbar timer
+    if monoSymbolList and monoSymbolList.progressbar then
+      monoSymbolList.progressbar.OnTimer = nil
+    end
+
+    -- 3. Unlock pipe (try unlock even if uncertain)
+    print("🔓 Attempting to unlock pipe...")
+    pcall(function()
+      if monopipe and monopipe.unlock then
+        monopipe.unlock()
+      end
+    end)
+
+    -- 4. Delay before destroy to let MonoCollector finish its work
+    print("⌛ Waiting before destroy (sleep 250ms)...")
+    sleep(250)  -- let it flush pipe state
+
+    -- 5. Destroy main pipe
+    local t0 = os.clock()
+    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
+
+    pcall(function()
+      if monopipe then
+        monopipe.destroy()
+        monopipe = nil
+      end
+    end)
+
+    local t1 = os.clock()
+    print(string.format("👻 monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
+
+
+    -- 6. Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
+    end
+
+    -- 7. Destroy event pipe if exists
+    if monoeventpipe then
+      monoeventpipe.destroy()
+      monoeventpipe = nil
+    end
+
+    print("👻 SafeMonoDestroy: Cleanup complete.")
+  end
+end
+
+-- 列出指定 class 中、同名方法的所有 overload，回傳詳盡資訊（不註冊符號）
+if _G.mono_listMethodsByName == nil then
+  _G.mono_listMethodsByName = function(namespace, classname, methodname)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Class not found: %s.%s", namespace, classname))
+      return {}
+    end
+
+    local mtds = mono_class_enumMethods(cls)
+    if not mtds then
+      print(string.format("💔 No methods in: %s.%s", namespace, classname))
+      return {}
+    end
+
+    local out = {}
+    local cnt = 0
+    for _, v in ipairs(mtds) do
+      if v.name == methodname then
+        local entry = { name = v.name, method = v.method }
+
+        -- 參數/回傳型別（用 CE 提供的 parameters API，比較穩）
+        local okP, p = pcall(mono_method_get_parameters, v.method)
+        if okP and p and p.parameters then
+          entry.params = p.parameters         -- array of {typename=..., name=...}
+          entry.paramnames = {}
+          for i, pi in ipairs(p.parameters) do
+            entry.paramnames[i] = pi.name
+          end
+          entry.returntype = p.returntype and p.returntype.name or nil
+        else
+          -- 後備：某些版本 mono_method_getSignature 可能回傳字串或多返回值
+          local okS, a, b, c = pcall(mono_method_getSignature, v.method)
+          if okS then
+            -- 嘗試相容 ijm_mtd_by_sig 的 (params, paramnames, returntype)
+            entry.params      = a
+            entry.paramnames  = b
+            entry.returntype  = c
+            entry.signature   = type(a) == "string" and a or nil
+          end
+        end
+
+        -- 編譯 JIT 取得地址
+        local addr = mono_compile_method(v.method)
+        entry.address = addr
+
+        cnt = cnt + 1
+        out[cnt] = entry
+      end
+    end
+
+    print(string.format("🔎 Found %d overload(s) for %s.%s.%s", cnt, namespace, classname, methodname))
+    return out
+  end
+end
+
+-- 產生欄位 offset 對照表（若 CE 版本支援欄位列舉/offset 取得）
+if _G.mono_offsetsTable == nil then
+  _G.mono_offsetsTable = function(cacheTable, classname, namespace, opts)
+    -- 行為與 ijm_offset_table 類似：若已有表且非空就直接回傳
+    if cacheTable and type(cacheTable) == "table" then
+      local hasAny = next(cacheTable) ~= nil
+      if hasAny then return cacheTable end
+    end
+
+    local t = {}
+    local cls = mono_findClass(namespace or "", classname)
+    if not cls then
+      print(string.format("💔 Class not found: %s.%s", namespace or "", classname))
+      return t
+    end
+
+    -- 嘗試列舉欄位
+    local fields = nil
+    if mono_class_enumFields then
+      local okF, res = pcall(mono_class_enumFields, cls)
+      if okF then fields = res end
+    end
+
+    if not fields or #fields == 0 then
+      print("⚠ 無法列舉欄位（當前 CE/Mono 外掛可能不支援 mono_class_enumFields）。")
+      return t
+    end
+
+    for _, f in ipairs(fields) do
+      local fname = f.name or ("&lt;noname_"..tostring(_).."&gt;")
+      local off = nil
+      if mono_field_get_offset then
+        local okO, o = pcall(mono_field_get_offset, f.field)
+        if okO then off = o end
+      end
+      t[fname] = off
+    end
+
+    -- 若需要標註是 Mono 單例/IL2CPP Enum 等，可透過 opts 設定，這裡僅示意保留
+    if opts and opts.meta then t.__meta = opts.meta end
+
+    return t
+  end
+end
+
+-- 📏 Register symbol by parameter type array (exact match)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local p = mono_method_get_parameters(m.method)
+        local matched = true
+
+        if #p.parameters ~= #paramTypes then
+          matched = false
+        else
+          for i = 1, #paramTypes do
+            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Method found but failed to compile.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 📏 Register symbol by partial signature match (overload-safe, with excludes and match info)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("💔 Error: No methods found in %s.%s", namespace, classname))
+      return
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local sig = mono_method_getSignature(m.method)
+        local matched = true
+
+        -- Check required substrings
+        for _, kw in ipairs(sigContains) do
+          if not string.find(sig, kw, 1, true) then
+            matched = false
+            break
+          end
+        end
+
+        -- Check excluded substrings (if given)
+        if matched and sigExcludes then
+          for _, ex in ipairs(sigExcludes) do
+            if string.find(sig, ex, 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Signature matched but failed to compile method.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          print(string.format("🔎 Matched Signature: %s", sig))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+
+-- 📏 Register symbol by simple method name (first match)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = mono_findMethod(namespace, classname, methodname)
+    if m == nil or m == 0 then
+      print(string.format("💔 Error: Method not found - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    local addr = mono_compile_method(m)
+    if addr == 0 then
+      print(string.format("💔 Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+  end
+end
+
+-- 🌀 Attach Mono if needed
+local pid = getOpenedProcessID()
+if pid == 0 then
+  print("⚠ Warning: No process is currently open.")
+  return
+end
+
+if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
+
+if monopipe == nil or _G.lastMonoPID ~= pid then
+  if monopipe ~= nil then
+    pcall(_G.SafeMonoDestroy)
+  end
+  pcall(LaunchMonoDataCollector)
+  _G.lastMonoPID = pid
+end
+
+-- ⚡ Example usage - Register Mono methods to CE symbol table
+-- These functions compile (JIT) a Mono method and register it as a CE symbol
+
+-- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+-- Description: Registers the first matched method with given name.
+-- ⚠ Use this only when there's no overload (or you're fine with the first one).
+-- Params:
+--   symbolname: The name you want to register (used in CE as a label)
+--   namespace:  Mono namespace of the class (can be "" if none)
+--   classname:  Class name that contains the method
+--   methodname: Method name to find (first match will be used)
+-- Example:
+
+--_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
+
+
+-- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+-- Description: Registers a method that exactly matches the provided parameter types.
+-- Use this when there are multiple overloads of a method.
+-- Params:
+--   symbolname: The name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (exact match)
+--   paramTypes: Array of expected parameter type strings (must match count &amp; order)
+--               These are matched using `string.find`, so partial match is allowed.
+-- Example:
+--   UseAbility(string idAct, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+-- Description: Registers the method whose signature contains all given substrings.
+-- Flexible, and suitable when exact type names vary or signature format is uncertain.
+-- Params:
+--   symbolname: The symbol name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (will scan all overloads)
+--   sigContains: Array of strings that should all appear in the method signature
+--                e.g., { "Act", "Card", "Point", "bool" }
+--   sigExcludes: Signatures to exclude
+-- Example:
+--   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  {"Item"},      -- sigContains
+  {"List"}       -- sigExcludes
+)
+
+Signatures above:
+System.Collections.Generic.List&lt;Item&gt; 
+Item 
+
+** Both have "Item" but first one have "List"
+--]]
+
+--[[
+
+Type Mapping (for overload filtering)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+
+--]]
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+--pcall(_G.SafeMonoDestroy)
+{$asm}
+//unregistersymbol(*)
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"Toggle Scripts"</Description>
+          <Color>4080FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+
+--[[
+-- attach process
+local processName = "game_exe.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+--]]
+
+  10, -- "Toggle Compact View"
+  5, -- "Battle: try to keep min HP/AP"
+  13, -- "Get SP"
+  17, -- "Battle: inf. item use"
+  20, -- "Battle: TP multiplier"
+  24, -- "Battle: break multiplier"
+  35, -- "Item Editor"
+  22, -- "monitor another check point"
+  27, -- "Fix HP gauge"
+  40, -- "m_properties+"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  65, -- "m_Item+"
+  40, -- "m_properties+"
+  27, -- "Fix HP gauge"
+  22, -- "monitor another check point"
+  35, -- "Item Editor"
+  24, -- "Battle: break multiplier"
+  20, -- "Battle: TP multiplier"
+  17, -- "Battle: inf. item use"
+  13, -- "Get SP"
+  5, -- "Battle: try to keep min HP/AP"
+  63, -- "Atelier Resleriana: The Red Alchemist &amp; the White Guardian  /  https://opencheattables.com"
+  10, -- "Toggle Compact View"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 10, Description: "Toggle Compact View", Depth: 0
+-- ID: 0, Description: "Enable mono (waiting IL2CPP to 100% complete)", Depth: 0
+--   ID: 17, Description: "Battle: inf. item use", Depth: 1
+--   ID: 5, Description: "Battle: try to keep min HP/AP", Depth: 1
+--     ID: 22, Description: "monitor another check point", Depth: 2
+--     ID: 27, Description: "Fix HP gauge", Depth: 2
+--   ID: 13, Description: "Get SP", Depth: 1
+--   ID: 20, Description: "Battle: TP multiplier", Depth: 1
+--   ID: 24, Description: "Battle: break multiplier", Depth: 1
+--   ID: 35, Description: "Item Editor", Depth: 1
+--     ID: 40, Description: "m_properties+", Depth: 2
+--     ID: 65, Description: "m_Item+", Depth: 2
+-- ID: 63, Description: "Atelier Resleriana: The Red Alchemist &amp; the White Guardian  /  https://opencheattables.com", Depth: 0
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Battle: inf. item use"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_ITEM_NO_DEC,GameAssembly.dll,66 FF C8 66 89 41 44) // should be unique
+
+INJECT_BATT_ITEM_NO_DEC:
+  nop 3
+
+registersymbol(INJECT_BATT_ITEM_NO_DEC)
+
+[DISABLE]
+
+INJECT_BATT_ITEM_NO_DEC:
+  db 66 FF C8
+
+unregistersymbol(INJECT_BATT_ITEM_NO_DEC)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+217DE03
+
+GameAssembly.dll+217DDD4: 0F 84 9E 01 00 00     - je GameAssembly.dll+217DF78
+GameAssembly.dll+217DDDA: 48 8B 4F 20           - mov rcx,[rdi+20]
+GameAssembly.dll+217DDDE: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+217DDE1: 0F 84 91 01 00 00     - je GameAssembly.dll+217DF78
+GameAssembly.dll+217DDE7: 0F B7 41 44           - movzx eax,word ptr [rcx+44]
+GameAssembly.dll+217DDEB: 66 85 C0              - test ax,ax
+GameAssembly.dll+217DDEE: 0F 84 7E 01 00 00     - je GameAssembly.dll+217DF72
+GameAssembly.dll+217DDF4: 48 89 5C 24 30        - mov [rsp+30],rbx
+GameAssembly.dll+217DDF9: 48 89 6C 24 38        - mov [rsp+38],rbp
+GameAssembly.dll+217DDFE: 48 89 74 24 40        - mov [rsp+40],rsi
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+217DE03: 66 FF C8              - dec ax
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+217DE06: 66 89 41 44           - mov [rcx+44],ax
+GameAssembly.dll+217DE0A: 48 8B 0D C7 62 BC 03  - mov rcx,[GameAssembly.dll+5D440D8]
+GameAssembly.dll+217DE11: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+217DE18: 75 05                 - jne GameAssembly.dll+217DE1F
+GameAssembly.dll+217DE1A: E8 51 54 14 FE        - call GameAssembly.dll+2C3270
+GameAssembly.dll+217DE1F: 45 33 C0              - xor r8d,r8d
+GameAssembly.dll+217DE22: 33 D2                 - xor edx,edx
+GameAssembly.dll+217DE24: 48 8B CF              - mov rcx,rdi
+GameAssembly.dll+217DE27: E8 24 E4 11 00        - call TraitUtility.BMOLBBIBKPE
+GameAssembly.dll+217DE2C: 48 8B E8              - mov rbp,rax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Battle: try to keep min HP/AP"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+//BattleUnitMoveControl.Update
+
+//aobscanmodule(INJECT_BATTLE_CONTROL,GameAssembly.dll,39 79 10 0F 8F ?? ?? ?? ?? 40 38 3D) // should be unique
+aobscanregion(INJECT_BATTLE_CONTROL,BattleUnitMoveControl.Update+30, BattleUnitMoveControl.Update+130,39 79 10 0F 8F ?? ?? ?? ?? 40 38 3D) // should be unique
+
+alloc(newmem,$1000,INJECT_BATTLE_CONTROL)
+
+alloc(INJECT_BATTLE_CONTROLo, 9)
+
+label(code)
+label(return)
+label(i_base_bdata_addr vf_min_hp_ratio vf_min_ap_ratio vf_min_enemy_hp_ratio vf_max_enemy_hp_ratio)
+
+INJECT_BATTLE_CONTROLo:
+  readmem(INJECT_BATTLE_CONTROL, 9)
+
+newmem:
+  cmp dword ptr [rcx+1C], 0
+  je to_enemy
+
+  push r15
+  // HP
+  mov r15d, [rcx+14] // max hp
+  vcvtsi2ss xmm15, xmm15, r15d
+  vmovss xmm14, [vf_min_hp_ratio]
+  vmulss xmm13, xmm14, xmm15
+  mov r15d, [rcx+10]  // hp
+  vcvtsi2ss xmm15, xmm15, r15d
+  vucomiss xmm15, xmm13
+  jae endp_a
+  vcvtss2si r15d, xmm13
+  mov [rcx+10], r15d
+
+endp_a:
+  // AP
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+1C] // max ap
+  vmovss xmm14, [vf_min_ap_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+18]  // ap
+  vucomiss xmm15, xmm13
+  jae endp_b
+  vcvtss2si r15d, xmm13
+  mov [rcx+18], r15d
+
+
+endp_b:
+  pop r15
+
+  jmp code
+
+
+to_enemy:
+  push r15
+  cmp dword ptr [vf_min_enemy_hp_ratio], 0
+  je enemy_max_hp
+
+  // min HP
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+14]
+  vmovss xmm14, [vf_min_enemy_hp_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+10]  // hp
+  vucomiss xmm15, xmm13
+  jae enemy_max_hp
+  vcvtss2si r15d, xmm13
+  mov [rcx+10], r15d
+  jmp endp_ea
+
+enemy_max_hp:
+  // max HP
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+14]
+  vmovss xmm14, [vf_max_enemy_hp_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+10]
+  vucomiss xmm15, xmm13
+  jbe endp_ea
+  vcvtss2si r15d, xmm13
+  mov [rcx+10], r15d
+  //jmp endp_ea
+
+endp_ea:
+  pop r15
+
+code:
+  cmp [rcx+10],edi
+  //jg GameAssembly.dll+201D797
+  reassemble(INJECT_BATTLE_CONTROL+3)
+  jmp return
+align 10 cc
+  i_base_bdata_addr:
+  dq 0 0
+  vf_min_hp_ratio:
+  dd (float)0.5
+  vf_min_ap_ratio:
+  dd (float)0.8
+  vf_min_enemy_hp_ratio:
+  dd (float)0
+  vf_max_enemy_hp_ratio:
+  dd (float)1
+
+INJECT_BATTLE_CONTROL:
+  jmp newmem
+  nop 4
+return:
+registersymbol(i_base_bdata_addr vf_min_hp_ratio vf_min_ap_ratio vf_min_enemy_hp_ratio vf_max_enemy_hp_ratio)
+registersymbol(INJECT_BATTLE_CONTROL)
+registersymbol(INJECT_BATTLE_CONTROLo)
+[DISABLE]
+
+INJECT_BATTLE_CONTROL:
+  //db 39 79 10 0F 8F A2 00 00 00
+  readmem(INJECT_BATTLE_CONTROLo, 9)
+
+unregistersymbol(INJECT_BATTLE_CONTROL)
+dealloc(newmem)
+unregistersymbol(INJECT_BATTLE_CONTROLo)
+dealloc(INJECT_BATTLE_CONTROLo)
+unregistersymbol(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+201D6EC
+
+BattleUnitMoveControl.Update - 40 56                 - push rsi
+GameAssembly.dll+201D6A2     - 48 83 EC 20           - sub rsp,20
+GameAssembly.dll+201D6A6     - 48 8B 41 20           - mov rax,[rcx+20]
+GameAssembly.dll+201D6AA     - 48 8B F1              - mov rsi,rcx
+GameAssembly.dll+201D6AD     - 48 85 C0              - test rax,rax
+GameAssembly.dll+201D6B0     - 0F84 40010000         - je GameAssembly.dll+201D7F6
+GameAssembly.dll+201D6B6     - 48 89 5C 24 30        - mov [rsp+30],rbx
+GameAssembly.dll+201D6BB: 48 8B 59 30           - mov rbx,[rcx+30]
+GameAssembly.dll+201D6BF: 48 85 DB              - test rbx,rbx
+GameAssembly.dll+201D6C2: 0F 84 29 01 00 00     - je GameAssembly.dll+201D7F1
+GameAssembly.dll+201D6C8: 80 B8 22 02 00 00 00  - cmp byte ptr [rax+00000222],00
+GameAssembly.dll+201D6CF: 0F 84 1C 01 00 00     - je GameAssembly.dll+201D7F1
+GameAssembly.dll+201D6D5: 48 89 7C 24 38        - mov [rsp+38],rdi
+GameAssembly.dll+201D6DA: 48 8B 88 F0 01 00 00  - mov rcx,[rax+000001F0]
+GameAssembly.dll+201D6E1: 33 FF                 - xor edi,edi
+GameAssembly.dll+201D6E3: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+201D6E6: 0F 84 AB 00 00 00     - je GameAssembly.dll+201D797
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+201D6EC: 39 79 10              - cmp [rcx+10],edi
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+201D6EF: 0F 8F A2 00 00 00     - jg GameAssembly.dll+201D797
+GameAssembly.dll+201D6F5: 40 38 3D 4B BB 01 04  - cmp [GameAssembly.dll+6039247],dil
+GameAssembly.dll+201D6FC: 75 27                 - jne GameAssembly.dll+201D725
+GameAssembly.dll+201D6FE: 48 8D 0D D3 5A D6 03  - lea rcx,[GameAssembly.dll+5D831D8]
+GameAssembly.dll+201D705: E8 E6 D7 32 FE        - call GameAssembly.dll+34AEF0
+GameAssembly.dll+201D70A: F0 09 3C 24           - lock or [rsp],edi
+GameAssembly.dll+201D70E: 48 8D 0D 43 5A D6 03  - lea rcx,[GameAssembly.dll+5D83158]
+GameAssembly.dll+201D715: E8 D6 D7 32 FE        - call GameAssembly.dll+34AEF0
+GameAssembly.dll+201D71A: F0 09 3C 24           - lock or [rsp],edi
+GameAssembly.dll+201D71E: C6 05 22 BB 01 04 01  - mov byte ptr [GameAssembly.dll+6039247],01
+GameAssembly.dll+201D725 - 48 8B 5E 30           - mov rbx,[rsi+30]
+GameAssembly.dll+201D729 - 48 85 DB              - test rbx,rbx
+
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>22</ID>
+              <Description>"monitor another check point"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_CONTROL2,GameAssembly.dll,8B 85 08 01 00 00 01) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_CONTROL2)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  mov eax,[rbp+00000108]
+  // =============================
+  push r15
+  mov r15d, [rcx+10]
+  mov [i_tmp1], r15d
+  pushfq
+  add [rcx+10],eax
+
+  //
+  cmp dword ptr [rcx+1C], 0
+  je to_enemy
+
+to_player:
+  // HP
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+14]
+  vmovss xmm14, [vf_min_hp_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+10]
+  vucomiss xmm15, xmm13
+  jae endp_a
+  vcvtss2si r15d, xmm13
+  mov [rcx+10], r15d
+
+endp_a:
+  // AP
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+1C]
+  vmovss xmm14, [vf_min_ap_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+18]
+  vucomiss xmm15, xmm13
+  jae endp_b
+  vcvtss2si r15d, xmm13
+  mov [rcx+18], r15d
+
+
+endp_b:
+  jmp end_all
+
+
+to_enemy:
+  cmp dword ptr [vf_min_enemy_hp_ratio], 0
+  je end_all
+
+  // HP
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+14]
+  vmovss xmm14, [vf_min_enemy_hp_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, dword ptr [rcx+10]
+  vucomiss xmm15, xmm13
+  jae endp_ea
+
+  vcvtss2si r15d, xmm13
+  mov [rcx+10], r15d
+
+endp_ea:
+
+end_all:
+  popfq
+  mov r15d, [i_tmp1]
+  mov [rcx+10], r15d
+
+  pop r15
+
+
+
+  jmp return
+align 10 cc
+  i_tmp1:
+  dd 0
+
+INJECT_BATTLE_CONTROL2:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_CONTROL2)
+
+[DISABLE]
+
+INJECT_BATTLE_CONTROL2:
+  db 8B 85 08 01 00 00
+
+unregistersymbol(INJECT_BATTLE_CONTROL2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+15D0405
+
+GameAssembly.dll+15D03D7: 48 0F 4D D1           - cmovge rdx,rcx
+GameAssembly.dll+15D03DB: 49 8B CF              - mov rcx,r15
+GameAssembly.dll+15D03DE: E8 1D 95 D8 FE        - call GameAssembly.dll+359900
+GameAssembly.dll+15D03E3: 4C 8B C7              - mov r8,rdi
+GameAssembly.dll+15D03E6: 48 8D 8D 08 01 00 00  - lea rcx,[rbp+00000108]
+GameAssembly.dll+15D03ED: 49 8B D7              - mov rdx,r15
+GameAssembly.dll+15D03F0: E8 0B 95 D8 FE        - call GameAssembly.dll+359900
+GameAssembly.dll+15D03F5: 48 8B 8B F0 01 00 00  - mov rcx,[rbx+000001F0]
+GameAssembly.dll+15D03FC: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+15D03FF: 0F 84 DA 09 00 00     - je GameAssembly.dll+15D0DDF
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+15D0405: 8B 85 08 01 00 00     - mov eax,[rbp+00000108]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+15D040B: 01 41 10              - add [rcx+10],eax
+GameAssembly.dll+15D040E: 48 8B 4B 18           - mov rcx,[rbx+18]
+GameAssembly.dll+15D0412: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+15D0415: 0F 84 C4 09 00 00     - je GameAssembly.dll+15D0DDF
+GameAssembly.dll+15D041B: 45 33 C9              - xor r9d,r9d
+GameAssembly.dll+15D041E: 4C 8B C6              - mov r8,rsi
+GameAssembly.dll+15D0421: BA 59 72 6E 6A        - mov edx,6A6E7259
+GameAssembly.dll+15D0426: E8 55 B4 FB FF        - call BattleUnitConditionControl.IHMIFPHKGII
+GameAssembly.dll+15D042B: 8B 83 08 02 00 00     - mov eax,[rbx+00000208]
+GameAssembly.dll+15D0431: 89 83 0C 02 00 00     - mov [rbx+0000020C],eax
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>27</ID>
+              <Description>"Fix HP gauge"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_FIX_HP_GAUGE,GameAssembly.dll,79 7B 03 89 73 60 48 8B 74 24 48) // should be unique
+alloc(newmem,$1000,INJECT_BATT_FIX_HP_GAUGE)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+
+  mov r15d, [rbx+64] // max hp
+  vcvtsi2ss xmm15, xmm15, r15d
+  vmovss xmm14, [vf_min_hp_ratio]
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, esi
+  vucomiss xmm15, xmm13
+  jae endp_a
+  vcvtss2si esi, xmm13
+
+endp_a:
+  pop r15
+
+code:
+  mov [rbx+60],esi
+  mov rsi,[rsp+48]
+  jmp return
+
+INJECT_BATT_FIX_HP_GAUGE+03:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_BATT_FIX_HP_GAUGE)
+
+[DISABLE]
+
+INJECT_BATT_FIX_HP_GAUGE+03:
+  db 89 73 60 48 8B 74 24 48
+
+unregistersymbol(INJECT_BATT_FIX_HP_GAUGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+133CEF6
+
+GameAssembly.dll+133CED4: 89 44 24 38     - mov [rsp+38],eax
+GameAssembly.dll+133CED8: E8 13 E5 33 02  - call GameAssembly.dll+367B3F0
+GameAssembly.dll+133CEDD: 48 85 C0        - test rax,rax
+GameAssembly.dll+133CEE0: 74 2F           - je GameAssembly.dll+133CF11
+GameAssembly.dll+133CEE2: 48 85 FF        - test rdi,rdi
+GameAssembly.dll+133CEE5: 74 2A           - je GameAssembly.dll+133CF11
+GameAssembly.dll+133CEE7: 48 8B 50 10     - mov rdx,[rax+10]
+GameAssembly.dll+133CEEB: 45 33 C0        - xor r8d,r8d
+GameAssembly.dll+133CEEE: 48 8B CF        - mov rcx,rdi
+GameAssembly.dll+133CEF1: E8 6A 79 7B 03  - call UnityEngine.UI.Image.set_sprite
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+133CEF6: 89 73 60        - mov [rbx+60],esi
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+133CEF9: 48 8B 74 24 48  - mov rsi,[rsp+48]
+GameAssembly.dll+133CEFE: 89 6B 64        - mov [rbx+64],ebp
+GameAssembly.dll+133CF01: 48 8B 5C 24 30  - mov rbx,[rsp+30]
+GameAssembly.dll+133CF06: 48 8B 6C 24 40  - mov rbp,[rsp+40]
+GameAssembly.dll+133CF0B: 48 83 C4 20     - add rsp,20
+GameAssembly.dll+133CF0F: 5F              - pop rdi
+GameAssembly.dll+133CF10: C3              - ret 
+GameAssembly.dll+133CF11: E8 0A A3 F7 FE  - call GameAssembly.dll+2B7220
+GameAssembly.dll+133CF16: CC              - int 3 
+GameAssembly.dll+133CF17: E8 14 A3 F7 FE  - call GameAssembly.dll+2B7230
+}
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>6</ID>
+              <Description>"HP ratio"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_hp_ratio</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>7</ID>
+              <Description>"AP ratio"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_ap_ratio</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>8</ID>
+              <Description>"Enemy min HP ratio"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_min_enemy_hp_ratio</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>11</ID>
+              <Description>"Enemy max HP ratio"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_max_enemy_hp_ratio</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"Get SP"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_SP,GameAssembly.dll,48 63 C3 48 39 42 10) // should be unique
+alloc(newmem,$1000,INJECT_GET_SP)
+
+label(code)
+label(return i_base_sp_addr)
+
+newmem:
+  mov [i_base_sp_addr], rdx
+
+code:
+  movsxd  rax,ebx
+  cmp [rdx+10],rax
+  jmp return
+align 10 cc
+  i_base_sp_addr:
+  dq 0
+
+INJECT_GET_SP:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_SP i_base_sp_addr)
+
+[DISABLE]
+
+INJECT_GET_SP:
+  db 48 63 C3 48 39 42 10
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+1CEECAB
+
+GameAssembly.dll+1CEEC79: E8 92 64 64 01        - call GameAssembly.dll+3335110
+GameAssembly.dll+1CEEC7E: 48 85 C0              - test rax,rax
+GameAssembly.dll+1CEEC81: 0F 84 D2 01 00 00     - je GameAssembly.dll+1CEEE59
+GameAssembly.dll+1CEEC87: 48 8B 40 40           - mov rax,[rax+40]
+GameAssembly.dll+1CEEC8B: 48 85 C0              - test rax,rax
+GameAssembly.dll+1CEEC8E: 0F 84 C5 01 00 00     - je GameAssembly.dll+1CEEE59
+GameAssembly.dll+1CEEC94: 48 8B 90 A0 00 00 00  - mov rdx,[rax+000000A0]
+GameAssembly.dll+1CEEC9B: 48 85 D2              - test rdx,rdx
+GameAssembly.dll+1CEEC9E: 0F 84 B5 01 00 00     - je GameAssembly.dll+1CEEE59
+GameAssembly.dll+1CEECA4: 49 8B 8E B8 00 00 00  - mov rcx,[r14+000000B8]
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+1CEECAB: 48 63 C3              - movsxd  rax,ebx
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+1CEECAE: 48 39 42 10           - cmp [rdx+10],rax
+GameAssembly.dll+1CEECB2: 7C 10                 - jl GameAssembly.dll+1CEECC4
+GameAssembly.dll+1CEECB4: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+1CEECB7: 0F 84 9C 01 00 00     - je GameAssembly.dll+1CEEE59
+GameAssembly.dll+1CEECBD: BA 25 3D D6 EA        - mov edx,EAD63D25
+GameAssembly.dll+1CEECC2: EB 0E                 - jmp GameAssembly.dll+1CEECD2
+GameAssembly.dll+1CEECC4: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+1CEECC7: 0F 84 8C 01 00 00     - je GameAssembly.dll+1CEEE59
+GameAssembly.dll+1CEECCD: BA 72 51 24 00        - mov edx,00245172
+GameAssembly.dll+1CEECD2: 45 33 C0              - xor r8d,r8d
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>14</ID>
+              <Description>"m_currentSkillPoints"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_sp_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>15</ID>
+              <Description>"m_totalSkillPoints"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_sp_addr</Address>
+              <Offsets>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Battle: TP multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_TP_MULTI,GameAssembly.dll,44 01 70 10 33 D2) // should be unique
+alloc(newmem,$1000,INJECT_TP_MULTI)
+
+label(code)
+label(return vf_tp_multi)
+
+newmem:
+  cmp r14d, 0
+  jle code
+  vcvtsi2ss xmm15, xmm15, r14d
+  vmovss xmm14, [vf_tp_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si r15d, xmm15
+
+code:
+  add [rax+10],r14d
+  xor edx,edx
+  jmp return
+align 10 cc
+  vf_tp_multi:
+  dd (float)3.3333333
+
+INJECT_TP_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_TP_MULTI vf_tp_multi)
+
+[DISABLE]
+
+INJECT_TP_MULTI:
+  db 44 01 70 10 33 D2
+
+unregistersymbol(INJECT_TP_MULTI vf_tp_multi)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+22521A1
+
+GameAssembly.dll+2252172: F3 0F 2C D9           - cvttss2si ebx,xmm1
+GameAssembly.dll+2252176: 48 8B 0D 23 98 AD 03  - mov rcx,[GameAssembly.dll+5D2B9A0]
+GameAssembly.dll+225217D: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+2252184: 75 05                 - jne GameAssembly.dll+225218B
+GameAssembly.dll+2252186: E8 E5 10 07 FE        - call GameAssembly.dll+2C3270
+GameAssembly.dll+225218B: 48 8B 87 60 01 00 00  - mov rax,[rdi+00000160]
+GameAssembly.dll+2252192: 48 85 C0              - test rax,rax
+GameAssembly.dll+2252195: 0F 84 B4 00 00 00     - je GameAssembly.dll+225224F
+GameAssembly.dll+225219B: 85 DB                 - test ebx,ebx
+GameAssembly.dll+225219D: 44 0F 4F F3           - cmovg r14d,ebx
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+22521A1: 44 01 70 10           - add [rax+10],r14d
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+22521A5: 33 D2                 - xor edx,edx
+GameAssembly.dll+22521A7: B9 1D A0 00 6A        - mov ecx,6A00A01D
+GameAssembly.dll+22521AC: E8 0F B7 F9 FF        - call BattleParamFixDataExpand.IGCJNIPGICC
+GameAssembly.dll+22521B1: 48 8B 9F 60 01 00 00  - mov rbx,[rdi+00000160]
+GameAssembly.dll+22521B8: 48 85 DB              - test rbx,rbx
+GameAssembly.dll+22521BB: 0F 84 8E 00 00 00     - je GameAssembly.dll+225224F
+GameAssembly.dll+22521C1: F3 0F 2C C0           - cvttss2si eax,xmm0
+GameAssembly.dll+22521C5: 3B 43 10              - cmp eax,[rbx+10]
+GameAssembly.dll+22521C8: 7D 13                 - jnl GameAssembly.dll+22521DD
+GameAssembly.dll+22521CA: 33 D2                 - xor edx,edx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>21</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_tp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Battle: break multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-26
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BREAK_MULTI,GameAssembly.dll,44 2B 75 1C 78 0D) // should be unique
+alloc(newmem,$1000,INJECT_BREAK_MULTI)
+
+label(code)
+label(return vf_break_multi)
+
+newmem:
+  cmp dword ptr [rbp+1C], 0
+  jle code
+
+  vmovss xmm14, [vf_break_multi]
+  vcvtsi2ss xmm15, xmm15, [rbp+1C]
+  vmulss xmm15, xmm14, xmm15
+
+  //vcvttps2dq xmm15, xmm15 //xmm15[0].float -&gt; xmm15[0].int32 (截斷)
+  vcvtps2dq xmm15, xmm15  // 依 MXCSR 四捨五入轉換
+  vmovd dword ptr [rbp+1C], xmm15
+
+
+code:
+  sub r14d,[rbp+1C]
+  reassemble(INJECT_BREAK_MULTI+4)
+  //js GameAssembly.dll+15D0AED
+  jmp return
+align 10 cc
+  vf_break_multi:
+  dd (float)6.66666766
+
+INJECT_BREAK_MULTI:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BREAK_MULTI vf_break_multi)
+
+[DISABLE]
+
+INJECT_BREAK_MULTI:
+  db 44 2B 75 1C 78 0D
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+15D0ADA
+
+GameAssembly.dll+15D0AB3: 49 8B 41 30     - mov rax,[r9+30]
+GameAssembly.dll+15D0AB7: 83 78 28 00     - cmp dword ptr [rax+28],00
+GameAssembly.dll+15D0ABB: 48 8D 51 F0     - lea rdx,[rcx-10]
+GameAssembly.dll+15D0ABF: 48 0F 4D D1     - cmovge rdx,rcx
+GameAssembly.dll+15D0AC3: 49 8B CC        - mov rcx,r12
+GameAssembly.dll+15D0AC6: E8 35 8E D8 FE  - call GameAssembly.dll+359900
+GameAssembly.dll+15D0ACB: 4D 8B C7        - mov r8,r15
+GameAssembly.dll+15D0ACE: 48 8D 4D 1C     - lea rcx,[rbp+1C]
+GameAssembly.dll+15D0AD2: 49 8B D4        - mov rdx,r12
+GameAssembly.dll+15D0AD5: E8 26 8E D8 FE  - call GameAssembly.dll+359900
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+15D0ADA: 44 2B 75 1C     - sub r14d,[rbp+1C]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+15D0ADE: 78 0D           - js GameAssembly.dll+15D0AED
+GameAssembly.dll+15D0AE0: 8B 47 3C        - mov eax,[rdi+3C]
+GameAssembly.dll+15D0AE3: 44 3B F0        - cmp r14d,eax
+GameAssembly.dll+15D0AE6: 7E 08           - jle GameAssembly.dll+15D0AF0
+GameAssembly.dll+15D0AE8: 44 8B F0        - mov r14d,eax
+GameAssembly.dll+15D0AEB: EB 03           - jmp GameAssembly.dll+15D0AF0
+GameAssembly.dll+15D0AED: 45 33 F6        - xor r14d,r14d
+GameAssembly.dll+15D0AF0: 44 89 77 38     - mov [rdi+38],r14d
+GameAssembly.dll+15D0AF4: 48 8B 7B 18     - mov rdi,[rbx+18]
+GameAssembly.dll+15D0AF8: 48 85 FF        - test rdi,rdi
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_break_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>35</ID>
+          <Description>"Item Editor"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-27
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ITEM_EDITOR,GameAssembly.dll,5A 83 79 18 01 74 0D) // should be unique
+alloc(newmem,$1000,INJECT_ITEM_EDITOR)
+
+label(code)
+label(return i_base_item_addr)
+//TraitUtility.FOFCLCOAGNK
+
+// name: m_Item -&gt; m_Info -&gt; m_Name+14
+
+newmem:
+  push rdx
+  mov rdx, [rsp+8]
+  mov [i_base_item_addr], rdx
+  pop rdx
+
+code:
+  cmp dword ptr [rcx+18],01
+  jmp INJECT_ITEM_EDITOR+14
+  //je GameAssembly.dll+22A06BC
+  jmp return
+align 10 cc
+  i_base_item_addr:
+  dq 0
+
+INJECT_ITEM_EDITOR+01:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_ITEM_EDITOR i_base_item_addr)
+
+[DISABLE]
+
+INJECT_ITEM_EDITOR+01:
+  db 83 79 18 01 74 0D
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+22A06A9
+
+GameAssembly.dll+22A067B: 48 8B 05 56 3A AA 03  - mov rax,[GameAssembly.dll+5D440D8]
+GameAssembly.dll+22A0682: 83 B8 E0 00 00 00 00  - cmp dword ptr [rax+000000E0],00
+GameAssembly.dll+22A0689: 75 0F                 - jne GameAssembly.dll+22A069A
+GameAssembly.dll+22A068B: 48 8B C8              - mov rcx,rax
+GameAssembly.dll+22A068E: E8 DD 2B 02 FE        - call GameAssembly.dll+2C3270
+GameAssembly.dll+22A0693: 48 8B 05 3E 3A AA 03  - mov rax,[GameAssembly.dll+5D440D8]
+GameAssembly.dll+22A069A: 48 8B 80 B8 00 00 00  - mov rax,[rax+000000B8]
+GameAssembly.dll+22A06A1: 48 8B 08              - mov rcx,[rax]
+GameAssembly.dll+22A06A4: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+22A06A7: 74 5A                 - je GameAssembly.dll+22A0703
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+22A06A9: 83 79 18 01           - cmp dword ptr [rcx+18],01
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+22A06AD: 74 0D                 - je GameAssembly.dll+22A06BC
+GameAssembly.dll+22A06AF: 33 C0                 - xor eax,eax
+GameAssembly.dll+22A06B1: C7 41 18 01 00 00 00  - mov [rcx+18],00000001
+GameAssembly.dll+22A06B8: 48 89 41 10           - mov [rcx+10],rax
+GameAssembly.dll+22A06BC: 33 C0                 - xor eax,eax
+GameAssembly.dll+22A06BE: 48 89 41 1C           - mov [rcx+1C],rax
+GameAssembly.dll+22A06C2: 45 33 C0              - xor r8d,r8d
+GameAssembly.dll+22A06C5: C7 41 24 00 00 80 3F  - mov [rcx+24],3F800000
+GameAssembly.dll+22A06CC: 48 8B D3              - mov rdx,rbx
+GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>37</ID>
+              <Description>"addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_item_addr</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>36</ID>
+              <Description>"m_ItemID"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_item_addr</Address>
+              <Offsets>
+                <Offset>10</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>38</ID>
+              <Description>"m_RuntimeID"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_item_addr</Address>
+              <Offsets>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>62</ID>
+              <Description>"Name"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>String</VariableType>
+              <Length>32</Length>
+              <Unicode>1</Unicode>
+              <CodePage>0</CodePage>
+              <ZeroTerminate>1</ZeroTerminate>
+              <Address>i_base_item_addr</Address>
+              <Offsets>
+                <Offset>14</Offset>
+                <Offset>10</Offset>
+                <Offset>30</Offset>
+                <Offset>28</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>40</ID>
+              <Description>"m_properties+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>39</ID>
+                  <Description>"m_rank"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>41</ID>
+                  <Description>"m_addTrait0"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>42</ID>
+                  <Description>"m_addTrait1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>20</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>43</ID>
+                  <Description>"m_addTrait2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>24</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>44</ID>
+                  <Description>"m_oldTrait0"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>28</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>45</ID>
+                  <Description>"m_oldTrait1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>2C</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>46</ID>
+                  <Description>"m_oldTrait2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>30</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>47</ID>
+                  <Description>"m_geistCore"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>34</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>48</ID>
+                  <Description>"m_giftColorLeft"</Description>
+                  <DropDownListLink>Color.ID</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>38</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>49</ID>
+                  <Description>"m_giftColorRight"</Description>
+                  <DropDownListLink>Color.ID</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>3C</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>50</ID>
+                  <Description>"m_Level"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>40</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>51</ID>
+                  <Description>"m_oldLevel"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>42</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>52</ID>
+                  <Description>"m_useRemain"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>44</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>53</ID>
+                  <Description>"m_reinforceConnect"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>2 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>46</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>54</ID>
+                  <Description>"m_addHP"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>48</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>55</ID>
+                  <Description>"m_addATK"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>49</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>56</ID>
+                  <Description>"m_addDEF"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>4A</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>57</ID>
+                  <Description>"m_addSPD"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>4B</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>58</ID>
+                  <Description>"m_addALL"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>4C</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>59</ID>
+                  <Description>"m_addSkillPower"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>4D</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>60</ID>
+                  <Description>"m_addUseRemain"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>4E</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>61</ID>
+                  <Description>"m_favorite"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>4F</Offset>
+                    <Offset>20</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>65</ID>
+              <Description>"m_Item+"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"m_Price -&gt; m_Value"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>18</Offset>
+                    <Offset>40</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>67</ID>
+                  <Description>"m_Price -&gt; m_CanBuyFromMerchant"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>1C</Offset>
+                    <Offset>40</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>68</ID>
+                  <Description>"m_Price -&gt; m_CanSellToMerchant"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Byte</VariableType>
+                  <Address>i_base_item_addr</Address>
+                  <Offsets>
+                    <Offset>1D</Offset>
+                    <Offset>40</Offset>
+                    <Offset>28</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>63</ID>
+      <Description>"Atelier Resleriana: The Red Alchemist &amp; the White Guardian  /  https://opencheattables.com"</Description>
+      <Options moHideChildren="1"/>
+      <Color>008E00</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>64</ID>
+          <Description>"Color.ID"</Description>
+          <DropDownList DisplayValueAsItem="1">444446048:Pink
+1824922885:Red
+553397017:Yellow
+1465702656:Blue
+667823249:Green
+</DropDownList>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :mov ecx,05F5E0FF</Description>
+      <AddressString>GameAssembly.dll+17BD9C9</AddressString>
+      <Before>
+        <Byte>E8</Byte>
+        <Byte>67</Byte>
+        <Byte>C3</Byte>
+        <Byte>86</Byte>
+        <Byte>FE</Byte>
+      </Before>
+      <Actual>
+        <Byte>B9</Byte>
+        <Byte>FF</Byte>
+        <Byte>E0</Byte>
+        <Byte>F5</Byte>
+        <Byte>05</Byte>
+      </Actual>
+      <After>
+        <Byte>3B</Byte>
+        <Byte>C1</Byte>
+        <Byte>0F</Byte>
+        <Byte>4C</Byte>
+        <Byte>C8</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
+  <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
+</CheatTable>
