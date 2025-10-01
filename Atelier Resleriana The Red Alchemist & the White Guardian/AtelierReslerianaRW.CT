@@ -56,7 +56,7 @@ end
       <Description>"Enable mono (waiting IL2CPP to 100% complete)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$asm}
 {
 define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
@@ -552,6 +552,7 @@ local disableBattleScripts = {
   40, -- "m_properties+"
   27, -- "Fix HP gauge"
   22, -- "monitor another check point"
+  120, -- "Battle: last used item count"
   119, -- "Battle: fast unite gauge"
   71, -- "Battle: Damage multiplier"
   35, -- "Item Editor"
@@ -579,6 +580,7 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 10, Description: "Toggle Compact View", Depth: 0
 -- ID: 0, Description: "Enable mono (waiting IL2CPP to 100% complete)", Depth: 0
 --   ID: 17, Description: "Battle: inf. item use", Depth: 1
+--   ID: 120, Description: "Battle: last used item count", Depth: 1
 --   ID: 71, Description: "Battle: Damage multiplier", Depth: 1
 --   ID: 5, Description: "Battle: try to keep min HP/AP", Depth: 1
 --     ID: 22, Description: "monitor another check point", Depth: 2
@@ -653,7 +655,8 @@ GameAssembly.dll+217DE2C: 48 8B E8              - mov rbp,rax
         </CheatEntry>
         <CheatEntry>
           <ID>120</ID>
-          <Description>"Battle: set item use# to 99 after use"</Description>
+          <Description>"Battle: last used item count"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript Async="1">{ Game   : AtelierReslerianaRW.exe
   Version: 
@@ -667,28 +670,31 @@ aobscanmodule(INJECT_INF_ITEM_USE2,GameAssembly.dll,74 0F 66 89 78 44) // should
 alloc(newmem,$1000,INJECT_INF_ITEM_USE2)
 
 label(code)
-label(return)
+label(return i_base_item_cnt)
 
 newmem:
+  mov [i_base_item_cnt], rax
 
 code:
   reassemble(INJECT_INF_ITEM_USE2)
-  //mov di, 63
-  mov byte ptr [rax+44], 63
+  mov [rax+44],di
   jmp return
+align 10 cc
+  i_base_item_cnt:
+  dq 0
 
 INJECT_INF_ITEM_USE2:
   jmp newmem
   nop
 return:
-registersymbol(INJECT_INF_ITEM_USE2)
+registersymbol(INJECT_INF_ITEM_USE2 i_base_item_cnt)
 
 [DISABLE]
 
 INJECT_INF_ITEM_USE2:
   db 74 0F 66 89 78 44
 
-unregistersymbol(INJECT_INF_ITEM_USE2)
+unregistersymbol(INJECT_INF_ITEM_USE2 i_base_item_cnt)
 dealloc(newmem)
 
 {
@@ -719,6 +725,19 @@ GameAssembly.dll+217BCD7: CC                    - int 3
 GameAssembly.dll+217BCD8: CC                    - int 3 
 }
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>121</ID>
+              <Description>"m_useRemain"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_item_cnt</Address>
+              <Offsets>
+                <Offset>44</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>71</ID>
@@ -1704,7 +1723,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
             </CheatEntry>
             <CheatEntry>
               <ID>36</ID>
-              <Description>"m_ItemID"</Description>
+              <Description>"►m_ItemID"</Description>
               <DropDownListLink>Item.ID</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2051,7 +2070,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
             </CheatEntry>
             <CheatEntry>
               <ID>66</ID>
-              <Description>"m_Item"</Description>
+              <Description>"►m_Item"</Description>
               <DropDownListLink>Icon.ID</DropDownListLink>
               <ShowAsHex>1</ShowAsHex>
               <ShowAsSigned>0</ShowAsSigned>
@@ -2070,7 +2089,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
               <CheatEntries>
                 <CheatEntry>
                   <ID>106</ID>
-                  <Description>"Count"</Description>
+                  <Description>"►Count"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -2617,6 +2636,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 1496047969:👜出来が良い
 774689271:👜プロの完成度
 1222279091:👜超クオリティ
+1913438432:👜人形を作る
 286114301:👜変幻自在
 490246425:🗡攻撃強化
 609642342:🗡良く燃える
@@ -2628,10 +2648,11 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 202442601:🛡防御力超強化
 1837788470:🛡鋼鉄の守り
 2088498150:🛡竜鱗の守り
+434597488:🛡超硬度
 512404087:🛡頑丈
 20610017:🪽素早さ強化
-281797939:🪽素早さ超強化
 1741477285:🪽素早さブースト
+281797939:🪽素早さ超強化
 1901105008:🪽韋駄天の脚力
 1621168572:🪽光速の脚力
 1860198138:🪽風に乗る
@@ -2644,22 +2665,26 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 47750854:💪全能力強化
 321454102:💪全能力超強化
 1680748672:💪全能力ブースト
+2076647967:💪パラメータ＋8％
 489786459:💪パラメータ＋10％
 1781972173:💪肉体を強化する
 1389971177:✨器用さ強化
 875554989:✨器用さブースト
 1126750267:✨器用さ超強化
 582201958:✨巧者の手捌き
+1437893360:✨巧者の妙技
 1228786093:✨範囲ボーナス
 801859561:✨範囲ボーナス＋
 1489786751:✨複数に効果増大
 1604424552:✨少数ボーナス
+820080905:✨少数ボーナス＋
 1206272415:✨単体に効果増大
 656525434:✨シングルボーナス
 1920463902:✨使い切り強化
 344021592:✨使い切り強化＋
 906033993:✨使用回数＋１
 1358320909:✨使用回数＋2
+1733694163:✨みずみずしい
 1269362583:✨使用回数－１
 761151955:✨使用回数-2
 1883688922:✨回数圧縮
@@ -2669,10 +2694,13 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 84668534:✨精霊の祝福
 1246389937:✨太陽の輝き
 16539439:✨さらさら
+1283146002:✨みなぎる胆力
 1432383569:✨良薬の素
 1687198251:✨伝統料理！
 40252527:✨サクサク
 735120622:✨採れたて新鮮
+975213118:✨香り豊か
+1677549108:✨とろけるおいしさ
 1753600461:✨高速使用
 242450313:✨高速使用＋
 2037665567:✨ソニックスロー
@@ -2682,62 +2710,76 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 271095549:✨ＨＰ消費
 1994275001:✨ＨＰ消費＋
 490271886:✨AP消費
+2077121224:✨AP消費＋
 351956646:✨飛び回る
 273752645:✨神秘の輝き
 852114861:🗡自由な魂
 1397839856:🗡レアメタル
 1171066171:🗡ウィングエッジ
 1413256169:🗡禍々しい気迫
+591111039:🗡潜在覚醒
+2091121478:🗡軍神の力
 1611808916:❤ＨＰ強化
 115666646:❤ＨＰ大増量
 1910758976:❤ＨＰ超強化
 276345885:❤みなぎる力
 632327955:🛡火耐性上昇
 1128669527:🛡火耐性上昇＋
-1440381854:🛡火耐性強化
 876679617:🛡火耐性上昇＋＋
+1440381854:🛡火耐性強化
+584928012:🛡火耐性ブースト
 451035380:🛡氷耐性上昇
 2081746614:🛡氷耐性上昇＋
 185851424:🛡氷耐性上昇＋＋
 1787343997:🛡氷耐性強化
-2071538351:🛡氷耐性超強化
 495944939:🛡氷耐性ブースト
+2071538351:🛡氷耐性超強化
 105577073:🛡風耐性上昇
 1622955061:🛡風耐性上昇＋
-1981812478:🛡風耐性強化
 398156963:🛡風耐性上昇＋＋
+1981812478:🛡風耐性強化
+19349096:🛡風耐性ブースト
+1741787182:🛡風耐性超強化
 856505847:🛡雷耐性上昇
 1442550707:🛡雷耐性上昇＋
 586982181:🛡雷耐性上昇＋＋
+1130875256:🛡雷耐性強化
+878770670:🛡雷耐性ブースト
 1385584556:🛡雷耐性超強化
 1678706567:🛡物理耐性上昇
 49916355:🛡物理耐性上昇＋
 1979619669:🛡物理耐性上昇＋＋
-93613532:🛡物理耐性超強化
+342225672:🛡物理耐性強化
 1667416990:🛡物理耐性ブースト
+93613532:🛡物理耐性超強化
 443791519:🛡魔法耐性上昇
 2089096923:🛡魔法耐性上昇＋
 193078861:🛡魔法耐性上昇＋＋
 1780042770:🛡魔法耐性強化
 488537224:🛡魔法耐性ブースト
+2078855874:🛡魔法耐性超強化
 155849478:🛡粘り強い
 1711993195:🛡完璧な丸み
-1205109228:⚔消費AP－１０％
+1205109228:⚔消費AP－10%
 555888558:⚔消費AP－15%
+1445273400:⚔消費AP－20%
 935228773:⚔消費AP削減
 975938214:⚔エコスキル
 1294766644:⚔コスト圧縮スキル
 770382807:⚔セービングスキル
-1140267522:⚔スキル威力＋１０％
-620868676:⚔スキル威力＋12％
-1376158930:⚔スキル威力＋15％
+1140267522:⚔スキル威力＋10%
+620868676:⚔スキル威力＋12%
+1376158930:⚔スキル威力＋15%
 865988239:⚔スキル強化
+1151000089:⚔スキルブースト
 1410867024:⚔鋭さが増す・物理
 1172930948:⚔攻撃性能が増す・物理
+854503702:⚔切れ味が増す・物理
 611511263:⚔連打の追撃・物理
 1198225806:⚔鋭さが増す・魔法
 563992524:⚔切れ味が増す・魔法
 1452992350:⚔攻撃性能が増す・魔法
+922848513:⚔連打の追撃・魔法
 1510010318:⚔鋭さが増す・火
 1022772108:⚔切れ味が増す・火
 1274114846:⚔攻撃性能が増す・火
@@ -2754,6 +2796,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 1541445911:⚔連打の追撃・雷
 1300022238:⚔切れ味が増す・雷
 981201740:⚔攻撃性能が増す・雷
+750569717:⚔錬金術の頂
 1634153842:⚔アツアツ
 1294472984:🧨破壞力增加
 736016722:🧨破壞力增加＋
@@ -2766,6 +2809,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 340399612:🧨追い討ち強化＋＋
 1976663975:🧨情け無用の一撃
 47599409:🧨手加減無しの一撃
+1679876469:🧨ブレイクバースト
 1833865731:🧨ブレイクダメージ
 196623431:🧨ブレイクダメージ＋
 2092895441:🧨ブレイクダメージ＋＋
@@ -2782,6 +2826,8 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 1494351619:🧨クリティカル＋
 773246869:🧨クリティカル＋＋
 1334683080:🧨会心の出来
+948606302:🧨半分クリティカル
+1585199900:🧨必中クリティカル
 1969292537:✨大漁！
 1261834094:🡫火傷を与える
 767598888:🡫炎瘡を与える
@@ -2810,11 +2856,14 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 719721902:♡麻痺を治療
 259732645:♡気付けの癒し
 998011272:♡豊穣の恵み
+1396354314:♡状態異常全解除
 2131869738:♡目覚める生命
 375391716:♡ヌメリ成分
 522010794:♡ＨＰ回復付与
 2045505264:♡ＨＰ回復付与＋
 1870115877:♡蘇生付与
+410027187:♡蘇生付与＋
+1117833508:♡退魔の力
 1601005557:🡫力の呪い
 1991437565:🡫物理攻撃の呪い
 272908985:🡫物理攻撃の呪い＋
@@ -2849,6 +2898,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 769234200:👤剛力の祝福
 1524540814:👤剛力神の祝福
 1134476396:👤魔力の祝福
+627577390:👤魔力の祝福＋
 309249613::👤風の祝福
 1274491902:👤守りの祝福
 755080636::👤守護の祝福
@@ -2873,19 +2923,24 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 1848691667:👤氷の祝福
 1956145161:👤風の祝福
 1127814103:👤雷の祝福
+634371475:👤雷の祝福＋
 836468706:👤疾風の祝福
 1366634800:🧨会心の祝福
 931372906:🧨会心の祝福＋
 1082437628:🧨会心の祝福＋＋
 555730337:🧨会心の恩恵
+1444476215:🧨会心の大恩恵
 1539045475:💪ぷにぷに
 126982968:👤魅惑のしっぽ
 725369862:👤混合強化
 1305143876:👤混合強化＋
 202645357:👤混ぜ上手
+1793241385:👤混ぜ上手＋
 195702134:👤連携上手
 540667834:👤割り込み強撃
+1187987964:👤割り込み強撃＋
 1014979780:👤割り込み上手
+1518989954:👤割り込み上手
 601334543:🫳撃破時ドロップ増加
 </DropDownList>
           <GroupHeader>1</GroupHeader>
@@ -2953,6 +3008,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 495206437:虫を採る・匠
 1783585676:アンタイジェム・緑
 477821448:アンタイジェム・赤
+1296089764:アンタイジェム・金
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
