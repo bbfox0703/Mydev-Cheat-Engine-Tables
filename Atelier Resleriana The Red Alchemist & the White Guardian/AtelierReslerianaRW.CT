@@ -56,7 +56,7 @@ end
       <Description>"Enable mono (waiting IL2CPP to 100% complete)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$asm}
 {
 define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
@@ -552,6 +552,7 @@ local disableBattleScripts = {
   40, -- "m_properties+"
   27, -- "Fix HP gauge"
   22, -- "monitor another check point"
+  120, -- "Battle: last used item count"
   119, -- "Battle: fast unite gauge"
   71, -- "Battle: Damage multiplier"
   35, -- "Item Editor"
@@ -579,6 +580,7 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 10, Description: "Toggle Compact View", Depth: 0
 -- ID: 0, Description: "Enable mono (waiting IL2CPP to 100% complete)", Depth: 0
 --   ID: 17, Description: "Battle: inf. item use", Depth: 1
+--   ID: 120, Description: "Battle: last used item count", Depth: 1
 --   ID: 71, Description: "Battle: Damage multiplier", Depth: 1
 --   ID: 5, Description: "Battle: try to keep min HP/AP", Depth: 1
 --     ID: 22, Description: "monitor another check point", Depth: 2
@@ -650,6 +652,92 @@ GameAssembly.dll+217DE27: E8 24 E4 11 00        - call TraitUtility.BMOLBBIBKPE
 GameAssembly.dll+217DE2C: 48 8B E8              - mov rbp,rax
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>120</ID>
+          <Description>"Battle: last used item count"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript Async="1">{ Game   : AtelierReslerianaRW.exe
+  Version: 
+  Date   : 2025-09-29
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_ITEM_USE2,GameAssembly.dll,74 0F 66 89 78 44) // should be unique
+alloc(newmem,$1000,INJECT_INF_ITEM_USE2)
+
+label(code)
+label(return i_base_item_cnt)
+
+newmem:
+  mov [i_base_item_cnt], rax
+
+code:
+  reassemble(INJECT_INF_ITEM_USE2)
+  mov [rax+44],di
+  jmp return
+align 10 cc
+  i_base_item_cnt:
+  dq 0
+
+INJECT_INF_ITEM_USE2:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_INF_ITEM_USE2 i_base_item_cnt)
+
+[DISABLE]
+
+INJECT_INF_ITEM_USE2:
+  db 74 0F 66 89 78 44
+
+unregistersymbol(INJECT_INF_ITEM_USE2 i_base_item_cnt)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+217BCBF
+
+GameAssembly.dll+217BC99: 74 35                 - je GameAssembly.dll+217BCD0
+GameAssembly.dll+217BC9B: 0F B7 48 44           - movzx ecx,word ptr [rax+44]
+GameAssembly.dll+217BC9F: 3B CF                 - cmp ecx,edi
+GameAssembly.dll+217BCA1: 7E 22                 - jle GameAssembly.dll+217BCC5
+GameAssembly.dll+217BCA3: 48 8B 0D 6E 8E BC 03  - mov rcx,[GameAssembly.dll+5D44B18]
+GameAssembly.dll+217BCAA: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
+GameAssembly.dll+217BCB1: 75 05                 - jne GameAssembly.dll+217BCB8
+GameAssembly.dll+217BCB3: E8 B8 75 14 FE        - call GameAssembly.dll+2C3270
+GameAssembly.dll+217BCB8: 48 8B 43 20           - mov rax,[rbx+20]
+GameAssembly.dll+217BCBC: 48 85 C0              - test rax,rax
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+217BCBF: 74 0F                 - je GameAssembly.dll+217BCD0
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+217BCC1: 66 89 78 44           - mov [rax+44],di
+GameAssembly.dll+217BCC5: 48 8B 7C 24 30        - mov rdi,[rsp+30]
+GameAssembly.dll+217BCCA: 48 83 C4 20           - add rsp,20
+GameAssembly.dll+217BCCE: 5B                    - pop rbx
+GameAssembly.dll+217BCCF: C3                    - ret 
+GameAssembly.dll+217BCD0: E8 4B B5 13 FE        - call GameAssembly.dll+2B7220
+GameAssembly.dll+217BCD5: CC                    - int 3 
+GameAssembly.dll+217BCD6: CC                    - int 3 
+GameAssembly.dll+217BCD7: CC                    - int 3 
+GameAssembly.dll+217BCD8: CC                    - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>121</ID>
+              <Description>"m_useRemain"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Byte</VariableType>
+              <Address>i_base_item_cnt</Address>
+              <Offsets>
+                <Offset>44</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>71</ID>
@@ -1469,7 +1557,7 @@ GameAssembly.dll+15D0AF8: 48 85 FF        - test rdi,rdi
           <ID>119</ID>
           <Description>"Battle: fast unite gauge"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : AtelierReslerianaRW.exe
+          <AssemblerScript Async="1">{ Game   : AtelierReslerianaRW.exe
   Version: 
   Date   : 2025-09-29
   Author : bbfox@https://opencheattables.com
@@ -1485,6 +1573,8 @@ label(return)
 //BroomBattleUnite.IHGLPGNDKPL
 
 newmem:
+  cmp eax, [rbx+2C]
+  jbe code
   mov eax, [rbx+30]
 
 code:
@@ -1633,7 +1723,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
             </CheatEntry>
             <CheatEntry>
               <ID>36</ID>
-              <Description>"m_ItemID"</Description>
+              <Description>"►m_ItemID"</Description>
               <DropDownListLink>Item.ID</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -1980,7 +2070,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
             </CheatEntry>
             <CheatEntry>
               <ID>66</ID>
-              <Description>"m_Item"</Description>
+              <Description>"►m_Item"</Description>
               <DropDownListLink>Icon.ID</DropDownListLink>
               <ShowAsHex>1</ShowAsHex>
               <ShowAsSigned>0</ShowAsSigned>
@@ -1999,7 +2089,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
               <CheatEntries>
                 <CheatEntry>
                   <ID>106</ID>
-                  <Description>"Count"</Description>
+                  <Description>"►Count"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -2527,16 +2617,26 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
           <ID>69</ID>
           <Description>"Trait.ID"</Description>
           <DropDownList DisplayValueAsItem="1">1117174350:💰高値
-610276364::💰高値＋
+610276364:💰高値＋
+1399268510:💰高値＋＋
+855396033:💰高級品
+1174109783:💰希少な逸品
+588107795:💰プレミア価格
+1770887905:💰黄金の輝き
 1090454473:💰安值
 638168461:💰安值＋
+1359912219:💰安值＋＋
+815134534:💰量産品
 1200801744:💰大量生産品
+560228758:💰エコノミー
 692131312:👜アイテムレベル上昇
 1337441194:👜アイテムレベル上昇＋
 951094076:👜アイテムレベル上昇＋＋
 1028478503:👜チーズの海
 1496047969:👜出来が良い
 774689271:👜プロの完成度
+1222279091:👜超クオリティ
+1913438432:👜人形を作る
 286114301:👜変幻自在
 490246425:🗡攻撃強化
 609642342:🗡良く燃える
@@ -2547,104 +2647,204 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 2065053695:🛡防御ブースト
 202442601:🛡防御力超強化
 1837788470:🛡鋼鉄の守り
+2088498150:🛡竜鱗の守り
+434597488:🛡超硬度
 512404087:🛡頑丈
 20610017:🪽素早さ強化
-281797939:🪽素早さ超強化
 1741477285:🪽素早さブースト
+281797939:🪽素早さ超強化
 1901105008:🪽韋駄天の脚力
+1621168572:🪽光速の脚力
 1860198138:🪽風に乗る
 1486328248:💪攻速強化
 957152235:💪攻速ブースト
 798007586:💪防速強化
+1046560754:💪攻防強化
 1309395837:💪攻防ブースト
 687695161:💪攻防超強化
 47750854:💪全能力強化
+321454102:💪全能力超強化
+1680748672:💪全能力ブースト
+2076647967:💪パラメータ＋8％
 489786459:💪パラメータ＋10％
 1781972173:💪肉体を強化する
 1389971177:✨器用さ強化
 875554989:✨器用さブースト
+1126750267:✨器用さ超強化
+582201958:✨巧者の手捌き
+1437893360:✨巧者の妙技
 1228786093:✨範囲ボーナス
+801859561:✨範囲ボーナス＋
+1489786751:✨複数に効果増大
 1604424552:✨少数ボーナス
+820080905:✨少数ボーナス＋
+1206272415:✨単体に効果増大
+656525434:✨シングルボーナス
+1920463902:✨使い切り強化
+344021592:✨使い切り強化＋
+906033993:✨使用回数＋１
+1358320909:✨使用回数＋2
+1733694163:✨みずみずしい
+1269362583:✨使用回数－１
+761151955:✨使用回数-2
+1883688922:✨回数圧縮
+380658076:✨回数圧縮＋
 1511138978:✨回数補正
+1021610212:✨回数補正＋
+84668534:✨精霊の祝福
 1246389937:✨太陽の輝き
 16539439:✨さらさら
-1762598082:✨パワースロー
+1283146002:✨みなぎる胆力
+1432383569:✨良薬の素
+1687198251:✨伝統料理！
+40252527:✨サクサク
+735120622:✨採れたて新鮮
+975213118:✨香り豊か
+1677549108:✨とろけるおいしさ
+1753600461:✨高速使用
+242450313:✨高速使用＋
 2037665567:✨ソニックスロー
+1762598082:✨パワースロー
+268022408:✨パワースロー＋
 1557544060:✨時を止める
 271095549:✨ＨＰ消費
+1994275001:✨ＨＰ消費＋
 490271886:✨AP消費
+2077121224:✨AP消費＋
 351956646:✨飛び回る
+273752645:✨神秘の輝き
 852114861:🗡自由な魂
 1397839856:🗡レアメタル
 1171066171:🗡ウィングエッジ
+1413256169:🗡禍々しい気迫
+591111039:🗡潜在覚醒
+2091121478:🗡軍神の力
 1611808916:❤ＨＰ強化
 115666646:❤ＨＰ大増量
 1910758976:❤ＨＰ超強化
+276345885:❤みなぎる力
 632327955:🛡火耐性上昇
 1128669527:🛡火耐性上昇＋
 876679617:🛡火耐性上昇＋＋
+1440381854:🛡火耐性強化
+584928012:🛡火耐性ブースト
 451035380:🛡氷耐性上昇
 2081746614:🛡氷耐性上昇＋
 185851424:🛡氷耐性上昇＋＋
+1787343997:🛡氷耐性強化
+495944939:🛡氷耐性ブースト
+2071538351:🛡氷耐性超強化
 105577073:🛡風耐性上昇
 1622955061:🛡風耐性上昇＋
 398156963:🛡風耐性上昇＋＋
+1981812478:🛡風耐性強化
+19349096:🛡風耐性ブースト
+1741787182:🛡風耐性超強化
 856505847:🛡雷耐性上昇
 1442550707:🛡雷耐性上昇＋
 586982181:🛡雷耐性上昇＋＋
+1130875256:🛡雷耐性強化
+878770670:🛡雷耐性ブースト
+1385584556:🛡雷耐性超強化
 1678706567:🛡物理耐性上昇
 49916355:🛡物理耐性上昇＋
 1979619669:🛡物理耐性上昇＋＋
+342225672:🛡物理耐性強化
+1667416990:🛡物理耐性ブースト
+93613532:🛡物理耐性超強化
 443791519:🛡魔法耐性上昇
 2089096923:🛡魔法耐性上昇＋
 193078861:🛡魔法耐性上昇＋＋
+1780042770:🛡魔法耐性強化
+488537224:🛡魔法耐性ブースト
+2078855874:🛡魔法耐性超強化
 155849478:🛡粘り強い
 1711993195:🛡完璧な丸み
-1205109228:⚔消費AP－１０％
+1205109228:⚔消費AP－10%
 555888558:⚔消費AP－15%
+1445273400:⚔消費AP－20%
+935228773:⚔消費AP削減
 975938214:⚔エコスキル
-1140267522:⚔スキル威力＋１０％
-620868676:⚔スキル威力＋12％
-1376158930:⚔スキル威力＋15％
+1294766644:⚔コスト圧縮スキル
+770382807:⚔セービングスキル
+1140267522:⚔スキル威力＋10%
+620868676:⚔スキル威力＋12%
+1376158930:⚔スキル威力＋15%
+865988239:⚔スキル強化
+1151000089:⚔スキルブースト
 1410867024:⚔鋭さが増す・物理
+1172930948:⚔攻撃性能が増す・物理
+854503702:⚔切れ味が増す・物理
+611511263:⚔連打の追撃・物理
 1198225806:⚔鋭さが増す・魔法
+563992524:⚔切れ味が増す・魔法
+1452992350:⚔攻撃性能が増す・魔法
+922848513:⚔連打の追撃・魔法
 1510010318:⚔鋭さが増す・火
-1914881192:⚔鋭さが増す・氷
-2046466222:⚔鋭さが増す・風
-730492312:⚔鋭さが増す・雷
-1634153842:⚔アツアツ
+1022772108:⚔切れ味が増す・火
+1274114846:⚔攻撃性能が増す・火
 711596353:⚔連打の追撃・火
+1914881192:⚔鋭さが増す・氷
+349465326:⚔切れ味が増す・氷
+1674795644:⚔攻撃性能が増す・氷
+38285351:⚔連打の追撃・氷
+2046466222:⚔鋭さが増す・風
+520894184:⚔切れ味が増す・風
+1745553022:⚔攻撃性能が増す・風
+160459811:⚔連打の追撃・風
+730492312:⚔鋭さが増す・雷
+1541445911:⚔連打の追撃・雷
+1300022238:⚔切れ味が増す・雷
+981201740:⚔攻撃性能が増す・雷
+750569717:⚔錬金術の頂
+1634153842:⚔アツアツ
 1294472984:🧨破壞力增加
 736016722:🧨破壞力增加＋
 1557760452:🧨破壞力增加＋＋
 1027793817:🧨大きな破壊力
-1833865731:🧨ブレイクダメージ
-488924812:🧨執着する一撃
-96176936::🧨追い討ち強化
+1246089999:🧨強力な破壊力
+749960523:🧨猛烈な破壊力
+96176936:🧨追い討ち強化
+1666000238:🧨追い討ち強化＋
+340399612:🧨追い討ち強化＋＋
 1976663975:🧨情け無用の一撃
+47599409:🧨手加減無しの一撃
+1679876469:🧨ブレイクバースト
+1833865731:🧨ブレイクダメージ
+196623431:🧨ブレイクダメージ＋
+2092895441:🧨ブレイクダメージ＋＋
+488924812:🧨執着する一撃
 1859122559:♡回復力增加
 137976635:♡回復力增加＋
+2134797229:♡回復力增加＋＋
+514130418:♡大きな回復量
+1772237160:♡強力な回復量
 257204002:♡猛烈な回復量
 2118984596:♡凍てつく美味しさ
+135721148:♡竜の生命力
 1072124231:🧨クリティカル
 1494351619:🧨クリティカル＋
 773246869:🧨クリティカル＋＋
 1334683080:🧨会心の出来
-906033993:✨使用回数＋１
-1269362583:✨使用回数－１
-1883688922:✨回数圧縮
-656525434:✨シングルボーナス
-1920463902:✨使い切り強化
-84668534:✨精霊の祝福
-1753600461:✨高速使用
+948606302:🧨半分クリティカル
+1585199900:🧨必中クリティカル
+1969292537:✨大漁！
 1261834094:🡫火傷を与える
+767598888:🡫炎瘡を与える
 2030071280:🡫睡眠を与える
+536265642:🡫昏睡を与える
+577192135:🡫とてもいい香り
 1378696749:🡫毒を与える
+886804585:🡫猛毒を与える
 74946987:🡫暗闇を与える
+1652635631:🡫怨呪を与える
 2012966841:🡫暗黒の猛毒
 493660396:🡫スタンを与える
+2073691822:🡫緊縛を与える
 1612405935:🡫麻痺を与える
+116257515:🡫鈍麻を与える
 910293801:🡫カチコチを与える
+1354192237:🡫氷瘡を与える
 2021393459:🡫背筋が凍る
 900200886:🡫磁気を帯びた
 1519182113:♡火傷を治療
@@ -2656,9 +2856,14 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 719721902:♡麻痺を治療
 259732645:♡気付けの癒し
 998011272:♡豊穣の恵み
+1396354314:♡状態異常全解除
 2131869738:♡目覚める生命
 375391716:♡ヌメリ成分
 522010794:♡ＨＰ回復付与
+2045505264:♡ＨＰ回復付与＋
+1870115877:♡蘇生付与
+410027187:♡蘇生付与＋
+1117833508:♡退魔の力
 1601005557:🡫力の呪い
 1991437565:🡫物理攻撃の呪い
 272908985:🡫物理攻撃の呪い＋
@@ -2669,6 +2874,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 940920071:🡫火攻撃の呪い
 1591993155:🡫火攻撃の呪い＋
 1064593050:🡫氷攻撃の呪い
+1501743324:🡫氷攻撃の呪い＋
 2001917165:🡫雷攻撃の呪い
 295991977:🡫雷攻撃の呪い＋
 468662373:🡫風攻撃の呪い
@@ -2677,6 +2883,7 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 1737846051:🡫無速の呪詛
 1339726756:🡫剛力の呪詛
 690763234:🡫剛力の呪詛＋
+1002319388:🡫無守の呪詛
 1296353340:🡫魔力の呪詛
 733111930:🡫魔力の呪詛＋
 1885465798:🡫火の呪詛
@@ -2684,32 +2891,57 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 102502849:🡫氷の呪詛
 1625997189:🡫氷の呪詛＋
 80725041:🡫雷の呪詛
+1647929973:🡫雷の呪詛＋
 1402706342:🡫風の呪詛
 896350180:🡫風の呪詛＋
-2020120747:👤物理耐性の祝福
-513685231:👤物理耐性の祝福＋
-2062994227:👤魔法耐性の祝福
 1261386590:👤力の祝福
 769234200:👤剛力の祝福
+1524540814:👤剛力神の祝福
+1134476396:👤魔力の祝福
+627577390:👤魔力の祝福＋
 309249613::👤風の祝福
 1274491902:👤守りの祝福
 755080636::👤守護の祝福
 1462620580:👤速さの祝福
+1090580468:👤猛撃の祝福
+670450102:👤猛撃の祝福＋
+2020120747:👤物理耐性の祝福
+513685231:👤物理耐性の祝福＋
+2062994227:👤魔法耐性の祝福
+469788023:👤魔法耐性の祝福＋
 521583784:👤火耐性の祝福
+2044728046:👤火耐性の祝福＋
+250028668:👤炎鎧の加護
 833491662:👤氷耐性の祝福
 1465433228:👤氷耐性の祝福＋
 816055051:👤雷耐性の祝福
 1448258895:👤雷耐性の祝福＋
 1022151116:👤風耐性の祝福
 1511679886:👤風耐性の祝福＋
-1090580468:👤猛撃の祝福
 1466047851:👤火の祝福
-147219863:👤氷の祝福
+147219863:👤氷の祝福＋
+1848691667:👤氷の祝福
+1956145161:👤風の祝福
+1127814103:👤雷の祝福
+634371475:👤雷の祝福＋
+836468706:👤疾風の祝福
 1366634800:🧨会心の祝福
 931372906:🧨会心の祝福＋
 1082437628:🧨会心の祝福＋＋
+555730337:🧨会心の恩恵
+1444476215:🧨会心の大恩恵
 1539045475:💪ぷにぷに
-126982968:↑魅惑のしっぽ
+126982968:👤魅惑のしっぽ
+725369862:👤混合強化
+1305143876:👤混合強化＋
+202645357:👤混ぜ上手
+1793241385:👤混ぜ上手＋
+195702134:👤連携上手
+540667834:👤割り込み強撃
+1187987964:👤割り込み強撃＋
+1014979780:👤割り込み上手
+1518989954:👤割り込み上手
+601334543:🫳撃破時ドロップ増加
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
@@ -2775,6 +3007,8 @@ GameAssembly.dll+22A06CF: E8 6C 29 4B FF        - call TraitFactors.PFHLMOCDGMG
 1636447366:草を刈る・匠
 495206437:虫を採る・匠
 1783585676:アンタイジェム・緑
+477821448:アンタイジェム・赤
+1296089764:アンタイジェム・金
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
