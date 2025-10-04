@@ -59,6 +59,11 @@ ja-JP: マリーのアトリエ Remake ～ザールブルグの錬金術士～
 zh-TW: 梅露露的鍊金工房 ～亞蘭德之鍊金術士3～ DX  
 ja-JP: メルルのアトリエ ～アーランドの錬金術士３～ DX  
 
+## Atelier Resleriana The Red Alchemist & the White Guardian  
+[Atelier Resleriana The Red Alchemist & the White Guardian (Steam)](https://store.steampowered.com/app/3259600/_/)  
+zh-TW: 紅色的鍊金術士和白色的守護者 ～蕾斯萊莉婭娜的鍊金工房～  
+ja-JP: 紅の錬金術士と白の守護者 ～レスレリアーナのアトリエ～  
+
 ## Atelier Rorona DX (non-English)  
 [Atelier Rorona ~The Alchemist of Arland~ DX (non-English)(Steam)](https://store.steampowered.com/app/936160/__DX/)  
 zh-TW: 蘿樂娜的鍊金工房 ～亞蘭德之鍊金術士～ DX  
@@ -166,6 +171,10 @@ ja-JP: ja-JP: フェアリーフェンサー エフ Refrain Chord
 
 ## Farthest Frontier  
 [Farthest Frontier (Steam)](https://store.steampowered.com/app/1044720/Farthest_Frontier/)  
+
+## FINAL FANTASY TACTICS - The Ivalice Chronicles  
+[FINAL FANTASY TACTICS - The Ivalice Chronicles (Steam)] (https://store.steampowered.com/app/1004640/FINAL_FANTASY_TACTICS__The_Ivalice_Chronicles/)  
+ja-JP: ファイナルファンタジータクティクス - イヴァリース クロニクルズ  
 
 ## FINAL FANTASY VI  
 [FINAL FANTASY VI (Steam)] (https://store.steampowered.com/app/1173820/FINAL_FANTASY_VI/)  
