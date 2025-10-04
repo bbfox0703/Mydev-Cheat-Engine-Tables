@@ -1,0 +1,1356 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>287</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>293</ID>
+      <Description>"Toggle scripts"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+
+-- attach process
+local processName = "FFT_enhanced.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+
+
+local enableBattleScripts = {
+  6, -- "Battle: selected char (LT or click)"
+  15, -- "Battle: player side HP/MP/XP"
+  26, -- "Map: Status menu: get JP list"
+  287, -- "Toggle Compact View"
+  288, -- "Browse &amp; set item amount (non-equiped)"
+  24, -- "Battle: XP multiplier"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  289, -- "item count must &gt;="
+  29, -- "Geterate list"
+  28, -- "+List (do not delete this)"
+  24, -- "Battle: XP multiplier"
+  288, -- "Browse &amp; set item amount (non-equiped)"
+  287, -- "Toggle Compact View"
+  26, -- "Map: Status menu: get JP list"
+  15, -- "Battle: player side HP/MP/XP"
+  6, -- "Battle: selected char (LT or click)"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 287, Description: "Toggle Compact View", Depth: 0
+-- ID: 6, Description: "Battle: selected char (LT or click)", Depth: 0
+-- ID: 15, Description: "Battle: player side HP/MP/XP", Depth: 0
+--   ID: 24, Description: "Battle: XP multiplier", Depth: 1
+-- ID: 26, Description: "Map: Status menu: get JP list", Depth: 0
+--   ID: 29, Description: "Geterate list", Depth: 1
+--   ID: 28, Description: "+List (do not delete this)", Depth: 1
+-- ID: 288, Description: "Browse &amp; set item amount (non-equiped)", Depth: 0
+--   ID: 289, Description: "item count must &gt;=", Depth: 1
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"Battle: selected char (LT or click)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_SELECTED_CHAR,FFT_enhanced.exe,0F B7 41 30 66 89 42 0C ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 64) // should be unique
+alloc(newmem,$1000,INJECT_BATT_SELECTED_CHAR)
+
+label(code)
+label(return)
+label(i_batt_base_sel_char_addr)
+
+newmem:
+  mov [i_batt_base_sel_char_addr], rcx
+
+code:
+  movzx eax,word ptr [rcx+30]
+  mov [rdx+0C],ax
+  jmp return
+align 10 cc
+  i_batt_base_sel_char_addr:
+  dq 0
+
+INJECT_BATT_SELECTED_CHAR:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_BATT_SELECTED_CHAR)
+registersymbol(i_batt_base_sel_char_addr)
+
+[DISABLE]
+
+INJECT_BATT_SELECTED_CHAR:
+  db 0F B7 41 30 66 89 42 0C
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+21305C
+
+FFT_enhanced.exe+213036: B8 03 00 00 00  - mov eax,00000003
+FFT_enhanced.exe+21303B: 66 89 42 02     - mov [rdx+02],ax
+FFT_enhanced.exe+21303F: 0F B6 41 28     - movzx eax,byte ptr [rcx+28]
+FFT_enhanced.exe+213043: 66 89 42 08     - mov [rdx+08],ax
+FFT_enhanced.exe+213047: 0F B7 41 32     - movzx eax,word ptr [rcx+32]
+FFT_enhanced.exe+21304B: 66 89 42 10     - mov [rdx+10],ax
+FFT_enhanced.exe+21304F: 66 85 C0        - test ax,ax
+FFT_enhanced.exe+213052: 75 08           - jne FFT_enhanced.exe+21305C
+FFT_enhanced.exe+213054: 41 0F B7 C7     - movzx eax,r15w
+FFT_enhanced.exe+213058: 66 89 42 10     - mov [rdx+10],ax
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+21305C: 0F B7 41 30     - movzx eax,word ptr [rcx+30]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+213060: 66 89 42 0C     - mov [rdx+0C],ax
+FFT_enhanced.exe+213064: 66 44 89 72 0E  - mov [rdx+0E],r14w
+FFT_enhanced.exe+213069: 0F B7 41 36     - movzx eax,word ptr [rcx+36]
+FFT_enhanced.exe+21306D: 66 89 42 16     - mov [rdx+16],ax
+FFT_enhanced.exe+213071: 66 85 C0        - test ax,ax
+FFT_enhanced.exe+213074: 75 08           - jne FFT_enhanced.exe+21307E
+FFT_enhanced.exe+213076: 41 0F B7 C7     - movzx eax,r15w
+FFT_enhanced.exe+21307A: 66 89 42 16     - mov [rdx+16],ax
+FFT_enhanced.exe+21307E: 0F B7 41 34     - movzx eax,word ptr [rcx+34]
+FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>8</ID>
+          <Description>"base"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"Side ID"</Description>
+          <DropDownList DisplayValueAsItem="1">0:Player side?
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"Max HP"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>32</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"MP"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"Max MP"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>36</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"EXP"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>11E</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"X"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>4F</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Y"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>50</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Direction"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>51</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"CT (not for current one)"</Description>
+          <DropDownListLink>HP</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>41</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"JP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>F0</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>15</ID>
+      <Description>"Battle: player side HP/MP/XP"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-04
+  Author : bfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_GET_ALL_CHARS,FFT_enhanced.exe,45 0F B7 57 30) // should be unique
+alloc(newmem,$1000,INJECT_BATT_GET_ALL_CHARS)
+
+label(code)
+label(return)
+label(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
+
+newmem:
+  push rax
+  mov al, [ib_player_group]
+  cmp [r15+4], al
+  jne endp
+
+check_hp:
+  movzx eax, word ptr [r15+32]
+  movzx r10d, word ptr [r15+30]
+  vmovss xmm14, [vf_player_side_hp_min]
+  vcvtsi2ss xmm15, xmm15, eax
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, r10d
+  vucomiss xmm15, xmm13
+  jae check_mp
+
+  vcvtss2si eax, xmm13
+  mov [r15+30], ax
+
+check_mp:
+  movzx eax, word ptr [r15+36]
+  movzx r10d, word ptr [r15+34]
+  vmovss xmm14, [vf_player_side_mp_min]
+  vcvtsi2ss xmm15, xmm15, eax
+  vmulss xmm13, xmm14, xmm15
+  vcvtsi2ss xmm15, xmm15, r10d
+  vucomiss xmm15, xmm13
+  jae endp
+
+  vcvtss2si eax, xmm13
+  mov [r15+34], ax
+
+endp:
+  pop rax
+
+code:
+  movzx r10d,word ptr [r15+30]
+  jmp return
+align 10 cc
+  vf_player_side_hp_min:
+  dd (float)0.63
+  vf_player_side_mp_min:
+  dd (float)0.75
+  ib_player_group:
+  db 0
+  align 10 cc
+  i_base_batt_chars_data:
+  dq 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
+INJECT_BATT_GET_ALL_CHARS:
+  jmp newmem
+return:
+registersymbol(INJECT_BATT_GET_ALL_CHARS)
+registersymbol(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
+
+[DISABLE]
+
+INJECT_BATT_GET_ALL_CHARS:
+  db 45 0F B7 57 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+2021D0
+
+FFT_enhanced.exe+2021A6: 75 07                    - jne FFT_enhanced.exe+2021AF
+FFT_enhanced.exe+2021A8: 45 85 F6                 - test r14d,r14d
+FFT_enhanced.exe+2021AB: 75 02                    - jne FFT_enhanced.exe+2021AF
+FFT_enhanced.exe+2021AD: B3 01                    - mov bl,01
+FFT_enhanced.exe+2021AF: 41 8B 8F FC 01 00 00     - mov ecx,[r15+000001FC]
+FFT_enhanced.exe+2021B6: 49 8D 97 4C 01 00 00     - lea rdx,[r15+0000014C]
+FFT_enhanced.exe+2021BD: E8 66 45 FE FF           - call FFT_enhanced.exe+1E6728
+FFT_enhanced.exe+2021C2: 41 0F B6 4F 06           - movzx ecx,byte ptr [r15+06]
+FFT_enhanced.exe+2021C7: 49 8D 57 66              - lea rdx,[r15+66]
+FFT_enhanced.exe+2021CB: 45 0F B7 47 32           - movzx r8d,word ptr [r15+32]
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+2021D0: 45 0F B7 57 30           - movzx r10d,word ptr [r15+30]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+2021D5: 44 8B 8C 24 B0 00 00 00  - mov r9d,[rsp+000000B0]
+FFT_enhanced.exe+2021DD: 88 9C 24 90 00 00 00     - mov [rsp+00000090],bl
+FFT_enhanced.exe+2021E4: 89 8C 24 88 00 00 00     - mov [rsp+00000088],ecx
+FFT_enhanced.exe+2021EB: 49 8D 4F 61              - lea rcx,[r15+61]
+FFT_enhanced.exe+2021EF: 48 89 94 24 80 00 00 00  - mov [rsp+00000080],rdx
+FFT_enhanced.exe+2021F7: 8B 94 24 B8 00 00 00     - mov edx,[rsp+000000B8]
+FFT_enhanced.exe+2021FE: 48 89 4C 24 78           - mov [rsp+78],rcx
+FFT_enhanced.exe+202203: 48 8D 0D A6 1F AD 03     - lea rcx,[FFT_enhanced.exe+3CD41B0]
+FFT_enhanced.exe+20220A: 48 89 4C 24 70           - mov [rsp+70],rcx
+FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Battle: XP multiplier"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_XP_MULTI,FFT_enhanced.exe,0F B7 84 7B 1E 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_XP_MULTI)
+
+label(code)
+label(return)
+label(vf_xp_multi)
+
+newmem:
+  push rax
+  mov al, [ib_player_group]
+  cmp [rbx+rdi*2+4], al
+  jne endp
+
+xp_multi:
+  vcvtsi2ss xmm15, xmm15, edx
+  vmovss xmm14, [vf_xp_multi]
+  vmulss xmm15, xmm14, xmm15
+  vmovss xmm13, [vf_31999]
+  vucomiss xmm15, xmm13
+  jbe @F
+  movaps xmm15, xmm13
+
+@@:
+  vcvtss2si edx, xmm15
+
+endp:
+  pop rax
+
+code:
+  movzx eax,word ptr [rbx+rdi*2+0000011E]
+  jmp return
+align 10 cc
+  vf_xp_multi:
+  dd (float)1.66666
+  vf_31999:
+  dd (float)31999
+
+INJECT_XP_MULTI:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_XP_MULTI)
+registersymbol(vf_xp_multi)
+
+[DISABLE]
+
+INJECT_XP_MULTI:
+  db 0F B7 84 7B 1E 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+27F703
+
+FFT_enhanced.exe+27F6DC: 75 04                    - jne FFT_enhanced.exe+27F6E2
+FFT_enhanced.exe+27F6DE: 84 C9                    - test cl,cl
+FFT_enhanced.exe+27F6E0: 78 E9                    - js FFT_enhanced.exe+27F6CB
+FFT_enhanced.exe+27F6E2: 0F B7 84 7B F0 00 00 00  - movzx eax,word ptr [rbx+rdi*2+000000F0]
+FFT_enhanced.exe+27F6EA: 41 B8 0F 27 00 00        - mov r8d,0000270F
+FFT_enhanced.exe+27F6F0: 03 C2                    - add eax,edx
+FFT_enhanced.exe+27F6F2: 8B CF                    - mov ecx,edi
+FFT_enhanced.exe+27F6F4: 41 3B C0                 - cmp eax,r8d
+FFT_enhanced.exe+27F6F7: 41 0F 4F C0              - cmovg eax,r8d
+FFT_enhanced.exe+27F6FB: 66 89 84 7B F0 00 00 00  - mov [rbx+rdi*2+000000F0],ax
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+27F703: 0F B7 84 7B 1E 01 00 00  - movzx eax,word ptr [rbx+rdi*2+0000011E]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+27F70B: 03 C2                    - add eax,edx
+FFT_enhanced.exe+27F70D: 41 3B C0                 - cmp eax,r8d
+FFT_enhanced.exe+27F710: 41 0F 4F C0              - cmovg eax,r8d
+FFT_enhanced.exe+27F714: 0F B7 D0                 - movzx edx,ax
+FFT_enhanced.exe+27F717: 66 89 84 7B 1E 01 00 00  - mov [rbx+rdi*2+0000011E],ax
+FFT_enhanced.exe+27F71F: E8 4C 56 FF FF           - call FFT_enhanced.exe+274D70
+FFT_enhanced.exe+27F724: 44 8B C0                 - mov r8d,eax
+FFT_enhanced.exe+27F727: 8B C7                    - mov eax,edi
+FFT_enhanced.exe+27F729: 99                       - cdq 
+FFT_enhanced.exe+27F72A: 2B C2                    - sub eax,edx
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>25</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_xp_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Player side ID"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_player_group</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"min. HP ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_player_side_hp_min</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"min. MP ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_player_side_mp_min</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>288</ID>
+      <Description>"Browse &amp; set item amount (non-equiped)"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_EQUIPS,FFT_enhanced.exe,43 0F B6 0C 08 03) // should be unique
+alloc(newmem,$1000,INJECT_GET_EQUIPS)
+
+label(code)
+label(return)
+label(ib_equip_min_threshold ib_equip_set_amount_to)
+
+newmem:
+  mov cl, [ib_equip_min_threshold]
+  cmp [r8+r9], cl
+  jb code
+
+  mov cl, [ib_equip_set_amount_to]
+  cmp [r8+r9], cl
+  jae code
+  mov [r8+r9], cl
+
+code:
+  movzx ecx,byte ptr [r8+r9]
+  jmp return
+align 10 cc
+  ib_equip_min_threshold:
+  db 2
+  align 10 0
+  ib_equip_set_amount_to:
+  db 34
+
+INJECT_GET_EQUIPS:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_EQUIPS)
+registersymbol(ib_equip_min_threshold ib_equip_set_amount_to)
+
+[DISABLE]
+
+INJECT_GET_EQUIPS:
+  db 43 0F B6 0C 08
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+280768
+
+FFT_enhanced.exe+280743: CC                    - int 3 
+FFT_enhanced.exe+280744: B8 FF 03 00 00        - mov eax,000003FF
+FFT_enhanced.exe+280749: 41 B8 03 01 00 00     - mov r8d,00000103
+FFT_enhanced.exe+28074F: 66 23 C8              - and cx,ax
+FFT_enhanced.exe+280752: 8D 41 FF              - lea eax,[rcx-01]
+FFT_enhanced.exe+280755: 66 41 3B C0           - cmp ax,r8w
+FFT_enhanced.exe+280759: 77 1C                 - ja FFT_enhanced.exe+280777
+FFT_enhanced.exe+28075B: 44 0F B7 C1           - movzx r8d,cx
+FFT_enhanced.exe+28075F: 4C 8D 0D 8A 10 F2 00  - lea r9,[FFT_enhanced.exe+11A17F0]
+FFT_enhanced.exe+280766: 33 C0                 - xor eax,eax
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+280768: 43 0F B6 0C 08        - movzx ecx,byte ptr [r8+r9]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+28076D: 03 CA                 - add ecx,edx
+FFT_enhanced.exe+28076F: 0F 49 C1              - cmovns eax,ecx
+FFT_enhanced.exe+280772: 43 88 04 08           - mov [r8+r9],al
+FFT_enhanced.exe+280776: C3                    - ret 
+FFT_enhanced.exe+280777: 33 C0                 - xor eax,eax
+FFT_enhanced.exe+280779: C3                    - ret 
+FFT_enhanced.exe+28077A: CC                    - int 3 
+FFT_enhanced.exe+28077B: CC                    - int 3 
+FFT_enhanced.exe+28077C: 48 8B C4              - mov rax,rsp
+FFT_enhanced.exe+28077F: 48 89 58 08           - mov [rax+08],rbx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>289</ID>
+          <Description>"item count must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_equip_min_threshold</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>290</ID>
+              <Description>"Caution: 0 = get all"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>291</ID>
+          <Description>"Set amount to:"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_equip_set_amount_to</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>26</ID>
+      <Description>"Map: Status menu: get JP list"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-04
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_CHAR_JP_LIST,FFT_enhanced.exe,0F 10 87 80 00 00 00 0F) // should be unique
+alloc(newmem,$1000,INJECT_GET_CHAR_JP_LIST)
+
+label(code)
+label(return)
+label(i_equip_screen_jp_addr)
+
+newmem:
+  push r15
+  push r13
+  push rcx
+  xor r13, r13
+
+loop1:
+  mov r15, i_equip_screen_jp_addr
+  lea r15, [r15+r13*8]
+  cmp qword ptr [r15], rdi
+  je endp
+
+  cmp qword ptr [r15], 0
+  je write_it
+
+  inc r13
+  cmp r13, #60
+  ja endp
+  jmp loop1
+
+write_it:
+  mov [r15], rdi
+  jmp endp
+
+endp:
+  pop rcx
+  pop r13
+  pop r15
+
+code:
+  movups xmm0,[rdi+00000080]
+  jmp return
+align 10 cc
+  i_equip_screen_jp_addr:
+  dq 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
+INJECT_GET_CHAR_JP_LIST:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_CHAR_JP_LIST)
+registersymbol(i_equip_screen_jp_addr)
+
+[DISABLE]
+
+INJECT_GET_CHAR_JP_LIST:
+  db 0F 10 87 80 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+280CC5
+
+FFT_enhanced.exe+280C8E: 0F 10 47 52              - movups xmm0,[rdi+52]
+FFT_enhanced.exe+280C92: 0F 11 83 9B 00 00 00     - movups [rbx+0000009B],xmm0
+FFT_enhanced.exe+280C99: 0F 10 4F 62              - movups xmm1,[rdi+62]
+FFT_enhanced.exe+280C9D: 0F 11 8B AB 00 00 00     - movups [rbx+000000AB],xmm1
+FFT_enhanced.exe+280CA4: 0F B7 47 72              - movzx eax,word ptr [rdi+72]
+FFT_enhanced.exe+280CA8: 66 89 83 BB 00 00 00     - mov [rbx+000000BB],ax
+FFT_enhanced.exe+280CAF: F2 0F 10 47 74           - movsd xmm0,[rdi+74]
+FFT_enhanced.exe+280CB4: F2 0F 11 83 BD 00 00 00  - movsd [rbx+000000BD],xmm0
+FFT_enhanced.exe+280CBC: 8B 47 7C                 - mov eax,[rdi+7C]
+FFT_enhanced.exe+280CBF: 89 83 C5 00 00 00        - mov [rbx+000000C5],eax
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+280CC5: 0F 10 87 80 00 00 00     - movups xmm0,[rdi+00000080]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+280CCC: 0F 11 83 CA 00 00 00     - movups [rbx+000000CA],xmm0
+FFT_enhanced.exe+280CD3: 0F 10 8F 90 00 00 00     - movups xmm1,[rdi+00000090]
+FFT_enhanced.exe+280CDA: 0F 11 8B DA 00 00 00     - movups [rbx+000000DA],xmm1
+FFT_enhanced.exe+280CE1: F2 0F 10 87 A0 00 00 00  - movsd xmm0,[rdi+000000A0]
+FFT_enhanced.exe+280CE9: F2 0F 11 83 EA 00 00 00  - movsd [rbx+000000EA],xmm0
+FFT_enhanced.exe+280CF1: 8B 87 A8 00 00 00        - mov eax,[rdi+000000A8]
+FFT_enhanced.exe+280CF7: 89 83 F2 00 00 00        - mov [rbx+000000F2],eax
+FFT_enhanced.exe+280CFD: 0F B7 87 AC 00 00 00     - movzx eax,word ptr [rdi+000000AC]
+FFT_enhanced.exe+280D04: 66 89 83 F6 00 00 00     - mov [rbx+000000F6],ax
+FFT_enhanced.exe+280D0B: 0F 10 87 AE 00 00 00     - movups xmm0,[rdi+000000AE]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"Usage: enter / leave main menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"Do not edit data when in Job / troops menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>285</ID>
+          <Description>"Recommend: edit actived jobs only"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"addr (should not be zero)"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_equip_screen_jp_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"Geterate list"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+local baseSymbol = "i_equip_screen_jp_addr"
+local parentName = "+List (do not delete this)"
+local addressList = getAddressList()
+
+-- 顏色設定
+local evenColor = 0xFF8000
+local oddColor = 0xAA8044
+local jpEvenColor = 0x80FF80
+local jpOddColor = 0xC0C0C0
+
+-- 開始讀取地址清單
+local listStartAddr = getAddressSafe(baseSymbol)
+if not listStartAddr then
+  print("❌ 找不到符號：" .. baseSymbol)
+  return
+end
+
+local maxItems = 60
+local charIndex = 1
+
+synchronize(function()
+  -- 取得或建立 parent node
+  local parentRecord = addressList.getMemoryRecordByDescription(parentName)
+  if not parentRecord then
+    parentRecord = addressList.createMemoryRecord()
+    parentRecord.Description = parentName
+    parentRecord.IsGroupHeader = true
+    parentRecord.Options = "[moHideChildren]"
+  end
+
+  -- 清除舊的子節點
+  while parentRecord.Count &gt; 0 do
+    parentRecord.Child[0].destroy()
+  end
+
+  -- 建立所有角色 nodes
+  for n = 0, maxItems - 1 do
+    local ptrAddr = listStartAddr + n * 8
+    local itemAddr = readQword(ptrAddr)
+
+    -- 如果讀到 0，停止
+    if itemAddr == 0 then
+      break
+    end
+
+    -- 建立角色群組節點
+    local charNode = addressList.createMemoryRecord()
+    charNode.Description = string.format("Char[%02d]", charIndex)
+    charNode.IsGroupHeader = true
+    charNode.Options = "[moHideChildren]"
+    charNode.Parent = parentRecord
+    charNode.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    -- 建立 JP[01] 到 JP[22]
+    for i = 1, 22 do
+      local jpNode = addressList.createMemoryRecord()
+      jpNode.Description = string.format("JP[%02d]", i)
+      jpNode.Address = string.format("%X", itemAddr + (i - 1) * 2 + 0x80)
+      jpNode.Type = vtWord
+      jpNode.ShowAsHex = false
+      jpNode.Parent = charNode
+      jpNode.Color = (i % 2 == 1) and jpEvenColor or jpOddColor
+    end
+
+    charIndex = charIndex + 1
+  end
+
+  parentRecord.Active = true
+end)
+
+print(string.format("✔ 已建立 %d 個角色記錄", charIndex - 1))
+closeLuaEngine()
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+local PARENT_NAME = "+List (do not delete this)"
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("❌ 找不到父節點: " .. PARENT_NAME)
+    return
+  end
+
+  -- 刪除所有子節點
+  while parent.Count &gt; 0 do
+    parent.Child[0].destroy()
+  end
+
+  parent.Active = false
+  print("✔ 已清除所有角色記錄")
+end)
+closeLuaEngine()
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"+List (do not delete this)"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>292</ID>
+      <Description>"FINAL FANTASY TACTICS - The Ivalice Chronicles  /  https://opencheattables.com"</Description>
+      <Color>009500</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- AOBScanModuleN関数
+if not AOBScanModuleN then
+    function AOBScanModuleN(moduleName, signature, maxResults, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addrs = {}
+        synchronize(function()
+            local count = results.getCount()
+            for i = 0, math.min(maxResults - 1, count - 1) do
+                table.insert(addrs, results[i])
+                if debugMode then
+                    print(string.format("🔦 AOB[%d] found at: 0x%s", i + 1, results[i]))
+                end
+            end
+        end)
+
+        if #addrs == 0 and debugMode then
+            print("💔 AOB not found in " .. moduleName)
+        end
+
+        results.destroy()
+        ms.destroy()
+
+        return addrs
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModuleN')
+
+
+-- 搜尋並取出最多5筆結果
+--[[
+local list = AOBScanModuleN("GameModule.exe", "12 34 56 ?? 78", 5)
+
+if list then
+    for i, addr in ipairs(list) do
+        print(string.format("地址 %d: 0x%s", i, addr))
+    end
+end
+]]--
+
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
+</CheatTable>
