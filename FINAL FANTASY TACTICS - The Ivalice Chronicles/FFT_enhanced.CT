@@ -2416,6 +2416,23 @@ local oddColor = 0xAA8044
 local jpEvenColor = 0x80FF80
 local jpOddColor = 0xC0C0C0
 
+-- 建立節點的通用函數
+local function createNode(desc, addr, vtype, parent, color, showHex)
+  local node = addressList.createMemoryRecord()
+  node.Description = desc
+  if addr then
+    node.Address = string.format("%X", addr)
+    node.Type = vtype or vtByte
+    node.ShowAsHex = showHex or false
+  else
+    node.IsGroupHeader = true
+    node.Options = "[moHideChildren]"
+  end
+  node.Parent = parent
+  node.Color = color
+  return node
+end
+
 -- 開始讀取地址清單
 local listStartAddr = getAddressSafe(baseSymbol)
 if not listStartAddr then
@@ -2441,161 +2458,65 @@ synchronize(function()
     parentRecord.Child[0].destroy()
   end
 
+  -- 基本資料定義表
+  local statsData = {
+    {"EXP", 0x1C, vtByte},
+    {"Lv", 0x1D, vtByte},
+    {"Brave", 0x1E, vtByte},
+    {"Faith", 0x1F, vtByte}
+  }
+
+  -- 裝備資料定義表
+  local equipData = {
+    {"Right hand", 0x14, vtWord},
+    {"Unknown", 0x16, vtWord},
+    {"Left hand", 0x18, vtWord},
+    {"Shield", 0x1A, vtWord},
+    {"Head", 0x0E, vtWord},
+    {"Body", 0x10, vtWord},
+    {"Accessory", 0x12, vtWord}
+  }
+
   -- 建立所有角色 nodes
   for n = 0, maxItems - 1 do
     local ptrAddr = listStartAddr + n * 8
     local itemAddr = readQword(ptrAddr)
 
-    -- 如果讀到 0，停止
-    if itemAddr == 0 then
-      break
-    end
+    if itemAddr == 0 then break end
+
+    local charColor = (charIndex % 2 == 1) and evenColor or oddColor
 
     -- 建立角色群組節點
-    local charNode = addressList.createMemoryRecord()
-    charNode.Description = string.format("Char[%02d]", charIndex)
-    charNode.IsGroupHeader = true
-    charNode.Options = "[moHideChildren]"
-    charNode.Parent = parentRecord
-    charNode.Color = (charIndex % 2 == 1) and evenColor or oddColor
+    local charNode = createNode(string.format("Char[%02d]", charIndex), nil, nil, parentRecord, charColor)
 
-    -- 建立角色基本資料群組節點
-    local charNodeData = addressList.createMemoryRecord()
-    charNodeData.Description = "Stats+"
-    charNodeData.IsGroupHeader = true
-    charNodeData.Options = "[moHideChildren]"
-    charNodeData.Parent = charNode
-    charNodeData.Color = (charIndex % 2 == 1) and evenColor or oddColor
+    -- 建立子群組
+    local statsNode = createNode("Stats+", nil, nil, charNode, charColor)
+    local equipNode = createNode("Equip IDs+", nil, nil, charNode, charColor)
+    local jpNode = createNode("JP+", nil, nil, charNode, charColor)
+    local jpExpNode = createNode("JP EXP+", nil, nil, charNode, charColor)
 
-    -- 建立角色裝備資料群組節點
-    local charNodeEqp = addressList.createMemoryRecord()
-    charNodeEqp.Description = "Equip IDs+"
-    charNodeEqp.IsGroupHeader = true
-    charNodeEqp.Options = "[moHideChildren]"
-    charNodeEqp.Parent = charNode
-    charNodeEqp.Color = (charIndex % 2 == 1) and evenColor or oddColor
+    -- 建立基本資料項目
+    for i, data in ipairs(statsData) do
+      local color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      createNode(data[1], itemAddr + data[2], data[3], statsNode, color)
+    end
 
-    -- 建立角色JP 群組節點
-    local charNodeJP = addressList.createMemoryRecord()
-    charNodeJP.Description = "JP+"
-    charNodeJP.IsGroupHeader = true
-    charNodeJP.Options = "[moHideChildren]"
-    charNodeJP.Parent = charNode
-    charNodeJP.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    -- 建立角色JP EXP 群組節點
-    local charNodeJPEXP = addressList.createMemoryRecord()
-    charNodeJPEXP.Description = "JP EXP+"
-    charNodeJPEXP.IsGroupHeader = true
-    charNodeJPEXP.Options = "[moHideChildren]"
-    charNodeJPEXP.Parent = charNode
-    charNodeJPEXP.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    -- 基本資料
-    local NodeXP = addressList.createMemoryRecord()
-    NodeXP.Description = "EXP"
-    NodeXP.Address = string.format("%X", itemAddr + 0x1C)
-    NodeXP.Type = vtByte
-    NodeXP.ShowAsHex = false
-    NodeXP.Parent = charNodeData
-    NodeXP.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeLv = addressList.createMemoryRecord()
-    NodeLv.Description = "Lv"
-    NodeLv.Address = string.format("%X", itemAddr + 0x1D)
-    NodeLv.Type = vtByte
-    NodeLv.ShowAsHex = false
-    NodeLv.Parent = charNodeData
-    NodeLv.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeBr = addressList.createMemoryRecord()
-    NodeBr.Description = "Brave"
-    NodeBr.Address = string.format("%X", itemAddr + 0x1E)
-    NodeBr.Type = vtByte
-    NodeBr.ShowAsHex = false
-    NodeBr.Parent = charNodeData
-    NodeBr.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeFa = addressList.createMemoryRecord()
-    NodeFa.Description = "Faith"
-    NodeFa.Address = string.format("%X", itemAddr + 0x1F)
-    NodeFa.Type = vtByte
-    NodeFa.ShowAsHex = false
-    NodeFa.Parent = charNodeData
-    NodeFa.Color = (charIndex % 2 == 1) and evenColor or oddColor
-    --------------------------
-
-    -- 裝備資料
-    local NodeEqRHand = addressList.createMemoryRecord()
-    NodeEqRHand.Description = "Right hand"
-    NodeEqRHand.Address = string.format("%X", itemAddr + 0x14)
-    NodeEqRHand.Type = vtWord
-    NodeEqRHand.ShowAsHex = false
-    NodeEqRHand.Parent = charNodeEqp
-    NodeEqRHand.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeEqU1 = addressList.createMemoryRecord()
-    NodeEqU1.Description = "Unknown"
-    NodeEqU1.Address = string.format("%X", itemAddr + 0x16)
-    NodeEqU1.Type = vtWord
-    NodeEqU1.ShowAsHex = false
-    NodeEqU1.Parent = charNodeEqp
-    NodeEqU1.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeEqLHand = addressList.createMemoryRecord()
-    NodeEqLHand.Description = "Left hand"
-    NodeEqLHand.Address = string.format("%X", itemAddr + 0x18)
-    NodeEqLHand.Type = vtWord
-    NodeEqLHand.ShowAsHex = false
-    NodeEqLHand.Parent = charNodeEqp
-    NodeEqLHand.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeEqHead = addressList.createMemoryRecord()
-    NodeEqHead.Description = "Head"
-    NodeEqHead.Address = string.format("%X", itemAddr + 0x0E)
-    NodeEqHead.Type = vtWord
-    NodeEqHead.ShowAsHex = false
-    NodeEqHead.Parent = charNodeEqp
-    NodeEqHead.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeEqBody = addressList.createMemoryRecord()
-    NodeEqBody.Description = "Body"
-    NodeEqBody.Address = string.format("%X", itemAddr + 0x10)
-    NodeEqBody.Type = vtWord
-    NodeEqBody.ShowAsHex = false
-    NodeEqBody.Parent = charNodeEqp
-    NodeEqBody.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    local NodeEqAccessory = addressList.createMemoryRecord()
-    NodeEqAccessory.Description = "Accessory"
-    NodeEqAccessory.Address = string.format("%X", itemAddr + 0x12)
-    NodeEqAccessory.Type = vtWord
-    NodeEqAccessory.ShowAsHex = false
-    NodeEqAccessory.Parent = charNodeEqp
-    NodeEqAccessory.Color = (charIndex % 2 == 1) and evenColor or oddColor
-
-    --------------------------
+    -- 建立裝備資料項目
+    for i, data in ipairs(equipData) do
+      local color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      createNode(data[1], itemAddr + data[2], data[3], equipNode, color)
+    end
 
     -- 建立 JP[01] 到 JP[22]
     for i = 1, 22 do
-      local jpNode = addressList.createMemoryRecord()
-      jpNode.Description = string.format("JP[%02d]", i)
-      jpNode.Address = string.format("%X", itemAddr + (i - 1) * 2 + 0x80)
-      jpNode.Type = vtWord
-      jpNode.ShowAsHex = false
-      jpNode.Parent = charNodeJP
-      jpNode.Color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      local color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      createNode(string.format("JP[%02d]", i), itemAddr + (i - 1) * 2 + 0x80, vtWord, jpNode, color)
     end
 
     -- 建立 JP EXP[01] 到 JP EXP[22]
     for i = 1, 22 do
-      local jpXPNode = addressList.createMemoryRecord()
-      jpXPNode.Description = string.format("JP EXP[%02d]", i)
-      jpXPNode.Address = string.format("%X", itemAddr + (i - 1) * 2 + 0xAE)
-      jpXPNode.Type = vtWord
-      jpXPNode.ShowAsHex = false
-      jpXPNode.Parent = charNodeJPEXP
-      jpXPNode.Color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      local color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      createNode(string.format("JP EXP[%02d]", i), itemAddr + (i - 1) * 2 + 0xAE, vtWord, jpExpNode, color)
     end
 
     charIndex = charIndex + 1
@@ -2621,7 +2542,6 @@ synchronize(function()
     return
   end
 
-  -- 刪除所有子節點
   while parent.Count &gt; 0 do
     parent.Child[0].destroy()
   end
@@ -2629,8 +2549,8 @@ synchronize(function()
   parent.Active = false
   print("All records cleared!")
 end)
-closeLuaEngine()
 
+closeLuaEngine()
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
