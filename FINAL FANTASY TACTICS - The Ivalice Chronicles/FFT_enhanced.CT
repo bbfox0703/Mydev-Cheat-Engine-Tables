@@ -101,14 +101,16 @@ end)
 
   6, -- "Battle: selected char (LT or click)"
   15, -- "Battle: player side HP/MP/XP/Others"
-  26, -- "Map: Status menu: get JP list"
+  26, -- "Map: Status menu: get JP data"
   287, -- "Toggle Compact View"
   288, -- "Browse &amp; set item amount (non-equipped)"
+  1286, -- "Get money"
   24, -- "Battle: JP XP multiplier"
   302, -- "Battle: XP multiplier"
   305, -- "Battle: keep min brave/faith after action"
   646, -- "Battle: set min jmp/mov/spd/atk..."
   654, -- "Battle: damage multiplier"
+  1284, -- "Enable Check point #2"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -131,6 +133,7 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  1284, -- "Enable Check point #2"
   654, -- "Battle: damage multiplier"
   646, -- "Battle: set min jmp/mov/spd/atk..."
   630, -- "Attributes+"
@@ -143,9 +146,10 @@ local disableBattleScripts = {
   29, -- "Generate list"
   28, -- "+List (do not delete this)"
   24, -- "Battle: JP XP multiplier"
+  1286, -- "Get money"
   288, -- "Browse &amp; set item amount (non-equipped)"
   287, -- "Toggle Compact View"
-  26, -- "Map: Status menu: get JP list"
+  26, -- "Map: Status menu: get JP data"
   15, -- "Battle: player side HP/MP/XP/Others"
   6, -- "Battle: selected char (LT or click)"
 }
@@ -173,10 +177,12 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 24, Description: "Battle: JP XP multiplier", Depth: 1
 --   ID: 305, Description: "Battle: keep min brave/faith after action", Depth: 1
 --   ID: 654, Description: "Battle: damage multiplier", Depth: 1
+--     ID: 1284, Description: "Enable Check point #2", Depth: 2
 --   ID: 646, Description: "Battle: set min jmp/mov/spd/atk...", Depth: 1
 -- ID: 288, Description: "Browse &amp; set item amount (non-equipped)", Depth: 0
 --   ID: 289, Description: "item count must &gt;=", Depth: 1
--- ID: 26, Description: "Map: Status menu: get JP list", Depth: 0
+-- ID: 1286, Description: "Get money", Depth: 0
+-- ID: 26, Description: "Map: Status menu: get JP data", Depth: 0
 --   ID: 29, Description: "Generate list", Depth: 1
 --   ID: 28, Description: "+List (do not delete this)", Depth: 1
 
@@ -1618,7 +1624,7 @@ FFT_enhanced.exe+F4F0AA2: C1 EA 05                 - shr edx,05
         <CheatEntry>
           <ID>654</ID>
           <Description>"Battle: damage multiplier"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : FFT_enhanced.exe
   Version: 
@@ -1636,9 +1642,12 @@ label(return)
 label(vf_damage_to_player vf_damage_to_enemy i_max_damage_to_player is_limit_damage_to_player)
 
 newmem:
+  push rcx
   mov dword ptr [i_player_tag], 0
-  mov al, [ib_player_group]
-  cmp [rdi+4], al
+  mov cl, [ib_player_group]
+  cmp [rdi+4], cl
+  pop rcx
+
   jne calc_damage
 
   mov dword ptr [i_player_tag], 1
@@ -1664,6 +1673,9 @@ to_enemy:
 post_proc:
   vcvtss2si edx, xmm15
   mov dword ptr [i_player_tag], 0
+  mov [rax+06], dx
+
+
 
 code:
   movzx eax,word ptr [rdi+30]
@@ -1727,6 +1739,108 @@ FFT_enhanced.exe+2161F9: 74 44                 - je FFT_enhanced.exe+21623F
 }
 </AssemblerScript>
           <CheatEntries>
+            <CheatEntry>
+              <ID>1284</ID>
+              <Description>"Enable Check point #2"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_DAMAGE_MULTI2,FFT_enhanced.exe,2B C8 8D 04 11) // should be unique
+alloc(newmem,$1000,INJECT_DAMAGE_MULTI2)
+
+label(code)
+label(return)
+
+newmem:
+  push rcx
+  mov dword ptr [i_player_tag], 0
+  mov cl, [ib_player_group]
+  cmp [rdi+4], cl
+  pop rcx
+
+  jne calc_damage
+
+  mov dword ptr [i_player_tag], 1
+
+  cmp dword ptr [is_limit_damage_to_player], 1
+  jne calc_damage
+  cmp eax, [i_max_damage_to_player]
+  jbe calc_damage
+  movzx eax, [i_max_damage_to_player]
+
+calc_damage:
+  movaps, xmm14, [vf_damage_to_player]
+  vcvtsi2ss xmm15, xmm15, eax
+  vshufps xmm15, xmm15, xmm15, 0
+  vmulps xmm15, xmm14, xmm15
+
+  cmp dword ptr [i_player_tag], 1
+  je post_proc
+
+to_enemy:
+  vshufps xmm15, xmm15, xmm15, 1
+
+post_proc:
+  vcvtss2si eax, xmm15
+  mov dword ptr [i_player_tag], 0
+  mov [rbp+06], ax
+
+code:
+  sub ecx,eax
+  lea eax,[rcx+rdx]
+  jmp return
+align 10 cc
+  i_player_tag:
+  dd 0
+
+INJECT_DAMAGE_MULTI2:
+  jmp newmem
+return:
+registersymbol(INJECT_DAMAGE_MULTI2)
+
+[DISABLE]
+
+INJECT_DAMAGE_MULTI2:
+  db 2B C8 8D 04 11
+
+unregistersymbol(INJECT_DAMAGE_MULTI2)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+301271
+
+FFT_enhanced.exe+30123D: 83 E1 03                 - and ecx,03
+FFT_enhanced.exe+301240: 66 89 84 4F 50 41 86 01  - mov [rdi+rcx*2+01864150],ax
+FFT_enhanced.exe+301248: E8 97 16 00 00           - call FFT_enhanced.exe+3028E4
+FFT_enhanced.exe+30124D: 48 8B 2D 5C 2E 56 01     - mov rbp,[FFT_enhanced.exe+18640B0]
+FFT_enhanced.exe+301254: 48 8B 3D 6D 2E 56 01     - mov rdi,[FFT_enhanced.exe+18640C8]
+FFT_enhanced.exe+30125B: 0F BF 45 06              - movsx eax,word ptr [rbp+06]
+FFT_enhanced.exe+30125F: 0F B7 57 30              - movzx edx,word ptr [rdi+30]
+FFT_enhanced.exe+301263: 44 0F B7 7F 32           - movzx r15d,word ptr [rdi+32]
+FFT_enhanced.exe+301268: 0F BF 4D 08              - movsx ecx,word ptr [rbp+08]
+FFT_enhanced.exe+30126C: 44 0F B7 47 34           - movzx r8d,word ptr [rdi+34]
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+301271: 2B C8                    - sub ecx,eax
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+301273: 8D 04 11                 - lea eax,[rcx+rdx]
+FFT_enhanced.exe+301276: 8B CB                    - mov ecx,ebx
+FFT_enhanced.exe+301278: 85 C0                    - test eax,eax
+FFT_enhanced.exe+30127A: 0F 49 C8                 - cmovns ecx,eax
+FFT_enhanced.exe+30127D: 0F BF 45 0A              - movsx eax,word ptr [rbp+0A]
+FFT_enhanced.exe+301281: 41 3B CF                 - cmp ecx,r15d
+FFT_enhanced.exe+301284: 44 0F 4E F9              - cmovle r15d,ecx
+FFT_enhanced.exe+301288: 0F BF 4D 0C              - movsx ecx,word ptr [rbp+0C]
+FFT_enhanced.exe+30128C: 2B C8                    - sub ecx,eax
+FFT_enhanced.exe+30128E: 42 8D 04 01              - lea eax,[rcx+r8]
+}
+</AssemblerScript>
+            </CheatEntry>
             <CheatEntry>
               <ID>655</ID>
               <Description>"Limit damage to player?"</Description>
@@ -1833,11 +1947,11 @@ code:
   mov [rbx+30],ax
   jmp return
   ib_min_jmp:
-  db 4
+  db 5
   ib_min_mov:
-  db 6
-  ib_min_spd:
   db 7
+  ib_min_spd:
+  db 8
   ib_min_atk:
   db 7
   ib_min_matk:
@@ -2051,8 +2165,109 @@ FFT_enhanced.exe+28077F: 48 89 58 08           - mov [rax+08],rbx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>1286</ID>
+      <Description>"Get money"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-05
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_MONEY,FFT_enhanced.exe,0F 10 49 30 0F 11 48 30 0F 10 41 40 0F 11 40 40 0F 10 49 50 0F 11 48 50 0F 10 41 60 0F 11 40 60 49 03 C2) // should be unique
+alloc(newmem,$1000,INJECT_GET_MONEY)
+
+label(code)
+label(return)
+label(i_base_money_addr)
+
+newmem:
+  pushfq
+  cmp edx, 7
+  jne @F
+
+  mov [i_base_money_addr], rcx
+
+@@:
+  popfq
+
+code:
+  movups xmm1,[rcx+30]
+  movups [rax+30],xmm1
+  jmp return
+align 10 cc
+  i_base_money_addr:
+  dq 0
+
+INJECT_GET_MONEY:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_MONEY)
+registersymbol(i_base_money_addr)
+
+[DISABLE]
+
+INJECT_GET_MONEY:
+  db 0F 10 49 30 0F 11 48 30
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+2060F4
+
+FFT_enhanced.exe+2060C2: 41 0F 11 88 22 86 00 00  - movups [r8+00008622],xmm1
+FFT_enhanced.exe+2060CA: 8A 05 8E 69 57 00        - mov al,[FFT_enhanced.exe+77CA5E]
+FFT_enhanced.exe+2060D0: 41 88 80 38 8A 00 00     - mov [r8+00008A38],al
+FFT_enhanced.exe+2060D7: 49 8D 80 34 86 00 00     - lea rax,[r8+00008634]
+FFT_enhanced.exe+2060DE: 0F 10 01                 - movups xmm0,[rcx]
+FFT_enhanced.exe+2060E1: 0F 11 00                 - movups [rax],xmm0
+FFT_enhanced.exe+2060E4: 0F 10 49 10              - movups xmm1,[rcx+10]
+FFT_enhanced.exe+2060E8: 0F 11 48 10              - movups [rax+10],xmm1
+FFT_enhanced.exe+2060EC: 0F 10 41 20              - movups xmm0,[rcx+20]
+FFT_enhanced.exe+2060F0: 0F 11 40 20              - movups [rax+20],xmm0
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+2060F4: 0F 10 49 30              - movups xmm1,[rcx+30]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+2060F8: 0F 11 48 30              - movups [rax+30],xmm1
+FFT_enhanced.exe+2060FC: 0F 10 41 40              - movups xmm0,[rcx+40]
+FFT_enhanced.exe+206100: 0F 11 40 40              - movups [rax+40],xmm0
+FFT_enhanced.exe+206104: 0F 10 49 50              - movups xmm1,[rcx+50]
+FFT_enhanced.exe+206108: 0F 11 48 50              - movups [rax+50],xmm1
+FFT_enhanced.exe+20610C: 0F 10 41 60              - movups xmm0,[rcx+60]
+FFT_enhanced.exe+206110: 0F 11 40 60              - movups [rax+60],xmm0
+FFT_enhanced.exe+206114: 49 03 C2                 - add rax,r10
+FFT_enhanced.exe+206117: 0F 10 49 70              - movups xmm1,[rcx+70]
+FFT_enhanced.exe+20611B: 49 03 CA                 - add rcx,r10
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1288</ID>
+          <Description>"Usage: enter -&gt; leave main menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1287</ID>
+          <Description>"value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>30</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>26</ID>
-      <Description>"Map: Status menu: get JP list"</Description>
+      <Description>"Map: Status menu: get JP/other data"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : FFT_enhanced.exe
@@ -2244,6 +2459,123 @@ synchronize(function()
     charNode.Parent = parentRecord
     charNode.Color = (charIndex % 2 == 1) and evenColor or oddColor
 
+    -- 建立角色基本資料群組節點
+    local charNodeData = addressList.createMemoryRecord()
+    charNodeData.Description = "Stats+"
+    charNodeData.IsGroupHeader = true
+    charNodeData.Options = "[moHideChildren]"
+    charNodeData.Parent = charNode
+    charNodeData.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    -- 建立角色裝備資料群組節點
+    local charNodeEqp = addressList.createMemoryRecord()
+    charNodeEqp.Description = "Equip IDs+"
+    charNodeEqp.IsGroupHeader = true
+    charNodeEqp.Options = "[moHideChildren]"
+    charNodeEqp.Parent = charNode
+    charNodeEqp.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    -- 建立角色JP 群組節點
+    local charNodeJP = addressList.createMemoryRecord()
+    charNodeJP.Description = "JP+"
+    charNodeJP.IsGroupHeader = true
+    charNodeJP.Options = "[moHideChildren]"
+    charNodeJP.Parent = charNode
+    charNodeJP.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    -- 建立角色JP EXP 群組節點
+    local charNodeJPEXP = addressList.createMemoryRecord()
+    charNodeJPEXP.Description = "JP EXP+"
+    charNodeJPEXP.IsGroupHeader = true
+    charNodeJPEXP.Options = "[moHideChildren]"
+    charNodeJPEXP.Parent = charNode
+    charNodeJPEXP.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    -- 基本資料
+    local NodeXP = addressList.createMemoryRecord()
+    NodeXP.Description = "EXP"
+    NodeXP.Address = string.format("%X", itemAddr + 0x1C)
+    NodeXP.Type = vtByte
+    NodeXP.ShowAsHex = false
+    NodeXP.Parent = charNodeData
+    NodeXP.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeLv = addressList.createMemoryRecord()
+    NodeLv.Description = "Lv"
+    NodeLv.Address = string.format("%X", itemAddr + 0x1D)
+    NodeLv.Type = vtByte
+    NodeLv.ShowAsHex = false
+    NodeLv.Parent = charNodeData
+    NodeLv.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeBr = addressList.createMemoryRecord()
+    NodeBr.Description = "Brave"
+    NodeBr.Address = string.format("%X", itemAddr + 0x1E)
+    NodeBr.Type = vtByte
+    NodeBr.ShowAsHex = false
+    NodeBr.Parent = charNodeData
+    NodeBr.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeFa = addressList.createMemoryRecord()
+    NodeFa.Description = "Faith"
+    NodeFa.Address = string.format("%X", itemAddr + 0x1F)
+    NodeFa.Type = vtByte
+    NodeFa.ShowAsHex = false
+    NodeFa.Parent = charNodeData
+    NodeFa.Color = (charIndex % 2 == 1) and evenColor or oddColor
+    --------------------------
+
+    -- 裝備資料
+    local NodeEqRHand = addressList.createMemoryRecord()
+    NodeEqRHand.Description = "Right hand"
+    NodeEqRHand.Address = string.format("%X", itemAddr + 0x14)
+    NodeEqRHand.Type = vtWord
+    NodeEqRHand.ShowAsHex = false
+    NodeEqRHand.Parent = charNodeEqp
+    NodeEqRHand.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeEqU1 = addressList.createMemoryRecord()
+    NodeEqU1.Description = "Unknown"
+    NodeEqU1.Address = string.format("%X", itemAddr + 0x16)
+    NodeEqU1.Type = vtWord
+    NodeEqU1.ShowAsHex = false
+    NodeEqU1.Parent = charNodeEqp
+    NodeEqU1.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeEqLHand = addressList.createMemoryRecord()
+    NodeEqLHand.Description = "Left hand"
+    NodeEqLHand.Address = string.format("%X", itemAddr + 0x18)
+    NodeEqLHand.Type = vtWord
+    NodeEqLHand.ShowAsHex = false
+    NodeEqLHand.Parent = charNodeEqp
+    NodeEqLHand.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeEqHead = addressList.createMemoryRecord()
+    NodeEqHead.Description = "Head"
+    NodeEqHead.Address = string.format("%X", itemAddr + 0x0E)
+    NodeEqHead.Type = vtWord
+    NodeEqHead.ShowAsHex = false
+    NodeEqHead.Parent = charNodeEqp
+    NodeEqHead.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeEqBody = addressList.createMemoryRecord()
+    NodeEqBody.Description = "Body"
+    NodeEqBody.Address = string.format("%X", itemAddr + 0x10)
+    NodeEqBody.Type = vtWord
+    NodeEqBody.ShowAsHex = false
+    NodeEqBody.Parent = charNodeEqp
+    NodeEqBody.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    local NodeEqAccessory = addressList.createMemoryRecord()
+    NodeEqAccessory.Description = "Accessory"
+    NodeEqAccessory.Address = string.format("%X", itemAddr + 0x12)
+    NodeEqAccessory.Type = vtWord
+    NodeEqAccessory.ShowAsHex = false
+    NodeEqAccessory.Parent = charNodeEqp
+    NodeEqAccessory.Color = (charIndex % 2 == 1) and evenColor or oddColor
+
+    --------------------------
+
     -- 建立 JP[01] 到 JP[22]
     for i = 1, 22 do
       local jpNode = addressList.createMemoryRecord()
@@ -2251,8 +2583,19 @@ synchronize(function()
       jpNode.Address = string.format("%X", itemAddr + (i - 1) * 2 + 0x80)
       jpNode.Type = vtWord
       jpNode.ShowAsHex = false
-      jpNode.Parent = charNode
+      jpNode.Parent = charNodeJP
       jpNode.Color = (i % 2 == 1) and jpEvenColor or jpOddColor
+    end
+
+    -- 建立 JP EXP[01] 到 JP EXP[22]
+    for i = 1, 22 do
+      local jpXPNode = addressList.createMemoryRecord()
+      jpXPNode.Description = string.format("JP EXP[%02d]", i)
+      jpXPNode.Address = string.format("%X", itemAddr + (i - 1) * 2 + 0xAE)
+      jpXPNode.Type = vtWord
+      jpXPNode.ShowAsHex = false
+      jpXPNode.Parent = charNodeJPEXP
+      jpXPNode.Color = (i % 2 == 1) and jpEvenColor or jpOddColor
     end
 
     charIndex = charIndex + 1
