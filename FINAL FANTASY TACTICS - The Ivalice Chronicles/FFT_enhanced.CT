@@ -201,7 +201,7 @@ synchronize(function() getLuaEngine().Close() end)
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATT_SELECTED_CHAR,FFT_enhanced.exe,0F B7 41 30 66 89 42 0C ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 64) // should be unique
+aobscanmodule(INJECT_BATT_SELECTED_CHAR,$process,0F B7 41 30 66 89 42 0C ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 64) // should be unique
 alloc(newmem,$1000,INJECT_BATT_SELECTED_CHAR)
 
 label(code)
@@ -1175,7 +1175,7 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATT_GET_ALL_CHARS,FFT_enhanced.exe,45 0F B7 57 30) // should be unique
+aobscanmodule(INJECT_BATT_GET_ALL_CHARS,$process,45 0F B7 57 30) // should be unique
 alloc(newmem,$1000,INJECT_BATT_GET_ALL_CHARS)
 
 label(code)
@@ -1325,7 +1325,7 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
 
 [ENABLE]
 
-aobscanmodule(INJECT_XP_MULTI2,FFT_enhanced.exe,44 03 C0 45 3B C5) // should be unique
+aobscanmodule(INJECT_XP_MULTI2,$process,44 03 C0 45 3B C5) // should be unique
 alloc(newmem,$1000,INJECT_XP_MULTI2)
 
 label(code)
@@ -1421,20 +1421,46 @@ FFT_enhanced.exe+27F546: 88 46 02              - mov [rsi+02],al
 
 [ENABLE]
 
-aobscanmodule(INJECT_XP_MULTI,FFT_enhanced.exe,0F B7 84 7B 1E 01 00 00) // should be unique
+aobscanmodule(INJECT_XP_MULTI,$process,0F B7 84 7B 1E 01 00 00) // should be unique
 alloc(newmem,$1000,INJECT_XP_MULTI)
 
 label(code)
 label(return)
-label(vf_xp_multi)
+label(vf_xp_multi i_is_add_xp_to_all iw_xp_extra)
 
 newmem:
   push rax
+  pushfq
+
   mov al, [ib_player_group]
-  cmp [rbx+rdi*2+4], al
+  cmp [rbx+4], al
   jne endp
 
+to_add_extra:
+  cmp dword ptr [i_is_add_xp_to_all], 1
+  jne xp_multi
+
+  push rcx
+  push rdx
+
+  xor rcx, rcx
+  mov ecx, #19
+  mov ax, [iw_xp_extra]
+
+loop1:
+  dec rcx
+  cmp word ptr [rbx+rcx*2+0000011E], #32000
+  jae @F
+  add word ptr [rbx+rcx*2+0000011E], ax  // 0-18
+@@:
+  test rcx, rcx
+  jnz loop1
+
+  pop rdx
+  pop rcx
+
 xp_multi:
+  // xp multiplier
   vcvtsi2ss xmm15, xmm15, edx
   vmovss xmm14, [vf_xp_multi]
   vmulss xmm15, xmm14, xmm15
@@ -1447,6 +1473,7 @@ xp_multi:
   vcvtss2si edx, xmm15
 
 endp:
+  popfq
   pop rax
 
 code:
@@ -1457,13 +1484,18 @@ align 10 cc
   dd (float)4.5
   vf_31999:
   dd (float)31999
+  i_is_add_xp_to_all:
+  dd 1
+  iw_xp_extra:
+  db 14
+  db 0
 
 INJECT_XP_MULTI:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_XP_MULTI)
-registersymbol(vf_xp_multi)
+registersymbol(vf_xp_multi i_is_add_xp_to_all iw_xp_extra)
 
 [DISABLE]
 
@@ -1510,6 +1542,28 @@ FFT_enhanced.exe+27F72A: 2B C2                    - sub eax,edx
               <VariableType>Float</VariableType>
               <Address>vf_xp_multi</Address>
             </CheatEntry>
+            <CheatEntry>
+              <ID>1289</ID>
+              <Description>"Extra XP to all jobs?"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_is_add_xp_to_all</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1290</ID>
+              <Description>"Extra XP"</Description>
+              <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Byte</VariableType>
+              <Address>iw_xp_extra</Address>
+            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
@@ -1525,7 +1579,7 @@ FFT_enhanced.exe+27F72A: 2B C2                    - sub eax,edx
 
 [ENABLE]
 
-aobscanmodule(INJECT_KEEP_MIN_BR_FA,FFT_enhanced.exe,41 0F B6 5A 2B) // should be unique
+aobscanmodule(INJECT_KEEP_MIN_BR_FA,$process,41 0F B6 5A 2B) // should be unique
 alloc(newmem,$1000,INJECT_KEEP_MIN_BR_FA)
 
 label(code)
@@ -1634,7 +1688,7 @@ FFT_enhanced.exe+F4F0AA2: C1 EA 05                 - shr edx,05
 
 [ENABLE]
 
-aobscanmodule(INJECT_DAMAGE_MULTI,FFT_enhanced.exe,0F B7 47 30 2B C2 85 C0 41 0F 4E CE 8A D1 E8 F2) // should be unique
+aobscanmodule(INJECT_DAMAGE_MULTI,$process,0F B7 47 30 2B C2 85 C0 41 0F 4E CE 8A D1 E8 F2) // should be unique
 alloc(newmem,$1000,INJECT_DAMAGE_MULTI)
 
 label(code)
@@ -1683,7 +1737,7 @@ code:
   jmp return
 align 10 cc
   vf_damage_to_player:
-  dd (float)0.9
+  dd (float)1
   vf_damage_to_enemy:
   dd (float)1.1
   dd 0 0
@@ -1751,7 +1805,7 @@ FFT_enhanced.exe+2161F9: 74 44                 - je FFT_enhanced.exe+21623F
 
 [ENABLE]
 
-aobscanmodule(INJECT_DAMAGE_MULTI2,FFT_enhanced.exe,2B C8 8D 04 11) // should be unique
+aobscanmodule(INJECT_DAMAGE_MULTI2,$process,2B C8 8D 04 11) // should be unique
 alloc(newmem,$1000,INJECT_DAMAGE_MULTI2)
 
 label(code)
@@ -1891,7 +1945,7 @@ FFT_enhanced.exe+30128E: 42 8D 04 01              - lea eax,[rcx+r8]
 
 [ENABLE]
 
-aobscanmodule(INJECT_SET_SPD_JMP_MOV,FFT_enhanced.exe,0F B6 47 42 66 89 43 30) // should be unique
+aobscanmodule(INJECT_SET_SPD_JMP_MOV,$process,0F B6 47 42 66 89 43 30) // should be unique
 alloc(newmem,$1000,INJECT_SET_SPD_JMP_MOV)
 
 label(code)
@@ -2068,7 +2122,7 @@ FFT_enhanced.exe+35B507: 0F B6 47 46  - movzx eax,byte ptr [rdi+46]
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_EQUIPS,FFT_enhanced.exe,43 0F B6 0C 08 03) // should be unique
+aobscanmodule(INJECT_GET_EQUIPS,$process,43 0F B6 0C 08 03) // should be unique
 alloc(newmem,$1000,INJECT_GET_EQUIPS)
 
 label(code)
@@ -2177,7 +2231,7 @@ FFT_enhanced.exe+28077F: 48 89 58 08           - mov [rax+08],rbx
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_MONEY,FFT_enhanced.exe,0F 10 49 30 0F 11 48 30 0F 10 41 40 0F 11 40 40 0F 10 49 50 0F 11 48 50 0F 10 41 60 0F 11 40 60 49 03 C2) // should be unique
+aobscanmodule(INJECT_GET_MONEY,$process,0F 10 49 30 0F 11 48 30 0F 10 41 40 0F 11 40 40 0F 10 49 50 0F 11 48 50 0F 10 41 60 0F 11 40 60 49 03 C2) // should be unique
 alloc(newmem,$1000,INJECT_GET_MONEY)
 
 label(code)
@@ -2278,7 +2332,7 @@ FFT_enhanced.exe+20611B: 49 03 CA                 - add rcx,r10
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_CHAR_JP_LIST,FFT_enhanced.exe,0F 10 87 80 00 00 00 0F) // should be unique
+aobscanmodule(INJECT_GET_CHAR_JP_LIST,$process,0F 10 87 80 00 00 00 0F) // should be unique
 alloc(newmem,$1000,INJECT_GET_CHAR_JP_LIST)
 
 label(code)
