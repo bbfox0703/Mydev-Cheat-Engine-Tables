@@ -101,7 +101,7 @@ end)
 
   6, -- "Battle: selected char (LT or click)"
   15, -- "Battle: player side HP/MP/XP/Others"
-  26, -- "Map: Status menu: get JP data"
+  26, -- "Map: Status menu: get JP/other data"
   287, -- "Toggle Compact View"
   288, -- "Browse &amp; set item amount (non-equipped)"
   1286, -- "Get money"
@@ -133,7 +133,9 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  3895, -- "Modify all JP value to 8000, if not zero"
   1284, -- "Enable Check point #2"
+  1299, -- "Force set as enemy"
   654, -- "Battle: damage multiplier"
   646, -- "Battle: set min jmp/mov/spd/atk..."
   630, -- "Attributes+"
@@ -149,7 +151,7 @@ local disableBattleScripts = {
   1286, -- "Get money"
   288, -- "Browse &amp; set item amount (non-equipped)"
   287, -- "Toggle Compact View"
-  26, -- "Map: Status menu: get JP data"
+  26, -- "Map: Status menu: get JP/other data"
   15, -- "Battle: player side HP/MP/XP/Others"
   6, -- "Battle: selected char (LT or click)"
 }
@@ -173,6 +175,7 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 628, Description: "Loc+", Depth: 1
 --   ID: 626, Description: "JP+", Depth: 1
 -- ID: 15, Description: "Battle: player side HP/MP/XP/Others", Depth: 0
+--   ID: 1299, Description: "Force set as enemy", Depth: 1
 --   ID: 302, Description: "Battle: XP multiplier", Depth: 1
 --   ID: 24, Description: "Battle: JP XP multiplier", Depth: 1
 --   ID: 305, Description: "Battle: keep min brave/faith after action", Depth: 1
@@ -182,9 +185,11 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 288, Description: "Browse &amp; set item amount (non-equipped)", Depth: 0
 --   ID: 289, Description: "item count must &gt;=", Depth: 1
 -- ID: 1286, Description: "Get money", Depth: 0
--- ID: 26, Description: "Map: Status menu: get JP data", Depth: 0
+-- ID: 26, Description: "Map: Status menu: get JP/other data", Depth: 0
 --   ID: 29, Description: "Generate list", Depth: 1
+--     ID: 3895, Description: "Modify all JP value to 8000, if not zero", Depth: 2
 --   ID: 28, Description: "+List (do not delete this)", Depth: 1
+
 
 </AssemblerScript>
     </CheatEntry>
@@ -206,10 +211,13 @@ alloc(newmem,$1000,INJECT_BATT_SELECTED_CHAR)
 
 label(code)
 label(return)
-label(i_batt_base_sel_char_addr)
+label(i_batt_base_sel_char_addr i_friend_foe_tmp)
 
 newmem:
   mov [i_batt_base_sel_char_addr], rcx
+  mov al, [rcx+5]
+  and al, #16
+  mov [i_friend_foe_tmp], al
 
 code:
   movzx eax,word ptr [rcx+30]
@@ -218,13 +226,15 @@ code:
 align 10 cc
   i_batt_base_sel_char_addr:
   dq 0
+  i_friend_foe_tmp:
+  db 0
 
 INJECT_BATT_SELECTED_CHAR:
   jmp newmem
   nop 3
 return:
 registersymbol(INJECT_BATT_SELECTED_CHAR)
-registersymbol(i_batt_base_sel_char_addr)
+registersymbol(i_batt_base_sel_char_addr i_friend_foe_tmp)
 
 [DISABLE]
 
@@ -265,7 +275,7 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
       <CheatEntries>
         <CheatEntry>
           <ID>8</ID>
-          <Description>"base"</Description>
+          <Description>"base address"</Description>
           <ShowAsHex>1</ShowAsHex>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
@@ -273,7 +283,7 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           <Address>i_batt_base_sel_char_addr</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>7</ID>
+          <ID>1297</ID>
           <Description>"Side ID"</Description>
           <DropDownList DisplayValueAsItem="1">0:Player side?
 </DropDownList>
@@ -306,6 +316,47 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           <Offsets>
             <Offset>29</Offset>
           </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2549</ID>
+          <Description>"Controllable?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Binary</VariableType>
+          <BitStart>4</BitStart>
+          <BitLength>1</BitLength>
+          <ShowAsBinary>0</ShowAsBinary>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>1</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2550</ID>
+          <Description>"Firend/Foe?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:Friend
+1:Foe
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Binary</VariableType>
+          <BitStart>4</BitStart>
+          <BitLength>1</BitLength>
+          <ShowAsBinary>0</ShowAsBinary>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>5</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2552</ID>
+          <Description>"No description"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>Byte</VariableType>
+          <Address>i_friend_foe_tmp</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>627</ID>
@@ -1181,12 +1232,40 @@ alloc(newmem,$1000,INJECT_BATT_GET_ALL_CHARS)
 label(code)
 label(return)
 label(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
+label(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit)
 
 newmem:
+  cmp r15, [i_ignore_addr1]
+  je endp
+  cmp r15, [i_ignore_addr2]
+  je endp
+
   push rax
+
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov al, [r15+5]
+  and al, 10
+  cmp al, 0
+  jne endp
+
+next1:
   mov al, [ib_player_group]
   cmp [r15+4], al
   jne endp
+
+chk_min_max_hpmp:
+  mov ax, [iw_min_max_hp]
+  cmp [r15+32], ax
+  jae @F
+  mov [r15+32], ax
+
+@@:
+  mov ax, [iw_min_max_mp]
+  cmp [r15+36], ax
+  jae @F
+  mov [r15+36], ax
+
 
 check_hp:
   movzx eax, word ptr [r15+32]
@@ -1225,9 +1304,22 @@ align 10 cc
   dd (float)0.7
   vf_player_side_mp_min:
   dd (float)0.75
+  vf_enemy_side_hp_min:
+  dd (float)0.7
+  iw_min_max_hp:
+  dw 40
+  iw_min_max_mp:
+  dw 64
   ib_player_group:
   db 0
   align 10 cc
+  i_ignore_addr1:
+  dq 0
+  i_ignore_addr2:
+  dq 0
+  is_check_friend_bit:
+  dd 1
+  align 10 0
   i_base_batt_chars_data:
   dq 0
   align 100 0
@@ -1244,6 +1336,7 @@ INJECT_BATT_GET_ALL_CHARS:
 return:
 registersymbol(INJECT_BATT_GET_ALL_CHARS)
 registersymbol(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
+registersymbol(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit)
 
 [DISABLE]
 
@@ -1289,6 +1382,17 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
+          <ID>2551</ID>
+          <Description>"Extra side check logic? (high priority)"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>is_check_friend_bit</Address>
+        </CheatEntry>
+        <CheatEntry>
           <ID>16</ID>
           <Description>"Player side ID"</Description>
           <ShowAsSigned>0</ShowAsSigned>
@@ -1313,6 +1417,53 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
           <Address>vf_player_side_mp_min</Address>
         </CheatEntry>
         <CheatEntry>
+          <ID>2523</ID>
+          <Description>"Min "Max HP""</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>iw_min_max_hp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2524</ID>
+          <Description>"Min "Max MP""</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>iw_min_max_mp</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1299</ID>
+          <Description>"Force set as enemy"</Description>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1301</ID>
+              <Description>"Get from "Battle: selected char (LT or click)" -&gt; base address"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1298</ID>
+              <Description>"address #1"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_ignore_addr1</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1300</ID>
+              <Description>"address #2"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_ignore_addr2</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>302</ID>
           <Description>"Battle: XP multiplier"</Description>
           <Options moHideChildren="1"/>
@@ -1333,7 +1484,22 @@ label(return)
 label(vf_xp_multi2)
 
 newmem:
+  cmp rbx, [i_ignore_addr1]
+  je endp
+  cmp rbx, [i_ignore_addr2]
+  je endp
+
+
   push rdx
+
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov dl, [rbx+5]
+  and dl, 10
+  cmp dl, 0
+  jne endp
+
+next1:
   mov dl, [ib_player_group]
   cmp [rbx+4], dl
   jne endp
@@ -1429,9 +1595,22 @@ label(return)
 label(vf_xp_multi i_is_add_xp_to_all iw_xp_extra)
 
 newmem:
+  cmp rbx, [i_ignore_addr1]
+  je endp
+  cmp rbx, [i_ignore_addr2]
+  je endp
+
+
   push rax
   pushfq
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov al, [rbx+5]
+  and al, 10
+  cmp al, 0
+  jne endp
 
+next1:
   mov al, [ib_player_group]
   cmp [rbx+4], al
   jne endp
@@ -1584,10 +1763,24 @@ alloc(newmem,$1000,INJECT_KEEP_MIN_BR_FA)
 
 label(code)
 label(return)
-label(ib_min_brfa_value)
+label(ib_min_brfa_value ib_max_faith_value)
 
 newmem:
+  cmp r10, [i_ignore_addr1]
+  je endp
+  cmp r10, [i_ignore_addr2]
+  je endp
+
+
   push rax
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov al, [r10+5]
+  and al, 10
+  cmp al, 0
+  jne endp
+
+next1:
   mov al, [ib_player_group]
   cmp [r10+4], al
   jne endp
@@ -1612,6 +1805,18 @@ newmem:
   jae @F
   mov [r10+2D], al
 
+  mov al, [ib_max_faith_value]
+@@:
+  cmp [r10+2C], al
+  jbe @F
+  mov [r10+2C], al
+
+@@:
+  cmp [r10+2D], al
+  jbe @F
+  mov [r10+2D], al
+
+
 endp:
   pop rax
 
@@ -1621,12 +1826,14 @@ code:
 align 10 cc
   ib_min_brfa_value:
   db #80
+  ib_max_faith_value:
+  db #89
 
 INJECT_KEEP_MIN_BR_FA:
   jmp newmem
 return:
 registersymbol(INJECT_KEEP_MIN_BR_FA)
-registersymbol(ib_min_brfa_value)
+registersymbol(ib_min_brfa_value ib_max_faith_value)
 
 [DISABLE]
 
@@ -1667,11 +1874,19 @@ FFT_enhanced.exe+F4F0AA2: C1 EA 05                 - shr edx,05
           <CheatEntries>
             <CheatEntry>
               <ID>306</ID>
-              <Description>"value"</Description>
+              <Description>"min value"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>Byte</VariableType>
               <Address>ib_min_brfa_value</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1302</ID>
+              <Description>"Max faith value"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Byte</VariableType>
+              <Address>ib_max_faith_value</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -1696,12 +1911,27 @@ label(return)
 label(vf_damage_to_player vf_damage_to_enemy i_max_damage_to_player is_limit_damage_to_player)
 
 newmem:
-  push rcx
+  cmp rdi, [i_ignore_addr1]
+  je calc_damage
+  cmp rdi, [i_ignore_addr2]
+  je calc_damage
+
   mov dword ptr [i_player_tag], 0
+
+  push rcx
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov cl, [rdi+5]
+  and cl, 10
+  cmp cl, 0
+  pop rcx
+  jne calc_damage
+
+next1:
+  push rcx
   mov cl, [ib_player_group]
   cmp [rdi+4], cl
   pop rcx
-
   jne calc_damage
 
   mov dword ptr [i_player_tag], 1
@@ -1739,7 +1969,7 @@ align 10 cc
   vf_damage_to_player:
   dd (float)1
   vf_damage_to_enemy:
-  dd (float)1.1
+  dd (float)2.1
   dd 0 0
   is_limit_damage_to_player:
   dd 1
@@ -1812,12 +2042,27 @@ label(code)
 label(return)
 
 newmem:
-  push rcx
+  cmp rdi, [i_ignore_addr1]
+  je calc_damage
+  cmp rdi, [i_ignore_addr2]
+  je calc_damage
+
   mov dword ptr [i_player_tag], 0
+
+  push rcx
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov cl, [rdi+5]
+  and cl, 10
+  cmp cl, 0
+  pop rcx
+  jne calc_damage
+
+next1:
+  push rcx
   mov cl, [ib_player_group]
   cmp [rdi+4], cl
   pop rcx
-
   jne calc_damage
 
   mov dword ptr [i_player_tag], 1
@@ -1953,6 +2198,19 @@ label(return)
 label(ib_min_jmp ib_min_mov ib_min_spd ib_min_atk ib_min_matk ib_min_dodge)
 
 newmem:
+  cmp rdi, [i_ignore_addr1]
+  je endp
+  cmp rdi, [i_ignore_addr2]
+  je endp
+
+  cmp dword ptr [is_check_friend_bit], 1
+  jne next1
+  mov al, [rdi+5]
+  and al, 10
+  cmp al, 0
+  jne endp
+
+next1:
   mov al, [ib_player_group]
   cmp [rdi+4], al
   jne endp
@@ -2011,7 +2269,7 @@ code:
   ib_min_matk:
   db 7
   ib_min_dodge:
-  db 25
+  db 32
 
 
 INJECT_SET_SPD_JMP_MOV:
@@ -2439,7 +2697,7 @@ FFT_enhanced.exe+280D0B: 0F 10 87 AE 00 00 00     - movups xmm0,[rdi+000000AE]
         </CheatEntry>
         <CheatEntry>
           <ID>285</ID>
-          <Description>"Recommend: edit actived jobs only"</Description>
+          <Description>"Re-enable when member changed"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
@@ -2455,6 +2713,7 @@ FFT_enhanced.exe+280D0B: 0F 10 87 AE 00 00 00     - movups xmm0,[rdi+000000AE]
         <CheatEntry>
           <ID>29</ID>
           <Description>"Generate list"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript Async="1">[ENABLE]
 {$lua}
@@ -2514,6 +2773,7 @@ synchronize(function()
 
   -- 基本資料定義表
   local statsData = {
+    {"Job ID", 0x2, vtByte},
     {"EXP", 0x1C, vtByte},
     {"Lv", 0x1D, vtByte},
     {"Brave", 0x1E, vtByte},
@@ -2606,6 +2866,70 @@ end)
 
 closeLuaEngine()
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>3895</ID>
+              <Description>"Modify all JP value to 8000, if not zero"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+local PARENT_NAME = "+List (do not delete this)"
+local JP_GROUP_NAME = "JP+"
+local TARGET_VALUE = 8000
+
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Parent node not found: " .. PARENT_NAME)
+    return
+  end
+
+  local modifiedCount = 0
+
+  -- 遍歷所有 Char[nn] 節點
+  for i = 0, parent.Count - 1 do
+    local charNode = parent.Child[i]
+
+    -- 遍歷 Char 下的所有群組，找到 JP+
+    for j = 0, charNode.Count - 1 do
+      local groupNode = charNode.Child[j]
+
+      if groupNode.Description == JP_GROUP_NAME then
+        -- 修改 JP+ 下所有非零子節點
+        for k = 0, groupNode.Count - 1 do
+          local jpNode = groupNode.Child[k]
+
+          -- 讀取角前值
+          local addr = getAddressSafe(jpNode.Address)
+          if addr then
+            local currentValue = readInteger(addr)
+
+            -- 如果不是 0，則改為 8000
+            if currentValue and currentValue ~= 0 then
+              writeInteger(addr, TARGET_VALUE)
+              modifiedCount = modifiedCount + 1
+            end
+          end
+        end
+        break  -- 找到 JP+ 後就跳出，不用繼續找
+      end
+    end
+  end
+
+  print(string.format("✔ Modified %d JP values to %d", modifiedCount, TARGET_VALUE))
+end)
+
+closeLuaEngine()
+
+[DISABLE]
+
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>28</ID>
