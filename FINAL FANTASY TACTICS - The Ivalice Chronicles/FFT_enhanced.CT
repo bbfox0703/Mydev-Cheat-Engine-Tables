@@ -318,6 +318,17 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>5325</ID>
+          <Description>"Hearts"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>7</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>2549</ID>
           <Description>"Controllable?"</Description>
           <DropDownList DisplayValueAsItem="1">0:No
@@ -350,13 +361,6 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           <Offsets>
             <Offset>5</Offset>
           </Offsets>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>2552</ID>
-          <Description>"No description"</Description>
-          <ShowAsSigned>0</ShowAsSigned>
-          <VariableType>Byte</VariableType>
-          <Address>i_friend_foe_tmp</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>627</ID>
@@ -1215,7 +1219,7 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
     </CheatEntry>
     <CheatEntry>
       <ID>15</ID>
-      <Description>"Battle: player side HP/MP/XP/Others"</Description>
+      <Description>"Battle: HP/MP/XP/Others"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : FFT_enhanced.exe
@@ -1232,13 +1236,17 @@ alloc(newmem,$1000,INJECT_BATT_GET_ALL_CHARS)
 label(code)
 label(return)
 label(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
-label(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit)
+label(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit is_enemy_always_sleep)
+label(is_player_always_reflect is_player_always_wall is_enemy_always_blind is_player_always_reraise is_enemy_always_dontact)
+label(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison is_enemy_always_frog)
+label(is_always_remove_sleep is_always_remove_blind is_always_remove_dontact is_always_remove_dontmove is_always_remove_confuse is_always_remove_silence)
+label(is_player_always_float is_always_remove_frog)
 
 newmem:
   cmp r15, [i_ignore_addr1]
-  je endp
+  je to_enemy
   cmp r15, [i_ignore_addr2]
-  je endp
+  je to_enemy
 
   push rax
 
@@ -1247,12 +1255,12 @@ newmem:
   mov al, [r15+5]
   and al, 10
   cmp al, 0
-  jne endp
+  jne to_enemy
 
 next1:
   mov al, [ib_player_group]
   cmp [r15+4], al
-  jne endp
+  jne to_enemy
 
 chk_min_max_hpmp:
   mov ax, [iw_min_max_hp]
@@ -1265,6 +1273,72 @@ chk_min_max_hpmp:
   cmp [r15+36], ax
   jae @F
   mov [r15+36], ax
+
+check_set_buff:
+  // remove sleep
+  cmp dword ptr [is_always_remove_sleep], 1
+  jne @F
+  and byte ptr [r15+65], EF
+
+@@:
+  // remove blind
+  cmp dword ptr [is_always_remove_blind], 1
+  jne @F
+  and byte ptr [r15+62], DF
+
+@@:
+  // remove don't act
+  cmp dword ptr [is_always_remove_dontact], 1
+  jne @F
+  and byte ptr [r15+65], FB
+
+@@:
+  // remove don't move
+  cmp dword ptr [is_always_remove_dontmove], 1
+  jne @F
+  and byte ptr [r15+65], F7
+
+@@:
+  // remove confuse
+  cmp dword ptr [is_always_remove_confuse], 1
+  jne @F
+  and byte ptr [r15+62], EF
+
+@@:
+  // remove silence
+  cmp dword ptr [is_always_remove_silence], 1
+  jne @F
+  and byte ptr [r15+62], F7
+
+@@:
+  // remove frog
+  cmp dword ptr [is_always_remove_frog], 1
+  jne @F
+  and byte ptr [r15+63], FD
+
+@@:
+  // reflect
+  cmp dword ptr [is_player_always_reflect], 1
+  jne @F
+  or byte ptr [r15+65], 2
+
+@@:
+  //wall
+  cmp dword ptr [is_player_always_wall], 1
+  jne @F
+  or byte ptr [r15+64], 30
+
+@@:
+  //reraise
+  cmp dword ptr [is_player_always_reraise], 1
+  jne @F
+  or byte ptr [r15+63], 20
+
+@@:
+  // float
+  cmp dword ptr [is_player_always_float], 1
+  jne @F
+  or byte ptr [r15+63], 40
 
 
 check_hp:
@@ -1292,6 +1366,77 @@ check_mp:
 
   vcvtss2si eax, xmm13
   mov [r15+34], ax
+  jmp endp
+
+to_enemy:
+  // sleep
+  cmp dword ptr [is_enemy_always_sleep], 1
+  jne @F
+  or byte ptr [r15+65], 10
+
+@@:
+  // blind
+  cmp dword ptr [is_enemy_always_blind], 1
+  jne @F
+  or byte ptr [r15+62], 20
+
+@@:
+  // don't act
+  cmp dword ptr [is_enemy_always_dontact], 1
+  jne @F
+  or byte ptr [r15+65], 4
+
+@@:
+  // don't move
+  cmp dword ptr [is_enemy_always_dontmove], 1
+  jne @F
+  or byte ptr [r15+65], 8
+
+
+@@:
+  // confuse
+  cmp dword ptr [is_enemy_always_confuse], 1
+  jne @F
+  or byte ptr [r15+62], 10
+
+@@:
+  // silence
+  cmp dword ptr [is_enemy_always_silence], 1
+  jne @F
+  or byte ptr [r15+62], 8
+
+@@:
+  // silence
+  cmp dword ptr [is_enemy_always_frog], 1
+  jne @F
+  or byte ptr [r15+63], 2
+
+check_unset_buff:
+  // remove reflect
+  cmp dword ptr [is_player_always_reflect], 1
+  jne @F
+  //or byte ptr [r15+65], 2
+  and byte ptr [r15+65], FD
+
+@@:
+  // remove wall
+  cmp dword ptr [is_player_always_wall], 1
+  jne @F
+  //or byte ptr [r15+64], 30
+  and byte ptr [r15+64], CF
+
+@@:
+  // remove reraise
+  cmp dword ptr [is_player_always_reraise], 1
+  jne @F
+  and byte ptr [r15+63], DF
+
+@@:
+  // remove reraise
+  cmp dword ptr [is_player_always_reraise], 1
+  jne @F
+  and byte ptr [r15+63], DF
+
 
 endp:
   pop rax
@@ -1310,6 +1455,44 @@ align 10 cc
   dw 40
   iw_min_max_mp:
   dw 64
+  is_enemy_always_sleep:
+  dd 0
+  is_enemy_always_blind:
+  dd 0
+  is_enemy_always_dontact:
+  dd 0
+  is_enemy_always_dontmove:
+  dd 0
+  is_enemy_always_confuse:
+  dd 0
+  is_enemy_always_silence:
+  dd 0
+  is_enemy_always_poison:
+  dd 0
+  is_enemy_always_frog:
+  dd 0
+  is_always_remove_sleep:
+  dd 1
+  is_always_remove_blind:
+  dd 1
+  is_always_remove_dontact:
+  dd 1
+  is_always_remove_dontmove:
+  dd 1
+  is_always_remove_confuse:
+  dd 1
+  is_always_remove_silence:
+  dd 1
+  is_always_remove_frog:
+  dd 1
+  is_player_always_reflect:
+  dd 0
+  is_player_always_wall:
+  dd 1
+  is_player_always_reraise:
+  dd 1
+  is_player_always_float:
+  dd 1
   ib_player_group:
   db 0
   align 10 cc
@@ -1336,7 +1519,11 @@ INJECT_BATT_GET_ALL_CHARS:
 return:
 registersymbol(INJECT_BATT_GET_ALL_CHARS)
 registersymbol(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
-registersymbol(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit)
+registersymbol(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit is_enemy_always_sleep)
+registersymbol(is_player_always_reflect is_player_always_wall is_enemy_always_blind is_player_always_reraise is_enemy_always_dontact)
+registersymbol(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison is_enemy_always_frog)
+registersymbol(is_always_remove_sleep is_always_remove_blind is_always_remove_dontact is_always_remove_dontmove is_always_remove_confuse is_always_remove_silence)
+registersymbol(is_player_always_float is_always_remove_frog)
 
 [DISABLE]
 
@@ -1433,8 +1620,243 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
           <Address>iw_min_max_mp</Address>
         </CheatEntry>
         <CheatEntry>
+          <ID>5304</ID>
+          <Description>"Some Buffs/Debuffs settings+"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>5305</ID>
+              <Description>"Add related buff to player"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5306</ID>
+              <Description>"Revoke related buff from enemy"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5319</ID>
+              <Description>"to player"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>5301</ID>
+                  <Description>"Reflect?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_player_always_reflect</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5303</ID>
+                  <Description>"Wall?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_player_always_wall</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5308</ID>
+                  <Description>"Reraise?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_player_always_reraise</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5321</ID>
+                  <Description>"float?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_player_always_float</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5312</ID>
+                  <Description>"Remove sleep?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_sleep</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5313</ID>
+                  <Description>"Remove blind?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_blind</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5314</ID>
+                  <Description>"Remove don't act?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_dontact</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5315</ID>
+                  <Description>"Remove don't move?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_dontmove</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5317</ID>
+                  <Description>"Remove confuse?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_confuse</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5318</ID>
+                  <Description>"Remove silence?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_silence</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5323</ID>
+                  <Description>"Remove frog?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_frog</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5320</ID>
+              <Description>"to enemy"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>5302</ID>
+                  <Description>"Sleep to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_sleep</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5307</ID>
+                  <Description>"Blind to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_blind</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5309</ID>
+                  <Description>"Don't act to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_dontact</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5316</ID>
+                  <Description>"Don't move to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_dontmove</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5310</ID>
+                  <Description>"Confuse to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_confuse</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5311</ID>
+                  <Description>"Silence to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_silence</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5324</ID>
+                  <Description>"Frog to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_frog</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>1299</ID>
           <Description>"Force set as enemy"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
@@ -2595,7 +3017,7 @@ alloc(newmem,$1000,INJECT_GET_CHAR_JP_LIST)
 
 label(code)
 label(return)
-label(i_equip_screen_jp_addr)
+label(i_equip_screen_jp_addr i_current_member_count)
 
 newmem:
   push r15
@@ -2605,6 +3027,7 @@ newmem:
 
 loop1:
   mov r15, i_equip_screen_jp_addr
+  mov [i_current_member_count], r13
   lea r15, [r15+r13*8]
   cmp qword ptr [r15], rdi
   je endp
@@ -2630,6 +3053,8 @@ code:
   movups xmm0,[rdi+00000080]
   jmp return
 align 10 cc
+  i_current_member_count:
+  dq 0 0
   i_equip_screen_jp_addr:
   dq 0
   align 100 0
@@ -2644,7 +3069,7 @@ INJECT_GET_CHAR_JP_LIST:
   nop 2
 return:
 registersymbol(INJECT_GET_CHAR_JP_LIST)
-registersymbol(i_equip_screen_jp_addr)
+registersymbol(i_equip_screen_jp_addr i_current_member_count)
 
 [DISABLE]
 
@@ -2709,6 +3134,14 @@ FFT_enhanced.exe+280D0B: 0F 10 87 AE 00 00 00     - movups xmm0,[rdi+000000AE]
           <Color>808080</Color>
           <VariableType>8 Bytes</VariableType>
           <Address>i_equip_screen_jp_addr</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3896</ID>
+          <Description>"count"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>808080</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_current_member_count</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>29</ID>
@@ -2906,11 +3339,11 @@ synchronize(function()
           -- 讀取角前值
           local addr = getAddressSafe(jpNode.Address)
           if addr then
-            local currentValue = readInteger(addr)
+            local currentValue = readSmallInteger(addr)
 
             -- 如果不是 0，則改為 8000
-            if currentValue and currentValue ~= 0 then
-              writeInteger(addr, TARGET_VALUE)
+            if currentValue and currentValue ~= 0 and currentValue &lt; TARGET_VALUE then
+              writeSmallInteger(addr, TARGET_VALUE)
               modifiedCount = modifiedCount + 1
             end
           end
@@ -2920,7 +3353,64 @@ synchronize(function()
     end
   end
 
-  print(string.format("✔ Modified %d JP values to %d", modifiedCount, TARGET_VALUE))
+  print(string.format("Modified %d JP values to %d", modifiedCount, TARGET_VALUE))
+end)
+
+closeLuaEngine()
+
+[DISABLE]
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5300</ID>
+              <Description>"Modify all JP EXP value to 500, if not zero &amp; &lt; 500"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+local PARENT_NAME = "+List (do not delete this)"
+local JP_GROUP_NAME = "JP EXP+"
+local TARGET_VALUE = 500
+
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Parent node not found: " .. PARENT_NAME)
+    return
+  end
+
+  local modifiedCount = 0
+
+  for i = 0, parent.Count - 1 do
+    local charNode = parent.Child[i]
+
+    for j = 0, charNode.Count - 1 do
+      local groupNode = charNode.Child[j]
+
+      if groupNode.Description == JP_GROUP_NAME then
+        for k = 0, groupNode.Count - 1 do
+          local jpNode = groupNode.Child[k]
+
+          local addr = getAddressSafe(jpNode.Address)
+          if addr then
+            local currentValue = readSmallInteger(addr)
+
+            if currentValue and currentValue ~= 0 and currentValue &lt; TARGET_VALUE then
+              writeSmallInteger(addr, TARGET_VALUE)
+              modifiedCount = modifiedCount + 1
+            end
+          end
+        end
+        break
+      end
+    end
+  end
+
+  print(string.format("Modified %d JP vEXP alues to %d", modifiedCount, TARGET_VALUE))
 end)
 
 closeLuaEngine()
