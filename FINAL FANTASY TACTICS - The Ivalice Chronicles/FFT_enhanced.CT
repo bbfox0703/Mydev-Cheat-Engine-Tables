@@ -318,6 +318,17 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           </Offsets>
         </CheatEntry>
         <CheatEntry>
+          <ID>5325</ID>
+          <Description>"Hearts"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>7</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>2549</ID>
           <Description>"Controllable?"</Description>
           <DropDownList DisplayValueAsItem="1">0:No
@@ -1227,8 +1238,9 @@ label(return)
 label(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
 label(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit is_enemy_always_sleep)
 label(is_player_always_reflect is_player_always_wall is_enemy_always_blind is_player_always_reraise is_enemy_always_dontact)
-label(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison)
+label(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison is_enemy_always_frog)
 label(is_always_remove_sleep is_always_remove_blind is_always_remove_dontact is_always_remove_dontmove is_always_remove_confuse is_always_remove_silence)
+label(is_player_always_float is_always_remove_frog)
 
 newmem:
   cmp r15, [i_ignore_addr1]
@@ -1299,6 +1311,12 @@ check_set_buff:
   and byte ptr [r15+62], F7
 
 @@:
+  // remove frog
+  cmp dword ptr [is_always_remove_frog], 1
+  jne @F
+  and byte ptr [r15+63], FD
+
+@@:
   // reflect
   cmp dword ptr [is_player_always_reflect], 1
   jne @F
@@ -1315,6 +1333,12 @@ check_set_buff:
   cmp dword ptr [is_player_always_reraise], 1
   jne @F
   or byte ptr [r15+63], 20
+
+@@:
+  // float
+  cmp dword ptr [is_player_always_float], 1
+  jne @F
+  or byte ptr [r15+63], 40
 
 
 check_hp:
@@ -1381,6 +1405,12 @@ to_enemy:
   jne @F
   or byte ptr [r15+62], 8
 
+@@:
+  // silence
+  cmp dword ptr [is_enemy_always_frog], 1
+  jne @F
+  or byte ptr [r15+63], 2
+
 check_unset_buff:
   // remove reflect
   cmp dword ptr [is_player_always_reflect], 1
@@ -1400,6 +1430,13 @@ check_unset_buff:
   cmp dword ptr [is_player_always_reraise], 1
   jne @F
   and byte ptr [r15+63], DF
+
+@@:
+  // remove reraise
+  cmp dword ptr [is_player_always_reraise], 1
+  jne @F
+  and byte ptr [r15+63], DF
+
 
 endp:
   pop rax
@@ -1432,6 +1469,8 @@ align 10 cc
   dd 0
   is_enemy_always_poison:
   dd 0
+  is_enemy_always_frog:
+  dd 0
   is_always_remove_sleep:
   dd 1
   is_always_remove_blind:
@@ -1444,11 +1483,15 @@ align 10 cc
   dd 1
   is_always_remove_silence:
   dd 1
+  is_always_remove_frog:
+  dd 1
   is_player_always_reflect:
   dd 0
   is_player_always_wall:
   dd 1
   is_player_always_reraise:
+  dd 1
+  is_player_always_float:
   dd 1
   ib_player_group:
   db 0
@@ -1478,8 +1521,9 @@ registersymbol(INJECT_BATT_GET_ALL_CHARS)
 registersymbol(i_base_batt_chars_data ib_player_group vf_player_side_hp_min vf_player_side_mp_min)
 registersymbol(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_bit is_enemy_always_sleep)
 registersymbol(is_player_always_reflect is_player_always_wall is_enemy_always_blind is_player_always_reraise is_enemy_always_dontact)
-registersymbol(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison)
+registersymbol(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison is_enemy_always_frog)
 registersymbol(is_always_remove_sleep is_always_remove_blind is_always_remove_dontact is_always_remove_dontmove is_always_remove_confuse is_always_remove_silence)
+registersymbol(is_player_always_float is_always_remove_frog)
 
 [DISABLE]
 
@@ -1578,7 +1622,7 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
         <CheatEntry>
           <ID>5304</ID>
           <Description>"Some Buffs/Debuffs settings+"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
@@ -1631,6 +1675,17 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_player_always_reraise</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5321</ID>
+                  <Description>"float?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_player_always_float</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>5312</ID>
@@ -1697,6 +1752,17 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_always_remove_silence</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5323</ID>
+                  <Description>"Remove frog?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_always_remove_frog</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -1771,6 +1837,17 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_enemy_always_silence</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5324</ID>
+                  <Description>"Frog to enemy?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_enemy_always_frog</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
