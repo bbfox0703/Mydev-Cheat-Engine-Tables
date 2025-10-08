@@ -73,6 +73,7 @@ if pid ~= nil and pid &gt; 0 then
   end
 end
 
+if (syntaxcheck) then return end
 synchronize(function()
   getLuaEngine().menuItem5.doClick()
   getLuaEngine().Close()
@@ -100,11 +101,12 @@ end)
 --]]
 
   6, -- "Battle: selected char (LT or click)"
-  15, -- "Battle: player side HP/MP/XP/Others"
-  26, -- "Map: Status menu: get JP/other data"
+  15, -- "Battle: HP/MP/XP/Others"
   287, -- "Toggle Compact View"
   288, -- "Browse &amp; set item amount (non-equipped)"
+  292, -- "FINAL FANTASY TACTICS - The Ivalice Chronicles  /  https://opencheattables.com"
   1286, -- "Get money"
+  5328, -- "Browse &amp; set poach materials amount"
   24, -- "Battle: JP XP multiplier"
   302, -- "Battle: XP multiplier"
   305, -- "Battle: keep min brave/faith after action"
@@ -133,8 +135,13 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  5320, -- "to enemy"
+  5319, -- "to player"
+  5300, -- "Modify all JP EXP value to 1200, if not zero &amp; &lt; 1200"
   3895, -- "Modify all JP value to 8000, if not zero"
   1284, -- "Enable Check point #2"
+  658, -- "Multiplier to enemy"
+  5304, -- "Some Buffs/Debuffs settings+"
   1299, -- "Force set as enemy"
   654, -- "Battle: damage multiplier"
   646, -- "Battle: set min jmp/mov/spd/atk..."
@@ -148,11 +155,13 @@ local disableBattleScripts = {
   29, -- "Generate list"
   28, -- "+List (do not delete this)"
   24, -- "Battle: JP XP multiplier"
+  5328, -- "Browse &amp; set poach materials amount"
   1286, -- "Get money"
+  292, -- "FINAL FANTASY TACTICS - The Ivalice Chronicles  /  https://opencheattables.com"
   288, -- "Browse &amp; set item amount (non-equipped)"
   287, -- "Toggle Compact View"
   26, -- "Map: Status menu: get JP/other data"
-  15, -- "Battle: player side HP/MP/XP/Others"
+  15, -- "Battle: HP/MP/XP/Others"
   6, -- "Battle: selected char (LT or click)"
 }
 local addressList = getAddressList()
@@ -174,21 +183,28 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 630, Description: "Attributes+", Depth: 1
 --   ID: 628, Description: "Loc+", Depth: 1
 --   ID: 626, Description: "JP+", Depth: 1
--- ID: 15, Description: "Battle: player side HP/MP/XP/Others", Depth: 0
+-- ID: 15, Description: "Battle: HP/MP/XP/Others", Depth: 0
+--   ID: 5304, Description: "Some Buffs/Debuffs settings+", Depth: 1
+--     ID: 5319, Description: "to player", Depth: 2
+--     ID: 5320, Description: "to enemy", Depth: 2
 --   ID: 1299, Description: "Force set as enemy", Depth: 1
 --   ID: 302, Description: "Battle: XP multiplier", Depth: 1
 --   ID: 24, Description: "Battle: JP XP multiplier", Depth: 1
 --   ID: 305, Description: "Battle: keep min brave/faith after action", Depth: 1
 --   ID: 654, Description: "Battle: damage multiplier", Depth: 1
 --     ID: 1284, Description: "Enable Check point #2", Depth: 2
+--     ID: 658, Description: "Multiplier to enemy", Depth: 2
 --   ID: 646, Description: "Battle: set min jmp/mov/spd/atk...", Depth: 1
 -- ID: 288, Description: "Browse &amp; set item amount (non-equipped)", Depth: 0
 --   ID: 289, Description: "item count must &gt;=", Depth: 1
+-- ID: 5328, Description: "Browse &amp; set poach materials amount", Depth: 0
 -- ID: 1286, Description: "Get money", Depth: 0
 -- ID: 26, Description: "Map: Status menu: get JP/other data", Depth: 0
 --   ID: 29, Description: "Generate list", Depth: 1
 --     ID: 3895, Description: "Modify all JP value to 8000, if not zero", Depth: 2
+--     ID: 5300, Description: "Modify all JP EXP value to 1200, if not zero &amp; &lt; 1200", Depth: 2
 --   ID: 28, Description: "+List (do not delete this)", Depth: 1
+-- ID: 292, Description: "FINAL FANTASY TACTICS - The Ivalice Chronicles  /  https://opencheattables.com", Depth: 0
 
 
 </AssemblerScript>
@@ -283,6 +299,18 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           <Address>i_batt_base_sel_char_addr</Address>
         </CheatEntry>
         <CheatEntry>
+          <ID>9</ID>
+          <Description>"Job ID"</Description>
+          <DropDownListLink>Job.ID</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>3</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>1297</ID>
           <Description>"Side ID"</Description>
           <DropDownList DisplayValueAsItem="1">0:Player side?
@@ -296,7 +324,7 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>9</ID>
+          <ID>7577</ID>
           <Description>"EXP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -1960,7 +1988,7 @@ code:
   jmp return
 align 10 cc
   vf_xp_multi2:
-  dd (float)2
+  dd (float)3.333333
 
 INJECT_XP_MULTI2:
   jmp newmem
@@ -2616,6 +2644,14 @@ FFT_enhanced.exe+30128E: 42 8D 04 01              - lea eax,[rcx+r8]
               <Color>C08000</Color>
               <VariableType>Float</VariableType>
               <Address>vf_damage_to_enemy</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>7576</ID>
+                  <Description>"Poach may not work if not 1"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -2919,6 +2955,125 @@ FFT_enhanced.exe+28077F: 48 89 58 08           - mov [rax+08],rbx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>5328</ID>
+      <Description>"Browse &amp; set poach materials amount"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-08
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_POACH_ITEMS,FFT_enhanced.exe,41 38 37 0F 86 ?? ?? ?? 00 48 8B) // should be unique
+alloc(newmem,$1000,INJECT_GET_POACH_ITEMS)
+
+alloc(INJECT_GET_POACH_ITEMSo, 9)
+
+label(code)
+label(return)
+label(ib_min_poach_threshold ib_set_poach_amt_to)
+
+INJECT_GET_POACH_ITEMSo:
+  readmem(INJECT_GET_POACH_ITEMS, 9)
+
+newmem:
+  push rcx
+  pushfq
+  mov cl, [ib_min_poach_threshold]
+  cmp [r15], cl
+  jb endp
+  mov cl, [ib_set_poach_amt_to]
+  cmp [r15], cl
+  jae endp
+  mov [r15], cl
+
+
+endp:
+  popfq
+  pop rcx
+
+code:
+  cmp [r15],sil
+  reassemble(INJECT_GET_POACH_ITEMS+3)
+  //jbe FFT_enhanced.exe+1A917B
+  jmp return
+align 10 cc
+  ib_min_poach_threshold:
+  db 1
+  ib_set_poach_amt_to:
+  db 14
+
+INJECT_GET_POACH_ITEMS:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_GET_POACH_ITEMS)
+registersymbol(INJECT_GET_POACH_ITEMSo)
+registersymbol(ib_min_poach_threshold ib_set_poach_amt_to)
+
+[DISABLE]
+
+INJECT_GET_POACH_ITEMS:
+  //db 41 38 37 0F 86 F8 01 00 00
+  readmem(INJECT_GET_POACH_ITEMSo, 9)
+
+unregistersymbol(INJECT_GET_POACH_ITEMS)
+dealloc(newmem)
+unregistersymbol(INJECT_GET_POACH_ITEMSo)
+dealloc(INJECT_GET_POACH_ITEMSo)
+unregistersymbol(*)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+1A8F7A
+
+FFT_enhanced.exe+1A8F48: 89 74 24 38                    - mov [rsp+38],esi
+FFT_enhanced.exe+1A8F4C: 48 8B D9                       - mov rbx,rcx
+FFT_enhanced.exe+1A8F4F: 49 89 73 C8                    - mov [r11-38],rsi
+FFT_enhanced.exe+1A8F53: 49 BD AB AA AA AA AA AA AA 2A  - mov r13,2AAAAAAAAAAAAAAB
+FFT_enhanced.exe+1A8F5D: 48 89 81 A0 17 00 00           - mov [rcx+000017A0],rax
+FFT_enhanced.exe+1A8F64: 41 BA FF FF FF FF              - mov r10d,FFFFFFFF
+FFT_enhanced.exe+1A8F6A: 8D 6E 01                       - lea ebp,[rsi+01]
+FFT_enhanced.exe+1A8F6D: 89 74 24 48                    - mov [rsp+48],esi
+FFT_enhanced.exe+1A8F71: 83 FD 60                       - cmp ebp,60
+FFT_enhanced.exe+1A8F74: 0F 87 01 02 00 00              - ja FFT_enhanced.exe+1A917B
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+1A8F7A: 41 38 37                       - cmp [r15],sil
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+1A8F7D: 0F 86 F8 01 00 00              - jbe FFT_enhanced.exe+1A917B
+FFT_enhanced.exe+1A8F83: 48 8B 8B A0 17 00 00           - mov rcx,[rbx+000017A0]
+FFT_enhanced.exe+1A8F8A: 49 8B C5                       - mov rax,r13
+FFT_enhanced.exe+1A8F8D: 48 2B 8B 98 17 00 00           - sub rcx,[rbx+00001798]
+FFT_enhanced.exe+1A8F94: 48 8B BB A0 17 00 00           - mov rdi,[rbx+000017A0]
+FFT_enhanced.exe+1A8F9B: 4C 8B 83 A8 17 00 00           - mov r8,[rbx+000017A8]
+FFT_enhanced.exe+1A8FA2: 48 F7 E9                       - imul rcx
+FFT_enhanced.exe+1A8FA5: 89 6C 24 38                    - mov [rsp+38],ebp
+FFT_enhanced.exe+1A8FA9: 48 C1 FA 02                    - sar rdx,02
+FFT_enhanced.exe+1A8FAD: 48 8B C2                       - mov rax,rdx
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>5329</ID>
+          <Description>"current amount must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_min_poach_threshold</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5330</ID>
+          <Description>"Set amount to"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Byte</VariableType>
+          <Address>ib_set_poach_amt_to</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>1286</ID>
       <Description>"Get money"</Description>
       <Options moHideChildren="1"/>
@@ -3181,8 +3336,8 @@ local evenColor = 0xFF8000
 local oddColor = 0xAA8044
 local jpEvenColor = 0x80FF80
 local jpOddColor = 0xC0C0C0
--- 建立節點的通用函數（擴充支援 binary）
-local function createNode(desc, addr, vtype, parent, color, showHex, startBit, bitLength)
+-- 建立節點的通用函數（擴充支援 binary 和 dropdown）
+local function createNode(desc, addr, vtype, parent, color, showHex, startBit, bitLength, dropdownMemrec)
   local node = addressList.createMemoryRecord()
   node.Description = desc
   if addr then
@@ -3194,6 +3349,12 @@ local function createNode(desc, addr, vtype, parent, color, showHex, startBit, b
     if vtype == vtBinary then
       node.Binary.Startbit = startBit or 0
       node.Binary.Size = bitLength or 1
+    end
+
+    -- 如果有指定 dropdown，設定連結
+    if dropdownMemrec then
+      node.DropDownLinked = true
+      node.DropDownLinkedMemrec = dropdownMemrec
     end
   else
     node.IsGroupHeader = true
@@ -3224,24 +3385,17 @@ synchronize(function()
   while parentRecord.Count &gt; 0 do
     parentRecord.Child[0].destroy()
   end
-  -- 基本資料定義表（格式：名稱, 偏移, 型別, 是否顯示為16進位, startBit, bitLength）
+  -- 基本資料定義表（格式：名稱, 偏移, 型別, 顯示16進位, startBit, bitLength, dropdownMemrec）
   local statsData = {
     {"Type", 0, vtByte, true},
     {"Seq", 0x1, vtByte},
-    {"Job ID", 0x2, vtByte},
+    {"Job ID", 0x2, vtByte, false, nil, nil, "Job.ID"},  -- 設定 dropdown
     {"EXP", 0x1C, vtByte},
     {"Lv", 0x1D, vtByte},
     {"Brave", 0x1E, vtByte},
     {"Faith", 0x1F, vtByte},
-    {"Display Seq#", 0x122, vtByte},
-    {"Favorite", 0x123, vtBinary, false, 0, 1}  -- binary: startBit=0, length=1
+    {"Favorite", 0x124, vtBinary, false, 0, 1}
   }
-
-  local skillsData = {
-    {"Base -&gt; Ultima / アルテマ", 0x32, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
-    {"Summon -&gt; Zodiac / ゾディアーク", 0x4B, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
-  }
-
   -- 裝備資料定義表
   local equipData = {
     {"Right hand", 0x14, vtWord},
@@ -3262,19 +3416,13 @@ synchronize(function()
     local charNode = createNode(string.format("Char[%02d]", charIndex), nil, nil, parentRecord, charColor)
     -- 建立子群組
     local statsNode = createNode("Stats+", nil, nil, charNode, charColor)
-    local skillsNode = createNode("Skills+", nil, nil, charNode, charColor)
     local equipNode = createNode("Equip IDs+", nil, nil, charNode, charColor)
     local jpNode = createNode("JP+", nil, nil, charNode, charColor)
     local jpExpNode = createNode("JP EXP+", nil, nil, charNode, charColor)
     -- 建立基本資料項目
     for i, data in ipairs(statsData) do
       local color = (i % 2 == 1) and jpEvenColor or jpOddColor
-      createNode(data[1], itemAddr + data[2], data[3], statsNode, color, data[4], data[5], data[6])
-    end
-    -- 建立技能項目
-    for i, data in ipairs(skillsData) do
-      local color = (i % 2 == 1) and jpEvenColor or jpOddColor
-      createNode(data[1], itemAddr + data[2], data[3], skillsNode, color, data[4], data[5], data[6])
+      createNode(data[1], itemAddr + data[2], data[3], statsNode, color, data[4], data[5], data[6], data[7])
     end
     -- 建立裝備資料項目
     for i, data in ipairs(equipData) do
@@ -3381,7 +3529,7 @@ closeLuaEngine()
             </CheatEntry>
             <CheatEntry>
               <ID>5300</ID>
-              <Description>"Modify all JP EXP value to 500, if not zero &amp; &lt; 500"</Description>
+              <Description>"Modify all JP EXP value to 1200, if not zero &amp; &lt; 1200"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript Async="1">[ENABLE]
 {$lua}
@@ -3389,7 +3537,7 @@ if syntaxcheck then return end
 
 local PARENT_NAME = "+List (do not delete this)"
 local JP_GROUP_NAME = "JP EXP+"
-local TARGET_VALUE = 500
+local TARGET_VALUE = 1200
 
 local addressList = getAddressList()
 
@@ -3449,8 +3597,25 @@ closeLuaEngine()
     <CheatEntry>
       <ID>292</ID>
       <Description>"FINAL FANTASY TACTICS - The Ivalice Chronicles  /  https://opencheattables.com"</Description>
+      <Options moHideChildren="1"/>
       <Color>009500</Color>
       <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>7575</ID>
+          <Description>"Job.ID"</Description>
+          <DropDownList DisplayValueAsItem="1">2:*Warrior (hero)
+30:*Holy Knight
+48:*Cleric
+77:*Mechanic
+91:Bard
+92:Dancer
+38:(e)Knight blade
+40:(e)White Knight
+</DropDownList>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
