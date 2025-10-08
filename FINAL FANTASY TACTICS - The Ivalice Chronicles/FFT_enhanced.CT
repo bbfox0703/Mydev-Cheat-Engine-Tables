@@ -1240,7 +1240,7 @@ label(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_check_friend_
 label(is_player_always_reflect is_player_always_wall is_enemy_always_blind is_player_always_reraise is_enemy_always_dontact)
 label(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison is_enemy_always_frog)
 label(is_always_remove_sleep is_always_remove_blind is_always_remove_dontact is_always_remove_dontmove is_always_remove_confuse is_always_remove_silence)
-label(is_player_always_float is_always_remove_frog)
+label(is_player_always_float is_always_remove_frog is_player_always_fast)
 
 newmem:
   cmp r15, [i_ignore_addr1]
@@ -1339,6 +1339,13 @@ check_set_buff:
   cmp dword ptr [is_player_always_float], 1
   jne @F
   or byte ptr [r15+63], 40
+
+@@:
+  // fast
+  cmp dword ptr [is_player_always_fast], 1
+  jne @F
+  mov byte ptr [r15+6A], 20
+  or byte ptr [r15+64], 8
 
 
 check_hp:
@@ -1493,6 +1500,8 @@ align 10 cc
   dd 1
   is_player_always_float:
   dd 1
+  is_player_always_fast:
+  dd 1
   ib_player_group:
   db 0
   align 10 cc
@@ -1523,7 +1532,7 @@ registersymbol(i_ignore_addr1 i_ignore_addr2 iw_min_max_hp iw_min_max_mp is_chec
 registersymbol(is_player_always_reflect is_player_always_wall is_enemy_always_blind is_player_always_reraise is_enemy_always_dontact)
 registersymbol(is_enemy_always_confuse is_enemy_always_silence is_enemy_always_dontmove is_enemy_always_poison is_enemy_always_frog)
 registersymbol(is_always_remove_sleep is_always_remove_blind is_always_remove_dontact is_always_remove_dontmove is_always_remove_confuse is_always_remove_silence)
-registersymbol(is_player_always_float is_always_remove_frog)
+registersymbol(is_player_always_float is_always_remove_frog is_player_always_fast)
 
 [DISABLE]
 
@@ -1686,6 +1695,17 @@ FFT_enhanced.exe+20220F: 8B 8C 24 A0 00 00 00     - mov ecx,[rsp+000000A0]
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_player_always_float</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>5326</ID>
+                  <Description>"fast?"</Description>
+                  <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_player_always_fast</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>5312</ID>
@@ -3024,6 +3044,7 @@ newmem:
   push r13
   push rcx
   xor r13, r13
+  mov qword ptr [i_current_member_count], 0
 
 loop1:
   mov r15, i_equip_screen_jp_addr
@@ -3045,6 +3066,7 @@ write_it:
   jmp endp
 
 endp:
+  add qword ptr [i_current_member_count], 1
   pop rcx
   pop r13
   pop r15
@@ -3137,7 +3159,7 @@ FFT_enhanced.exe+280D0B: 0F 10 87 AE 00 00 00     - movups xmm0,[rdi+000000AE]
         </CheatEntry>
         <CheatEntry>
           <ID>3896</ID>
-          <Description>"count"</Description>
+          <Description>"~count"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>808080</Color>
           <VariableType>8 Bytes</VariableType>
@@ -3151,25 +3173,28 @@ FFT_enhanced.exe+280D0B: 0F 10 87 AE 00 00 00     - movups xmm0,[rdi+000000AE]
           <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if syntaxcheck then return end
-
 local baseSymbol = "i_equip_screen_jp_addr"
 local parentName = "+List (do not delete this)"
 local addressList = getAddressList()
-
 -- 顏色設定
 local evenColor = 0xFF8000
 local oddColor = 0xAA8044
 local jpEvenColor = 0x80FF80
 local jpOddColor = 0xC0C0C0
-
--- 建立節點的通用函數
-local function createNode(desc, addr, vtype, parent, color, showHex)
+-- 建立節點的通用函數（擴充支援 binary）
+local function createNode(desc, addr, vtype, parent, color, showHex, startBit, bitLength)
   local node = addressList.createMemoryRecord()
   node.Description = desc
   if addr then
     node.Address = string.format("%X", addr)
     node.Type = vtype or vtByte
     node.ShowAsHex = showHex or false
+
+    -- 如果是 binary 類型，設定 bit 相關參數
+    if vtype == vtBinary then
+      node.Binary.Startbit = startBit or 0
+      node.Binary.Size = bitLength or 1
+    end
   else
     node.IsGroupHeader = true
     node.Options = "[moHideChildren]"
@@ -3178,17 +3203,14 @@ local function createNode(desc, addr, vtype, parent, color, showHex)
   node.Color = color
   return node
 end
-
 -- 開始讀取地址清單
 local listStartAddr = getAddressSafe(baseSymbol)
 if not listStartAddr then
   print("Symbol not found: " .. baseSymbol)
   return
 end
-
 local maxItems = 60
 local charIndex = 1
-
 synchronize(function()
   -- 取得或建立 parent node
   local parentRecord = addressList.getMemoryRecordByDescription(parentName)
@@ -3198,19 +3220,26 @@ synchronize(function()
     parentRecord.IsGroupHeader = true
     parentRecord.Options = "[moHideChildren]"
   end
-
   -- 清除舊的子節點
   while parentRecord.Count &gt; 0 do
     parentRecord.Child[0].destroy()
   end
-
-  -- 基本資料定義表
+  -- 基本資料定義表（格式：名稱, 偏移, 型別, 是否顯示為16進位, startBit, bitLength）
   local statsData = {
+    {"Type", 0, vtByte, true},
+    {"Seq", 0x1, vtByte},
     {"Job ID", 0x2, vtByte},
     {"EXP", 0x1C, vtByte},
     {"Lv", 0x1D, vtByte},
     {"Brave", 0x1E, vtByte},
-    {"Faith", 0x1F, vtByte}
+    {"Faith", 0x1F, vtByte},
+    {"Display Seq#", 0x122, vtByte},
+    {"Favorite", 0x123, vtBinary, false, 0, 1}  -- binary: startBit=0, length=1
+  }
+
+  local skillsData = {
+    {"Base -&gt; Ultima / アルテマ", 0x32, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
+    {"Summon -&gt; Zodiac / ゾディアーク", 0x4B, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
   }
 
   -- 裝備資料定義表
@@ -3223,80 +3252,68 @@ synchronize(function()
     {"Body", 0x10, vtWord},
     {"Accessory", 0x12, vtWord}
   }
-
   -- 建立所有角色 nodes
   for n = 0, maxItems - 1 do
     local ptrAddr = listStartAddr + n * 8
     local itemAddr = readQword(ptrAddr)
-
     if itemAddr == 0 then break end
-
     local charColor = (charIndex % 2 == 1) and evenColor or oddColor
-
     -- 建立角色群組節點
     local charNode = createNode(string.format("Char[%02d]", charIndex), nil, nil, parentRecord, charColor)
-
     -- 建立子群組
     local statsNode = createNode("Stats+", nil, nil, charNode, charColor)
+    local skillsNode = createNode("Skills+", nil, nil, charNode, charColor)
     local equipNode = createNode("Equip IDs+", nil, nil, charNode, charColor)
     local jpNode = createNode("JP+", nil, nil, charNode, charColor)
     local jpExpNode = createNode("JP EXP+", nil, nil, charNode, charColor)
-
     -- 建立基本資料項目
     for i, data in ipairs(statsData) do
       local color = (i % 2 == 1) and jpEvenColor or jpOddColor
-      createNode(data[1], itemAddr + data[2], data[3], statsNode, color)
+      createNode(data[1], itemAddr + data[2], data[3], statsNode, color, data[4], data[5], data[6])
     end
-
+    -- 建立技能項目
+    for i, data in ipairs(skillsData) do
+      local color = (i % 2 == 1) and jpEvenColor or jpOddColor
+      createNode(data[1], itemAddr + data[2], data[3], skillsNode, color, data[4], data[5], data[6])
+    end
     -- 建立裝備資料項目
     for i, data in ipairs(equipData) do
       local color = (i % 2 == 1) and jpEvenColor or jpOddColor
       createNode(data[1], itemAddr + data[2], data[3], equipNode, color)
     end
-
     -- 建立 JP[01] 到 JP[22]
     for i = 1, 22 do
       local color = (i % 2 == 1) and jpEvenColor or jpOddColor
       createNode(string.format("JP[%02d]", i), itemAddr + (i - 1) * 2 + 0x80, vtWord, jpNode, color)
     end
-
     -- 建立 JP EXP[01] 到 JP EXP[22]
     for i = 1, 22 do
       local color = (i % 2 == 1) and jpEvenColor or jpOddColor
       createNode(string.format("JP EXP[%02d]", i), itemAddr + (i - 1) * 2 + 0xAE, vtWord, jpExpNode, color)
     end
-
     charIndex = charIndex + 1
   end
-
   parentRecord.Active = true
 end)
-
 print(string.format("%d records created.", charIndex - 1))
 closeLuaEngine()
-
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-
 local PARENT_NAME = "+List (do not delete this)"
 local addressList = getAddressList()
-
 synchronize(function()
   local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
   if not parent then
     print("Parent node not found: " .. PARENT_NAME)
     return
   end
-
   while parent.Count &gt; 0 do
     parent.Child[0].destroy()
   end
-
   parent.Active = false
   print("All records cleared!")
 end)
-
 closeLuaEngine()
 </AssemblerScript>
           <CheatEntries>
