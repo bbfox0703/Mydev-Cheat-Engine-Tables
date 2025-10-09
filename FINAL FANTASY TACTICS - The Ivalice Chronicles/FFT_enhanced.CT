@@ -99,21 +99,20 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 --]]
-
-  0, -- "Toggle Compact View"
   2, -- "Battle: selected char (LT or click)"
   87, -- "Battle: HP/MP/XP/Others"
   146, -- "Browse &amp; set item amount (non-equipped)"
   150, -- "Browse &amp; set poach materials amount"
   153, -- "Get money"
   156, -- "Map: Status menu: get characters data"
+  4939, -- "Fast tavern errands (儲け話) complete"
   123, -- "Battle: XP multiplier"
   125, -- "Battle: JP XP multiplier"
   129, -- "Battle: keep min brave/faith after action"
   132, -- "Battle: damage multiplier"
   139, -- "Battle: set min jmp/mov/spd/atk..."
   133, -- "Enable Check point #2"
-  163, -- "Get selected char address"
+  0, -- "Toggle Compact View"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -147,7 +146,8 @@ local disableBattleScripts = {
   111, -- "to enemy"
   98, -- "to player"
   170, -- "+List (do not delete this)"
-  162, -- "Generate list"
+  162, -- "Generate list (may take minutes...)"
+  161, -- "~count"
   147, -- "item count must &gt;="
   139, -- "Battle: set min jmp/mov/spd/atk..."
   132, -- "Battle: damage multiplier"
@@ -160,6 +160,7 @@ local disableBattleScripts = {
   37, -- "Loc+"
   20, -- "Attributes+"
   11, -- "Base stats+"
+  4939, -- "Fast tavern errands (儲け話) complete"
   171, -- "FINAL FANTASY TACTICS - The Ivalice Chronicles  /  https://opencheattables.com"
   156, -- "Map: Status menu: get characters data"
   153, -- "Get money"
@@ -203,12 +204,14 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 146, Description: "Browse &amp; set item amount (non-equipped)", Depth: 0
 --   ID: 147, Description: "item count must &gt;=", Depth: 1
 -- ID: 150, Description: "Browse &amp; set poach materials amount", Depth: 0
+-- ID: 4939, Description: "Fast tavern errands (儲け話) complete", Depth: 0
 -- ID: 153, Description: "Get money", Depth: 0
 -- ID: 156, Description: "Map: Status menu: get characters data", Depth: 0
---   ID: 162, Description: "Generate list", Depth: 1
+--   ID: 161, Description: "~count", Depth: 1
+--   ID: 162, Description: "Generate list (may take minutes...)", Depth: 1
 --     ID: 163, Description: "Get selected char address", Depth: 2
---       ID: 165, Description: "(Auto mode) Expand selected char", Depth: 3
 --       ID: 166, Description: "Expand selected char", Depth: 3
+--       ID: 165, Description: "(Auto mode) Expand selected char", Depth: 3
 --     ID: 167, Description: "Modify all JP value to 8000, if not zero", Depth: 2
 --     ID: 168, Description: "Modify all JP EXP value to 1200, if not zero &amp; &lt; 1200", Depth: 2
 --     ID: 169, Description: "Modify all EXP value to 99", Depth: 2
@@ -308,7 +311,18 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
         </CheatEntry>
         <CheatEntry>
           <ID>4</ID>
-          <Description>"Job ID (ref only)"</Description>
+          <Description>"char ID? (ref only)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Byte</VariableType>
+          <Address>i_batt_base_sel_char_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>2489</ID>
+          <Description>"Job ID? (ref only)"</Description>
           <DropDownListLink>Job.ID</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -3082,6 +3096,90 @@ FFT_enhanced.exe+1A8FAD: 48 8B C2                       - mov rax,rdx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>4939</ID>
+      <Description>"Fast tavern errands (儲け話) complete"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : FFT_enhanced.exe
+  Version: 
+  Date   : 2025-10-09
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_ERRANDS,FFT_enhanced.exe,43 0F B6 44 2E 02) // should be unique
+alloc(newmem,$1000,INJECT_FAST_ERRANDS)
+
+label(code)
+label(return)
+
+newmem:
+  //cmp byte ptr [r14+r13+02], 0
+  //je code
+  mov al, [r14+r13+03]
+  cmp al, [r14+r13+02]
+  je code
+  dec al
+  mov [r14+r13+02], al
+
+
+code:
+  movzx eax,byte ptr [r14+r13+02]
+  jmp return
+
+INJECT_FAST_ERRANDS:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_FAST_ERRANDS)
+
+[DISABLE]
+
+INJECT_FAST_ERRANDS:
+  db 43 0F B6 44 2E 02
+
+unregistersymbol(INJECT_FAST_ERRANDS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: FFT_enhanced.exe+2E8658
+
+FFT_enhanced.exe+2E8625: 8B 94 C5 C0 00 00 00     - mov edx,[rbp+rax*8+000000C0]
+FFT_enhanced.exe+2E862C: 41 3B D4                 - cmp edx,r12d
+FFT_enhanced.exe+2E862F: 0F 84 5C 01 00 00        - je FFT_enhanced.exe+2E8791
+FFT_enhanced.exe+2E8635: 48 63 84 C5 C4 00 00 00  - movsxd  rax,dword ptr [rbp+rax*8+000000C4]
+FFT_enhanced.exe+2E863D: 89 95 9C 00 00 00        - mov [rbp+0000009C],edx
+FFT_enhanced.exe+2E8643: 4C 8D 34 C0              - lea r14,[rax+rax*8]
+FFT_enhanced.exe+2E8647: 43 0F B6 4C 2E 03        - movzx ecx,byte ptr [r14+r13+03]
+FFT_enhanced.exe+2E864D: 89 8D A4 00 00 00        - mov [rbp+000000A4],ecx
+FFT_enhanced.exe+2E8653: 83 FA 02                 - cmp edx,02
+FFT_enhanced.exe+2E8656: 75 0E                    - jne FFT_enhanced.exe+2E8666
+// ---------- INJECTING HERE ----------
+FFT_enhanced.exe+2E8658: 43 0F B6 44 2E 02        - movzx eax,byte ptr [r14+r13+02]
+// ---------- DONE INJECTING  ----------
+FFT_enhanced.exe+2E865E: 2B C8                    - sub ecx,eax
+FFT_enhanced.exe+2E8660: 89 8D B0 00 00 00        - mov [rbp+000000B0],ecx
+FFT_enhanced.exe+2E8666: 83 FA 03                 - cmp edx,03
+FFT_enhanced.exe+2E8669: 48 8D 4C 24 60           - lea rcx,[rsp+60]
+FFT_enhanced.exe+2E866E: B8 06 00 00 00           - mov eax,00000006
+FFT_enhanced.exe+2E8673: 48 89 4C 24 48           - mov [rsp+48],rcx
+FFT_enhanced.exe+2E8678: 41 0F 44 C4              - cmove eax,r12d
+FFT_enhanced.exe+2E867C: 48 8D 3D 7D 79 D1 FF     - lea rdi,[FFT_enhanced.exe]
+FFT_enhanced.exe+2E8683: 49 83 C5 06              - add r13,06
+FFT_enhanced.exe+2E8687: 4C 8D 65 C0              - lea r12,[rbp-40]
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>4940</ID>
+          <Description>"Usage: 1. accept errand; 2. leave errands menu; 3. enter errands menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>153</ID>
       <Description>"Get money"</Description>
       <Options moHideChildren="1"/>
@@ -3253,7 +3351,7 @@ align 10 cc
   i_nodes_needed:
   dd 0
   vf_mul_num:
-  dd (float)65
+  dd (float)67
   align 10 0
   i_equip_screen_jp_addr:
   dq 0
@@ -3420,7 +3518,7 @@ synchronize(function()
   end
   -- 基本資料定義表（格式：名稱, 偏移, 型別, 顯示16進位, startBit, bitLength, dropdownMemrec）
   local statsData = {
-    {"Type", 0, vtByte, true},
+    {"Type/Char ID", 0, vtByte, true},
     {"Seq", 0x1, vtByte},
     {"Job ID (ref. only)", 0x2, vtByte, false, nil, nil, "Job.ID"},  -- 設定 dropdown
     {"EXP", 0x1C, vtByte},
@@ -3432,7 +3530,9 @@ synchronize(function()
   }
   -- 技能群組
   local skillsData = {
-    {"Base --&gt; Ultima / アルテマ", 0x32, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
+    {"Squire --&gt; Ultima / アルテマ", 0x32, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
+    {"Gallant knight (見習い天騎士) --&gt; Ultima / アルテマ", 0x33, vtBinary, false, 7, 1},  -- binary: startBit=0, length=1
+    {"Holy knight? (聖騎士?) --&gt; Ultima / アルテマ", 0x33, vtBinary, false, 6, 1},  -- binary: startBit=0, length=1
     {"Summon --&gt; Zodiac / ゾディアーク", 0x4B, vtBinary, false, 0, 1},  -- binary: startBit=0, length=1
   }
   -- 裝備資料定義表
@@ -3515,7 +3615,7 @@ closeLuaEngine()
               <Description>"Get selected char address"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : FFT_enhanced.exe
+              <AssemblerScript Async="1">{ Game   : FFT_enhanced.exe
   Version: 
   Date   : 2025-10-08
   Author : bbfox@https://opencheattables.com
@@ -3648,16 +3748,18 @@ synchronize(function()
         statsNode = charNode.Child[j]
         break
       end
+      print("Stats+ not found")
     end
 
     if statsNode then
       -- 尋找 Type 節點
       local typeNode = nil
       for k = 0, statsNode.Count - 1 do
-        if statsNode.Child[k].Description == "Type" then
+        if statsNode.Child[k].Description == "Type/Char ID" then
           typeNode = statsNode.Child[k]
           break
         end
+        print("Type/Char ID not found")
       end
 
       if typeNode and typeNode.Address then
@@ -3763,7 +3865,7 @@ local function updateExpansion()
       if statsNode then
         local typeNode = nil
         for k = 0, statsNode.Count - 1 do
-          if statsNode.Child[k].Description == "Type" then
+          if statsNode.Child[k].Description == "Type/Char ID" then
             typeNode = statsNode.Child[k]
             break
           end
@@ -4027,12 +4129,38 @@ closeLuaEngine()
         <CheatEntry>
           <ID>172</ID>
           <Description>"Job.ID"</Description>
-          <DropDownList DisplayValueAsItem="1">2:*Warrior (hero)
+          <DropDownList DisplayValueAsItem="1">2:*Squire (hero)
+3:*Gallant knight (hero)
+5:*Holy Knight?
+22:Machinist
+25:*Skyseer / 天道士
+41:*Skyseer / 天道士
+26:*Netherseer / 天冥士
+27:(e)Arknight
 30:*Holy Knight
+45:(e)Assassin
+46:(e)Assassin
 48:*Cleric
-77:*Mechanic
+74:Squire
+75:Chemist
+76:Knight
+77:Archer
+78:Monk
+79:White Mage
+80:Black Mage
+81:Time Mage
+82:Summoner
+83:Thief
+84:Orator
+85:Mystic
+86:Geomancer
+87:Dragoon
+88:Samurai
+89:Ninja
+90:Arithmetician
 91:Bard
 92:Dancer
+93:Mime
 38:(e)Knight blade
 40:(e)White Knight
 </DropDownList>
