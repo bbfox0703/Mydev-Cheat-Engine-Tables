@@ -810,7 +810,7 @@ FFT_enhanced.exe+213082: BE 64 00 00 00  - mov esi,00000064
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
-              <ID>38</ID>
+              <ID>7214</ID>
               <Description>"X"</Description>
               <DropDownListLink>HP</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
@@ -1535,6 +1535,8 @@ check_mp:
 
 to_enemy:
   // sleep
+  cmp word ptr [r15+30], 0
+  je endp
   cmp dword ptr [is_enemy_always_sleep], 1
   jne @F
   or byte ptr [r15+65], 10
@@ -2757,7 +2759,7 @@ FFT_enhanced.exe+30128E: 42 8D 04 01              - lea eax,[rcx+r8]
               <CheatEntries>
                 <CheatEntry>
                   <ID>138</ID>
-                  <Description>"Poach may not work if not 1"</Description>
+                  <Description>"Poach *may not* work if not 1"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
@@ -3710,6 +3712,7 @@ closeLuaEngine()
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
+--[[
 local PARENT_NAME = "+List (do not delete this)"
 local addressList = getAddressList()
 synchronize(function()
@@ -3724,6 +3727,48 @@ synchronize(function()
   parent.Active = false
   print("All records cleared!")
 end)
+closeLuaEngine()
+--]]
+local PARENT_NAME = "+List (do not delete this)"
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Parent node not found: " .. PARENT_NAME)
+    return
+  end
+
+  local totalCount = parent.Count
+  print(string.format("Clearing %d nodes...", totalCount))
+
+  -- 批次刪除並定期回收
+  local batchSize = 5
+  local deleted = 0
+
+  while parent.Count &gt; 0 do
+    for i = 1, math.min(batchSize, parent.Count) do
+      if parent.Count &gt; 0 then
+        local child = parent.Child[parent.Count - 1]
+        child.destroy()
+        deleted = deleted + 1
+      end
+    end
+
+    -- 每批次後回收一次
+    collectgarbage("collect")
+  end
+
+  parent.Active = false
+
+  -- 最後再回收幾次
+  collectgarbage("collect")
+  collectgarbage("collect")
+
+  print(string.format("Cleared %d records", deleted))
+end)
+
+collectgarbage("collect")
 closeLuaEngine()
 </AssemblerScript>
           <CheatEntries>
@@ -4328,14 +4373,27 @@ closeLuaEngine()
 56:(act/npc)Throw / 投げる
 62:(act/npc)Blade Beam / 刀魂放気
 63:(act/npc)Drain / 吸血
+64:(act/npc)Unyielding Blade / 剛剣
 66:(act/npc)Unyielding Blade / 剛剣
 67:(act)Unyielding Blade / 剛剣
 69:(act)Spellblade / 魔法剣
+70:(act/npc)Swordskill / 剣技
+71:(act/npc)All Magicks / 全魔法
 74:(act)Swordplay / 全剣技
+75:(act/npc)Destory Spellblade / 破壊魔剣
+76:(act/npc)Holy Magicks / 聖魔法
 107:(act/boss):?
 108:(act/boss):?
+111:(act/boss):?
+112:(act/boss):?
+119:(act/boss):?
+120:(act/boss):?
+123:(act/boss):?
+124:(act/boss):?
+125:(act/boss):?
+126:(act/boss):?
 166:(rct)Strength Surge
-168:(rct)Speed Surge
+168:(rct)Speed Surge / 反動スピードアップ
 169:(rct)Vanish
 170:(rct)Vigilance / 警戒
 171:(rct)Dragonheart / 竜の魂
@@ -4345,38 +4403,38 @@ closeLuaEngine()
 176:(rct)Critical: Recover MP / 瀕死MP回復
 177:(rct)Critical: Quick
 178:(rct)Bonecrusher / 肉斬骨断
-179:(rct)Magick Counter
+179:(rct)Magick Counter / 魔法返し
 180:(rct)Counter Tackle / 反撃タックル
 181:(rct)Nature's Wrath / 風水返し
 182:(rct)Absorb MP
-183:(rct)Gil Snapper
+183:(rct)Gil Snapper / ギルガメの心
 185:(rct)Auto-Potion
 186:(rct)Counter / カウンター
 188:(rct)Cup of Life
 189:(rct)Mana Shield
 190:(rct)Soulbind
 191:(rct)Parry / 装備武器ガード
-192:(rct)Earplugs
+192:(rct)Earplugs / 耳をふさぐ
 193:(rct)Reflexes / 見切る
 194:(rct)Sticky Fingers / キャッチ
 195:(rct)Shirahadori / 白刃取り
 196:(rct)Archer's bane / 矢かわし
 197:(rct)First Strike
 198:(sup)Equip Heavy Armor / 兜鎧装備
-199:(sup)Equip Shields
-200:(sup)Equip Swords
-205:(sup)Equip Katana
+199:(sup)Equip Shields / 盾装備
+200:(sup)Equip Swords / 剣装備
+201:(sup)Equip Katana / 刀装備
 202:(sup)Equip Crossbows / 自動弓装備
 203:(sup)Equip Polearms
 204:(sup)Equip Axes
 205:(sup)Equip Guns
-206:(sup)Halve MP
+206:(sup)Halve MP / 消費MP半減
 207:(sup)JP Boost / 獲得JPアップ
-208:(sup)EXP Boost / 獲得JPアップ
-209:(sup)Attack Boost
-210:(sup)Defense Boost
+208:(sup)EXP Boost / 獲得EXPアップ
+209:(sup)Attack Boost / 物理攻撃アップ
+210:(sup)Defense Boost / 物理防御アップ
 211:(sup)Magick Boost
-212:(sup)Magick Defense Boost
+212:(sup)Magick Defense Boost / 魔法防御アップ
 213:(sup)Concentrate / 精神統一
 214:(sup)Tame
 215:(sup)Poach / 密猟
@@ -4396,7 +4454,7 @@ closeLuaEngine()
 233:(mov)Jump +1 / 跳躍+1
 234:(mov)Jump +2 / 跳躍+2
 235:(mov)Jump +3 / 跳躍+3
-236:(mov)Ignore Elevation
+236:(mov)Ignore Elevation / 高低差無視移動
 237:(mov)Move-HP Up / ＨＰ回復移動
 238:(mov)Manafont
 239:(mov)Accure EXP
@@ -4407,7 +4465,7 @@ closeLuaEngine()
 245:(mov)Ignore Terrain / 地形無視移動
 246:(mov)Waterwalking / 水面移動
 247:(mov)Swim
-248:(mov)Lavawalking
+248:(mov)Lavawalking / 溶岩上移動
 250:(mov)Levitate
 251:(mov)Fly / 飛行移動
 253:(mov)Treasure Hunter
