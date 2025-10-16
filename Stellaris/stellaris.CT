@@ -4661,8 +4661,127 @@ stellaris.exe+147BB57: 0F 84 88 01 00 00     - je stellaris.exe+147BCE5
                   <Address>i_fleet_num_watermark</Address>
                 </CheatEntry>
                 <CheatEntry>
+                  <ID>17536</ID>
+                  <Description>"Recover starbase HP (click on right panel)"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2025-10-16
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_ADD_STATION_INTO_LIST,stellaris.exe,39 53 20 74 07 48 8B 1D ?? ?? ?? ?? 48 8B 43 08 48 8D 4B 08 FF 50 20 84 C0 0F 84 ?? ?? 00 00 48 8B 05) // should be unique
+alloc(newmem,$1000,INJECT_ADD_STATION_INTO_LIST)
+
+label(code)
+label(return)
+
+newmem:
+  push r15
+  push r14
+
+  xor r14, r14
+
+loop1:
+  mov r15, i_fleet_address_list
+  lea r15, [r15+r14*8]
+  cmp qword ptr [r15], 0
+  je write_data
+  cmp qword ptr [r15], rbx
+  je endp
+  inc r14
+
+  cmp [i_fleet_num_watermark], r14
+  jae @F
+  mov [i_fleet_num_watermark], r14
+
+@@:
+  cmp r14, #2560
+  ja endp
+  jmp loop1
+
+write_data:
+  mov [r15], rbx
+
+endp:
+  // recover HP
+  mov r15, [rbx+70]
+  mov r14, [rbx+698]
+  cmp r14, r15
+  cmovb r14, r15
+  mov [rbx+698], r14
+
+  mov r15, [rbx+D0]
+  mov r14, [rbx+6A8]
+  cmp r14, r15
+  cmovb r14, r15
+  mov [rbx+6A8], r14
+
+  mov r15, [rbx+190]
+  mov r14, [rbx+6A0]
+  cmp r14, r15
+  cmovb r14, r15
+  mov [rbx+6A0], r14
+
+  pop r14
+  pop r15
+
+
+
+code:
+  cmp [rbx+20],edx
+  //je stellaris.exe+13D4D3A
+  reassemble(INJECT_ADD_STATION_INTO_LIST+3)
+  jmp return
+
+INJECT_ADD_STATION_INTO_LIST:
+  jmp newmem
+return:
+registersymbol(INJECT_ADD_STATION_INTO_LIST)
+
+[DISABLE]
+
+INJECT_ADD_STATION_INTO_LIST:
+  db 39 53 20 74 07
+
+unregistersymbol(INJECT_ADD_STATION_INTO_LIST)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+13D4D2E
+
+stellaris.exe+13D4D0A: 8B 93 98 00 00 00     - mov edx,[rbx+00000098]
+stellaris.exe+13D4D10: 8B CA                 - mov ecx,edx
+stellaris.exe+13D4D12: 81 E1 FF FF FF 00     - and ecx,00FFFFFF
+stellaris.exe+13D4D18: 3B 48 20              - cmp ecx,[rax+20]
+stellaris.exe+13D4D1B: 73 16                 - jae stellaris.exe+13D4D33
+stellaris.exe+13D4D1D: 48 8B 40 18           - mov rax,[rax+18]
+stellaris.exe+13D4D21: 48 03 C9              - add rcx,rcx
+stellaris.exe+13D4D24: 48 8B 5C C8 08        - mov rbx,[rax+rcx*8+08]
+stellaris.exe+13D4D29: 48 85 DB              - test rbx,rbx
+stellaris.exe+13D4D2C: 74 05                 - je stellaris.exe+13D4D33
+// ---------- INJECTING HERE ----------
+stellaris.exe+13D4D2E: 39 53 20              - cmp [rbx+20],edx
+// ---------- DONE INJECTING  ----------
+stellaris.exe+13D4D31: 74 07                 - je stellaris.exe+13D4D3A
+stellaris.exe+13D4D33: 48 8B 1D B6 26 BD 01  - mov rbx,[stellaris.exe+2FA73F0]
+stellaris.exe+13D4D3A: 48 8B 43 08           - mov rax,[rbx+08]
+stellaris.exe+13D4D3E: 48 8D 4B 08           - lea rcx,[rbx+08]
+stellaris.exe+13D4D42: FF 50 20              - call qword ptr [rax+20]
+stellaris.exe+13D4D45: 84 C0                 - test al,al
+stellaris.exe+13D4D47: 0F 84 AD 00 00 00     - je stellaris.exe+13D4DFA
+stellaris.exe+13D4D4D: 48 8B 05 84 39 BD 01  - mov rax,[stellaris.exe+2FA86D8]
+stellaris.exe+13D4D54: 48 89 7C 24 30        - mov [rsp+30],rdi
+stellaris.exe+13D4D59: 48 85 C0              - test rax,rax
+}
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
                   <ID>17534</ID>
                   <Description>"Extra fleet option for non-player"</Description>
+                  <Options moHideChildren="1"/>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>{ Game   : stellaris.exe
   Version: 
@@ -5024,57 +5143,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>267</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>283</ID>
-                      <Description>"Prefix name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>217</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17409</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5143,57 +5230,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>268</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>284</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>478</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17410</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5262,57 +5317,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>269</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+10</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>285</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+10</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>479</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+10</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17411</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+10</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5381,57 +5404,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>270</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+18</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>286</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+18</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>480</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+18</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17412</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+18</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5500,57 +5491,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>271</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+20</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>287</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+20</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>481</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+20</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17413</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+20</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5619,57 +5578,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>272</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+28</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>288</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+28</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>482</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+28</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17414</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+28</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5738,57 +5665,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>273</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+30</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>289</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+30</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>483</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+30</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17415</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+30</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5857,57 +5752,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>274</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+38</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>290</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+38</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>484</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+38</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17416</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+38</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -5976,57 +5839,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>275</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+40</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>291</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+40</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>485</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+40</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17417</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+40</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6095,57 +5926,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>279</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+48</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>292</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+48</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>486</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+48</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17418</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+48</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6214,57 +6013,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>296</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+50</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>297</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+50</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>487</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+50</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17419</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+50</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6333,57 +6100,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>304</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+58</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>305</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+58</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>488</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+58</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17420</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+58</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6452,57 +6187,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>312</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+60</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>313</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+60</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>489</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+60</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17421</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+60</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6571,57 +6274,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>320</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+68</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>321</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+68</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>490</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+68</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17422</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+68</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6690,57 +6361,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>328</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+70</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>329</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+70</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>491</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+70</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17423</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+70</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6809,57 +6448,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>336</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+78</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>337</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+78</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>492</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+78</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17424</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+78</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -6928,57 +6535,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>344</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+80</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>345</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+80</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>493</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+80</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17425</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+80</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7047,57 +6622,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>352</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+88</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>353</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+88</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>494</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+88</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17426</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+88</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7166,57 +6709,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>360</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+90</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>361</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+90</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>495</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+90</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17427</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+90</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7285,57 +6796,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>368</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+98</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>369</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+98</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>496</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+98</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17428</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+98</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7404,57 +6883,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>376</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+A0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>377</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+A0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>497</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+A0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17429</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+A0</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7523,57 +6970,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>384</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+A8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>385</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+A8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>498</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+A8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17430</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+A8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7642,57 +7057,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>392</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+B0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>393</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+B0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>499</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+B0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17431</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+B0</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7761,57 +7144,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>400</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+B8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>401</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+B8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>500</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+B8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17432</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+B8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7880,57 +7231,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>409</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+C0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>410</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+C0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>501</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+C0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17433</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+C0</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -7999,57 +7318,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>417</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+C8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>418</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+C8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>502</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+C8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17434</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+C8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8118,57 +7405,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>425</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+D0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>426</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+D0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>503</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+D0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17435</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+D0</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8237,57 +7492,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>433</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+D8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>434</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+D8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>504</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+D8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17436</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+D8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8356,57 +7579,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>441</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+E0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>442</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+E0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>505</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+E0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17437</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+E0</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8475,57 +7666,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>449</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+E8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>450</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+E8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>506</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+E8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17438</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+E8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8594,57 +7753,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>457</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+F0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>458</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+F0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>507</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+F0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17439</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+F0</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8713,57 +7840,25 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>465</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+F8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>466</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+F8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>508</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+F8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>17440</ID>
-                      <Description>"(X) EXP"</Description>
+                      <Description>"EXP"</Description>
                       <DropDownListLink>EXP-desc</DropDownListLink>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>Custom</VariableType>
                       <CustomType>STLS Float</CustomType>
                       <Address>i_ship_stat_base_addr+F8</Address>
                       <Offsets>
-                        <Offset>690</Offset>
+                        <Offset>AA0</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8840,45 +7935,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>513</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+100</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>514</ID>
-                      <Description>"Prefix name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+100</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>515</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+100</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -8947,45 +8010,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>522</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+108</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>523</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+108</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>524</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+108</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9054,45 +8085,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>531</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+110</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>532</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+110</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>533</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+110</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9161,45 +8160,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>540</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+118</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>541</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+118</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>542</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+118</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9268,45 +8235,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>549</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+120</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>550</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+120</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>551</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+120</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9375,45 +8310,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>558</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+128</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>559</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+128</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>560</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+128</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9482,45 +8385,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>567</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+130</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>568</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+130</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>569</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+130</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9589,45 +8460,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>576</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+138</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>577</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+138</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>578</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+138</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9696,45 +8535,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>585</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+140</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>586</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+140</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>587</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+140</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9803,45 +8610,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>594</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+148</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>595</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+148</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>596</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+148</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -9910,45 +8685,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>603</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+150</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>604</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+150</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>605</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+150</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10017,45 +8760,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>612</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+158</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>613</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+158</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>614</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+158</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10124,45 +8835,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>621</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+160</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>622</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+160</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>623</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+160</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10228,38 +8907,6 @@ if syntaxcheck then return end
                       <Offsets>
                         <Offset>8</Offset>
                         <Offset>5A0</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>630</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+168</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>631</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+168</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10338,45 +8985,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>639</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+170</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>640</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+170</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>641</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+170</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10445,45 +9060,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>648</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+178</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>649</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+178</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>650</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+178</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10552,45 +9135,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>657</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+180</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>658</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+180</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>659</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+180</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10659,45 +9210,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>666</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+188</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>667</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+188</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>668</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+188</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10766,45 +9285,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>675</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+190</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>676</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+190</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>677</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+190</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10873,45 +9360,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>684</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+198</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>685</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+198</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>686</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+198</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -10980,45 +9435,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>693</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1A0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>694</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1A0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>695</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1A0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11087,45 +9510,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>702</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1A8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>703</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1A8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>704</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1A8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11194,45 +9585,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>711</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1B0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>712</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1B0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>713</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1B0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11301,45 +9660,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>720</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1B8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>721</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1B8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>722</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1B8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11408,45 +9735,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>729</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1C0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>730</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1C0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>731</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1C0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11515,45 +9810,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>738</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1C8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>739</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1C8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>740</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1C8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11622,45 +9885,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>747</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1D0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>748</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1D0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>749</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1D0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11729,45 +9960,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>756</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1D8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>757</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1D8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>758</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1D8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11836,45 +10035,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>765</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1E0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>766</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1E0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>767</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1E0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -11943,45 +10110,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>774</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1E8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>775</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1E8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>776</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1E8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -12050,45 +10185,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>783</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1F0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>784</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1F0</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>785</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1F0</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -12157,45 +10260,13 @@ if syntaxcheck then return end
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>792</ID>
-                      <Description>"Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1F8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>8</Offset>
-                        <Offset>28</Offset>
-                        <Offset>98</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>793</ID>
-                      <Description>"Prefix Name?"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <VariableType>String</VariableType>
-                      <Length>32</Length>
-                      <Unicode>0</Unicode>
-                      <CodePage>0</CodePage>
-                      <ZeroTerminate>1</ZeroTerminate>
-                      <Address>i_ship_stat_base_addr+1F8</Address>
-                      <Offsets>
-                        <Offset>0</Offset>
-                        <Offset>68</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
                       <ID>794</ID>
                       <Description>"in fleet position#"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <VariableType>8 Bytes</VariableType>
                       <Address>i_ship_stat_base_addr+1F8</Address>
                       <Offsets>
-                        <Offset>B0</Offset>
+                        <Offset>5F8</Offset>
                       </Offsets>
                     </CheatEntry>
                     <CheatEntry>
@@ -12520,8 +10591,19 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               </Offsets>
             </CheatEntry>
             <CheatEntry>
+              <ID>17537</ID>
+              <Description>"in fleet position"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_ship_info_base</Address>
+              <Offsets>
+                <Offset>5F8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
               <ID>818</ID>
-              <Description>"(X) EXP"</Description>
+              <Description>"EXP"</Description>
               <DropDownListLink>EXP-desc</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
@@ -12529,7 +10611,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <CustomType>STLS Float</CustomType>
               <Address>i_ship_info_base</Address>
               <Offsets>
-                <Offset>690</Offset>
+                <Offset>AA0</Offset>
               </Offsets>
             </CheatEntry>
             <CheatEntry>
@@ -13134,7 +11216,8 @@ stellaris.exe+23EC6B: 40 84 FF              - test dil,dil
           <ID>17441</ID>
           <Description>"EXP-desc"</Description>
           <DropDownList DisplayValueAsItem="1">0:N/A or New
-1000:Vertain
+100:Experienced
+1000:Veteran
 10000:Elite
 </DropDownList>
           <GroupHeader>1</GroupHeader>
