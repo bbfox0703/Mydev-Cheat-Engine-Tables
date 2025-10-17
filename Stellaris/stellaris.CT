@@ -53,102 +53,11 @@ end
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>842</ID>
-      <Description>"Enable"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <ID>17486</ID>
+      <Description>"Toggle some scripts on/all off"</Description>
+      <Color>4080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
-{$lua}
-if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-
-P_NAME = 'Stellaris.exe'
-_G.processID = getOpenedProcessID()
-if (p_ated == nil) and (getProcessIDFromProcessName(P_NAME) ~= nil) then
-	openProcess(P_NAME)
-    p_ated = true
-    Sleep(100)
-end
-
-closeLuaEngine()
-
-if _stellaris_customFloat == nil then
-
-registerCustomTypeAutoAssembler([[
-alloc(TypeName,256)
-alloc(ByteSize,8)
-alloc(ConvertRoutine,1024)
-alloc(ConvertBackRoutine,1024)
-alloc(UsesFloat,1)
-
-TypeName:
-db 'STLS Float',0
-
-ByteSize:
-dd 8
-
-UsesFloat:
-db 1
-
-ConvertRoutine:
-//at this point ecx contains the address where the bytes are stored
-
-xor rax,rax
-
-mov rax, qword ptr [rcx]
-cvtsi2ss xmm15, rax
-mov eax, (float)100000
-movd xmm14, eax
-vdivss xmm15, xmm15, xmm14
-//vcvtss2si eax, xmm15
-movd eax, xmm15
-
-ret
-
-ConvertBackRoutine:
-//at this point edx contains the address to write the value to
-//and ecx contains the value
-
-push rax
-mov  eax, ecx
-movd xmm15, eax
-//cvtsi2ss xmm15, eax
-mov eax, (float)100000
-movd xmm14, eax
-vmulss xmm15, xmm15, xmm14
-vcvtss2si rax, xmm15
-//movd eax, xmm15
-
-mov qword ptr [rdx], rax
-pop rax
-ret
-
-]])
-
-_stellaris_customFloat = true
-end
-if getOpenedProcessID() ~= _G.processID then
-  openProcess(_G.processID)
-end
-{$asm}
-
-[DISABLE]
-{$lua}
-if (syntaxcheck) then return end
-if memrec then print(memrec.Description) end
-
-p_ated = nil
-
-closeLuaEngine()
-
-</AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>17486</ID>
-          <Description>"Toggle some scripts on/all off"</Description>
-          <Color>4080FF</Color>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript Async="1">[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
 synchronize(function()
@@ -156,11 +65,9 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 
-local enableBattleScripts = {
 
---[[
 -- attach process
-local processName = "game_exe.exe"
+local processName = "Stellaris.exe"
 local pid = getProcessIDFromProcessName(processName)
 if pid ~= nil and pid &gt; 0 then
   local currentPid = getOpenedProcessID() or 0
@@ -175,13 +82,15 @@ end
 synchronize(function()
   getLuaEngine().Close()
 end)
---]]
 
+
+local enableBattleScripts = {
+  17, -- "Compact mode"
+  842, -- "Enable"
   17445, -- "Extra"
   17446, -- "Enable ironman console"
   17442, -- "Enable mod achievements - Step 1"
   17485, -- "Enable mod achievements - Step 2"
-  17, -- "Compact mode"
   2, -- "Get resources"
   19, -- "Current player research (Active: click research in left panel)"
   39, -- "Quick build in selected Starport/Planet"
@@ -191,16 +100,16 @@ end)
   91, -- "Fast Bogeys breakthrough (Usage: move-over progress bar) / 快速妖靈突破"
   97, -- "Selected Megastructure"
   102, -- "Selected Science Ship research (archaeology)"
-  114, -- "High HP for selected fleet / sci-ship survey multiplier"
+  114, -- "High HP for selected fleet"
   119, -- "Get terraforming info"
   163, -- "Single ship/mining station Hull/Armor/Shield viewer"
-  199, -- "Ship Hull/Armor/Shield Viewer"
   810, -- "Get construction ship build progress"
   17494, -- "Get anomaly research progress"
+  17540, -- "Hover-over some objects' icon"
   17459, -- "Auto running operation complete"
-  17498, -- "Single viewer: additional method"
   17526, -- "Auto update research data"
   17531, -- "Selected player fleet: recover HP"
+  17536, -- "Recover starbase HP (click on right panel)"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -223,11 +132,13 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  17545, -- "Starbase data will be added into "ship list""
   152, -- "Option 2: Sci-Ship survey multiplier"
   116, -- "Option 1: Monitor all player fleets (1. must be on, or script will error)"
+  17536, -- "Recover starbase HP (click on right panel)"
   17534, -- "Extra fleet option for non-player"
+  17532, -- "Recommend: re-enable script if ship is lost"
   17485, -- "Enable mod achievements - Step 2"
-  839, -- "Also get info during Voting period (Senate Session) / 於會議進行期間取得資訊"
   789, -- "#64"
   780, -- "#63"
   771, -- "#62"
@@ -301,12 +212,10 @@ local disableBattleScripts = {
   17511, -- "#6+"
   17506, -- "#5+"
   17501, -- "#4+"
-  17498, -- "Single viewer: additional method"
   17487, -- "_debug"
   17459, -- "Auto running operation complete"
   17446, -- "Enable ironman console"
   17442, -- "Enable mod achievements - Step 1"
-  832, -- "Get info during Senate Recess / 於休會期間取得資訊"
   509, -- "Ship Stats (#33-#64)"
   471, -- "_debug"
   405, -- "Reset data buffer in next scan (in case data buffer is full)"
@@ -325,15 +234,15 @@ local disableBattleScripts = {
   27, -- "#1+"
   26, -- "Refresh research items (in case researcher changed / or #1/#2/#3 incorrect)"
   1, -- "1. Get resources"
+  17540, -- "Hover-over some objects' icon"
   17527, -- "Temp: colony progress"
   17494, -- "Get anomaly research progress"
   17445, -- "Extra"
-  836, -- "Galactic community"
   810, -- "Get construction ship build progress"
   199, -- "Ship Hull/Armor/Shield Viewer"
   163, -- "Single ship/mining station Hull/Armor/Shield viewer"
   119, -- "Get terraforming info"
-  114, -- "High HP for selected fleet / sci-ship survey multiplier"
+  114, -- "High HP for selected fleet"
   102, -- "Selected Science Ship research (archaeology)"
   97, -- "Selected Megastructure"
   91, -- "Fast Bogeys breakthrough (Usage: move-over progress bar) / 快速妖靈突破"
@@ -343,7 +252,8 @@ local disableBattleScripts = {
   39, -- "Quick build in selected Starport/Planet"
   19, -- "Current player research (Active: click research in left panel)"
   2, -- "Get resources"
-  35, -- "Stellaris 4.1.5 PARTIAL  /  http://opencheattables.com"
+  842, -- "Enable"
+  35, -- "Stellaris 4.1.5  /  http://opencheattables.com"
   17, -- "Compact mode"
 }
 local addressList = getAddressList()
@@ -391,13 +301,16 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 102, Description: "Selected Science Ship research (archaeology)", Depth: 1
 --     ID: 108, Description: "Manual set progress to 0", Depth: 2
 --   ID: 17494, Description: "Get anomaly research progress", Depth: 1
---   ID: 114, Description: "High HP for selected fleet / sci-ship survey multiplier", Depth: 1
+--   ID: 114, Description: "High HP for selected fleet", Depth: 1
 --     ID: 113, Description: "1. Enable this script first", Depth: 2
 --       ID: 158, Description: "_debug", Depth: 3
 --       ID: 195, Description: "3. init param update", Depth: 3
 --         ID: 116, Description: "Option 1: Monitor all player fleets (1. must be on, or script will error)", Depth: 4
 --         ID: 152, Description: "Option 2: Sci-Ship survey multiplier", Depth: 4
 --     ID: 17531, Description: "Selected player fleet: recover HP", Depth: 2
+--       ID: 17532, Description: "Recommend: re-enable script if ship is lost", Depth: 3
+--       ID: 17536, Description: "Recover starbase HP (click on right panel)", Depth: 3
+--         ID: 17545, Description: "Starbase data will be added into "ship list"", Depth: 4
 --       ID: 17534, Description: "Extra fleet option for non-player", Depth: 3
 --   ID: 199, Description: "Ship Hull/Armor/Shield Viewer", Depth: 1
 --     ID: 405, Description: "Reset data buffer in next scan (in case data buffer is full)", Depth: 2
@@ -468,23 +381,148 @@ synchronize(function() getLuaEngine().Close() end)
 --       ID: 780, Description: "#63", Depth: 3
 --       ID: 789, Description: "#64", Depth: 3
 --   ID: 163, Description: "Single ship/mining station Hull/Armor/Shield viewer", Depth: 1
---     ID: 17498, Description: "Single viewer: additional method", Depth: 2
 --     ID: 471, Description: "_debug", Depth: 2
 --     ID: 173, Description: "Hull", Depth: 2
 --     ID: 175, Description: "Armor", Depth: 2
 --     ID: 174, Description: "Shield", Depth: 2
---   ID: 836, Description: "Galactic community", Depth: 1
---     ID: 832, Description: "Get info during Senate Recess / 於休會期間取得資訊", Depth: 2
---       ID: 839, Description: "Also get info during Voting period (Senate Session) / 於會議進行期間取得資訊", Depth: 3
+--   ID: 17540, Description: "Hover-over some objects' icon", Depth: 1
 --   ID: 17445, Description: "Extra", Depth: 1
 --     ID: 17442, Description: "Enable mod achievements - Step 1", Depth: 2
 --       ID: 17485, Description: "Enable mod achievements - Step 2", Depth: 3
 --     ID: 17446, Description: "Enable ironman console", Depth: 2
--- ID: 35, Description: "Stellaris 4.1.5 PARTIAL  /  http://opencheattables.com", Depth: 0
+-- ID: 35, Description: "Stellaris 4.1.5  /  http://opencheattables.com", Depth: 0
 --   ID: 17527, Description: "Temp: colony progress", Depth: 1
 
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>17552</ID>
+          <Description>"Auto attach Stellaris.exe"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
         </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>842</ID>
+      <Description>"Enable"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+print(process)
+local processName = "Stellaris.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+
+closeLuaEngine()
+
+if _stellaris_customFloat == nil then
+
+registerCustomTypeAutoAssembler([[
+alloc(TypeName,256)
+alloc(ByteSize,8)
+alloc(ConvertRoutine,1024)
+alloc(ConvertBackRoutine,1024)
+alloc(UsesFloat,1)
+
+TypeName:
+db 'STLS Float',0
+
+ByteSize:
+dd 8
+
+UsesFloat:
+db 1
+
+ConvertRoutine:
+//at this point ecx contains the address where the bytes are stored
+
+xor rax,rax
+
+mov rax, qword ptr [rcx]
+cvtsi2ss xmm15, rax
+mov eax, (float)100000
+movd xmm14, eax
+vdivss xmm15, xmm15, xmm14
+//vcvtss2si eax, xmm15
+movd eax, xmm15
+
+ret
+
+ConvertBackRoutine:
+//at this point edx contains the address to write the value to
+//and ecx contains the value
+
+push rax
+mov  eax, ecx
+movd xmm15, eax
+//cvtsi2ss xmm15, eax
+mov eax, (float)100000
+movd xmm14, eax
+vmulss xmm15, xmm15, xmm14
+vcvtss2si rax, xmm15
+//movd eax, xmm15
+
+mov qword ptr [rdx], rax
+pop rax
+ret
+
+]])
+
+_stellaris_customFloat = true
+end
+print(process)
+pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+print(process)
+synchronize(function()
+  getLuaEngine().Close()
+end)
+
+{$asm}
+alloc(newmem,$1000,stellaris.exe+115CF36)
+label(i_global_ships_data_address)
+newmem:
+  i_global_ships_data_address:
+  dq 0
+
+registersymbol(i_global_ships_data_address)
+
+[DISABLE]
+{$asm}
+unregistersymbol(i_global_ships_data_address)
+dealloc(newmem)
+{$lua}
+if (syntaxcheck) then return end
+if memrec then print(memrec.Description) end
+
+p_ated = nil
+
+closeLuaEngine()
+
+</AssemblerScript>
+      <CheatEntries>
         <CheatEntry>
           <ID>2</ID>
           <Description>"Get resources"</Description>
@@ -720,9 +758,7 @@ stellaris.exe+21F5DA - C3                    - ret
                 <CheatEntry>
                   <ID>36</ID>
                   <Description>"Set min. resources?"</Description>
-                  <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+                  <DropDownListLink>YesNo</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -1469,7 +1505,7 @@ code2:
 
 align 10 cc
   vf_player_research_mul:
-  dd (float)4.8
+  dd (float)6
   i_is_res123_check_ok:
   dd 0
 
@@ -2370,7 +2406,7 @@ stellaris.exe+1294852: 48 B9 00 E4 0B 54 02 00 00 00     - mov rcx,00000002540BE
               <ID>50</ID>
               <Description>"~base Age (may not work)"</Description>
               <ShowAsSigned>1</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_base_leader_addr</Address>
               <Offsets>
@@ -2381,7 +2417,7 @@ stellaris.exe+1294852: 48 B9 00 E4 0B 54 02 00 00 00     - mov rcx,00000002540BE
               <ID>62</ID>
               <Description>"EXP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_leader_addr</Address>
@@ -2393,7 +2429,7 @@ stellaris.exe+1294852: 48 B9 00 E4 0B 54 02 00 00 00     - mov rcx,00000002540BE
               <ID>45</ID>
               <Description>"Lv"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_base_leader_addr</Address>
               <Offsets>
@@ -2602,7 +2638,7 @@ if syntaxcheck then return end
               <ID>73</ID>
               <Description>"Real Infiltration Level"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF0080</Color>
+              <Color>FF4DA6</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_spy_network_addr</Address>
@@ -2615,6 +2651,7 @@ if syntaxcheck then return end
               <ID>69</ID>
               <Description>"Display value: current"</Description>
               <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_spy_network_addr</Address>
@@ -2626,6 +2663,7 @@ if syntaxcheck then return end
               <ID>70</ID>
               <Description>"Display value: Max"</Description>
               <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_spy_network_addr</Address>
@@ -2637,6 +2675,7 @@ if syntaxcheck then return end
               <ID>71</ID>
               <Description>"Display value: Max"</Description>
               <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_spy_network_addr</Address>
@@ -2879,9 +2918,7 @@ stellaris.exe+6BE757: 48 8D 8E F0 00 00 00     - lea rcx,[rsi+000000F0]
                 <CheatEntry>
                   <ID>17458</ID>
                   <Description>"Turn on?"</Description>
-                  <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+                  <DropDownListLink>YesNo</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -2905,6 +2942,7 @@ stellaris.exe+6BE757: 48 8D 8E F0 00 00 00     - lea rcx,[rsi+000000F0]
               <ID>78</ID>
               <Description>"(read only) Upkeep"</Description>
               <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_spy_action_addr</Address>
@@ -2914,12 +2952,12 @@ stellaris.exe+6BE757: 48 8D 8E F0 00 00 00     - lea rcx,[rsi+000000F0]
             </CheatEntry>
             <CheatEntry>
               <ID>79</ID>
-              <Description>"Breakthrough Chance * 100000"</Description>
+              <Description>"Breakthrough Chance"</Description>
               <DropDownList DisplayValueAsItem="1">1800000:High chance
 3600000:Very high chance
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF0080</Color>
+              <Color>FF44A2</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_base_spy_action_addr</Address>
@@ -3064,9 +3102,7 @@ stellaris.exe+AB1334: BB FF FF FF FF                 - mov ebx,FFFFFFFF
             <CheatEntry>
               <ID>17481</ID>
               <Description>"Fast build?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>YesNo</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
@@ -3219,9 +3255,7 @@ if syntaxcheck then return end
             <CheatEntry>
               <ID>821</ID>
               <Description>"Auto fast complete?"</Description>
-              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>YesNo</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
@@ -3473,9 +3507,7 @@ if syntaxcheck then return end
             <CheatEntry>
               <ID>822</ID>
               <Description>"Auto fast complete?"</Description>
-              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>YesNo</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
@@ -3601,9 +3633,7 @@ if syntaxcheck then return end
             <CheatEntry>
               <ID>819</ID>
               <Description>"Fast research?"</Description>
-              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>YesNo</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
@@ -3717,7 +3747,7 @@ stellaris.exe+D78832: E8 B9 D8 B1 00        - call stellaris.exe+18960F0
         </CheatEntry>
         <CheatEntry>
           <ID>114</ID>
-          <Description>"High HP for selected fleet / sci-ship survey multiplier"</Description>
+          <Description>"High HP for selected fleet"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
@@ -3769,7 +3799,7 @@ newmem:
   mov [i_base_player_iid], dx
   pop rdx
 
-  mov eax, [r8+00004D4]
+  mov eax, [r8+00006F8]
   mov [i_base_player_iid3], eax
 
   mov eax, [r8+00000658]
@@ -3837,31 +3867,31 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: stellaris.exe+FF4456
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+115CF36
 
-stellaris.exe+FF4433: 49 8B 42 18                    - mov rax,[r10+18]
-stellaris.exe+FF4437: 4C 8B 44 C8 08                 - mov r8,[rax+rcx*8+08]
-stellaris.exe+FF443C: 4D 85 C0                       - test r8,r8
-stellaris.exe+FF443F: 74 06                          - je stellaris.exe+FF4447
-stellaris.exe+FF4441: 41 39 50 20                    - cmp [r8+20],edx
-stellaris.exe+FF4445: 74 03                          - je stellaris.exe+FF444A
-stellaris.exe+FF4447: 4D 8B C1                       - mov r8,r9
-stellaris.exe+FF444A: 49 8B 88 D0 0C 00 00           - mov rcx,[r8+00000CD0]
-stellaris.exe+FF4451: 48 85 C9                       - test rcx,rcx
-stellaris.exe+FF4454: 7E 2F                          - jle stellaris.exe+FF4485
+stellaris.exe+115CF13: 49 8B 42 18                    - mov rax,[r10+18]
+stellaris.exe+115CF17: 4C 8B 44 C8 08                 - mov r8,[rax+rcx*8+08]
+stellaris.exe+115CF1C: 4D 85 C0                       - test r8,r8
+stellaris.exe+115CF1F: 74 06                          - je stellaris.exe+115CF27
+stellaris.exe+115CF21: 41 39 50 20                    - cmp [r8+20],edx
+stellaris.exe+115CF25: 74 03                          - je stellaris.exe+115CF2A
+stellaris.exe+115CF27: 4D 8B C1                       - mov r8,r9
+stellaris.exe+115CF2A: 49 8B 88 A0 0B 00 00           - mov rcx,[r8+00000BA0]
+stellaris.exe+115CF31: 48 85 C9                       - test rcx,rcx
+stellaris.exe+115CF34: 7E 2F                          - jle stellaris.exe+115CF65
 // ---------- INJECTING HERE ----------
-stellaris.exe+FF4456: 49 8B 90 98 06 00 00           - mov rdx,[r8+00000698]
+stellaris.exe+115CF36: 49 8B 90 98 06 00 00           - mov rdx,[r8+00000698]
 // ---------- DONE INJECTING  ----------
-stellaris.exe+FF445D: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
-stellaris.exe+FF4467: 48 03 C2                       - add rax,rdx
-stellaris.exe+FF446A: 48 83 F8 FC                    - cmp rax,-04
-stellaris.exe+FF446E: 77 0E                          - ja stellaris.exe+FF447E
-stellaris.exe+FF4470: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
-stellaris.exe+FF4477: 48 99                          - cqo
-stellaris.exe+FF4479: 48 F7 F9                       - idiv rcx
-stellaris.exe+FF447C: EB 0A                          - jmp stellaris.exe+FF4488
-stellaris.exe+FF447E: B8 FF FF FF FF                 - mov eax,FFFFFFFF
-stellaris.exe+FF4483: EB 03                          - jmp stellaris.exe+FF4488
+stellaris.exe+115CF3D: 48 B8 FE FF FF FF FF FF FF 7F  - mov rax,7FFFFFFFFFFFFFFE
+stellaris.exe+115CF47: 48 03 C2                       - add rax,rdx
+stellaris.exe+115CF4A: 48 83 F8 FC                    - cmp rax,-04
+stellaris.exe+115CF4E: 77 0E                          - ja stellaris.exe+115CF5E
+stellaris.exe+115CF50: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
+stellaris.exe+115CF57: 48 99                          - cqo
+stellaris.exe+115CF59: 48 F7 F9                       - idiv rcx
+stellaris.exe+115CF5C: EB 0A                          - jmp stellaris.exe+115CF68
+stellaris.exe+115CF5E: B8 FF FF FF FF                 - mov eax,FFFFFFFF
+stellaris.exe+115CF63: EB 03                          - jmp stellaris.exe+115CF68
 }
 </AssemblerScript>
               <CheatEntries>
@@ -3917,7 +3947,7 @@ stellaris.exe+FF4483: EB 03                          - jmp stellaris.exe+FF4488
                     </CheatEntry>
                     <CheatEntry>
                       <ID>157</ID>
-                      <Description>"chk id3 (4D4)"</Description>
+                      <Description>"chk id3 (6F8)"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>808080</Color>
                       <VariableType>4 Bytes</VariableType>
@@ -3971,7 +4001,7 @@ label(return)
 
 newmem:
   push rcx
-  mov ecx, [rax+000004D4]
+  mov ecx, [rax+000006F8]
   mov [i_base_player_iid3], ecx
 
   mov ecx, [rax+00000658]
@@ -4051,7 +4081,7 @@ stellaris.exe+B6724F: C3                    - ret
                       <VariableType>Auto Assembler Script</VariableType>
                       <AssemblerScript>{ Game   : stellaris.exe
   Version:
-  Date   : 2023-03-20
+  Date   : 2025-10-17
   Author : bbfox@https://opencheattables.com
 }
 
@@ -4065,6 +4095,7 @@ label(return)
 label(vf_ship_shield_multiplier)
 label(vf_ship_armor_multiplier)
 label(vf_ship_hull_multiplier)
+label(is_selected_ships_only)
 
 newmem:
   cmp qword ptr [i_base_player_pointer], 0
@@ -4076,8 +4107,12 @@ compare_data:
   push rbx
   push rax
 
+  cmp dword ptr [is_selected_ships_only], 1
+  je selected_ship_only
+
+
   mov ebx, dword ptr [i_base_player_iid3]
-  cmp dword ptr [rdx+000004D4], ebx
+  cmp dword ptr [rdx+000006F8], ebx
   jne endp
 
   //mov ebx, dword ptr [i_base_player_iid4]
@@ -4108,7 +4143,33 @@ compare_data:
   mov bx, [rbx+00000028]
   cmp bx, word ptr [i_base_player_iid]
   jne endp
+  jmp modify_data
 
+selected_ship_only: // read "Selected player fleet: recover HP" script dhip data
+  xor rax, rax
+
+  cmp qword ptr [i_global_ships_data_address], 0
+  je ship_not_found
+
+sloop1:
+  mov rbx, [i_global_ships_data_address]
+  lea rbx, [rbx+rax*8]
+  cmp qword ptr [rbx], 0
+  je ship_not_found
+  cmp qword ptr [rbx], rdx
+  je ship_found
+  inc rax
+
+  cmp rax, #2560
+  ja ship_not_found
+  jmp sloop1
+
+ship_not_found:
+  jmp endp
+
+ship_found:
+
+modify_data:
   mov rbx, [rdx+00000070]  // hull
   vmovss xmm14, [vf_ship_hull_multiplier]
   cvtsi2ss xmm15, rbx
@@ -4145,6 +4206,8 @@ align 10 cc
   dd (float)1.5
   vf_ship_hull_multiplier:
   dd (float)1.25
+  is_selected_ships_only:
+  dd 0
 
 INJECT_MONITOR_ALL_FLEETS:
   jmp newmem
@@ -4154,7 +4217,7 @@ registersymbol(INJECT_MONITOR_ALL_FLEETS)
 registersymbol(vf_ship_shield_multiplier)
 registersymbol(vf_ship_armor_multiplier)
 registersymbol(vf_ship_hull_multiplier)
-
+registersymbol(is_selected_ships_only)
 [DISABLE]
 
 INJECT_MONITOR_ALL_FLEETS:
@@ -4197,6 +4260,15 @@ stellaris.exe+857C8A: 48 8B B8 90 02 00 00  - mov rdi,[rax+00000290]
                           <Description>"Disable if affected enemy ship (i.e. hijacked / rebel)"</Description>
                           <Color>8000FF</Color>
                           <GroupHeader>1</GroupHeader>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>17538</ID>
+                          <Description>"Use "Selected player fleet: recover HP" ship data only"</Description>
+                          <DropDownListLink>YesNo</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>C08000</Color>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>is_selected_ships_only</Address>
                         </CheatEntry>
                         <CheatEntry>
                           <ID>830</ID>
@@ -4243,16 +4315,19 @@ alloc(newmem,$1000,INJECT_SCI_SHIP_SURVEY_MULTI)
 label(code)
 label(return)
 label(vf_sci_ship_survey_multi)
+label(is_selected_sciships_only)
 
 newmem:
+  cmp dword ptr [is_selected_sciships_only], 1
+  je compare_data
+
   mov ebx, dword ptr [i_base_player_iid3]
-  cmp dword ptr [r14+000004D4], ebx
+  cmp dword ptr [r14+000006F8], ebx
   jne code
 
   //mov ebx, dword ptr [i_base_player_iid4]
   //cmp dword ptr [rsi+00000658], ebx
   //jne code
-
 
   cmp qword ptr [i_base_player_pointer], 0
   jne compare_data
@@ -4262,6 +4337,9 @@ compare_data:
   push rax
   // rbx = safe to use
   //push rbx
+
+  cmp dword ptr [is_selected_sciships_only], 1
+  je selected_ship_only
 
   mov rax, [i_base_player_pointer]
   mov rbx, [r14+000005A0]
@@ -4286,8 +4364,34 @@ compare_data:
   mov bx, [rbx+00000028]
   cmp bx, word ptr [i_base_player_iid]
   jne endp
-  mov rbx, [r14+000005A0] // debug
+  //mov rbx, [r14+000005A0] // debug
+  jmp modify_exp
 
+selected_ship_only: // read "Selected player fleet: recover HP" script dhip data
+  xor rax, rax
+
+  cmp qword ptr [i_global_ships_data_address], 0
+  je ship_not_found
+
+sloop1:
+  mov rbx, [i_global_ships_data_address]
+  lea rbx, [rbx+rax*8]
+  cmp qword ptr [rbx], 0
+  je ship_not_found
+  cmp qword ptr [rbx], rdx
+  je ship_found
+  inc rax
+
+  cmp rax, #2560
+  ja ship_not_found
+  jmp sloop1
+
+ship_not_found:
+  jmp endp
+
+ship_found:
+
+modify_exp:
   vmovss xmm14, [vf_sci_ship_survey_multi]
   cvtsi2ss xmm15, rdx
   vmulss xmm15, xmm15, xmm14
@@ -4304,13 +4408,15 @@ code:
 align 10 cc
   vf_sci_ship_survey_multi:
   dd (float)6.6666666666
+  is_selected_sciships_only:
+  dd 0
 
 INJECT_SCI_SHIP_SURVEY_MULTI:
   jmp newmem
   nop 4
 return:
 registersymbol(INJECT_SCI_SHIP_SURVEY_MULTI)
-registersymbol(vf_sci_ship_survey_multi)
+registersymbol(vf_sci_ship_survey_multi is_selected_sciships_only)
 
 [DISABLE]
 
@@ -4351,6 +4457,15 @@ stellaris.exe+C2E2D2: 48 8B 01                       - mov rax,[rcx]
 </AssemblerScript>
                       <CheatEntries>
                         <CheatEntry>
+                          <ID>17550</ID>
+                          <Description>"Use "Selected player fleet: recover HP" ship data only"</Description>
+                          <DropDownListLink>YesNo</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>C08000</Color>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>is_selected_sciships_only</Address>
+                        </CheatEntry>
+                        <CheatEntry>
                           <ID>153</ID>
                           <Description>"multiplier"</Description>
                           <ShowAsSigned>0</ShowAsSigned>
@@ -4389,6 +4504,9 @@ newmem:
   push r14
 
   xor r14, r14
+
+  mov r15, i_fleet_address_list
+  mov [i_global_ships_data_address], r15
 
 loop1:
   mov r15, i_fleet_address_list
@@ -4610,6 +4728,8 @@ return:
 registersymbol(INJECT_SELECTED_FLEET_PRE)
 registersymbol(i_fleet_address_list i_fleet_num_watermark)
 [DISABLE]
+i_global_ships_data_address:
+  dq 0
 
 INJECT_SELECTED_FLEET_PRE:
   db 48 39 81 98 06 00 00
@@ -4649,8 +4769,20 @@ stellaris.exe+147BB57: 0F 84 88 01 00 00     - je stellaris.exe+147BCE5
                 <CheatEntry>
                   <ID>17532</ID>
                   <Description>"Recommend: re-enable script if ship is lost"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>17539</ID>
+                      <Description>"list"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>i_fleet_address_list</Address>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>17533</ID>
@@ -4663,6 +4795,7 @@ stellaris.exe+147BB57: 0F 84 88 01 00 00     - je stellaris.exe+147BCE5
                 <CheatEntry>
                   <ID>17536</ID>
                   <Description>"Recover starbase HP (click on right panel)"</Description>
+                  <Options moHideChildren="1"/>
                   <VariableType>Auto Assembler Script</VariableType>
                   <AssemblerScript>{ Game   : stellaris.exe
   Version: 
@@ -4683,6 +4816,9 @@ newmem:
   push r14
 
   xor r14, r14
+
+  mov r15, i_fleet_address_list
+  mov [i_global_ships_data_address], r15
 
 loop1:
   mov r15, i_fleet_address_list
@@ -4777,6 +4913,26 @@ stellaris.exe+13D4D54: 48 89 7C 24 30        - mov [rsp+30],rdi
 stellaris.exe+13D4D59: 48 85 C0              - test rax,rax
 }
 </AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>17545</ID>
+                      <Description>"Starbase data will be added into "ship list""</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <Color>8000FF</Color>
+                      <GroupHeader>1</GroupHeader>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>17546</ID>
+                          <Description>"list"</Description>
+                          <ShowAsHex>1</ShowAsHex>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>808080</Color>
+                          <VariableType>8 Bytes</VariableType>
+                          <Address>i_fleet_address_list</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>17534</ID>
@@ -10396,82 +10552,6 @@ stellaris.exe+A8EB5F: 48 8D 4D 08           - lea rcx,[rbp+08]
               <GroupHeader>1</GroupHeader>
             </CheatEntry>
             <CheatEntry>
-              <ID>17498</ID>
-              <Description>"Single viewer: additional method"</Description>
-              <Options moHideChildren="1"/>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : stellaris.exe
-  Version: 
-  Date   : 2025-05-26
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_GET_SHIP_INFO2,stellaris.exe,49 8B 96 98 06 00 00 4A 8D 0C) // should be unique
-alloc(newmem,$1000,INJECT_GET_SHIP_INFO2)
-
-label(code)
-label(return)
-
-newmem:
-  mov [i_ship_info_base], r14
-code:
-  mov rdx,[r14+00000698]
-  jmp return
-
-INJECT_GET_SHIP_INFO2:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_GET_SHIP_INFO2)
-
-[DISABLE]
-
-INJECT_GET_SHIP_INFO2:
-  db 49 8B 96 98 06 00 00
-
-unregistersymbol(INJECT_GET_SHIP_INFO2)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: stellaris.exe+FF2AEC
-
-stellaris.exe+FF2AC0: 48 8D 55 97                    - lea rdx,[rbp-69]
-stellaris.exe+FF2AC4: 48 8B CE                       - mov rcx,rsi
-stellaris.exe+FF2AC7: FF D3                          - call rbx
-stellaris.exe+FF2AC9: 4C 8B C8                       - mov r9,rax
-stellaris.exe+FF2ACC: 48 8B 08                       - mov rcx,[rax]
-stellaris.exe+FF2ACF: 4C 8B 91 B0 00 00 00           - mov r10,[rcx+000000B0]
-stellaris.exe+FF2AD6: 4D 8B 86 D0 0C 00 00           - mov r8,[r14+00000CD0]
-stellaris.exe+FF2ADD: 49 BD FE FF FF FF FF FF FF 7F  - mov r13,7FFFFFFFFFFFFFFE
-stellaris.exe+FF2AE7: 4D 85 C0                       - test r8,r8
-stellaris.exe+FF2AEA: 7E 24                          - jle stellaris.exe+FF2B10
-// ---------- INJECTING HERE ----------
-stellaris.exe+FF2AEC: 49 8B 96 98 06 00 00           - mov rdx,[r14+00000698]
-// ---------- DONE INJECTING  ----------
-stellaris.exe+FF2AF3: 4A 8D 0C 2A                    - lea rcx,[rdx+r13]
-stellaris.exe+FF2AF7: 48 83 F9 FC                    - cmp rcx,-04
-stellaris.exe+FF2AFB: 77 0E                          - ja stellaris.exe+FF2B0B
-stellaris.exe+FF2AFD: 48 69 C2 A0 86 01 00           - imul rax,rdx,000186A0
-stellaris.exe+FF2B04: 48 99                          - cqo 
-stellaris.exe+FF2B06: 49 F7 F8                       - idiv r8
-stellaris.exe+FF2B09: EB 08                          - jmp stellaris.exe+FF2B13
-stellaris.exe+FF2B0B: 48 8B C7                       - mov rax,rdi
-stellaris.exe+FF2B0E: EB 03                          - jmp stellaris.exe+FF2B13
-stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
-}
-</AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>472</ID>
-                  <Description>"Usage: click on single object"</Description>
-                  <Color>8000FF</Color>
-                  <GroupHeader>1</GroupHeader>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
               <ID>471</ID>
               <Description>"_debug"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -10551,7 +10631,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>171</ID>
               <Description>"Race name"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>String</VariableType>
               <Length>24</Length>
               <Unicode>0</Unicode>
@@ -10567,7 +10647,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>17489</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>String</VariableType>
               <Length>24</Length>
               <Unicode>0</Unicode>
@@ -10583,7 +10663,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>475</ID>
               <Description>"Sequence"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_ship_info_base</Address>
               <Offsets>
@@ -10594,7 +10674,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>17537</ID>
               <Description>"in fleet position"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>i_ship_info_base</Address>
               <Offsets>
@@ -10606,7 +10686,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <Description>"EXP"</Description>
               <DropDownListLink>EXP-desc</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_ship_info_base</Address>
@@ -10618,7 +10698,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>173</ID>
               <Description>"Hull"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_ship_info_base</Address>
@@ -10630,7 +10710,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
                   <ID>176</ID>
                   <Description>"Max Hull"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
-                  <Color>C08000</Color>
+                  <Color>FF8080</Color>
                   <VariableType>Custom</VariableType>
                   <CustomType>STLS Float</CustomType>
                   <Address>i_ship_info_base</Address>
@@ -10644,7 +10724,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>175</ID>
               <Description>"Armor"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_ship_info_base</Address>
@@ -10656,7 +10736,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
                   <ID>178</ID>
                   <Description>"Max Armor"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
-                  <Color>C08000</Color>
+                  <Color>FF8080</Color>
                   <VariableType>Custom</VariableType>
                   <CustomType>STLS Float</CustomType>
                   <Address>i_ship_info_base</Address>
@@ -10670,7 +10750,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
               <ID>174</ID>
               <Description>"Shield"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
+              <Color>FF8080</Color>
               <VariableType>Custom</VariableType>
               <CustomType>STLS Float</CustomType>
               <Address>i_ship_info_base</Address>
@@ -10682,7 +10762,7 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
                   <ID>177</ID>
                   <Description>"Max Shield"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
-                  <Color>C08000</Color>
+                  <Color>FF8080</Color>
                   <VariableType>Custom</VariableType>
                   <CustomType>STLS Float</CustomType>
                   <Address>i_ship_info_base</Address>
@@ -10695,231 +10775,165 @@ stellaris.exe+FF2B10: 49 8B C4                       - mov rax,r12
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>836</ID>
-          <Description>"Galactic community"</Description>
-          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
-          <GroupHeader>1</GroupHeader>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>832</ID>
-              <Description>"Get info during Senate Recess / 於休會期間取得資訊"</Description>
-              <Options moHideChildren="1"/>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : stellaris.exe
+          <ID>17540</ID>
+          <Description>"Hover-over some objects' icon"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : stellaris.exe
   Version: 
-  Date   : 2023-09-12
+  Date   : 2025-10-17
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GALAXY_COMMUNITY_SENATE_RECESS,stellaris.exe,45 8B 8D 5C 01 00 00) // should be unique
-alloc(newmem,$1000,INJECT_GALAXY_COMMUNITY_SENATE_RECESS)
+aobscanmodule(INJECT_HOVER_OVER_OBJECTS,stellaris.exe,44 39 40 20 74 07 48 8B 05 * * * * 0F B6 88) // should be unique
+alloc(newmem,$1000,INJECT_HOVER_OVER_OBJECTS)
 
 label(code)
-label(return)
-label(i_base_senate_recess_addr)
+label(return i_base_hover_obj_addr)
 
 newmem:
-  mov [i_base_senate_recess_addr], r13
+  mov [i_base_hover_obj_addr], rax
 
 code:
-  mov r9d,[r13+0000015C]
+  cmp [rax+20],r8d
+  //je stellaris.exe+CD4B62
+  reassemble(INJECT_HOVER_OVER_OBJECTS+4)
   jmp return
 align 10 cc
-  i_base_senate_recess_addr:
+  i_base_hover_obj_addr:
   dq 0
 
-INJECT_GALAXY_COMMUNITY_SENATE_RECESS:
+INJECT_HOVER_OVER_OBJECTS:
   jmp newmem
-  nop 2
+  nop
 return:
-registersymbol(INJECT_GALAXY_COMMUNITY_SENATE_RECESS)
-registersymbol(i_base_senate_recess_addr)
+registersymbol(INJECT_HOVER_OVER_OBJECTS i_base_hover_obj_addr)
 
 [DISABLE]
 
-INJECT_GALAXY_COMMUNITY_SENATE_RECESS:
-  db 45 8B 8D 5C 01 00 00
+INJECT_HOVER_OVER_OBJECTS:
+  db 44 39 40 20 74 07
 
-unregistersymbol(*)
+unregistersymbol(INJECT_HOVER_OVER_OBJECTS i_base_hover_obj_addr)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: stellaris.exe+665D17
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+CD4B55
 
-stellaris.exe+665CE0: 0F 84 CA 03 00 00     - je stellaris.exe+6660B0
-stellaris.exe+665CE6: 48 8B D3              - mov rdx,rbx
-stellaris.exe+665CE9: E8 12 BA B8 FF        - call stellaris.exe+1F1700
-stellaris.exe+665CEE: E9 BD 03 00 00        - jmp stellaris.exe+6660B0
-stellaris.exe+665CF3: 48 8B 05 CE 48 22 02  - mov rax,[stellaris.exe+288A5C8]
-stellaris.exe+665CFA: 8B 48 08              - mov ecx,[rax+08]
-stellaris.exe+665CFD: 41 89 8D 50 01 00 00  - mov [r13+00000150],ecx
-stellaris.exe+665D04: 45 89 BD 58 01 00 00  - mov [r13+00000158],r15d
-stellaris.exe+665D0B: E9 32 FB FF FF        - jmp stellaris.exe+665842
-stellaris.exe+665D10: 45 88 A5 F0 01 00 00  - mov [r13+000001F0],r12b
+stellaris.exe+CD4B35: 41 8B C0              - mov eax,r8d
+stellaris.exe+CD4B38: 25 FF FF FF 00        - and eax,00FFFFFF
+stellaris.exe+CD4B3D: 3B 42 20              - cmp eax,[rdx+20]
+stellaris.exe+CD4B40: 73 19                 - jae stellaris.exe+CD4B5B
+stellaris.exe+CD4B42: 8B C8                 - mov ecx,eax
+stellaris.exe+CD4B44: 48 03 C9              - add rcx,rcx
+stellaris.exe+CD4B47: 48 8B 42 18           - mov rax,[rdx+18]
+stellaris.exe+CD4B4B: 48 8B 44 C8 08        - mov rax,[rax+rcx*8+08]
+stellaris.exe+CD4B50: 48 85 C0              - test rax,rax
+stellaris.exe+CD4B53: 74 06                 - je stellaris.exe+CD4B5B
 // ---------- INJECTING HERE ----------
-stellaris.exe+665D17: 45 8B 8D 5C 01 00 00  - mov r9d,[r13+0000015C]
+stellaris.exe+CD4B55: 44 39 40 20           - cmp [rax+20],r8d
 // ---------- DONE INJECTING  ----------
-stellaris.exe+665D1E: 45 85 C9              - test r9d,r9d
-stellaris.exe+665D21: 7E 0A                 - jle stellaris.exe+665D2D
-stellaris.exe+665D23: 41 FF C9              - dec r9d
-stellaris.exe+665D26: 45 89 8D 5C 01 00 00  - mov [r13+0000015C],r9d
-stellaris.exe+665D2D: 45 39 65 74           - cmp [r13+74],r12d
-stellaris.exe+665D31: 0F 84 0B FB FF FF     - je stellaris.exe+665842
-stellaris.exe+665D37: 4C 8B 15 12 5F 22 02  - mov r10,[stellaris.exe+288BC50]
-stellaris.exe+665D3E: 4C 8B 05 83 48 22 02  - mov r8,[stellaris.exe+288A5C8]
-stellaris.exe+665D45: 4D 85 D2              - test r10,r10
-stellaris.exe+665D48: 74 2B                 - je stellaris.exe+665D75
+stellaris.exe+CD4B59: 74 07                 - je stellaris.exe+CD4B62
+stellaris.exe+CD4B5B: 48 8B 05 8E 28 2D 02  - mov rax,[stellaris.exe+2FA73F0]
+stellaris.exe+CD4B62: 0F B6 88 D0 04 00 00  - movzx ecx,byte ptr [rax+000004D0]
+stellaris.exe+CD4B69: 83 F9 0C              - cmp ecx,0C
+stellaris.exe+CD4B6C: 0F 87 26 04 00 00     - ja stellaris.exe+CD4F98
+stellaris.exe+CD4B72: 48 8D 15 87 B4 32 FF  - lea rdx,[stellaris.exe]
+stellaris.exe+CD4B79: 8B 8C 8A C8 4F CD 00  - mov ecx,[rdx+rcx*4+00CD4FC8]
+stellaris.exe+CD4B80: 48 03 CA              - add rcx,rdx
+stellaris.exe+CD4B83: FF E1                 - jmp rcx
+stellaris.exe+CD4B85: 48 8D 8B B0 03 00 00  - lea rcx,[rbx+000003B0]
 }
 </AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>839</ID>
-                  <Description>"Also get info during Voting period (Senate Session) / 於會議進行期間取得資訊"</Description>
-                  <VariableType>Auto Assembler Script</VariableType>
-                  <AssemblerScript>{ Game   : stellaris.exe
-  Version: 
-  Date   : 2022-12-08
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_GALACTIC_COMMU_VOTING_PERIOD,stellaris.exe,41 FF 85 58 01 00 00) // should be unique
-alloc(newmem,$1000,INJECT_GALACTIC_COMMU_VOTING_PERIOD)
-
-label(code)
-label(return)
-
-newmem:
-  mov [i_base_senate_recess_addr], r13
-
-code:
-  inc [r13+00000158]
-  jmp return
-
-INJECT_GALACTIC_COMMU_VOTING_PERIOD:
-  jmp newmem
-  nop 2
-return:
-registersymbol(INJECT_GALACTIC_COMMU_VOTING_PERIOD)
-
-[DISABLE]
-
-INJECT_GALACTIC_COMMU_VOTING_PERIOD:
-  db 41 FF 85 58 01 00 00
-
-unregistersymbol(INJECT_GALACTIC_COMMU_VOTING_PERIOD)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: stellaris.exe+631C59
-
-stellaris.exe+631C2F: FF 50 08              - call qword ptr [rax+08]
-stellaris.exe+631C32: 48 8D 35 C7 7E 45 01  - lea rsi,[stellaris.exe+1A89B00]
-stellaris.exe+631C39: 84 C0                 - test al,al
-stellaris.exe+631C3B: 0F 84 66 06 00 00     - je stellaris.exe+6322A7
-stellaris.exe+631C41: 48 8B CF              - mov rcx,rdi
-stellaris.exe+631C44: E8 07 E0 FF FF        - call stellaris.exe+62FC50
-stellaris.exe+631C49: 84 C0                 - test al,al
-stellaris.exe+631C4B: 0F 84 39 06 00 00     - je stellaris.exe+63228A
-stellaris.exe+631C51: 48 8B CF              - mov rcx,rdi
-stellaris.exe+631C54: E8 B7 3A CC FF        - call stellaris.exe+2F5710
-// ---------- INJECTING HERE ----------
-stellaris.exe+631C59: 41 FF 85 58 01 00 00  - inc [r13+00000158]
-// ---------- DONE INJECTING  ----------
-stellaris.exe+631C60: 41 8B 85 58 01 00 00  - mov eax,[r13+00000158]
-stellaris.exe+631C67: 3B 05 27 81 04 02     - cmp eax,[stellaris.exe+2679D94]
-stellaris.exe+631C6D: 7C 08                 - jl stellaris.exe+631C77
-stellaris.exe+631C6F: 49 8B CD              - mov rcx,r13
-stellaris.exe+631C72: E8 79 26 00 00        - call stellaris.exe+6342F0
-stellaris.exe+631C77: 48 8B 15 9A 56 16 02  - mov rdx,[stellaris.exe+2797318]
-stellaris.exe+631C7E: 48 85 D2              - test rdx,rdx
-stellaris.exe+631C81: 74 2A                 - je stellaris.exe+631CAD
-stellaris.exe+631C83: 45 8B 45 10           - mov r8d,[r13+10]
-stellaris.exe+631C87: 41 8B C0              - mov eax,r8d
-}
-</AssemblerScript>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>833</ID>
-                  <Description>"???"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>808080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>144</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>17408</ID>
-                  <Description>"Voting period elapsed"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>158</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>837</ID>
-                  <Description>"Senate recess"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>15C</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>834</ID>
-                  <Description>"Imperial Counci by election"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>160</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>835</ID>
-                  <Description>"???"</Description>
-                  <ShowAsSigned>1</ShowAsSigned>
-                  <Color>808080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>164</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>840</ID>
-                  <Description>"Imperial Counci member #?"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>168</Offset>
-                  </Offsets>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>841</ID>
-                  <Description>"???"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>808080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_base_senate_recess_addr</Address>
-                  <Offsets>
-                    <Offset>16C</Offset>
-                  </Offsets>
-                </CheatEntry>
-              </CheatEntries>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>17547</ID>
+              <Description>"Race name"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>String</VariableType>
+              <Length>24</Length>
+              <Unicode>0</Unicode>
+              <CodePage>0</CodePage>
+              <ZeroTerminate>1</ZeroTerminate>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+                <Offset>5A0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17541</ID>
+              <Description>"Sequence"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17548</ID>
+              <Description>"in fleet position"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>5F8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17549</ID>
+              <Description>"EXP"</Description>
+              <DropDownListLink>EXP-desc</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Custom</VariableType>
+              <CustomType>STLS Float</CustomType>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>AA0</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17542</ID>
+              <Description>"Hull"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Custom</VariableType>
+              <CustomType>STLS Float</CustomType>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>698</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17543</ID>
+              <Description>"Armor"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Custom</VariableType>
+              <CustomType>STLS Float</CustomType>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>6A8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17544</ID>
+              <Description>"Shield"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>Custom</VariableType>
+              <CustomType>STLS Float</CustomType>
+              <Address>i_base_hover_obj_addr</Address>
+              <Offsets>
+                <Offset>6A0</Offset>
+              </Offsets>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -11207,7 +11221,7 @@ stellaris.exe+23EC6B: 40 84 FF              - test dil,dil
     </CheatEntry>
     <CheatEntry>
       <ID>35</ID>
-      <Description>"Stellaris 4.1.5 PARTIAL  /  http://opencheattables.com"</Description>
+      <Description>"Stellaris 4.1.5  /  http://opencheattables.com"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <Color>008E47</Color>
       <GroupHeader>1</GroupHeader>
@@ -11219,6 +11233,14 @@ stellaris.exe+23EC6B: 40 84 FF              - test dil,dil
 100:Experienced
 1000:Veteran
 10000:Elite
+</DropDownList>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17551</ID>
+          <Description>"YesNo"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
