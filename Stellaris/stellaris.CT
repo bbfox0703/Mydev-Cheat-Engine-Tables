@@ -65,9 +65,26 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 
-
 -- attach process
 local processName = "Stellaris.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+
+
+local enableBattleScripts = {
+
+--[[
+-- attach process
+local processName = "game_exe.exe"
 local pid = getProcessIDFromProcessName(processName)
 if pid ~= nil and pid &gt; 0 then
   local currentPid = getOpenedProcessID() or 0
@@ -82,15 +99,10 @@ end
 synchronize(function()
   getLuaEngine().Close()
 end)
+--]]
 
-
-local enableBattleScripts = {
   17, -- "Compact mode"
   842, -- "Enable"
-  17445, -- "Extra"
-  17446, -- "Enable ironman console"
-  17442, -- "Enable mod achievements - Step 1"
-  17485, -- "Enable mod achievements - Step 2"
   2, -- "Get resources"
   19, -- "Current player research (Active: click research in left panel)"
   39, -- "Quick build in selected Starport/Planet"
@@ -104,12 +116,18 @@ local enableBattleScripts = {
   119, -- "Get terraforming info"
   163, -- "Single ship/mining station Hull/Armor/Shield viewer"
   810, -- "Get construction ship build progress"
+  17445, -- "Extra"
   17494, -- "Get anomaly research progress"
   17540, -- "Hover-over some objects' icon"
+  17555, -- "Get federation status"
+  17442, -- "Enable mod achievements - Step 1"
+  17446, -- "Enable ironman console"
   17459, -- "Auto running operation complete"
   17526, -- "Auto update research data"
   17531, -- "Selected player fleet: recover HP"
+  17485, -- "Enable mod achievements - Step 2"
   17536, -- "Recover starbase HP (click on right panel)"
+  17545, -- "Starbase data will be added into "ship list""
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -205,6 +223,8 @@ local disableBattleScripts = {
   206, -- "#1"
   195, -- "3. init param update"
   158, -- "_debug"
+  17558, -- "#2"
+  17557, -- "#1"
   17531, -- "Selected player fleet: recover HP"
   17526, -- "Auto update research data"
   17521, -- "#8+"
@@ -234,6 +254,7 @@ local disableBattleScripts = {
   27, -- "#1+"
   26, -- "Refresh research items (in case researcher changed / or #1/#2/#3 incorrect)"
   1, -- "1. Get resources"
+  17555, -- "Get federation status"
   17540, -- "Hover-over some objects' icon"
   17527, -- "Temp: colony progress"
   17494, -- "Get anomaly research progress"
@@ -386,6 +407,9 @@ synchronize(function() getLuaEngine().Close() end)
 --     ID: 175, Description: "Armor", Depth: 2
 --     ID: 174, Description: "Shield", Depth: 2
 --   ID: 17540, Description: "Hover-over some objects' icon", Depth: 1
+--   ID: 17555, Description: "Get federation status", Depth: 1
+--     ID: 17557, Description: "#1", Depth: 2
+--     ID: 17558, Description: "#2", Depth: 2
 --   ID: 17445, Description: "Extra", Depth: 1
 --     ID: 17442, Description: "Enable mod achievements - Step 1", Depth: 2
 --       ID: 17485, Description: "Enable mod achievements - Step 2", Depth: 3
@@ -412,7 +436,9 @@ synchronize(function() getLuaEngine().Close() end)
 {$lua}
 if (syntaxcheck) then return end
 if memrec then print(memrec.Description) end
-print(process)
+print("Start: " .. process)
+
+
 local processName = "Stellaris.exe"
 local pid = getProcessIDFromProcessName(processName)
 if pid ~= nil and pid &gt; 0 then
@@ -483,7 +509,7 @@ ret
 
 _stellaris_customFloat = true
 end
-print(process)
+print("End: " .. process)
 pid = getProcessIDFromProcessName(processName)
 if pid ~= nil and pid &gt; 0 then
   local currentPid = getOpenedProcessID() or 0
@@ -4170,21 +4196,21 @@ ship_not_found:
 ship_found:
 
 modify_data:
-  mov rbx, [rdx+00000070]  // hull
+  mov rbx, [rdx+00000BA0]  // hull
   vmovss xmm14, [vf_ship_hull_multiplier]
   cvtsi2ss xmm15, rbx
   vmulss xmm15, xmm15, xmm14
   vcvtss2si rbx, xmm15
   mov [rdx+00000698], rbx
 
-  mov rbx, [rdx+00000190]  // Shield
+  mov rbx, [rdx+00000BA8]  // Shield
   vmovss xmm14, [vf_ship_shield_multiplier]
   cvtsi2ss xmm15, rbx
   vmulss xmm15, xmm15, xmm14
   vcvtss2si rbx, xmm15
   mov [rdx+000006A0], rbx
 
-  mov rbx, [rdx+000000D0]  // Armor
+  mov rbx, [rdx+00000BB0]  // Armor
   vmovss xmm14, [vf_ship_armor_multiplier]
   cvtsi2ss xmm15, rbx
   vmulss xmm15, xmm15, xmm14
@@ -4203,9 +4229,9 @@ align 10 cc
   vf_ship_shield_multiplier:
   dd (float)2
   vf_ship_armor_multiplier:
-  dd (float)1.5
+  dd (float)2
   vf_ship_hull_multiplier:
-  dd (float)1.25
+  dd (float)2
   is_selected_ships_only:
   dd 0
 
@@ -4269,30 +4295,6 @@ stellaris.exe+857C8A: 48 8B B8 90 02 00 00  - mov rdi,[rax+00000290]
                           <Color>C08000</Color>
                           <VariableType>4 Bytes</VariableType>
                           <Address>is_selected_ships_only</Address>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>830</ID>
-                          <Description>"Hull multiplier"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <Color>C08000</Color>
-                          <VariableType>Float</VariableType>
-                          <Address>vf_ship_hull_multiplier</Address>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>813</ID>
-                          <Description>"Shield multiplier (during battle)"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <Color>C08000</Color>
-                          <VariableType>Float</VariableType>
-                          <Address>vf_ship_shield_multiplier</Address>
-                        </CheatEntry>
-                        <CheatEntry>
-                          <ID>814</ID>
-                          <Description>"Armor multiplier (during battle)"</Description>
-                          <ShowAsSigned>0</ShowAsSigned>
-                          <Color>C08000</Color>
-                          <VariableType>Float</VariableType>
-                          <Address>vf_ship_armor_multiplier</Address>
                         </CheatEntry>
                       </CheatEntries>
                     </CheatEntry>
@@ -4500,6 +4502,7 @@ label(return)
 label(i_fleet_address_list i_fleet_num_watermark)
 
 newmem:
+  pushfq
   push r15
   push r14
 
@@ -4531,24 +4534,27 @@ write_data:
 
 endp:
   // recover HP
-  mov r15, [rcx+70]
-  cmp rax, r15
-  cmovb rax, r15
+  vmovss xmm14, [vf_2]
+  mov r15, [rcx+BA0]
+  vcvtsi2ss xmm15, xmm15, r15
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si rax, xmm15
 
-  mov r15, [rcx+D0]
-  mov r14, [rcx+6A8]
-  cmp r14, r15
-  cmovb r14, r15
+  mov r15, [rcx+BB0]
+  vcvtsi2ss xmm15, xmm15, r15
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r14, xmm15
   mov [rcx+6A8], r14
 
-  mov r15, [rcx+190]
-  mov r14, [rcx+6A0]
-  cmp r14, r15
-  cmovb r14, r15
+  mov r15, [rcx+BA8]
+  vcvtsi2ss xmm15, xmm15, r15
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r14, xmm15
   mov [rcx+6A0], r14
 
   pop r14
   pop r15
+  popfq
 
 
 code:
@@ -4557,7 +4563,10 @@ code:
 align 10 cc
   i_fleet_num_watermark:
   dq 0
-  dq 0
+  vf_2:
+  dd (float)2
+  dd 0
+
   i_fleet_address_list:
   dq 0
   align 100 0
@@ -4843,23 +4852,23 @@ write_data:
 
 endp:
   // recover HP
-  mov r15, [rbx+70]
-  mov r14, [rbx+698]
-  cmp r14, r15
-  cmovb r14, r15
-  mov [rbx+698], r14
+  vmovss xmm14, [vf_2]
+  mov r15, [rcx+BA0]
+  vcvtsi2ss xmm15, xmm15, r15
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si rax, xmm15
 
-  mov r15, [rbx+D0]
-  mov r14, [rbx+6A8]
-  cmp r14, r15
-  cmovb r14, r15
-  mov [rbx+6A8], r14
+  mov r15, [rcx+BB0]
+  vcvtsi2ss xmm15, xmm15, r15
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r14, xmm15
+  mov [rcx+6A8], r14
 
-  mov r15, [rbx+190]
-  mov r14, [rbx+6A0]
-  cmp r14, r15
-  cmovb r14, r15
-  mov [rbx+6A0], r14
+  mov r15, [rcx+BA8]
+  vcvtsi2ss xmm15, xmm15, r15
+  vmulss xmm15, xmm15, xmm14
+  vcvtss2si r14, xmm15
+  mov [rcx+6A0], r14
 
   pop r14
   pop r15
@@ -4871,6 +4880,10 @@ code:
   //je stellaris.exe+13D4D3A
   reassemble(INJECT_ADD_STATION_INTO_LIST+3)
   jmp return
+align 10 cc
+  vf_2:
+  dd (float)2
+
 
 INJECT_ADD_STATION_INTO_LIST:
   jmp newmem
@@ -10715,7 +10728,7 @@ stellaris.exe+A8EB5F: 48 8D 4D 08           - lea rcx,[rbp+08]
                   <CustomType>STLS Float</CustomType>
                   <Address>i_ship_info_base</Address>
                   <Offsets>
-                    <Offset>70</Offset>
+                    <Offset>BA0</Offset>
                   </Offsets>
                 </CheatEntry>
               </CheatEntries>
@@ -10741,7 +10754,7 @@ stellaris.exe+A8EB5F: 48 8D 4D 08           - lea rcx,[rbp+08]
                   <CustomType>STLS Float</CustomType>
                   <Address>i_ship_info_base</Address>
                   <Offsets>
-                    <Offset>D0</Offset>
+                    <Offset>BB0</Offset>
                   </Offsets>
                 </CheatEntry>
               </CheatEntries>
@@ -10767,7 +10780,7 @@ stellaris.exe+A8EB5F: 48 8D 4D 08           - lea rcx,[rbp+08]
                   <CustomType>STLS Float</CustomType>
                   <Address>i_ship_info_base</Address>
                   <Offsets>
-                    <Offset>190</Offset>
+                    <Offset>BA8</Offset>
                   </Offsets>
                 </CheatEntry>
               </CheatEntries>
@@ -10934,6 +10947,206 @@ stellaris.exe+CD4B85: 48 8D 8B B0 03 00 00  - lea rcx,[rbx+000003B0]
               <Offsets>
                 <Offset>6A0</Offset>
               </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>17555</ID>
+          <Description>"Get federation status"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : stellaris.exe
+  Version: 
+  Date   : 2025-10-18
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_FEDER_STAT,stellaris.exe,48 8B B9 B8 01 00 00 45) // should be unique
+alloc(newmem,$1000,INJECT_GET_FEDER_STAT)
+
+label(code)
+label(return)
+label(i_base_feder_addr_1 i_base_feder_addr_2)
+
+newmem:
+  cmp [i_base_feder_addr_1], 0
+  je w1
+  cmp [i_base_feder_addr_1], rcx
+  je code
+  cmp [i_base_feder_addr_2], 0
+  je w2
+  jmp code
+
+w1:
+  mov [i_base_feder_addr_1], rcx
+  jmp code
+w2:
+  mov [i_base_feder_addr_2], rcx
+  jmp code
+
+code:
+  mov rdi,[rcx+000001B8]
+  jmp return
+align 10 cc
+  i_base_feder_addr_1:
+  dq 0
+  i_base_feder_addr_2:
+  dq 0
+
+INJECT_GET_FEDER_STAT:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_FEDER_STAT)
+registersymbol(i_base_feder_addr_1 i_base_feder_addr_2)
+[DISABLE]
+
+INJECT_GET_FEDER_STAT:
+  db 48 8B B9 B8 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: stellaris.exe+9F286B
+
+stellaris.exe+9F2844: 57                       - push rdi
+stellaris.exe+9F2845: 41 54                    - push r12
+stellaris.exe+9F2847: 41 55                    - push r13
+stellaris.exe+9F2849: 41 56                    - push r14
+stellaris.exe+9F284B: 41 57                    - push r15
+stellaris.exe+9F284D: 48 8D 6C 24 F8           - lea rbp,[rsp-08]
+stellaris.exe+9F2852: 48 81 EC 08 01 00 00     - sub rsp,00000108
+stellaris.exe+9F2859: 0F 29 B4 24 F0 00 00 00  - movaps [rsp+000000F0],xmm6
+stellaris.exe+9F2861: 4C 8B E9                 - mov r13,rcx
+stellaris.exe+9F2864: 48 8B 81 B0 01 00 00     - mov rax,[rcx+000001B0]
+// ---------- INJECTING HERE ----------
+stellaris.exe+9F286B: 48 8B B9 B8 01 00 00     - mov rdi,[rcx+000001B8]
+// ---------- DONE INJECTING  ----------
+stellaris.exe+9F2872: 45 33 F6                 - xor r14d,r14d
+stellaris.exe+9F2875: 41 8B DE                 - mov ebx,r14d
+stellaris.exe+9F2878: 44 89 71 08              - mov [rcx+08],r14d
+stellaris.exe+9F287C: 45 32 D2                 - xor r10b,r10b
+stellaris.exe+9F287F: 48 8B 88 20 01 00 00     - mov rcx,[rax+00000120]
+stellaris.exe+9F2886: 48 89 4D 68              - mov [rbp+68],rcx
+stellaris.exe+9F288A: 48 63 80 2C 01 00 00     - movsxd  rax,dword ptr [rax+0000012C]
+stellaris.exe+9F2891: 48 8D 04 C1              - lea rax,[rcx+rax*8]
+stellaris.exe+9F2895: 48 89 44 24 50           - mov [rsp+50],rax
+stellaris.exe+9F289A: 48 3B C8                 - cmp rcx,rax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>17557</ID>
+              <Description>"#1"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>17556</ID>
+                  <Description>"Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_feder_addr_1</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17560</ID>
+                  <Description>"EXP total"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>STLS Float</CustomType>
+                  <Address>i_base_feder_addr_1</Address>
+                  <Offsets>
+                    <Offset>1B8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17564</ID>
+                  <Description>"EXP now"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>STLS Float</CustomType>
+                  <Address>i_base_feder_addr_1</Address>
+                  <Offsets>
+                    <Offset>1C0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17562</ID>
+                  <Description>"Cohesion"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>STLS Float</CustomType>
+                  <Address>i_base_feder_addr_1</Address>
+                  <Offsets>
+                    <Offset>1D0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>17558</ID>
+              <Description>"#2"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>17559</ID>
+                  <Description>"Lv"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_base_feder_addr_2</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17561</ID>
+                  <Description>"EXP total"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>STLS Float</CustomType>
+                  <Address>i_base_feder_addr_2</Address>
+                  <Offsets>
+                    <Offset>1B8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17565</ID>
+                  <Description>"EXP now"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>STLS Float</CustomType>
+                  <Address>i_base_feder_addr_2</Address>
+                  <Offsets>
+                    <Offset>1C0</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>17563</ID>
+                  <Description>"Cohesion"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>Custom</VariableType>
+                  <CustomType>STLS Float</CustomType>
+                  <Address>i_base_feder_addr_2</Address>
+                  <Offsets>
+                    <Offset>1D0</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
