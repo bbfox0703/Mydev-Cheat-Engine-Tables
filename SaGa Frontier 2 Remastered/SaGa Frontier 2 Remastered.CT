@@ -855,7 +855,7 @@ GameAssembly.dll+33CFAA: 48 8B 40 28           - mov rax,[rax+28]
         <CheatEntry>
           <ID>5</ID>
           <Description>"Battle: get hit: keep min HP/LP.."</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : SaGa Frontier 2 Remastered.exe
   Version: 
@@ -1001,6 +1001,86 @@ GameAssembly.dll+2F07B7: 48 85 C9              - test rcx,rcx
               <Description>"Not god mode"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>456</ID>
+              <Description>"HP check point #2"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : SaGa Frontier 2 Remastered.exe
+  Version: 
+  Date   : 2025-10-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_BATTLE_HP_ADJUST,MainGame.bCalcWorkAdjust+60,MainGame.bCalcWorkAdjust+A0,41 0F 4E 4A 28) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_HP_ADJUST)
+
+label(code)
+label(return)
+
+newmem:
+  pushfq
+  cmp byte ptr [r10+20], 0
+  je endp
+  cmp ecx, 0
+  jg endp
+
+  mov ecx, [r10+2C]
+  vcvtsi2ss xmm13, xmm13, ecx
+  vmovss xmm14, [vf_min_hp_ratio]
+  vmulss xmm13, xmm14, xmm13
+  vcvtss2si ecx, xmm13
+
+endp:
+  popfq
+
+code:
+  cmovle ecx,[r10+28]
+  jmp return
+
+INJECT_BATTLE_HP_ADJUST:
+  jmp newmem
+return:
+registersymbol(INJECT_BATTLE_HP_ADJUST)
+
+[DISABLE]
+
+INJECT_BATTLE_HP_ADJUST:
+  db 41 0F 4E 4A 28
+
+unregistersymbol(INJECT_BATTLE_HP_ADJUST)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+2F0FAA
+
+GameAssembly.dll+2F0F7A: 4C 8D 0C C5 20 00 00 00  - lea r9,[rax*8+00000020]
+GameAssembly.dll+2F0F82: 49 8B 04 09              - mov rax,[r9+rcx]
+GameAssembly.dll+2F0F86: 48 85 C0                 - test rax,rax
+GameAssembly.dll+2F0F89: 0F 84 40 03 00 00        - je GameAssembly.dll+2F12CF
+GameAssembly.dll+2F0F8F: 4C 8B 90 B8 00 00 00     - mov r10,[rax+000000B8]
+GameAssembly.dll+2F0F96: 4D 8B C2                 - mov r8,r10
+GameAssembly.dll+2F0F99: 4D 85 D2                 - test r10,r10
+GameAssembly.dll+2F0F9C: 0F 84 2D 03 00 00        - je GameAssembly.dll+2F12CF
+GameAssembly.dll+2F0FA2: 41 8B 4A 2C              - mov ecx,[r10+2C]
+GameAssembly.dll+2F0FA6: 41 39 4A 28              - cmp [r10+28],ecx
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+2F0FAA: 41 0F 4E 4A 28           - cmovle ecx,[r10+28]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+2F0FAF: 85 C9                    - test ecx,ecx
+GameAssembly.dll+2F0FB1: 8B C5                    - mov eax,ebp
+GameAssembly.dll+2F0FB3: 0F 49 C1                 - cmovns eax,ecx
+GameAssembly.dll+2F0FB6: 41 89 42 28              - mov [r10+28],eax
+GameAssembly.dll+2F0FBA: 48 8B 97 D8 0D 00 00     - mov rdx,[rdi+00000DD8]
+GameAssembly.dll+2F0FC1: 48 85 D2                 - test rdx,rdx
+GameAssembly.dll+2F0FC4: 0F 84 05 03 00 00        - je GameAssembly.dll+2F12CF
+GameAssembly.dll+2F0FCA: 48 8B 82 20 01 00 00     - mov rax,[rdx+00000120]
+GameAssembly.dll+2F0FD1: 48 85 C0                 - test rax,rax
+GameAssembly.dll+2F0FD4: 0F 84 F5 02 00 00        - je GameAssembly.dll+2F12CF
+}
+</AssemblerScript>
             </CheatEntry>
             <CheatEntry>
               <ID>7</ID>
@@ -1634,6 +1714,115 @@ GameAssembly.dll+7AADD2: 48 8B 2D 9F DD 03 02  - mov rbp,[GameAssembly.dll+27E8B
                         <Offset>10</Offset>
                         <Offset>48</Offset>
                       </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>447</ID>
+                      <Description>"Modify all item cnt to 255"</Description>
+                      <VariableType>Auto Assembler Script</VariableType>
+                      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+--NO_ACTIVATE
+
+local PARENT_NAME = "CARRYITEM"
+local TARGET_VALUE = 255
+
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Parent node not found: " .. PARENT_NAME)
+    return
+  end
+
+  local modifiedCount = 0
+  local skippedCount = 0
+  local skipReasons = {
+    noIsZero = 0,
+    cntIsZero = 0,
+    cntIs255 = 0,
+    noNotFound = 0,
+    cntNotFound = 0,
+    readFailed = 0
+  }
+
+  -- 遍歷所有子節點
+  for i = 0, parent.Count - 1 do
+    local itemNode = parent.Child[i]
+
+    if itemNode.Count &gt;= 2 then
+      local noNode = nil
+      local cntNode = nil
+
+      for j = 0, itemNode.Count - 1 do
+        local subNode = itemNode.Child[j]
+
+        if subNode.Description == "no" and not noNode then
+          noNode = subNode
+        elseif subNode.Description == "cnt" and not cntNode then
+          cntNode = subNode
+        end
+
+        if noNode and cntNode then
+          break
+        end
+      end
+
+      if not noNode then
+        skipReasons.noNotFound = skipReasons.noNotFound + 1
+        skippedCount = skippedCount + 1
+      elseif not cntNode then
+        skipReasons.cntNotFound = skipReasons.cntNotFound + 1
+        skippedCount = skippedCount + 1
+      else
+        -- 直接讀取 Value 屬性
+        local noValue = tonumber(noNode.Value)
+        local cntValue = tonumber(cntNode.Value)
+
+        if not noValue or not cntValue then
+          skipReasons.readFailed = skipReasons.readFailed + 1
+          skippedCount = skippedCount + 1
+        elseif noValue == 0 then
+          skipReasons.noIsZero = skipReasons.noIsZero + 1
+          skippedCount = skippedCount + 1
+        elseif cntValue == 0 then
+          skipReasons.cntIsZero = skipReasons.cntIsZero + 1
+          skippedCount = skippedCount + 1
+        elseif cntValue == 255 then
+          skipReasons.cntIs255 = skipReasons.cntIs255 + 1
+          skippedCount = skippedCount + 1
+        else
+          -- 直接設定 Value
+          cntNode.Value = tostring(TARGET_VALUE)
+          modifiedCount = modifiedCount + 1
+        end
+      end
+    else
+      skippedCount = skippedCount + 1
+    end
+  end
+
+  print(string.format("✔ Modified %d 'cnt' values to %d", modifiedCount, TARGET_VALUE))
+  print(string.format("  Skipped %d items:", skippedCount))
+  print(string.format("    - no is 0: %d", skipReasons.noIsZero))
+  print(string.format("    - cnt is 0: %d", skipReasons.cntIsZero))
+  print(string.format("    - cnt is 255: %d", skipReasons.cntIs255))
+  if skipReasons.noNotFound &gt; 0 then
+    print(string.format("    - no not found: %d", skipReasons.noNotFound))
+  end
+  if skipReasons.cntNotFound &gt; 0 then
+    print(string.format("    - cnt not found: %d", skipReasons.cntNotFound))
+  end
+  if skipReasons.readFailed &gt; 0 then
+    print(string.format("    - read failed: %d", skipReasons.readFailed))
+  end
+end)
+
+closeLuaEngine()
+
+[DISABLE]
+</AssemblerScript>
                     </CheatEntry>
                     <CheatEntry>
                       <ID>55</ID>
@@ -6129,6 +6318,502 @@ GameAssembly.dll+343B78: 4C 8B C0              - mov r8,rax
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
+        <CheatEntry>
+          <ID>429</ID>
+          <Description>"Get storage items"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : SaGa Frontier 2 Remastered.exe
+  Version: 
+  Date   : 2025-10-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_STORAGE_ITEMS,MainGame.GetStorageFreeCount+40,MainGame.GetStorageFreeCount+140,48 8B 4B 10 48 85 C9 74 12 48) // should be unique
+alloc(newmem,$1000,INJECT_GET_STORAGE_ITEMS)
+
+label(code)
+label(return i_base_storage_addr)
+
+newmem:
+  mov [i_base_storage_addr], rbx
+
+code:
+  mov rcx,[rbx+10]
+  test rcx,rcx
+  jmp return
+align 10 cc
+  i_base_storage_addr:
+  dq 0
+
+INJECT_GET_STORAGE_ITEMS:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_STORAGE_ITEMS i_base_storage_addr)
+
+[DISABLE]
+
+INJECT_GET_STORAGE_ITEMS:
+  db 48 8B 4B 10 48 85 C9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+58253A
+
+GameAssembly.dll+58250B: 74 48                 - je GameAssembly.dll+582555
+GameAssembly.dll+58250D: 48 8B 98 00 11 00 00  - mov rbx,[rax+00001100]
+GameAssembly.dll+582514: 48 85 DB              - test rbx,rbx
+GameAssembly.dll+582517: 74 3C                 - je GameAssembly.dll+582555
+GameAssembly.dll+582519: 80 3D D1 EF 38 02 00  - cmp byte ptr [GameAssembly.dll+29114F1],00
+GameAssembly.dll+582520: 75 18                 - jne GameAssembly.dll+58253A
+GameAssembly.dll+582522: 48 8D 0D 9F FF 26 02  - lea rcx,[GameAssembly.dll+27F24C8]
+GameAssembly.dll+582529: E8 C2 AA CC FF        - call GameAssembly.dll+24CFF0
+GameAssembly.dll+58252E: F0 83 0C 24 00        - lock or dword ptr [rsp],00
+GameAssembly.dll+582533: C6 05 B7 EF 38 02 01  - mov byte ptr [GameAssembly.dll+29114F1],01
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+58253A: 48 8B 4B 10           - mov rcx,[rbx+10]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+58253E: 48 85 C9              - test rcx,rcx
+GameAssembly.dll+582541: 74 12                 - je GameAssembly.dll+582555
+GameAssembly.dll+582543: 48 8B 5C 24 20        - mov rbx,[rsp+20]
+GameAssembly.dll+582548: B8 E8 03 00 00        - mov eax,000003E8
+GameAssembly.dll+58254D: 2B 41 18              - sub eax,[rcx+18]
+GameAssembly.dll+582550: 48 83 C4 28           - add rsp,28
+GameAssembly.dll+582554: C3                    - ret 
+GameAssembly.dll+582555: E8 A6 44 CE FF        - call GameAssembly.il2cpp_value_box+50
+GameAssembly.dll+58255A: CC                    - int 3 
+GameAssembly.dll+58255B: CC                    - int 3 
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>448</ID>
+              <Description>"Talk to related NPC"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>430</ID>
+              <Description>"base addr."</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>808080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_base_storage_addr</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>432</ID>
+                  <Description>"_items"</Description>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>808080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>+0</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>433</ID>
+                      <Description>"_items (storage data)"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>808080</Color>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>10</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>437</ID>
+                          <Description>"↑↑↑Must be valid address"</Description>
+                          <Color>8000FF</Color>
+                          <GroupHeader>1</GroupHeader>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>434</ID>
+                          <Description>"Count"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>808080</Color>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+0</Address>
+                          <Offsets>
+                            <Offset>18</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>435</ID>
+                          <Description>"[0]CARRYITEM"</Description>
+                          <ShowAsHex>1</ShowAsHex>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>808080</Color>
+                          <VariableType>8 Bytes</VariableType>
+                          <Address>+0</Address>
+                          <Offsets>
+                            <Offset>20</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>436</ID>
+              <Description>"Generate list"</Description>
+              <Options moHideChildren="1"/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local baseSymbol = "_items (storage data)"
+local parentName = "+Item list (do not delete this)"
+local addressList = getAddressList()
+
+-- 顏色設定（深色系，在白底下清楚可見）
+local evenColor = 0x0080FF    -- 深橘色
+local oddColor = 0x0060C0     -- 深橘紅色
+local subColor1 = 0xFF6060    -- 淺藍色 (no)
+local subColor2 = 0x60FF60    -- 淺綠色 (cnt)
+local subColor3 = 0x6060FF    -- 淺紅色 (type)
+
+-- 建立節點的通用函數
+local function createNode(desc, addr, vtype, parent, color, showHex, dropdownMemrec)
+  local node = addressList.createMemoryRecord()
+  node.Description = desc
+  if addr then
+    node.Address = string.format("%X", addr)
+    node.Type = vtype or vtByte
+    node.ShowAsHex = showHex or false
+    -- 如果有指定 dropdown，設定連結
+    if dropdownMemrec then
+      node.DropDownLinked = true
+      node.DropDownLinkedMemrec = dropdownMemrec
+    end
+  else
+    node.IsGroupHeader = true
+    node.Options = "[moHideChildren]"
+  end
+  node.Parent = parent
+  node.Color = color
+  return node
+end
+
+-- 取得基底記錄的地址
+local baseRecord = addressList.getMemoryRecordByDescription(baseSymbol)
+if not baseRecord then
+  print("Memory record not found: " .. baseSymbol)
+  return
+end
+
+local baseAddr = getAddressSafe(baseRecord.Value)
+if not baseAddr then
+  print("Cannot get address from: " .. baseSymbol)
+  return
+end
+
+print(string.format("Base address: %X", baseAddr))
+
+local maxItems = 1000
+local itemIndex = 0
+
+synchronize(function()
+  -- 取得或建立 parent node
+  local parentRecord = addressList.getMemoryRecordByDescription(parentName)
+  if not parentRecord then
+    parentRecord = addressList.createMemoryRecord()
+    parentRecord.Description = parentName
+    parentRecord.IsGroupHeader = true
+    parentRecord.Options = "[moHideChildren]"
+  end
+
+  -- 清除舊的子節點
+  while parentRecord.Count &gt; 0 do
+    parentRecord.Child[0].destroy()
+  end
+
+  -- 建立所有道具 nodes
+  for n = 0, maxItems - 1 do
+    local ptrOffset = baseAddr + 0x20 + n * 8
+    local itemAddr = readQword(ptrOffset)
+
+    -- 如果讀到 0，停止
+    if not itemAddr or itemAddr == 0 then
+      break
+    end
+
+    local itemColor = (itemIndex % 2 == 0) and evenColor or oddColor
+
+    -- 建立道具群組節點 [nnn]CARRYITEM
+    local itemNode = createNode(string.format("[%03d]CARRYITEM", itemIndex), nil, nil, parentRecord, itemColor)
+    itemNode.Active = false  -- 預設不 active
+
+    -- 建立子節點：no (Item ID)
+    local noNode = createNode("no", itemAddr + 0x10, vtByte, itemNode, subColor1, false, "Item.ID")
+
+    -- 建立子節點：cnt (Count)
+    local cntNode = createNode("cnt", itemAddr + 0x11, vtByte, itemNode, subColor2, false, "cnt.ID")
+
+    -- 建立子節點：type
+    local typeNode = createNode("type", itemAddr + 0x14, vtDword, itemNode, subColor3, false)
+
+    itemIndex = itemIndex + 1
+  end
+
+  parentRecord.Active = true
+end)
+
+print(string.format("✔ Created %d item records", itemIndex))
+closeLuaEngine()
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+local PARENT_NAME = "+Item list (do not delete this)"
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Parent node not found: " .. PARENT_NAME)
+    return
+  end
+
+  local totalCount = parent.Count
+  print(string.format("Clearing %d item nodes...", totalCount))
+
+  -- 批次刪除並定期回收
+  local batchSize = 10
+  local deleted = 0
+
+  while parent.Count &gt; 0 do
+    for i = 1, math.min(batchSize, parent.Count) do
+      if parent.Count &gt; 0 then
+        local child = parent.Child[parent.Count - 1]
+
+        -- 清理 dropdown 引用
+        for j = child.Count - 1, 0, -1 do
+          local subChild = child.Child[j]
+          if subChild.DropDownLinked then
+            subChild.DropDownLinked = false
+            subChild.DropDownLinkedMemrec = nil
+          end
+        end
+
+        child.destroy()
+        deleted = deleted + 1
+      end
+    end
+
+    -- 每批次後回收一次
+    collectgarbage("collect")
+  end
+
+  parent.Active = false
+
+  -- 最後再回收幾次
+  collectgarbage("collect")
+  collectgarbage("collect")
+
+  print(string.format("✔ Cleared %d item records", deleted))
+end)
+
+collectgarbage("collect")
+closeLuaEngine()
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>438</ID>
+                  <Description>"Modify all item cnt to 255"</Description>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+--NO_ACTIVATE
+
+local PARENT_NAME = "+Item list (do not delete this)"
+local TARGET_VALUE = 255
+
+local addressList = getAddressList()
+
+synchronize(function()
+  local parent = addressList.getMemoryRecordByDescription(PARENT_NAME)
+  if not parent then
+    print("Parent node not found: " .. PARENT_NAME)
+    return
+  end
+
+  local modifiedCount = 0
+  local skippedCount = 0
+  local skipReasons = {
+    noIsZero = 0,
+    cntIsZero = 0,
+    cntIs255 = 0,
+    other = 0
+  }
+
+  -- 遍歷所有 [nnn]CARRYITEM 節點
+  for i = 0, parent.Count - 1 do
+    local itemNode = parent.Child[i]
+
+    -- 找出該 node 中的 "no" 和 "cnt"
+    local noAddr = nil
+    local cntAddr = nil
+
+    for j = 0, itemNode.Count - 1 do
+      local subNode = itemNode.Child[j]
+
+      if subNode.Description == "no" and subNode.Address then
+        noAddr = getAddressSafe(subNode.Address)
+      elseif subNode.Description == "cnt" and subNode.Address then
+        cntAddr = getAddressSafe(subNode.Address)
+      end
+    end
+
+    -- 檢查條件並修改
+    if noAddr and cntAddr then
+      local noValue = readByte(noAddr)
+      local cntValue = readByte(cntAddr)
+
+      -- 條件 1: no 不得為 0
+      if not noValue or noValue == 0 then
+        skipReasons.noIsZero = skipReasons.noIsZero + 1
+        skippedCount = skippedCount + 1
+      -- 條件 2: cnt 不得為 0
+      elseif not cntValue or cntValue == 0 then
+        skipReasons.cntIsZero = skipReasons.cntIsZero + 1
+        skippedCount = skippedCount + 1
+      -- 條件 3: cnt 不得為 255
+      elseif cntValue == 255 then
+        skipReasons.cntIs255 = skipReasons.cntIs255 + 1
+        skippedCount = skippedCount + 1
+      else
+        -- 所有條件滿足，執行修改
+        writeByte(cntAddr, TARGET_VALUE)
+        modifiedCount = modifiedCount + 1
+      end
+    else
+      skipReasons.other = skipReasons.other + 1
+      skippedCount = skippedCount + 1
+    end
+  end
+
+  print(string.format("Modified %d 'cnt' values to %d", modifiedCount, TARGET_VALUE))
+  print(string.format("  Skipped %d items:", skippedCount))
+  print(string.format("    - no is 0: %d", skipReasons.noIsZero))
+  print(string.format("    - cnt is 0: %d", skipReasons.cntIsZero))
+  print(string.format("    - cnt is 255: %d", skipReasons.cntIs255))
+  if skipReasons.other &gt; 0 then
+    print(string.format("    - other: %d", skipReasons.other))
+  end
+end)
+
+closeLuaEngine()
+
+[DISABLE]
+</AssemblerScript>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>431</ID>
+              <Description>"+Item list (do not delete this)"</Description>
+              <Options moHideChildren="1"/>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>451</ID>
+          <Description>"DIG! DIG! multiplier"</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : SaGa Frontier 2 Remastered.exe
+  Version: 
+  Date   : 2025-10-22
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_DIGDIG_MULTI,DiggerManager.ImplUpdateFuncExcavate+40,DiggerManager.ImplUpdateFuncExcavate+140,F3 0F 5C C8 0F 2F F9 F3 41) // should be unique
+alloc(newmem,$1000,INJECT_DIGDIG_MULTI)
+
+label(code)
+label(return vf_digdig_multi)
+
+newmem:
+  vmovss xmm14, [vf_digdig_multi]
+  vmulss xmm0, xmm0, xmm14
+
+code:
+  subss xmm1,xmm0
+  comiss xmm7,xmm1
+  jmp return
+align 10 cc
+  vf_digdig_multi:
+  dd (float)18
+
+INJECT_DIGDIG_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_DIGDIG_MULTI vf_digdig_multi)
+
+[DISABLE]
+
+INJECT_DIGDIG_MULTI:
+  db F3 0F 5C C8 0F 2F F9
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+6519FC
+
+GameAssembly.dll+6519CB: 0F 84 53 02 00 00           - je GameAssembly.dll+651C24
+GameAssembly.dll+6519D1: 41 F6 41 44 01              - test byte ptr [r9+44],01
+GameAssembly.dll+6519D6: F3 41 0F 10 49 1C           - movss xmm1,[r9+1C]
+GameAssembly.dll+6519DC: F3 44 0F 10 05 63 00 F2 01  - movss xmm8,[GameAssembly.dll+2571A48]
+GameAssembly.dll+6519E5: 76 0A                       - jna GameAssembly.dll+6519F1
+GameAssembly.dll+6519E7: F3 0F 10 05 51 01 F2 01     - movss xmm0,[GameAssembly.dll+2571B40]
+GameAssembly.dll+6519EF: EB 04                       - jmp GameAssembly.dll+6519F5
+GameAssembly.dll+6519F1: 41 0F 28 C0                 - movaps xmm0,xmm8
+GameAssembly.dll+6519F5: F3 0F 59 C2                 - mulss xmm0,xmm2
+GameAssembly.dll+6519F9: 0F 57 FF                    - xorps xmm7,xmm7
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+6519FC: F3 0F 5C C8                 - subss xmm1,xmm0
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+651A00: 0F 2F F9                    - comiss xmm7,xmm1
+GameAssembly.dll+651A03: F3 41 0F 11 49 1C           - movss [r9+1C],xmm1
+GameAssembly.dll+651A09: 0F 83 08 02 00 00           - jae GameAssembly.dll+651C17
+GameAssembly.dll+651A0F: 41 83 79 44 00              - cmp dword ptr [r9+44],00
+GameAssembly.dll+651A14: 0F 85 4D 01 00 00           - jne GameAssembly.dll+651B67
+GameAssembly.dll+651A1A: 0F 2F 0D EB 06 F2 01        - comiss xmm1,[GameAssembly.dll+257210C]
+GameAssembly.dll+651A21: 0F 82 CA 01 00 00           - jb GameAssembly.dll+651BF1
+GameAssembly.dll+651A27: 83 B9 A8 00 00 00 00        - cmp dword ptr [rcx+000000A8],00
+GameAssembly.dll+651A2E: 0F 85 BD 01 00 00           - jne GameAssembly.dll+651BF1
+GameAssembly.dll+651A34: 41 0F 2F 79 50              - comiss xmm7,[r9+50]
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>452</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_digdig_multi</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
@@ -6232,6 +6917,7 @@ GameAssembly.dll+343B78: 4C 8B C0              - mov r8,rax
 104:🧥術士服
 105:🧥革鎧
 106:🧥パッデドメイル
+109:🧥術戦士の鎧
 110:🧥ワニ革の鎧
 115:🧥ロブスターメイル
 116:🧥セラミックメイル
@@ -6239,6 +6925,8 @@ GameAssembly.dll+343B78: 4C 8B C0              - mov r8,rax
 118:💍ジャガーシード
 119:💍シンダーストーン
 120:💍ピュアチューナー
+124:🧥シルクトーガ
+135:🧥ボーンブレスト
 144:🥋鉄の胸当て
 153:🎩帽子
 158:🎩ジュエルバンド
@@ -6250,6 +6938,7 @@ GameAssembly.dll+343B78: 4C 8B C0              - mov r8,rax
 167:🧤樹氷の腕輪
 168:👟木ぐつ
 169:👟毛皮のブーツ
+170:👟ラバーソウル
 174:👟水晶のつばさ
 175:👟タイタスグリーブ
 176:💍貴石のかけら
@@ -6874,5 +7563,17 @@ if closeLuaEngine2 then
     closeLuaEngine2 = nil
 end
 ]]--
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
 </LuaScript>
 </CheatTable>
