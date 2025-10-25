@@ -338,14 +338,37 @@ synchronize(function()
 end)
 
 local enableBattleScripts = {
+
+--[[
+-- attach process
+local processName = "game_exe.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+--]]
+
   0, -- "Compact Mode"
-  22, -- "Set transport wagon speed"
-  23, -- "Set villager move speed / life"
   4, -- "No residence consumes water "
   5, -- "Villagers consume no food"
+  8, -- "Item degrade (corrpution) speed multiplier in storage"
+  10, -- "Prevent item corruption in storage &amp; set max count for some items"
+  22, -- "Set transport wagon speed"
   53, -- "Item gather number multiplier - Step 1"
   60, -- "Set minor some production buildings/resource spots material amount - Step 1"
-  8, -- "Item degrade (corrpution) speed multiplier in storage"
+  70, -- "Get tech pt."
+  73, -- "Faster provoke raiders CD"
+  76, -- "Set building HP (to all)"
   32, -- "Active - Step 2"
   59, -- "Set minor amount ... - Step 2"
 }
@@ -380,18 +403,19 @@ local disableBattleScripts = {
   18, -- "Set base material min/max amount in each storage location."
   15, -- "Set weapon/arrow/armor's min/max. amount in each storage location."
   11, -- "Set some items' min/max. amount in each storage location and market"
-  8, -- "Item degrade (corrpution) speed multiplier in storage"
+  76, -- "Set building HP (to all)"
+  73, -- "Faster provoke raiders CD"
+  70, -- "Get tech pt."
   60, -- "Set minor some production buildings/resource spots material amount - Step 1"
-  6, -- "No HP damage to building (inc. enemy)"
   53, -- "Item gather number multiplier - Step 1"
-  5, -- "Villagers consume no food"
   43, -- "When add item to storage"
   41, -- "When item remove: try to prevent corruption"
-  4, -- "No residence consumes water "
-  3, -- "(buggy) No residence consumes firewood"
   23, -- "Set villager move speed / life"
   22, -- "Set transport wagon speed"
   10, -- "Prevent item corruption in storage &amp; set max count for some items"
+  8, -- "Item degrade (corrpution) speed multiplier in storage"
+  5, -- "Villagers consume no food"
+  4, -- "No residence consumes water "
   0, -- "Compact Mode"
 }
 local addressList = getAddressList()
@@ -406,91 +430,33 @@ synchronize(function()
   end
 end)
 synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 0, Description: "Compact Mode", Depth: 0
+-- ID: 1, Description: "Enable", Depth: 0
+--   ID: 4, Description: "No residence consumes water ", Depth: 1
+--   ID: 5, Description: "Villagers consume no food", Depth: 1
+--   ID: 8, Description: "Item degrade (corrpution) speed multiplier in storage", Depth: 1
+--   ID: 53, Description: "Item gather number multiplier - Step 1", Depth: 1
+--     ID: 32, Description: "Active - Step 2", Depth: 2
+--       ID: 36, Description: "Multiplier threshold limt", Depth: 3
+--       ID: 38, Description: "Try to prevent corruption?", Depth: 3
+--   ID: 10, Description: "Prevent item corruption in storage &amp; set max count for some items", Depth: 1
+--     ID: 11, Description: "Set some items' min/max. amount in each storage location and market", Depth: 2
+--     ID: 15, Description: "Set weapon/arrow/armor's min/max. amount in each storage location.", Depth: 2
+--     ID: 18, Description: "Set base material min/max amount in each storage location.", Depth: 2
+--   ID: 22, Description: "Set transport wagon speed", Depth: 1
+--   ID: 23, Description: "Set villager move speed / life", Depth: 1
+--     ID: 28, Description: "Set min. armor when moving?", Depth: 2
+--   ID: 41, Description: "When item remove: try to prevent corruption", Depth: 1
+--   ID: 43, Description: "When add item to storage", Depth: 1
+--     ID: 45, Description: "Multiplier", Depth: 2
+--   ID: 70, Description: "Get tech pt.", Depth: 1
+--   ID: 76, Description: "Set building HP (to all)", Depth: 1
+--   ID: 73, Description: "Faster provoke raiders CD", Depth: 1
+--   ID: 60, Description: "Set minor some production buildings/resource spots material amount - Step 1", Depth: 1
+--     ID: 59, Description: "Set minor amount ... - Step 2", Depth: 2
+--       ID: 68, Description: "Options", Depth: 3
 
-</AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>3</ID>
-          <Description>"(buggy) No residence consumes firewood"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2024-10-18
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-//aobscanmodule(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,GameAssembly.dll,F3 0F 58 87 78 05 00 00) // should be unique
-//aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,ResidenceUpdateHeatingProc+260,ResidenceUpdateHeatingProc+320,F3 0F 58 ?? ?? ?? 00 00 F3 0F 11 ?? ?? ?? 00 00 48 8B 0D) // should be unique
-aobscanregion(INJECT_RESIDENCE_FIREWOOD_BURN_RATE,Residence.UpdateHeating+200,Residence.UpdateHeating+320,F3 0F 10 ?? ?? ?? 00 00 F3 0F 58 ?? ?? ?? 00 00 0F 2F 0D ?? ?? ?? ?? F3 ?? ?? ?? ?? ?? ?? ?? 0F ?? ?? ?? ?? ?? 0F ?? ?? 8B) // should be unique
-alloc(newmem,$1000,INJECT_RESIDENCE_FIREWOOD_BURN_RATE)
-
-alloc(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo,8)
-
-label(code)
-label(return)
-
-
-INJECT_RESIDENCE_FIREWOOD_BURN_RATEo:
-  readmem(INJECT_RESIDENCE_FIREWOOD_BURN_RATE, 8)
-
-newmem:
-
-
-code:
-  xorps xmm15, xmm15
-  vucomiss xmm1, xmm15
-  ja return
-  //addss xmm1,[rdi+00000608]
-  jmp return
-
-INJECT_RESIDENCE_FIREWOOD_BURN_RATE:
-  jmp newmem
-  nop 3
-return:
-registersymbol(INJECT_RESIDENCE_FIREWOOD_BURN_RATE)
-registersymbol(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo)
-
-[DISABLE]
-
-INJECT_RESIDENCE_FIREWOOD_BURN_RATE:
-  //db .. .. ......
-  readmem(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo, 8)
-
-unregistersymbol(*)
-unregistersymbol(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo)
-dealloc(newmem)
-dealloc(INJECT_RESIDENCE_FIREWOOD_BURN_RATEo)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+E5A2B2
-
-GameAssembly.dll+E5A288: 45 33 C0                 - xor r8d,r8d
-GameAssembly.dll+E5A28B: E8 F0 79 A1 FF           - call ItemStorage.GetItemCount
-GameAssembly.dll+E5A290: 0F 57 F6                 - xorps xmm6,xmm6
-GameAssembly.dll+E5A293: 85 DB                    - test ebx,ebx
-GameAssembly.dll+E5A295: 0F 85 82 01 00 00        - jne GameAssembly.dll+E5A41D
-GameAssembly.dll+E5A29B: 85 C0                    - test eax,eax
-GameAssembly.dll+E5A29D: 75 13                    - jne GameAssembly.dll+E5A2B2
-GameAssembly.dll+E5A29F: 44 89 B7 14 06 00 00     - mov [rdi+00000614],r14d
-GameAssembly.dll+E5A2A6: 44 89 B7 0C 06 00 00     - mov [rdi+0000060C],r14d
-GameAssembly.dll+E5A2AD: E9 CF 02 00 00           - jmp GameAssembly.dll+E5A581
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+E5A2B2: F3 0F 10 8F 0C 06 00 00  - movss xmm1,[rdi+0000060C]
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+E5A2BA: F3 0F 58 8F 08 06 00 00  - addss xmm1,[rdi+00000608]
-GameAssembly.dll+E5A2C2: 0F 2F 0D 2F C8 92 02     - comiss xmm1,[GameAssembly.dll+3786AF8]
-GameAssembly.dll+E5A2C9: F3 0F 11 8F 0C 06 00 00  - movss [rdi+0000060C],xmm1
-GameAssembly.dll+E5A2D1: 0F 82 AA 02 00 00        - jb GameAssembly.dll+E5A581
-GameAssembly.dll+E5A2D7: 0F 57 C0                 - xorps xmm0,xmm0
-GameAssembly.dll+E5A2DA: 8B C0                    - mov eax,eax
-GameAssembly.dll+E5A2DC: F2 48 0F 2A C0           - cvtsi2sd xmm0,rax
-GameAssembly.dll+E5A2E1: 66 0F 5A D0              - cvtpd2ps xmm2,xmm0
-GameAssembly.dll+E5A2E5: F3 0F 5D D1              - minss xmm2,xmm1
-GameAssembly.dll+E5A2E9: 0F 2F F2                 - comiss xmm6,xmm2
-}
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
@@ -626,90 +592,6 @@ GameAssembly.dll+E29DAA: 48 8B D6              - mov rdx,rsi
 GameAssembly.dll+E29DAD: E8 EE F2 01 00        - call VillagerHealth.Eat
 }
 </AssemblerScript>
-        </CheatEntry>
-        <CheatEntry>
-          <ID>6</ID>
-          <Description>"No HP damage to building (inc. enemy)"</Description>
-          <Options moHideChildren="1"/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Farthest Frontier.exe
-  Version: 
-  Date   : 2023-01-16
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-//aobscanmodule(INJECT_SET_BUILDING_LIFE,GameAssembly.dll,F3 0F 11 73 58 48) // should be unique
-aobscanregion(INJECT_SET_BUILDING_LIFE,DamageableComponent.set_life+20,DamageableComponent.set_life+120,F3 0F 11 73 58 48) // should be unique
-alloc(newmem,$1000,INJECT_SET_BUILDING_LIFE)
-
-label(code)
-label(return)
-
-newmem:
-//DamageableComponent.set_life
-  cmp byte ptr [rbx+100], 1 //_stationary
-  jne code
-  vmovss xmm15, [rbx+68] //&lt;baseMaxLife&gt;k__BackingField
-  vucomiss xmm6, xmm15
-  jae code
-  vmovss xmm6, [rbx+68]
-
-
-code:
-  movss [rbx+58],xmm6
-  jmp return
-
-INJECT_SET_BUILDING_LIFE:
-  jmp newmem
-return:
-registersymbol(INJECT_SET_BUILDING_LIFE)
-
-[DISABLE]
-
-INJECT_SET_BUILDING_LIFE:
-  db F3 0F 11 73 58
-
-unregistersymbol(INJECT_SET_BUILDING_LIFE)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+5FBDEB
-
-GameAssembly.dll+5FBDC2: 76 08                 - jna GameAssembly.dll+5FBDCC
-GameAssembly.dll+5FBDC4: 0F 28 F0              - movaps xmm6,xmm0
-GameAssembly.dll+5FBDC7: EB 03                 - jmp GameAssembly.dll+5FBDCC
-GameAssembly.dll+5FBDC9: 0F 57 F6              - xorps xmm6,xmm6
-GameAssembly.dll+5FBDCC: F3 0F 10 43 58        - movss xmm0,[rbx+58]
-GameAssembly.dll+5FBDD1: F3 0F 5C C6           - subss xmm0,xmm6
-GameAssembly.dll+5FBDD5: 0F 54 05 44 40 15 03  - andps xmm0,[GameAssembly.dll+374FE20]
-GameAssembly.dll+5FBDDC: 0F 2F 05 D1 29 15 03  - comiss xmm0,[GameAssembly.dll+374E7B4]
-GameAssembly.dll+5FBDE3: 0F 82 D2 01 00 00     - jb GameAssembly.dll+5FBFBB
-GameAssembly.dll+5FBDE9: 33 D2                 - xor edx,edx
-// ---------- INJECTING HERE ----------
-GameAssembly.dll+5FBDEB: F3 0F 11 73 58        - movss [rbx+58],xmm6
-// ---------- DONE INJECTING  ----------
-GameAssembly.dll+5FBDF0: 48 8B CB              - mov rcx,rbx
-GameAssembly.dll+5FBDF3: 48 89 7C 24 48        - mov [rsp+48],rdi
-GameAssembly.dll+5FBDF8: E8 93 23 00 00        - call DamageableComponent.get_damageableWidgetBlackboard
-GameAssembly.dll+5FBDFD: 48 8B 0D 64 25 46 03  - mov rcx,[GameAssembly.dll+3A5E368]
-GameAssembly.dll+5FBE04: 48 8B F8              - mov rdi,rax
-GameAssembly.dll+5FBE07: 83 B9 E0 00 00 00 00  - cmp dword ptr [rcx+000000E0],00
-GameAssembly.dll+5FBE0E: 75 05                 - jne GameAssembly.dll+5FBE15
-GameAssembly.dll+5FBE10: E8 8B FD D8 FF        - call GameAssembly.il2cpp_field_static_set_value+4490
-GameAssembly.dll+5FBE15: 80 3D 54 CA 62 03 00  - cmp byte ptr [GameAssembly.dll+3C28870],00
-GameAssembly.dll+5FBE1C: 75 13                 - jne GameAssembly.dll+5FBE31
-}
-</AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>7</ID>
-              <Description>"Apply to all buildings, include enemy"</Description>
-              <Color>8000FF</Color>
-              <GroupHeader>1</GroupHeader>
-            </CheatEntry>
-          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>8</ID>
@@ -1771,6 +1653,15 @@ newmem:
   // Float: 90:2BC: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998 (villager = 6.262869358)
   // Pointer: 100 &lt;immuneSystem&gt;k__BackingField = 0
 
+  // v1.0.0
+  // Raider:
+  // Float: 58: _movementSpeedBase = ? (Villager = 3.099999905 / Immigrant = ?)
+  // ???Pointer: 118: _raiderGroup &lt;&gt; 0 (Villiger = 0 (equals to onDeath)
+  // Byte: 90:D4 &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
+  // Float: 90:2D4: &lt;retreatTimeTillIgnore&gt;k__BackingField = ?? (villager = 6.777995118)
+  // Pointer: 110 &lt;immuneSystem&gt;k__BackingField = 0
+
+
 
 
   mov dword ptr [is_this_object_rider], 0
@@ -1787,18 +1678,18 @@ newmem:
   cmp dword ptr [rbx+58], (float)4.125 //_movementSpeedBase
   je chk_v1 //Immigrant
 
-  cmp byte ptr [r15+CC], 1 //canBeWounded = 0 -&gt; assume Rider
+  cmp byte ptr [r15+D4], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp1
 
 chk_v1:
   // Villager
   mov dword ptr [is_this_object_rider], 0
 
-  vmovss xmm15, [r15+68] //&lt;baseMaxLife&gt;k__BackingField
-  vmovss xmm14, [r15+58] //_life
-  vucomiss xmm14, xmm15
-  jae endp1
-  vmovss [r15+58], xmm15 //_life
+  //vmovss xmm15, [r15+68] //&lt;baseMaxLife&gt;k__BackingField
+  //vmovss xmm14, [r15+58] //_life
+  //vucomiss xmm14, xmm15
+  //jae endp1
+  mov dword ptr [r15+58], (float)500
 
 endp1:
   pop r15
@@ -1819,7 +1710,7 @@ check_armor:
   cmp dword ptr [rbx+58], (float)3.099999905 //_movementSpeedBase
   je chk_v2 //Immigrant
 
-  cmp byte ptr [r15+CC], 1 //canBeWounded = 0 -&gt; assume Rider
+  cmp byte ptr [r15+D4], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp2
 
   //Villager
@@ -1827,10 +1718,10 @@ chk_v2:
   mov dword ptr [is_this_object_rider], 0
 
   vmovss xmm15, [vf_min_armor_value]
-  vmovss xmm14, [r15+90] //baseArmor
+  vmovss xmm14, [r15+98] //baseArmor
   vucomiss xmm14, xmm15
   jae endp2
-  vmovss [r15+90], xmm15
+  vmovss [r15+98], xmm15
 
 endp2:
   pop r15
@@ -1850,14 +1741,14 @@ check_rider:
   cmp dword ptr [rbx+58], (float)3.099999905 //_movementSpeedBase
   je endp3 // Immigrant
 
-  cmp byte ptr [r15+CC], 0 //canBeWounded = 0 -&gt; assume Rider
+  cmp byte ptr [r15+D4], 0 //canBeWounded = 0 -&gt; assume Rider
   jne endp3
 
   // Rider
   mov dword ptr [is_this_object_rider], 1
 
-  mov dword ptr [r15+90], 0 // baseArmor
-  mov dword ptr [r15+E8], 0 // _trainingLevel
+  mov dword ptr [r15+98], 0 // baseArmor
+  mov dword ptr [r15+F0], 0 // _trainingLevel
 
 endp3:
   pop r15
@@ -1901,9 +1792,9 @@ align 10 cc
   vf_20:
   dd (float)20
   vf_min_armor_value:
-  dd (float)50
+  dd (float)100
   is_weaken_raider:
-  dd 1
+  dd 0
   is_this_object_rider:
   dd 0
   vf_Immigrant_move_speed:
@@ -2017,25 +1908,6 @@ GameAssembly.dll+F594C9: C6 05 60 95 D6 02 01  - mov byte ptr [GameAssembly.dll+
                   <Address>vf_min_armor_value</Address>
                 </CheatEntry>
               </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>30</ID>
-              <Description>"Make rider weak? (training level 0 &amp; no base armor)"</Description>
-              <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>is_weaken_raider</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>31</ID>
-              <Description>"Rider moving speed multiplier"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>C08000</Color>
-              <VariableType>Float</VariableType>
-              <Address>vf_raider_moving_speed_multi</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -2409,6 +2281,234 @@ GameAssembly.dll+8C2C66 - 74 06                 - je GameAssembly.dll+8C2C6E
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>70</ID>
+          <Description>"Get tech pt."</Description>
+          <Options moHideChildren="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2025-10-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_TECH_PT,TechTreeManager.CalcMonthsBeforeNextKnowledgePoint+30,TechTreeManager.CalcMonthsBeforeNextKnowledgePoint+A0,8B 9E BC 00 00 00) // should be unique
+alloc(newmem,$1000,INJECT_TECH_PT)
+
+label(code)
+label(return i_base_tech_pt_addr)
+
+newmem:
+  mov [i_base_tech_pt_addr], rsi
+  //cmp dword ptr [rsi+000000BC], 12
+  //jae code
+  //mov dword ptr [rsi+000000BC], 12
+
+code:
+  mov ebx,[rsi+000000BC]
+  jmp return
+align 10 cc
+  i_base_tech_pt_addr:
+  dq 0
+
+INJECT_TECH_PT:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_TECH_PT i_base_tech_pt_addr)
+
+[DISABLE]
+
+INJECT_TECH_PT:
+  db 8B 9E BC 00 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+B830EB
+
+GameAssembly.dll+B830AF: E8 5C 82 7F FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+600
+GameAssembly.dll+B830B4: 48 8D 0D 55 DC 04 03  - lea rcx,[GameAssembly.dll+3BD0D10]
+GameAssembly.dll+B830BB: E8 50 82 7F FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+600
+GameAssembly.dll+B830C0: 48 8D 0D F9 74 09 03  - lea rcx,[GameAssembly.dll+3C1A5C0]
+GameAssembly.dll+B830C7: E8 44 82 7F FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+600
+GameAssembly.dll+B830CC: 48 8D 0D F5 76 09 03  - lea rcx,[GameAssembly.dll+3C1A7C8]
+GameAssembly.dll+B830D3: E8 38 82 7F FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+600
+GameAssembly.dll+B830D8: 48 8D 0D 39 DC 04 03  - lea rcx,[GameAssembly.dll+3BD0D18]
+GameAssembly.dll+B830DF: E8 2C 82 7F FF        - call GameAssembly.GlobalizationNative_GetTimeZoneDisplayName+600
+GameAssembly.dll+B830E4: C6 05 F3 AB 23 03 01  - mov byte ptr [GameAssembly.dll+3DBDCDE],01
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+B830EB: 8B 9E BC 00 00 00     - mov ebx,[rsi+000000BC]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+B830F1: 33 D2                 - xor edx,edx
+GameAssembly.dll+B830F3: 48 8B CE              - mov rcx,rsi
+GameAssembly.dll+B830F6: E8 25 CE FF FF        - call TechTreeManager.GetNumKnowledgePointsRemaining
+GameAssembly.dll+B830FB: 3B D8                 - cmp ebx,eax
+GameAssembly.dll+B830FD: 0F 8D A2 02 00 00     - jnl GameAssembly.dll+B833A5
+GameAssembly.dll+B83103: 33 D2                 - xor edx,edx
+GameAssembly.dll+B83105: 48 8B CE              - mov rcx,rsi
+GameAssembly.dll+B83108: E8 03 FF FF FF        - call TechTreeManager.CalcKpsForNextKnowledgePoint
+GameAssembly.dll+B8310D: 66 0F 6E F8           - movd xmm7,eax
+GameAssembly.dll+B83111: 0F 5B FF              - cvtdq2ps xmm7,xmm7
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>71</ID>
+              <Description>"pt"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_base_tech_pt_addr</Address>
+              <Offsets>
+                <Offset>BC</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>76</ID>
+          <Description>"Set building HP (to all)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2025-10-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_BUILDING_DAMAGE,Building.GetNeededWorkUnitsForRepair+40,Building.GetNeededWorkUnitsForRepair+130,F3 0F 5C 70 58 0F 57) // should be unique
+alloc(newmem,$1000,INJECT_BUILDING_DAMAGE)
+
+label(code)
+label(return)
+
+newmem:
+  //movss xmm6, [rax+68] //&lt;baseMaxLife&gt;k__BackingField
+  mov dword ptr [rax+58], (float)20000
+  vxorps xmm6,xmm6,xmm6
+
+
+code:
+  subss xmm6,[rax+58]
+  jmp return
+
+INJECT_BUILDING_DAMAGE:
+  jmp newmem
+return:
+registersymbol(INJECT_BUILDING_DAMAGE)
+
+[DISABLE]
+
+INJECT_BUILDING_DAMAGE:
+  db F3 0F 5C 70 58
+
+unregistersymbol(INJECT_BUILDING_DAMAGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+F5E3BE
+
+GameAssembly.dll+F5E397: 48 8B 8B F0 01 00 00     - mov rcx,[rbx+000001F0]
+GameAssembly.dll+F5E39E: 0F 29 74 24 20           - movaps [rsp+20],xmm6
+GameAssembly.dll+F5E3A3: 48 85 C9                 - test rcx,rcx
+GameAssembly.dll+F5E3A6: 74 70                    - je GameAssembly.dll+F5E418
+GameAssembly.dll+F5E3A8: 33 D2                    - xor edx,edx
+GameAssembly.dll+F5E3AA: E8 D1 5A 78 FF           - call DamageableComponent.get_maxLife
+GameAssembly.dll+F5E3AF: 48 8B 83 F0 01 00 00     - mov rax,[rbx+000001F0]
+GameAssembly.dll+F5E3B6: 0F 28 F0                 - movaps xmm6,xmm0
+GameAssembly.dll+F5E3B9: 48 85 C0                 - test rax,rax
+GameAssembly.dll+F5E3BC: 74 5A                    - je GameAssembly.dll+F5E418
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+F5E3BE: F3 0F 5C 70 58           - subss xmm6,[rax+58]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+F5E3C3: 0F 57 C9                 - xorps xmm1,xmm1
+GameAssembly.dll+F5E3C6: 0F 2F F1                 - comiss xmm6,xmm1
+GameAssembly.dll+F5E3C9: 76 2E                    - jna GameAssembly.dll+F5E3F9
+GameAssembly.dll+F5E3CB: 33 D2                    - xor edx,edx
+GameAssembly.dll+F5E3CD: 48 8B CB                 - mov rcx,rbx
+GameAssembly.dll+F5E3D0: E8 AB 39 82 FF           - call CEMonoBehaviour.get_combatManager
+GameAssembly.dll+F5E3D5: 48 85 C0                 - test rax,rax
+GameAssembly.dll+F5E3D8: 74 3E                    - je GameAssembly.dll+F5E418
+GameAssembly.dll+F5E3DA: F3 0F 5E B0 68 01 00 00  - divss xmm6,[rax+00000168]
+GameAssembly.dll+F5E3E2: 0F 28 C6                 - movaps xmm0,xmm6
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>73</ID>
+          <Description>"Faster provoke raiders CD"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Farthest Frontier.exe
+  Version: 
+  Date   : 2025-10-25
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FAST_PROVOKE_RAIDERS,GameAssembly.dll,41 FF 8E 18 01 00 00) // should be unique
+alloc(newmem,$1000,INJECT_FAST_PROVOKE_RAIDERS)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [r14+00000118], A
+  jbe code
+  mov [r14+00000118], A
+
+code:
+  dec [r14+00000118]
+  jmp return
+
+INJECT_FAST_PROVOKE_RAIDERS:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_FAST_PROVOKE_RAIDERS)
+
+[DISABLE]
+
+INJECT_FAST_PROVOKE_RAIDERS:
+  db 41 FF 8E 18 01 00 00
+
+unregistersymbol(INJECT_FAST_PROVOKE_RAIDERS)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: GameAssembly.dll+6A57C4
+
+GameAssembly.dll+6A5790: 33 C9                    - xor ecx,ecx
+GameAssembly.dll+6A5792: 4C 8B 00                 - mov r8,[rax]
+GameAssembly.dll+6A5795: 48 8B 15 E4 4E 57 03     - mov rdx,[GameAssembly.dll+3C1A680]
+GameAssembly.dll+6A579C: E8 1F D4 95 FF           - call GameAssembly.dll+2BC0
+GameAssembly.dll+6A57A1: 48 8B 8C 24 80 00 00 00  - mov rcx,[rsp+00000080]
+GameAssembly.dll+6A57A9: 48 85 C9                 - test rcx,rcx
+GameAssembly.dll+6A57AC: 0F 85 B4 01 00 00        - jne GameAssembly.dll+6A5966
+GameAssembly.dll+6A57B2: 4C 8B B4 24 E0 01 00 00  - mov r14,[rsp+000001E0]
+GameAssembly.dll+6A57BA: 41 83 BE 18 01 00 00 00  - cmp dword ptr [r14+00000118],00
+GameAssembly.dll+6A57C2: 7E 07                    - jle GameAssembly.dll+6A57CB
+// ---------- INJECTING HERE ----------
+GameAssembly.dll+6A57C4: 41 FF 8E 18 01 00 00     - dec [r14+00000118]
+// ---------- DONE INJECTING  ----------
+GameAssembly.dll+6A57CB: 4C 8D 9C 24 B0 01 00 00  - lea r11,[rsp+000001B0]
+GameAssembly.dll+6A57D3: 49 8B 5B 38              - mov rbx,[r11+38]
+GameAssembly.dll+6A57D7: 49 8B 73 40              - mov rsi,[r11+40]
+GameAssembly.dll+6A57DB: 41 0F 28 73 F0           - movaps xmm6,[r11-10]
+GameAssembly.dll+6A57E0: 41 0F 28 7B E0           - movaps xmm7,[r11-20]
+GameAssembly.dll+6A57E5: 45 0F 28 43 D0           - movaps xmm8,[r11-30]
+GameAssembly.dll+6A57EA: 45 0F 28 4B C0           - movaps xmm9,[r11-40]
+GameAssembly.dll+6A57EF: 49 8B E3                 - mov rsp,r11
+GameAssembly.dll+6A57F2: 41 5F                    - pop r15
+GameAssembly.dll+6A57F4: 41 5E                    - pop r14
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>60</ID>
           <Description>"Set minor some production buildings/resource spots material amount - Step 1"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -2762,7 +2862,16 @@ GameAssembly.dll+8C1F9C: CC                    - int 3
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols/>
+  <UserdefinedSymbols>
+    <SymbolEntry>
+      <Name>AddItems2</Name>
+      <Address>7FFB4D606350</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>GetItemCount1</Name>
+      <Address>7FFB4D609A90</Address>
+    </SymbolEntry>
+  </UserdefinedSymbols>
   <LuaScript>--[[
 [ENABLE]
 {$lua}
