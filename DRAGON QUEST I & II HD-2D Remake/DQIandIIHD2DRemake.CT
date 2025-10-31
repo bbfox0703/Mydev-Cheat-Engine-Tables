@@ -1,0 +1,1551 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"**** tested in DQ I only ****"</Description>
+      <Color>8000FF</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>42</ID>
+      <Description>"Toggle scripts (auto attach)"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+
+-- attach process
+local processName = "DQIandIIHD2DRemake.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  1, -- "Toggle Compact View"
+  2, -- "Get gold"
+  8, -- "Browse and set item amount"
+  12, -- "Battle: inf MP"
+  35, -- "Field: browse usable spell and restore MP"
+  36, -- "Field: MP no decrease after casting"
+  37, -- "Field trap: zero damage"
+  38, -- "Longer holy protection / holy water duration"
+  16, -- "Char viewer"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  38, -- "Longer holy protection / holy water duration"
+  37, -- "Field trap: zero damage"
+  36, -- "Field: MP no decrease after casting"
+  35, -- "Field: browse usable spell and restore MP"
+  16, -- "Char viewer"
+  13, -- "Battle: HP options"
+  12, -- "Battle: inf MP"
+  8, -- "Browse and set item amount"
+  2, -- "Get gold"
+  1, -- "Toggle Compact View"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 1, Description: "Toggle Compact View", Depth: 0
+-- ID: 2, Description: "Get gold", Depth: 0
+-- ID: 8, Description: "Browse and set item amount", Depth: 0
+-- ID: 12, Description: "Battle: inf MP", Depth: 0
+-- ID: 13, Description: "Battle: HP options", Depth: 0
+-- ID: 16, Description: "Char viewer", Depth: 0
+-- ID: 35, Description: "Field: browse usable spell and restore MP", Depth: 0
+-- ID: 36, Description: "Field: MP no decrease after casting", Depth: 0
+-- ID: 37, Description: "Field trap: zero damage", Depth: 0
+-- ID: 38, Description: "Longer holy protection / holy water duration", Depth: 0
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Get gold"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_MONEY,$process,8B 51 28 48 8B 4B 38) // should be unique
+alloc(newmem,$100,INJECT_GET_MONEY)
+
+label(code)
+label(return i_base_money_addr)
+
+newmem:
+  mov [i_base_money_addr], rcx
+
+code:
+  mov edx,[rcx+28]
+  mov rcx,[rbx+38]
+  jmp return
+align 10 cc
+  i_base_money_addr:
+  dq 0
+
+INJECT_GET_MONEY:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_MONEY i_base_money_addr)
+
+[DISABLE]
+
+INJECT_GET_MONEY:
+  db 8B 51 28 48 8B 4B 38
+
+unregistersymbol(INJECT_GET_MONEY i_base_money_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+12D3836
+
+DQIandIIHD2DRemake.exe+12D3812: 48 83 EC 20           - sub rsp,20
+DQIandIIHD2DRemake.exe+12D3816: 41 B0 01              - mov r8b,01
+DQIandIIHD2DRemake.exe+12D3819: 48 8B D9              - mov rbx,rcx
+DQIandIIHD2DRemake.exe+12D381C: 48 8B 49 30           - mov rcx,[rcx+30]
+DQIandIIHD2DRemake.exe+12D3820: 41 0F B6 D0           - movzx edx,r8b
+DQIandIIHD2DRemake.exe+12D3824: E8 07 E1 0F 00        - call DQIandIIHD2DRemake.exe+13D1930
+DQIandIIHD2DRemake.exe+12D3829: E8 12 05 DA FF        - call DQIandIIHD2DRemake.exe+1073D40
+DQIandIIHD2DRemake.exe+12D382E: 48 8B 08              - mov rcx,[rax]
+DQIandIIHD2DRemake.exe+12D3831: 48 85 C9              - test rcx,rcx
+DQIandIIHD2DRemake.exe+12D3834: 74 2F                 - je DQIandIIHD2DRemake.exe+12D3865
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+12D3836: 8B 51 28              - mov edx,[rcx+28]
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+12D3839: 48 8B 4B 38           - mov rcx,[rbx+38]
+DQIandIIHD2DRemake.exe+12D383D: E8 CE CF 11 00        - call DQIandIIHD2DRemake.exe+13F0810
+DQIandIIHD2DRemake.exe+12D3842: 41 B8 01 00 00 00     - mov r8d,00000001
+DQIandIIHD2DRemake.exe+12D3848: 48 8D 15 99 35 E0 02  - lea rdx,[DQIandIIHD2DRemake.exe+40D6DE8]
+DQIandIIHD2DRemake.exe+12D384F: 48 8D 4C 24 30        - lea rcx,[rsp+30]
+DQIandIIHD2DRemake.exe+12D3854: E8 D7 21 39 00        - call DQIandIIHD2DRemake.exe+1665A30
+DQIandIIHD2DRemake.exe+12D3859: 48 8B 4B 40           - mov rcx,[rbx+40]
+DQIandIIHD2DRemake.exe+12D385D: 48 8B 10              - mov rdx,[rax]
+DQIandIIHD2DRemake.exe+12D3860: E8 CB C4 11 00        - call DQIandIIHD2DRemake.exe+13EFD30
+DQIandIIHD2DRemake.exe+12D3865: 48 83 C4 20           - add rsp,20
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Gold"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>28</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4</ID>
+          <Description>"Total gold earned?"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Mini medal"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>6</ID>
+          <Description>"# of mob kills"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>130</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"# of battles"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>134</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"Browse and set item amount"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BROWSE_ITEM_AND_SET_CNT,$process,41 8B 00 C3 CC) // should be unique
+alloc(newmem,$100,INJECT_BROWSE_ITEM_AND_SET_CNT)
+
+label(code)
+label(return i_set_item_cnt_to i_set_item_cnt_min)
+
+newmem:
+  mov eax, [i_set_item_cnt_min]
+  cmp dword ptr [r8], eax
+  jb code
+  mov eax, [i_set_item_cnt_to]
+  cmp [r8], eax
+  jae code
+  mov [r8], eax
+
+code:
+  mov eax,[r8]
+  ret 
+  int 3 
+  jmp return
+align 10 cc
+  i_set_item_cnt_to:
+  dd 32
+  i_set_item_cnt_min:
+  dd 2
+
+INJECT_BROWSE_ITEM_AND_SET_CNT:
+  jmp newmem
+return:
+registersymbol(INJECT_BROWSE_ITEM_AND_SET_CNT i_set_item_cnt_to i_set_item_cnt_min)
+
+[DISABLE]
+
+INJECT_BROWSE_ITEM_AND_SET_CNT:
+  db 41 8B 00 C3 CC
+
+unregistersymbol(INJECT_BROWSE_ITEM_AND_SET_CNT i_set_item_cnt_to)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: INJECT_BROWSE_ITEM_AND_SET_CNT
+
+DQIandIIHD2DRemake.exe+10A0277: 44 39 5A 08  - cmp [rdx+08],r11d
+DQIandIIHD2DRemake.exe+10A027B: 75 09        - jne DQIandIIHD2DRemake.exe+10A0286
+DQIandIIHD2DRemake.exe+10A027D: 41 8B 4A 04  - mov ecx,[r10+04]
+DQIandIIHD2DRemake.exe+10A0281: 39 4A 0C     - cmp [rdx+0C],ecx
+DQIandIIHD2DRemake.exe+10A0284: 74 0C        - je INJECT_BROWSE_ITEM_AND_SET_CNT
+DQIandIIHD2DRemake.exe+10A0286: 48 83 C0 10  - add rax,10
+DQIandIIHD2DRemake.exe+10A028A: 49 3B C1     - cmp rax,r9
+DQIandIIHD2DRemake.exe+10A028D: 75 E1        - jne DQIandIIHD2DRemake.exe+10A0270
+DQIandIIHD2DRemake.exe+10A028F: 33 C0        - xor eax,eax
+DQIandIIHD2DRemake.exe+10A0291: C3           - ret
+// ---------- INJECTING HERE ----------
+INJECT_BROWSE_ITEM_AND_SET_CNT: 41 8B 00     - mov eax,[r8]
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+10A0295: C3           - ret
+DQIandIIHD2DRemake.exe+10A0296: CC           - int 3
+DQIandIIHD2DRemake.exe+10A0297: CC           - int 3
+DQIandIIHD2DRemake.exe+10A0298: CC           - int 3
+DQIandIIHD2DRemake.exe+10A0299: CC           - int 3
+DQIandIIHD2DRemake.exe+10A029A: CC           - int 3
+DQIandIIHD2DRemake.exe+10A029B: CC           - int 3
+DQIandIIHD2DRemake.exe+10A029C: CC           - int 3
+DQIandIIHD2DRemake.exe+10A029D: CC           - int 3
+DQIandIIHD2DRemake.exe+10A029E: CC           - int 3
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Notice: affects import item too, be careful!"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>10</ID>
+          <Description>"Item amount must &gt;="</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_set_item_cnt_min</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"Set to"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_set_item_cnt_to</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"Battle: inf MP"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_MP,$process,3B D0 0F 4C C2 89 81 AC) // should be unique
+alloc(newmem,$1000,INJECT_INF_MP)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [rcx+00000190], 0
+  je code
+  cmp dword ptr [rcx+000001E0], 0
+  jne code
+
+  cmp edx,eax
+  cmovg eax,edx
+  jmp return
+
+code:
+  cmp edx,eax
+  cmovl eax,edx
+  jmp return
+
+INJECT_INF_MP:
+  jmp newmem
+return:
+registersymbol(INJECT_INF_MP)
+
+[DISABLE]
+
+INJECT_INF_MP:
+  db 3B D0 0F 4C C2
+
+unregistersymbol(INJECT_INF_MP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+F3C805
+
+DQIandIIHD2DRemake.exe+F3C7EB: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C7EC: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C7ED: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C7EE: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C7EF: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C7F0: 85 D2                          - test edx,edx
+DQIandIIHD2DRemake.exe+F3C7F2: 79 0B                          - jns DQIandIIHD2DRemake.exe+F3C7FF
+DQIandIIHD2DRemake.exe+F3C7F4: C7 81 AC 01 00 00 00 00 00 00  - mov [rcx+000001AC],00000000
+DQIandIIHD2DRemake.exe+F3C7FE: C3                             - ret 
+DQIandIIHD2DRemake.exe+F3C7FF: 8B 81 A8 01 00 00              - mov eax,[rcx+000001A8]
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+F3C805: 3B D0                          - cmp edx,eax
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+F3C807: 0F 4C C2                       - cmovl eax,edx
+DQIandIIHD2DRemake.exe+F3C80A: 89 81 AC 01 00 00              - mov [rcx+000001AC],eax
+DQIandIIHD2DRemake.exe+F3C810: C3                             - ret 
+DQIandIIHD2DRemake.exe+F3C811: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C812: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C813: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C814: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C815: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C816: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C817: CC                             - int 3 
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
+      <Description>"Battle: HP options"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATTLE_HP,$process,89 81 A4 01 00 00 C3) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_HP)
+
+label(code)
+label(return)
+label(vf_min_hp_pct i_enemy_hp_option)
+newmem:
+  cmp dword ptr [rcx+00000190], 0
+  je to_enemy
+  cmp dword ptr [rcx+000001E0], 0
+  jne to_enemy
+
+  push rdx
+  mov edx, [rcx+000001A0]
+  vcvtsi2ss xmm15, xmm15, edx
+  vmovss xmm14, [vf_min_hp_pct]
+  vmulss xmm14, xmm14, xmm15
+  vcvtss2si edx, xmm14
+  cmp eax, edx
+  cmovl eax, edx
+
+endp:
+  pop rdx
+
+  jmp code
+
+to_enemy:
+  cmp dword ptr [i_enemy_hp_option], 0
+  je code
+  cmp eax, 1
+  jbe code
+  mov eax, 1
+
+code:
+  mov [rcx+000001A4],eax
+  jmp return
+align 10 cc
+  vf_min_hp_pct:
+  dd (float)0.333333
+  i_enemy_hp_option:
+  dd 0
+
+INJECT_BATTLE_HP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_BATTLE_HP)
+registersymbol(vf_min_hp_pct i_enemy_hp_option)
+[DISABLE]
+
+INJECT_BATTLE_HP:
+  db 89 81 A4 01 00 00
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+F3C69A
+
+DQIandIIHD2DRemake.exe+F3C67D: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C67E: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C67F: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C680: 85 D2                          - test edx,edx
+DQIandIIHD2DRemake.exe+F3C682: 79 0B                          - jns DQIandIIHD2DRemake.exe+F3C68F
+DQIandIIHD2DRemake.exe+F3C684: C7 81 A4 01 00 00 00 00 00 00  - mov [rcx+000001A4],00000000
+DQIandIIHD2DRemake.exe+F3C68E: C3                             - ret 
+DQIandIIHD2DRemake.exe+F3C68F: 8B 81 A0 01 00 00              - mov eax,[rcx+000001A0]
+DQIandIIHD2DRemake.exe+F3C695: 3B D0                          - cmp edx,eax
+DQIandIIHD2DRemake.exe+F3C697: 0F 4C C2                       - cmovl eax,edx
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+F3C69A: 89 81 A4 01 00 00              - mov [rcx+000001A4],eax
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+F3C6A0: C3                             - ret 
+DQIandIIHD2DRemake.exe+F3C6A1: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A2: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A3: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A4: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A5: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A6: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A7: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A8: CC                             - int 3 
+DQIandIIHD2DRemake.exe+F3C6A9: CC                             - int 3 
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>14</ID>
+          <Description>"min. HP ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_min_hp_pct</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>15</ID>
+          <Description>"Enemy fast kill"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_enemy_hp_option</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>35</ID>
+      <Description>"Field: browse usable spell and restore MP"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FIELD_BROWSE_HEAL_SPELL,$process,8B 50 34 39 56 14) // should be unique
+alloc(newmem,$1000,INJECT_FIELD_BROWSE_HEAL_SPELL)
+
+label(code)
+label(return)
+
+newmem:
+  mov edx,[rax+30]
+  mov [rax+34], edx
+code:
+  //mov edx,[rax+34]
+  cmp [rsi+14],edx
+  jmp return
+
+INJECT_FIELD_BROWSE_HEAL_SPELL:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_FIELD_BROWSE_HEAL_SPELL)
+
+[DISABLE]
+
+INJECT_FIELD_BROWSE_HEAL_SPELL:
+  db 8B 50 34 39 56 14
+
+unregistersymbol(INJECT_FIELD_BROWSE_HEAL_SPELL)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+12F0670
+
+DQIandIIHD2DRemake.exe+12F0650: 8D 55 04           - lea edx,[rbp+04]
+DQIandIIHD2DRemake.exe+12F0653: E8 58 4C DB FF     - call DQIandIIHD2DRemake.exe+10A52B0
+DQIandIIHD2DRemake.exe+12F0658: 84 C0              - test al,al
+DQIandIIHD2DRemake.exe+12F065A: 75 5F              - jne DQIandIIHD2DRemake.exe+12F06BB
+DQIandIIHD2DRemake.exe+12F065C: 48 8B 4B 58        - mov rcx,[rbx+58]
+DQIandIIHD2DRemake.exe+12F0660: 8D 55 10           - lea edx,[rbp+10]
+DQIandIIHD2DRemake.exe+12F0663: E8 48 4C DB FF     - call DQIandIIHD2DRemake.exe+10A52B0
+DQIandIIHD2DRemake.exe+12F0668: 84 C0              - test al,al
+DQIandIIHD2DRemake.exe+12F066A: 75 4F              - jne DQIandIIHD2DRemake.exe+12F06BB
+DQIandIIHD2DRemake.exe+12F066C: 48 8B 43 58        - mov rax,[rbx+58]
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+12F0670: 8B 50 34           - mov edx,[rax+34]
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+12F0673: 39 56 14           - cmp [rsi+14],edx
+DQIandIIHD2DRemake.exe+12F0676: 7F 43              - jg DQIandIIHD2DRemake.exe+12F06BB
+DQIandIIHD2DRemake.exe+12F0678: E8 63 90 DE FF     - call DQIandIIHD2DRemake.exe+10D96E0
+DQIandIIHD2DRemake.exe+12F067D: 33 D2              - xor edx,edx
+DQIandIIHD2DRemake.exe+12F067F: 48 8B CE           - mov rcx,rsi
+DQIandIIHD2DRemake.exe+12F0682: E8 E9 FA BB FF     - call DQIandIIHD2DRemake.exe+EB0170
+DQIandIIHD2DRemake.exe+12F0687: 48 8B D8           - mov rbx,rax
+DQIandIIHD2DRemake.exe+12F068A: 48 85 C0           - test rax,rax
+DQIandIIHD2DRemake.exe+12F068D: 0F 84 9F 00 00 00  - je DQIandIIHD2DRemake.exe+12F0732
+DQIandIIHD2DRemake.exe+12F0693: E8 48 90 DE FF     - call DQIandIIHD2DRemake.exe+10D96E0
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>36</ID>
+      <Description>"Field: MP no decrease after casting"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FIELD_CAST_SPELL,$process,41 29 45 34 41 8B 45 34) // should be unique
+alloc(newmem,$1000,INJECT_FIELD_CAST_SPELL)
+
+label(code)
+label(return)
+
+newmem:
+  cmp eax, 0
+  jl code
+  xor eax, eax
+code:
+  sub [r13+34],eax
+  mov eax,[r13+34]
+  jmp return
+
+INJECT_FIELD_CAST_SPELL:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_FIELD_CAST_SPELL)
+
+[DISABLE]
+
+INJECT_FIELD_CAST_SPELL:
+  db 41 29 45 34 41 8B 45 34
+
+unregistersymbol(INJECT_FIELD_CAST_SPELL)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+10B15BA
+
+DQIandIIHD2DRemake.exe+10B1596: 33 C9                    - xor ecx,ecx
+DQIandIIHD2DRemake.exe+10B1598: E8 F3 5D 18 00           - call DQIandIIHD2DRemake.exe+1237390
+DQIandIIHD2DRemake.exe+10B159D: 4C 8D 45 97              - lea r8,[rbp-69]
+DQIandIIHD2DRemake.exe+10B15A1: 40 88 75 97              - mov [rbp-69],sil
+DQIandIIHD2DRemake.exe+10B15A5: 48 8D 55 EF              - lea rdx,[rbp-11]
+DQIandIIHD2DRemake.exe+10B15A9: 48 8B C8                 - mov rcx,rax
+DQIandIIHD2DRemake.exe+10B15AC: E8 3F 34 18 00           - call DQIandIIHD2DRemake.exe+12349F0
+DQIandIIHD2DRemake.exe+10B15B1: 40 38 75 97              - cmp [rbp-69],sil
+DQIandIIHD2DRemake.exe+10B15B5: 74 12                    - je DQIandIIHD2DRemake.exe+10B15C9
+DQIandIIHD2DRemake.exe+10B15B7: 8B 45 B7                 - mov eax,[rbp-49]
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+10B15BA: 41 29 45 34              - sub [r13+34],eax
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+10B15BE: 41 8B 45 34              - mov eax,[r13+34]
+DQIandIIHD2DRemake.exe+10B15C2: 0F 48 C6                 - cmovs eax,esi
+DQIandIIHD2DRemake.exe+10B15C5: 41 89 45 34              - mov [r13+34],eax
+DQIandIIHD2DRemake.exe+10B15C9: 48 8B 4D 0F              - mov rcx,[rbp+0F]
+DQIandIIHD2DRemake.exe+10B15CD: 40 B6 01                 - mov sil,01
+DQIandIIHD2DRemake.exe+10B15D0: 48 85 C9                 - test rcx,rcx
+DQIandIIHD2DRemake.exe+10B15D3: 74 05                    - je DQIandIIHD2DRemake.exe+10B15DA
+DQIandIIHD2DRemake.exe+10B15D5: E8 F6 90 4B 00           - call DQIandIIHD2DRemake.exe+156A6D0
+DQIandIIHD2DRemake.exe+10B15DA: 4C 8B AC 24 C0 00 00 00  - mov r13,[rsp+000000C0]
+DQIandIIHD2DRemake.exe+10B15E2: 4D 85 E4                 - test r12,r12
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>37</ID>
+      <Description>"Field trap: zero damage"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-05-29
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_FIELD_NO_DAMAGE,$process,29 51 2C 48 8B D9) // should be unique
+alloc(newmem,$1000,INJECT_FIELD_NO_DAMAGE)
+
+label(code)
+label(return)
+
+newmem:
+  cmp edx, 0
+  jbe code
+  xor edx, edx
+
+code:
+  sub [rcx+2C],edx
+  mov rbx,rcx
+  jmp return
+
+INJECT_FIELD_NO_DAMAGE:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_FIELD_NO_DAMAGE)
+
+[DISABLE]
+
+INJECT_FIELD_NO_DAMAGE:
+  db 29 51 2C 48 8B D9
+
+unregistersymbol(INJECT_FIELD_NO_DAMAGE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+10AB316
+
+DQIandIIHD2DRemake.exe+10AB308: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB309: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB30A: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB30B: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB30C: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB30D: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB30E: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB30F: CC                    - int 3
+DQIandIIHD2DRemake.exe+10AB310: 40 53                 - push rbx
+DQIandIIHD2DRemake.exe+10AB312: 48 83 EC 20           - sub rsp,20
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+10AB316: 29 51 2C              - sub [rcx+2C],edx
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+10AB319: 48 8B D9              - mov rbx,rcx
+DQIandIIHD2DRemake.exe+10AB31C: 83 79 2C 00           - cmp dword ptr [rcx+2C],00
+DQIandIIHD2DRemake.exe+10AB320: 7F 11                 - jg DQIandIIHD2DRemake.exe+10AB333
+DQIandIIHD2DRemake.exe+10AB322: BA 01 00 00 00        - mov edx,00000001
+DQIandIIHD2DRemake.exe+10AB327: E8 D4 78 FE FF        - call DQIandIIHD2DRemake.exe+1092C00
+DQIandIIHD2DRemake.exe+10AB32C: C7 43 2C 00 00 00 00  - mov [rbx+2C],00000000
+DQIandIIHD2DRemake.exe+10AB333: 48 83 C4 20           - add rsp,20
+DQIandIIHD2DRemake.exe+10AB337: 5B                    - pop rbx
+DQIandIIHD2DRemake.exe+10AB338: C3                    - ret
+DQIandIIHD2DRemake.exe+10AB339: CC                    - int 3
+}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>38</ID>
+      <Description>"Longer holy protection / holy water duration"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_LONGER_HOLY_WATER_TIME,$process,F3 0F 5C F0 F3 0F 5F F7 E8 5D) // should be unique
+alloc(newmem,$1000,INJECT_LONGER_HOLY_WATER_TIME)
+
+label(code)
+label(return i_base_purbuf_addr vf_t_multi)
+
+newmem:
+  mov [i_base_purbuf_addr], rcx
+  mulss xmm0, dword ptr [vf_t_multi]
+
+code:
+  subss xmm6,xmm0
+  maxss xmm6,xmm7
+  jmp return
+align 10 cc
+  i_base_purbuf_addr:
+  dq 0
+  vf_t_multi:
+  dd (float)0.2
+
+INJECT_LONGER_HOLY_WATER_TIME:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_LONGER_HOLY_WATER_TIME i_base_purbuf_addr vf_t_multi)
+
+[DISABLE]
+
+INJECT_LONGER_HOLY_WATER_TIME:
+  db F3 0F 5C F0 F3 0F 5F F7
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+F010D6
+
+DQIandIIHD2DRemake.exe+F010AB: 48 8B 08                 - mov rcx,[rax]
+DQIandIIHD2DRemake.exe+F010AE: 85 DB                    - test ebx,ebx
+DQIandIIHD2DRemake.exe+F010B0: 75 0A                    - jne DQIandIIHD2DRemake.exe+F010BC
+DQIandIIHD2DRemake.exe+F010B2: F3 0F 10 B1 AC 00 00 00  - movss xmm6,[rcx+000000AC]
+DQIandIIHD2DRemake.exe+F010BA: EB 08                    - jmp DQIandIIHD2DRemake.exe+F010C4
+DQIandIIHD2DRemake.exe+F010BC: F3 0F 10 B1 A8 00 00 00  - movss xmm6,[rcx+000000A8]
+DQIandIIHD2DRemake.exe+F010C4: 0F 2F F7                 - comiss xmm6,xmm7
+DQIandIIHD2DRemake.exe+F010C7: 0F 86 F4 00 00 00        - jbe DQIandIIHD2DRemake.exe+F011C1
+DQIandIIHD2DRemake.exe+F010CD: 41 0F 28 C5              - movaps xmm0,xmm13
+DQIandIIHD2DRemake.exe+F010D1: F3 41 0F 59 C4           - mulss xmm0,xmm12
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+F010D6: F3 0F 5C F0              - subss xmm6,xmm0
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+F010DA: F3 0F 5F F7              - maxss xmm6,xmm7
+DQIandIIHD2DRemake.exe+F010DE: E8 5D 2C 17 00           - call DQIandIIHD2DRemake.exe+1073D40
+DQIandIIHD2DRemake.exe+F010E3: 48 8B 08                 - mov rcx,[rax]
+DQIandIIHD2DRemake.exe+F010E6: 85 DB                    - test ebx,ebx
+DQIandIIHD2DRemake.exe+F010E8: 75 0A                    - jne DQIandIIHD2DRemake.exe+F010F4
+DQIandIIHD2DRemake.exe+F010EA: F3 0F 11 B1 AC 00 00 00  - movss [rcx+000000AC],xmm6
+DQIandIIHD2DRemake.exe+F010F2: EB 08                    - jmp DQIandIIHD2DRemake.exe+F010FC
+DQIandIIHD2DRemake.exe+F010F4: F3 0F 11 B1 A8 00 00 00  - movss [rcx+000000A8],xmm6
+DQIandIIHD2DRemake.exe+F010FC: 0F 2F F7                 - comiss xmm6,xmm7
+DQIandIIHD2DRemake.exe+F010FF: 77 73                    - ja DQIandIIHD2DRemake.exe+F01174
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>39</ID>
+          <Description>"ratio"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_t_multi</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"#"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_purbuf_addr</Address>
+          <Offsets>
+            <Offset>AC</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"Char viewer"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-10-31
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CHAR_VIEWER,$process,8B 78 7C F3 0F 58 F6 F3 0F 5C 35) // should be unique
+alloc(newmem,$1000,INJECT_CHAR_VIEWER)
+
+label(code)
+label(return i_base_char_viewer_addr)
+
+newmem:
+  mov [i_base_char_viewer_addr], rax
+
+code:
+  mov edi,[rax+7C]
+  addss xmm6,xmm6
+  jmp return
+align 10 cc
+  i_base_char_viewer_addr:
+  dq 0
+
+INJECT_CHAR_VIEWER:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_CHAR_VIEWER i_base_char_viewer_addr)
+
+[DISABLE]
+
+INJECT_CHAR_VIEWER:
+  db 8B 78 7C F3 0F 58 F6
+
+unregistersymbol(INJECT_CHAR_VIEWER i_base_char_viewer_addr)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: INJECT_CHAR_VIEWER
+
+DQIandIIHD2DRemake.exe+10A137F: 5F                       - pop rdi
+DQIandIIHD2DRemake.exe+10A1380: C3                       - ret
+DQIandIIHD2DRemake.exe+10A1381: 0F 29 74 24 20           - movaps [rsp+20],xmm6
+DQIandIIHD2DRemake.exe+10A1386: 48 89 7C 24 58           - mov [rsp+58],rdi
+DQIandIIHD2DRemake.exe+10A138B: E8 A0 0C 00 00           - call DQIandIIHD2DRemake.exe+10A2030
+DQIandIIHD2DRemake.exe+10A1390: 48 8B CF                 - mov rcx,rdi
+DQIandIIHD2DRemake.exe+10A1393: F2 0F 10 70 50           - movsd xmm6,[rax+50]
+DQIandIIHD2DRemake.exe+10A1398: 66 0F 5A F6              - cvtpd2ps xmm6,xmm6
+DQIandIIHD2DRemake.exe+10A139C: E8 8F 0C 00 00           - call DQIandIIHD2DRemake.exe+10A2030
+DQIandIIHD2DRemake.exe+10A13A1: 48 8D 4C 24 58           - lea rcx,[rsp+58]
+// ---------- INJECTING HERE ----------
+INJECT_CHAR_VIEWER: 8B 78 7C                 - mov edi,[rax+7C]
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+10A13A9: F3 0F 58 F6              - addss xmm6,xmm6
+DQIandIIHD2DRemake.exe+10A13AD: F3 0F 5C 35 83 D6 E1 02  - subss xmm6,[DQIandIIHD2DRemake.exe+3EBEA38]
+DQIandIIHD2DRemake.exe+10A13B5: F3 0F 2D DE              - cvtss2si ebx,xmm6
+DQIandIIHD2DRemake.exe+10A13B9: D1 FB                    - sar ebx,1
+DQIandIIHD2DRemake.exe+10A13BB: E8 E0 C5 FE FF           - call DQIandIIHD2DRemake.exe+108D9A0
+DQIandIIHD2DRemake.exe+10A13C0: 0F 28 74 24 20           - movaps xmm6,[rsp+20]
+DQIandIIHD2DRemake.exe+10A13C5: 8D 14 1F                 - lea edx,[rdi+rbx]
+DQIandIIHD2DRemake.exe+10A13C8: 03 D0                    - add edx,eax
+DQIandIIHD2DRemake.exe+10A13CA: 40 84 F6                 - test sil,sil
+DQIandIIHD2DRemake.exe+10A13CD: 74 30                    - je DQIandIIHD2DRemake.exe+10A13FF
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>17</ID>
+          <Description>"Lv"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>1C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"EXP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>20</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>19</ID>
+          <Description>"Max HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>28</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>2C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>21</ID>
+          <Description>"Max MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>30</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>22</ID>
+          <Description>"MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>23</ID>
+          <Description>"Base STR"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>38</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>24</ID>
+          <Description>"Base DUR"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>40</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>25</ID>
+          <Description>"Base SPD"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>48</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"Base STA"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>50</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"Base INT"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>58</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"Base LCK"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>60</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"Seed: STR"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>70</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>30</ID>
+          <Description>"Seed: DUR"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>74</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>31</ID>
+          <Description>"Seed: SPD"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>78</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>32</ID>
+          <Description>"Seed: STA"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>7C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>33</ID>
+          <Description>"Seed: INT"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>80</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>34</ID>
+          <Description>"Seed: LCK"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>84</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>41</ID>
+      <Description>"DRAGON QUEST I &amp; II HD-2D Remake  /  https://openchetatables.com"</Description>
+      <Color>009300</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- AOBScanModuleN関数
+if not AOBScanModuleN then
+    function AOBScanModuleN(moduleName, signature, maxResults, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addrs = {}
+        synchronize(function()
+            local count = results.getCount()
+            for i = 0, math.min(maxResults - 1, count - 1) do
+                table.insert(addrs, results[i])
+                if debugMode then
+                    print(string.format("🔦 AOB[%d] found at: 0x%s", i + 1, results[i]))
+                end
+            end
+        end)
+
+        if #addrs == 0 and debugMode then
+            print("💔 AOB not found in " .. moduleName)
+        end
+
+        results.destroy()
+        ms.destroy()
+
+        return addrs
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModuleN')
+
+
+-- 搜尋並取出最多5筆結果
+--[[
+local list = AOBScanModuleN("GameModule.exe", "12 34 56 ?? 78", 5)
+
+if list then
+    for i, addr in ipairs(list) do
+        print(string.format("地址 %d: 0x%s", i, addr))
+    end
+end
+]]--
+
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
+</CheatTable>
