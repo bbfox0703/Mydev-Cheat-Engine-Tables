@@ -124,7 +124,12 @@ zh-TW: 超時空之鑰
 ## Dorfromantik   
 [Dorfromantik (Steam)](https://store.steampowered.com/app/1455840/Dorfromantik/)  
   
-## DYNASTY WARRIORS ORIGINS  
+  
+## DRAGON QUEST I & II HD-2D Remake  
+[DRAGON QUEST I & II HD-2D Remake (Steam)](https://store.steampowered.com/app/2893570/I__II_HD2D_Remake/)  
+ja-JP: ドラゴンクエストI＆II
+
+## DRAGON QUEST III HD-2D Remake  
 [DRAGON QUEST III HD-2D Remake (Steam)](https://store.steampowered.com/app/2701660/DRAGON_QUEST_III_HD2D_Remake/)  
 ja-JP: ドラゴンクエストIII　そして伝説へ…
     
@@ -324,6 +329,10 @@ ja-JP: ロマンシング サガ3
 ## SaGa Frontier Remastered  
 [SaGa Frontier Remastered (Steam)](https://store.steampowered.com/app/1295270/SaGa_Frontier_Remastered/)  
 ja-JP: サガ フロンティア リマスター  
+
+## SaGa Frontier 2 Remastered  
+[SaGa Frontier 2 Remastered (Steam)](https://store.steampowered.com/app/2452080/SaGa_Frontier_2_Remastered//)  
+ja-JP: サガ フロンティア２ リマスター  
 
 ## SD GUNDAM BATTLE ALLIANCE
 [SD GUNDAM BATTLE ALLIANCE (Steam)](https://store.steampowered.com/app/824550/SD_GUNDAM_BATTLE_ALLIANCE/)  
