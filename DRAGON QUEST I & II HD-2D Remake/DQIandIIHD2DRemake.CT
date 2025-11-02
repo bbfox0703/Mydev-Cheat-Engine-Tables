@@ -70,7 +70,6 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 
-
 -- attach process
 local processName = "DQIandIIHD2DRemake.exe"
 local pid = getProcessIDFromProcessName(processName)
@@ -93,11 +92,12 @@ local enableBattleScripts = {
   2, -- "Get gold"
   8, -- "Browse and set item amount"
   12, -- "Battle: inf MP"
+  16, -- "Char viewer"
   35, -- "Field: browse usable spell and restore MP"
   36, -- "Field: MP no decrease after casting"
   37, -- "Field trap: zero damage"
   38, -- "Longer holy protection / holy water duration"
-  16, -- "Char viewer"
+  47, -- "Longer stealth duration"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -120,6 +120,7 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  47, -- "Longer stealth duration"
   38, -- "Longer holy protection / holy water duration"
   37, -- "Field trap: zero damage"
   36, -- "Field: MP no decrease after casting"
@@ -149,11 +150,13 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 8, Description: "Browse and set item amount", Depth: 0
 -- ID: 12, Description: "Battle: inf MP", Depth: 0
 -- ID: 13, Description: "Battle: HP options", Depth: 0
--- ID: 16, Description: "Char viewer", Depth: 0
 -- ID: 35, Description: "Field: browse usable spell and restore MP", Depth: 0
 -- ID: 36, Description: "Field: MP no decrease after casting", Depth: 0
 -- ID: 37, Description: "Field trap: zero damage", Depth: 0
 -- ID: 38, Description: "Longer holy protection / holy water duration", Depth: 0
+--   ID: 47, Description: "Longer stealth duration", Depth: 1
+-- ID: 16, Description: "Char viewer", Depth: 0
+
 
 
 </AssemblerScript>
@@ -519,7 +522,7 @@ code:
   jmp return
 align 10 cc
   vf_min_hp_pct:
-  dd (float)0.333333
+  dd (float)0.49
   i_enemy_hp_option:
   dd 0
 
@@ -800,7 +803,7 @@ DQIandIIHD2DRemake.exe+10AB339: CC                    - int 3
     <CheatEntry>
       <ID>38</ID>
       <Description>"Longer holy protection / holy water duration"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
   Version: 
@@ -874,6 +877,75 @@ DQIandIIHD2DRemake.exe+F010FF: 77 73                    - ja DQIandIIHD2DRemake.
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>47</ID>
+          <Description>"Longer stealth duration"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-11-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_LONGER_STEALTH_TIME,$process,F3 0F 10 B1 C4 00 00 00 F3) // should be unique
+alloc(newmem,$1000,INJECT_LONGER_STEALTH_TIME)
+
+label(code)
+label(return)
+
+newmem:
+  mov [i_base_purbuf_addr], rcx
+  mulss xmm0, dword ptr [vf_t_multi]
+
+code:
+  movss xmm6,[rcx+000000C4]
+  jmp return
+
+INJECT_LONGER_STEALTH_TIME:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_LONGER_STEALTH_TIME)
+
+[DISABLE]
+
+INJECT_LONGER_STEALTH_TIME:
+  db F3 0F 10 B1 C4 00 00 00
+
+unregistersymbol(INJECT_LONGER_STEALTH_TIME)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+F00EAF
+
+DQIandIIHD2DRemake.exe+F00E7E: 4C 89 A4 24 90 01 00 00  - mov [rsp+00000190],r12
+DQIandIIHD2DRemake.exe+F00E86: 45 32 E4                 - xor r12b,r12b
+DQIandIIHD2DRemake.exe+F00E89: E8 B2 2E 17 00           - call DQIandIIHD2DRemake.exe+1073D40
+DQIandIIHD2DRemake.exe+F00E8E: 48 8B 08                 - mov rcx,[rax]
+DQIandIIHD2DRemake.exe+F00E91: 0F 2F B9 C4 00 00 00     - comiss xmm7,[rcx+000000C4]
+DQIandIIHD2DRemake.exe+F00E98: 0F 83 A8 00 00 00        - jae DQIandIIHD2DRemake.exe+F00F46
+DQIandIIHD2DRemake.exe+F00E9E: E8 9D 2E 17 00           - call DQIandIIHD2DRemake.exe+1073D40
+DQIandIIHD2DRemake.exe+F00EA3: 41 0F 28 C5              - movaps xmm0,xmm13
+DQIandIIHD2DRemake.exe+F00EA7: F3 41 0F 59 C4           - mulss xmm0,xmm12
+DQIandIIHD2DRemake.exe+F00EAC: 48 8B 08                 - mov rcx,[rax]
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+F00EAF: F3 0F 10 B1 C4 00 00 00  - movss xmm6,[rcx+000000C4]
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+F00EB7: F3 0F 5C F0              - subss xmm6,xmm0
+DQIandIIHD2DRemake.exe+F00EBB: F3 0F 5F F7              - maxss xmm6,xmm7
+DQIandIIHD2DRemake.exe+F00EBF: E8 7C 2E 17 00           - call DQIandIIHD2DRemake.exe+1073D40
+DQIandIIHD2DRemake.exe+F00EC4: 0F 2F F7                 - comiss xmm6,xmm7
+DQIandIIHD2DRemake.exe+F00EC7: 48 8B 08                 - mov rcx,[rax]
+DQIandIIHD2DRemake.exe+F00ECA: F3 0F 11 B1 C4 00 00 00  - movss [rcx+000000C4],xmm6
+DQIandIIHD2DRemake.exe+F00ED2: 77 61                    - ja DQIandIIHD2DRemake.exe+F00F35
+DQIandIIHD2DRemake.exe+F00ED4: C7 44 24 38 FF FF FF FF  - mov [rsp+38],FFFFFFFF
+DQIandIIHD2DRemake.exe+F00EDC: 66 44 89 6C 24 3C        - mov [rsp+3C],r13w
+DQIandIIHD2DRemake.exe+F00EE2: 4C 89 6C 24 40           - mov [rsp+40],r13
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>39</ID>
           <Description>"ratio"</Description>
           <ShowAsSigned>0</ShowAsSigned>
@@ -882,14 +954,36 @@ DQIandIIHD2DRemake.exe+F010FF: 77 73                    - ja DQIandIIHD2DRemake.
           <Address>vf_t_multi</Address>
         </CheatEntry>
         <CheatEntry>
+          <ID>43</ID>
+          <Description>"Holy protection"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_purbuf_addr</Address>
+          <Offsets>
+            <Offset>A8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
           <ID>40</ID>
-          <Description>"#"</Description>
+          <Description>"Holy water"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>Float</VariableType>
           <Address>i_base_purbuf_addr</Address>
           <Offsets>
             <Offset>AC</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>46</ID>
+          <Description>"Stealth"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Float</VariableType>
+          <Address>i_base_purbuf_addr</Address>
+          <Offsets>
+            <Offset>C4</Offset>
           </Offsets>
         </CheatEntry>
       </CheatEntries>
@@ -1101,6 +1195,28 @@ DQIandIIHD2DRemake.exe+10A13CD: 74 30                    - je DQIandIIHD2DRemake
         </CheatEntry>
         <CheatEntry>
           <ID>29</ID>
+          <Description>"Seed: HP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>68</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>45</ID>
+          <Description>"Seed: MP"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_char_viewer_addr</Address>
+          <Offsets>
+            <Offset>6C</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>44</ID>
           <Description>"Seed: STR"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
