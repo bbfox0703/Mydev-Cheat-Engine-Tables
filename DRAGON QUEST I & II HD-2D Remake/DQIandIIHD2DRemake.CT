@@ -2,12 +2,6 @@
 <CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
-      <ID>0</ID>
-      <Description>"**** tested in DQ I only ****"</Description>
-      <Color>8000FF</Color>
-      <GroupHeader>1</GroupHeader>
-    </CheatEntry>
-    <CheatEntry>
       <ID>1</ID>
       <Description>"Toggle Compact View"</Description>
       <VariableType>Auto Assembler Script</VariableType>
@@ -87,6 +81,7 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 
+
 local enableBattleScripts = {
   1, -- "Toggle Compact View"
   2, -- "Get gold"
@@ -121,6 +116,7 @@ end)
 
 local disableBattleScripts = {
   47, -- "Longer stealth duration"
+  51, -- "[DQ2] Get some stats (achievement related?)"
   38, -- "Longer holy protection / holy water duration"
   37, -- "Field trap: zero damage"
   36, -- "Field: MP no decrease after casting"
@@ -147,6 +143,7 @@ synchronize(function() getLuaEngine().Close() end)
 -- Comments:
 -- ID: 1, Description: "Toggle Compact View", Depth: 0
 -- ID: 2, Description: "Get gold", Depth: 0
+-- ID: 51, Description: "[DQ2] Get some stats (achievement related?)", Depth: 0
 -- ID: 8, Description: "Browse and set item amount", Depth: 0
 -- ID: 12, Description: "Battle: inf MP", Depth: 0
 -- ID: 13, Description: "Battle: HP options", Depth: 0
@@ -247,7 +244,7 @@ DQIandIIHD2DRemake.exe+12D3865: 48 83 C4 20           - add rsp,20
         </CheatEntry>
         <CheatEntry>
           <ID>4</ID>
-          <Description>"Total gold earned?"</Description>
+          <Description>"Total gold earned"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
@@ -265,6 +262,28 @@ DQIandIIHD2DRemake.exe+12D3865: 48 83 C4 20           - add rsp,20
           <Address>i_base_money_addr</Address>
           <Offsets>
             <Offset>34</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>48</ID>
+          <Description>"Mini medal earned"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>38</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>49</ID>
+          <Description>"??"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_money_addr</Address>
+          <Offsets>
+            <Offset>44</Offset>
           </Offsets>
         </CheatEntry>
         <CheatEntry>
@@ -489,13 +508,19 @@ alloc(newmem,$1000,INJECT_BATTLE_HP)
 
 label(code)
 label(return)
-label(vf_min_hp_pct i_enemy_hp_option)
+label(vf_min_hp_pct i_enemy_hp_option is_check_dq2_flag)
 newmem:
   cmp dword ptr [rcx+00000190], 0
   je to_enemy
   cmp dword ptr [rcx+000001E0], 0
   jne to_enemy
 
+  cmp dword ptr [is_check_dq2_flag], 1
+  jne @F
+  cmp dword ptr [rcx+000001CC], 0
+  jne to_enemy
+
+@@:
   push rdx
   mov edx, [rcx+000001A0]
   vcvtsi2ss xmm15, xmm15, edx
@@ -525,13 +550,15 @@ align 10 cc
   dd (float)0.49
   i_enemy_hp_option:
   dd 0
+  is_check_dq2_flag:
+  dd 0
 
 INJECT_BATTLE_HP:
   jmp newmem
   nop
 return:
 registersymbol(INJECT_BATTLE_HP)
-registersymbol(vf_min_hp_pct i_enemy_hp_option)
+registersymbol(vf_min_hp_pct i_enemy_hp_option is_check_dq2_flag)
 [DISABLE]
 
 INJECT_BATTLE_HP:
@@ -569,6 +596,17 @@ DQIandIIHD2DRemake.exe+F3C6A9: CC                             - int 3
 }
 </AssemblerScript>
       <CheatEntries>
+        <CheatEntry>
+          <ID>57</ID>
+          <Description>"extra checks for DQ2?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_check_dq2_flag</Address>
+        </CheatEntry>
         <CheatEntry>
           <ID>14</ID>
           <Description>"min. HP ratio"</Description>
@@ -1282,6 +1320,229 @@ DQIandIIHD2DRemake.exe+10A13CD: 74 30                    - je DQIandIIHD2DRemake
           </Offsets>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>51</ID>
+      <Description>"[DQ2] Get some stats (achievement related?)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-11-02
+  Author : bbfox@https://openchetatables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_BATT_STATS,$process,8B 40 04 C3 CC CC CC CC 40) // should be unique
+alloc(newmem,$1000,INJECT_GET_BATT_STATS)
+
+label(code)
+label(return i_base_bstat_addr)
+
+newmem:
+  cmp [i_base_bstat_addr], rax
+  je code
+  cmp [i_base_bstat_addr2], rax
+  je code
+  cmp [i_base_bstat_addr3], rax
+  je code
+  cmp [i_base_bstat_addr4], rax
+  je code
+
+  cmp [i_base_bstat_addr], 0
+  je w1
+  cmp [i_base_bstat_addr2], 0
+  je w2
+  cmp [i_base_bstat_addr3], 0
+  je w3
+  cmp [i_base_bstat_addr4], 0
+  je w4
+  jmp code
+
+w1:
+  mov [i_base_bstat_addr], rax
+  jmp code
+w2:
+  mov [i_base_bstat_addr2], rax
+  jmp code
+w3:
+  mov [i_base_bstat_addr3], rax
+  jmp code
+w4:
+  mov [i_base_bstat_addr4], rax
+
+code:
+  mov eax,[rax+04]
+  ret 
+  int 3 
+  jmp return
+align 10 cc
+  i_base_bstat_addr:
+  dq 0
+  i_base_bstat_addr2:
+  dq 0
+  i_base_bstat_addr3:
+  dq 0
+  i_base_bstat_addr4:
+  dq 0
+
+
+INJECT_GET_BATT_STATS:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_BATT_STATS i_base_bstat_addr)
+
+[DISABLE]
+
+INJECT_GET_BATT_STATS:
+  db 8B 40 04 C3 CC
+
+unregistersymbol(*)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+1073FC8
+
+DQIandIIHD2DRemake.exe+1073FA9: 0F 1F 80 00 00 00 00  - nop dword ptr [rax+00000000]
+DQIandIIHD2DRemake.exe+1073FB0: 48 98                 - cdqe 
+DQIandIIHD2DRemake.exe+1073FB2: 48 C1 E0 04           - shl rax,04
+DQIandIIHD2DRemake.exe+1073FB6: 49 03 C0              - add rax,r8
+DQIandIIHD2DRemake.exe+1073FB9: 44 38 18              - cmp [rax],r11b
+DQIandIIHD2DRemake.exe+1073FBC: 74 0A                 - je DQIandIIHD2DRemake.exe+1073FC8
+DQIandIIHD2DRemake.exe+1073FBE: 8B 40 08              - mov eax,[rax+08]
+DQIandIIHD2DRemake.exe+1073FC1: 83 F8 FF              - cmp eax,-01
+DQIandIIHD2DRemake.exe+1073FC4: 75 EA                 - jne DQIandIIHD2DRemake.exe+1073FB0
+DQIandIIHD2DRemake.exe+1073FC6: 33 C0                 - xor eax,eax
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+1073FC8: 8B 40 04              - mov eax,[rax+04]
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+1073FCB: C3                    - ret 
+DQIandIIHD2DRemake.exe+1073FCC: CC                    - int 3 
+DQIandIIHD2DRemake.exe+1073FCD: CC                    - int 3 
+DQIandIIHD2DRemake.exe+1073FCE: CC                    - int 3 
+DQIandIIHD2DRemake.exe+1073FCF: CC                    - int 3 
+DQIandIIHD2DRemake.exe+1073FD0: 40 53                 - push rbx
+DQIandIIHD2DRemake.exe+1073FD2: 55                    - push rbp
+DQIandIIHD2DRemake.exe+1073FD3: 48 83 EC 38           - sub rsp,38
+DQIandIIHD2DRemake.exe+1073FD7: 8B 41 0C              - mov eax,[rcx+0C]
+DQIandIIHD2DRemake.exe+1073FDA: 33 ED                 - xor ebp,ebp
+}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>54</ID>
+          <Description>"open Battle records menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>60</ID>
+          <Description>"Enable before enter menu"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>52</ID>
+          <Description>"#1 (# of kills?)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_bstat_addr</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>53</ID>
+          <Description>"#2 (# items found?)"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_bstat_addr+8</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>55</ID>
+          <Description>"#3 unknown"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_bstat_addr+10</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>56</ID>
+          <Description>"#4 unknown"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_bstat_addr+18</Address>
+          <Offsets>
+            <Offset>4</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>59</ID>
+      <Description>"[DQ2] inf. spin the lottery drum"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{ Game   : DQIandIIHD2DRemake.exe
+  Version: 
+  Date   : 2025-11-02
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_LOTTERY_TICKETS,$process,FF C8 89 01 48 8B 45 28) // should be unique
+
+INJECT_INF_LOTTERY_TICKETS:
+  db 90 90
+
+registersymbol(INJECT_INF_LOTTERY_TICKETS)
+
+[DISABLE]
+
+INJECT_INF_LOTTERY_TICKETS:
+  db FF C8
+
+unregistersymbol(INJECT_INF_LOTTERY_TICKETS)
+
+
+{
+// ORIGINAL CODE - INJECTION POINT: DQIandIIHD2DRemake.exe+10AC056
+
+DQIandIIHD2DRemake.exe+10AC03A: 48 8B 74 24 60     - mov rsi,[rsp+60]
+DQIandIIHD2DRemake.exe+10AC03F: 85 DB              - test ebx,ebx
+DQIandIIHD2DRemake.exe+10AC041: 78 3D              - js DQIandIIHD2DRemake.exe+10AC080
+DQIandIIHD2DRemake.exe+10AC043: 3B 5D 30           - cmp ebx,[rbp+30]
+DQIandIIHD2DRemake.exe+10AC046: 7D 38              - jnl DQIandIIHD2DRemake.exe+10AC080
+DQIandIIHD2DRemake.exe+10AC048: 48 8B 45 28        - mov rax,[rbp+28]
+DQIandIIHD2DRemake.exe+10AC04C: 4A 8B 0C F8        - mov rcx,[rax+r15*8]
+DQIandIIHD2DRemake.exe+10AC050: 8B 01              - mov eax,[rcx]
+DQIandIIHD2DRemake.exe+10AC052: 85 C0              - test eax,eax
+DQIandIIHD2DRemake.exe+10AC054: 7E 2A              - jle DQIandIIHD2DRemake.exe+10AC080
+// ---------- INJECTING HERE ----------
+DQIandIIHD2DRemake.exe+10AC056: FF C8              - dec eax
+// ---------- DONE INJECTING  ----------
+DQIandIIHD2DRemake.exe+10AC058: 89 01              - mov [rcx],eax
+DQIandIIHD2DRemake.exe+10AC05A: 48 8B 45 28        - mov rax,[rbp+28]
+DQIandIIHD2DRemake.exe+10AC05E: 4E 8B 04 F8        - mov r8,[rax+r15*8]
+DQIandIIHD2DRemake.exe+10AC062: 41 83 38 00        - cmp dword ptr [r8],00
+DQIandIIHD2DRemake.exe+10AC066: 7F 14              - jg DQIandIIHD2DRemake.exe+10AC07C
+DQIandIIHD2DRemake.exe+10AC068: 41 B1 01           - mov r9b,01
+DQIandIIHD2DRemake.exe+10AC06B: 48 8D 4D 28        - lea rcx,[rbp+28]
+DQIandIIHD2DRemake.exe+10AC06F: 41 B8 01 00 00 00  - mov r8d,00000001
+DQIandIIHD2DRemake.exe+10AC075: 8B D3              - mov edx,ebx
+DQIandIIHD2DRemake.exe+10AC077: E8 34 E1 B9 FF     - call DQIandIIHD2DRemake.exe+C4A1B0
+}
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>41</ID>
