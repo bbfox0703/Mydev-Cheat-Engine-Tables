@@ -1621,38 +1621,6 @@ label(vf_raider_moving_speed_multi is_simple_mode)
 
 newmem:
 
-  // v0.8.1a
-  // Raider:
-  // Float: 44: _movementSpeedBase = 3 (Villager = 4.199999809)
-  // Pointer: E0: _raiderGroup &lt;&gt; 0 (Villiger = 0 (E0 equals to onDeath)
-  // Byte: 70:94 &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
-  // Float: 70: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998
-  // Pointer: 70:80 &lt;immuneSystem&gt;k__BackingField = 0
-
-  // v0.9.1
-  // Raider:
-  // Float: 4C: _movementSpeedBase = 3 (Villager = 4.199999809)
-  // Pointer: F0: _raiderGroup &lt;&gt; 0 (Villiger = 0 (E0 equals to onDeath)
-  // Byte: 78:B4 &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
-  // Float: 78:26C: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998
-  // Pointer: E8 &lt;immuneSystem&gt;k__BackingField = 0
-
-  // v0.9.2
-  // Raider:
-  // Float: 58: _movementSpeedBase = 3 (Villager = 4.199999809 / Immigrant = 4.125)
-  // ???Pointer: F0: _raiderGroup &lt;&gt; 0 (Villiger = 0 (E0 equals to onDeath)
-  // Byte: 88:BC &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
-  // Float: 88:2A4: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998 (villager = 3.349962711)
-  // Pointer: E8 &lt;immuneSystem&gt;k__BackingField = 0
-
-  // v0.9.4~ 0.9.6
-  // Raider:
-  // Float: 58: _movementSpeedBase = ? (Villager = 3.099999905 / Immigrant = ?)
-  // ???Pointer: F0: _raiderGroup &lt;&gt; 0 (Villiger = 0 (E0 equals to onDeath)
-  // Byte: 90:CC &lt;combatComp&gt;k__BackingField:canBeWounded = 0 (villager = 1)
-  // Float: 90:2BC: &lt;retreatTimeTillIgnore&gt;k__BackingField = 7.599225998 (villager = 6.262869358)
-  // Pointer: 100 &lt;immuneSystem&gt;k__BackingField = 0
-
   // v1.0.0
   // Raider:
   // Float: 58: _movementSpeedBase = ? (Villager = 3.099999905 / Immigrant = ?)
@@ -1661,39 +1629,38 @@ newmem:
   // Float: 90:2D4: &lt;retreatTimeTillIgnore&gt;k__BackingField = ?? (villager = 6.777995118)
   // Pointer: 110 &lt;immuneSystem&gt;k__BackingField = 0
 
+  //pushfq
+
   cmp dword ptr [is_simple_mode], 1
   jne not_simple_mode
 
-  mov dword ptr [is_this_object_rider], 0
-  jmp simple_mode_start
-
 not_simple_mode:
-  mov dword ptr [is_this_object_rider], 0
-
   cmp dword ptr [is_set_life], 1
   jne check_armor
 
+  // test #1
+  cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
+                             // Raider: _wantsToMeetAtFormation (0/1)
+  jb endp1
+
+  // test #2
   push r15
   mov r15, [rbx+90] //&lt;combatComp&gt;k__BackingField
   test r15, r15
   jz endp1
-
-  mov dword ptr [is_this_object_rider], 1
-  cmp dword ptr [rbx+58], (float)4.125 //_movementSpeedBase
-  je chk_v1 //Immigrant
 
   cmp byte ptr [r15+D4], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp1
 
 chk_v1:
   // Villager
-  mov dword ptr [is_this_object_rider], 0
+
 
   //vmovss xmm15, [r15+68] //&lt;baseMaxLife&gt;k__BackingField
   //vmovss xmm14, [r15+58] //_life
   //vucomiss xmm14, xmm15
   //jae endp1
-  mov dword ptr [r15+58], (float)500
+  mov dword ptr [r15+58], (float)5000
 
 endp1:
   pop r15
@@ -1703,24 +1670,22 @@ check_armor:
   cmp dword ptr [is_set_armor], 1
   jne check_rider
 
+  // test #1
+  cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
+                             // Raider: _wantsToMeetAtFormation (0/1)
+  jb check_rider
+
+  // test #2
   push r15
   mov r15, [rbx+90] //&lt;combatComp&gt;k__BackingField
-  test r15, r15
+  test r15, r15 // pointer is zero
   jz endp2
-
-  mov dword ptr [is_this_object_rider], 1
-
-  //cmp dword ptr [rbx+58], (float)4.125 //_movementSpeedBase
-  cmp dword ptr [rbx+58], (float)3.099999905 //_movementSpeedBase
-  je chk_v2 //Immigrant
 
   cmp byte ptr [r15+D4], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp2
 
   //Villager
 chk_v2:
-  mov dword ptr [is_this_object_rider], 0
-
   vmovss xmm15, [vf_min_armor_value]
   vmovss xmm14, [r15+98] //baseArmor
   vucomiss xmm14, xmm15
@@ -1733,24 +1698,23 @@ endp2:
 
 check_rider:
   cmp dword ptr [is_weaken_raider], 1
-  jne code
+  jne normal_mode_start
 
+  // test #1
+  cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;2?)
+                             // Raider: _wantsToMeetAtFormation (0/1)
+  jae endp3 // villager
+
+  // test #2
   push r15
   mov r15, [rbx+90] //&lt;combatComp&gt;k__BackingField
   test r15, r15
   jz endp3
 
-  mov dword ptr [is_this_object_rider], 0
-
-  cmp dword ptr [rbx+58], (float)3.099999905 //_movementSpeedBase
-  je endp3 // Immigrant
-
   cmp byte ptr [r15+D4], 0 //canBeWounded = 0 -&gt; assume Rider
   jne endp3
 
   // Rider
-  mov dword ptr [is_this_object_rider], 1
-
   mov dword ptr [r15+98], 0 // baseArmor
   mov dword ptr [r15+F0], 0 // _trainingLevel
 
@@ -1758,16 +1722,24 @@ endp3:
   pop r15
 
 
-code:
-simple_mode_start:
 normal_mode_start:
+simple_mode_start:
+  //popfq
+
+code:
   // orig code
   movss xmm6,[rbx+58] //_movementSpeedBase
   //
 
-  cmp dword ptr [is_this_object_rider], 1
-  je set_rider_moving_speed
+  cmp dword ptr [is_simple_mode], 1
+  je @F
 
+  // test #1
+  cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
+                             // Raider: _wantsToMeetAtFormation (0/1)
+  jb set_rider_moving_speed
+
+@@:
   vmovss xmm14, [vf_moving_speed_multi]
   vmulss xmm6, xmm6, xmm14
 
@@ -1782,8 +1754,8 @@ set_rider_moving_speed:
   //vmovss xmm15, [vf_shoe_bonus_base]
   vxorps xmm15, xmm15, xmm15
   vmovss [rbx+60], xmm15 //_shoeBonusBase
-
   jmp return
+
 align 10 cc
   vf_moving_speed_multi:
   dd (float)1.1
@@ -1801,12 +1773,10 @@ align 10 cc
   dd (float)100
   is_weaken_raider:
   dd 0
-  is_this_object_rider:
-  dd 0
   vf_Immigrant_move_speed:
   dd (float)4.125
   is_simple_mode:
-  dd 1
+  dd 0
 
 INJECT_SET_VILLAGER_DATA:
   jmp newmem
@@ -1877,6 +1847,12 @@ GameAssembly.dll+F594C9: C6 05 60 95 D6 02 01  - mov byte ptr [GameAssembly.dll+
                 <CheatEntry>
                   <ID>78</ID>
                   <Description>"Shoe bonus / moving speed only"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>79</ID>
+                  <Description>"Apply to enemy if he wear shoes"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
@@ -2777,16 +2753,7 @@ GameAssembly.dll+8C1F9C: CC                    - int 3
       <GroupHeader>1</GroupHeader>
     </CheatEntry>
   </CheatEntries>
-  <UserdefinedSymbols>
-    <SymbolEntry>
-      <Name>AddItems2</Name>
-      <Address>7FFFD4DE1130</Address>
-    </SymbolEntry>
-    <SymbolEntry>
-      <Name>GetItemCount1</Name>
-      <Address>7FFFD4DE48B0</Address>
-    </SymbolEntry>
-  </UserdefinedSymbols>
+  <UserdefinedSymbols/>
   <LuaScript>--[[
 [ENABLE]
 {$lua}
