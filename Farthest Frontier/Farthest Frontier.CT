@@ -1629,18 +1629,21 @@ newmem:
   // Float: 90:2D4: &lt;retreatTimeTillIgnore&gt;k__BackingField = ?? (villager = 6.777995118)
   // Pointer: 110 &lt;immuneSystem&gt;k__BackingField = 0
 
+  //pushfq
+
   cmp dword ptr [is_simple_mode], 1
   jne not_simple_mode
 
-  mov dword ptr [is_this_object_rider], 0
-  jmp simple_mode_start
-
 not_simple_mode:
-  mov dword ptr [is_this_object_rider], 0
-
   cmp dword ptr [is_set_life], 1
   jne check_armor
 
+  // test #1
+  cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
+                             // Raider: _wantsToMeetAtFormation (0/1)
+  jb endp1
+
+  // test #2
   push r15
   mov r15, [rbx+90] //&lt;combatComp&gt;k__BackingField
   test r15, r15
@@ -1648,10 +1651,6 @@ not_simple_mode:
 
   cmp byte ptr [r15+D4], 1 //canBeWounded = 0 -&gt; assume Rider
   jne endp1
-
-  cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
-                             // Raider: _wantsToMeetAtFormation (0/1)
-  jb endp1
 
 chk_v1:
   // Villager
@@ -1671,10 +1670,12 @@ check_armor:
   cmp dword ptr [is_set_armor], 1
   jne check_rider
 
+  // test #1
   cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
                              // Raider: _wantsToMeetAtFormation (0/1)
   jb check_rider
 
+  // test #2
   push r15
   mov r15, [rbx+90] //&lt;combatComp&gt;k__BackingField
   test r15, r15 // pointer is zero
@@ -1697,12 +1698,14 @@ endp2:
 
 check_rider:
   cmp dword ptr [is_weaken_raider], 1
-  jne code
+  jne normal_mode_start
 
+  // test #1
   cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;2?)
                              // Raider: _wantsToMeetAtFormation (0/1)
   jae endp3 // villager
 
+  // test #2
   push r15
   mov r15, [rbx+90] //&lt;combatComp&gt;k__BackingField
   test r15, r15
@@ -1719,9 +1722,11 @@ endp3:
   pop r15
 
 
-code:
-simple_mode_start:
 normal_mode_start:
+simple_mode_start:
+  //popfq
+
+code:
   // orig code
   movss xmm6,[rbx+58] //_movementSpeedBase
   //
@@ -1729,6 +1734,7 @@ normal_mode_start:
   cmp dword ptr [is_simple_mode], 1
   je @F
 
+  // test #1
   cmp dword ptr [rbx+1F0], 2 // villager: &lt;monthsOfFoodToCarry&gt;k__BackingField (&gt;=2?)
                              // Raider: _wantsToMeetAtFormation (0/1)
   jb set_rider_moving_speed
@@ -1766,8 +1772,6 @@ align 10 cc
   vf_min_armor_value:
   dd (float)100
   is_weaken_raider:
-  dd 0
-  is_this_object_rider:
   dd 0
   vf_Immigrant_move_speed:
   dd (float)4.125
