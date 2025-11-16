@@ -74,6 +74,11 @@ ja-JP: ロロナのアトリエ ～アーランドの錬金術士～ DX
 ja-JP: ライザのアトリエ ～常闇の女王と秘密の隠れ家～  
 zh-TW: 萊莎的鍊金工房 ～常闇女王與秘密藏身處～  
 
+## Atelier Ryza Ever Darkness & the Secret Hideout DX
+[Atelier Ryza: Ever Darkness & the Secret Hideout DX (Steam)](https://store.steampowered.com/app/3365030/__DX/)  
+ja-JP: ライザのアトリエ ～常闇の女王と秘密の隠れ家～ DX  
+zh-TW: 萊莎的鍊金工房 ～常闇女王與秘密藏身處～ DX  
+
 ## Atelier Ryza 2
 [Atelier Ryza 2: Lost Legends & the Secret Fairy (Steam)](https://store.steampowered.com/app/1257290/_/)  
 ja-JP: ライザのアトリエ2 ～失われた伝承と秘密の妖精  
