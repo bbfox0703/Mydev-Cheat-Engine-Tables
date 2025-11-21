@@ -335,9 +335,20 @@ aobscanmodule(INJECT_BROWSE_ITEM_AND_SET_CNT,$process,41 8B 00 C3 CC) // should 
 alloc(newmem,$100,INJECT_BROWSE_ITEM_AND_SET_CNT)
 
 label(code)
-label(return i_set_item_cnt_to i_set_item_cnt_min)
+label(return i_set_item_cnt_to i_set_item_cnt_min i_min_items_addr)
 
 newmem:
+  cmp qword ptr [i_min_items_addr], 0
+  je write_addr
+  cmp qword ptr [i_min_items_addr], r8
+  ja  write_addr
+  jmp set_count
+
+write_addr:
+  mov [i_min_items_addr], r8
+
+
+set_count:
   mov eax, [i_set_item_cnt_min]
   cmp dword ptr [r8], eax
   jb code
@@ -352,6 +363,8 @@ code:
   int 3 
   jmp return
 align 10 cc
+  i_min_items_addr:
+  dq 0
   i_set_item_cnt_to:
   dd 32
   i_set_item_cnt_min:
@@ -360,14 +373,14 @@ align 10 cc
 INJECT_BROWSE_ITEM_AND_SET_CNT:
   jmp newmem
 return:
-registersymbol(INJECT_BROWSE_ITEM_AND_SET_CNT i_set_item_cnt_to i_set_item_cnt_min)
+registersymbol(INJECT_BROWSE_ITEM_AND_SET_CNT i_set_item_cnt_to i_set_item_cnt_min i_min_items_addr)
 
 [DISABLE]
 
 INJECT_BROWSE_ITEM_AND_SET_CNT:
   db 41 8B 00 C3 CC
 
-unregistersymbol(INJECT_BROWSE_ITEM_AND_SET_CNT i_set_item_cnt_to)
+unregistersymbol(INJECT_BROWSE_ITEM_AND_SET_CNT i_set_item_cnt_to i_min_items_addr)
 dealloc(newmem)
 
 {
