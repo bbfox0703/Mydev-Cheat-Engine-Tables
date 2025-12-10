@@ -291,9 +291,9 @@ synchronize(function() getLuaEngine().Close() end)
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
 {$asm}
-define(container_base ,"Atelier_Ryza_2_DX.exe"+1AC3EE0)
+define(container_base ,"Atelier_Ryza_2_DX.exe"+1AC3EE0) // xx
 
-define(basket_base ,"Atelier_Ryza_2_DX.exe"+1ABD7B0)
+define(basket_base ,"Atelier_Ryza_2_DX.exe"+1EF6770)  // v1.00
 
 registersymbol(container_base)
 registersymbol(basket_base)
@@ -307,7 +307,7 @@ if memrec then print(memrec.Description) end
 g_containerBaseAddress = getAddressSafe("Atelier_Ryza_2_DX.exe")+0x1AC3EE0 -- xx
 
 --basket address
-g_basketBaseAddress = getAddressSafe("Atelier_Ryza_2_DX.exe")+0x1ABD7B0 -- xx
+g_basketBaseAddress = getAddressSafe("Atelier_Ryza_2_DX.exe")+0x1EF6770 -- v1.00
 
 --container size
 g_containerSizeAddress = getAddressSafe("Atelier_Ryza_2_DX.exe")+0x1B6919C -- xx
@@ -607,6 +607,7 @@ alloc(newmem_start,$1000,INJECT_XYZ_COORDS)
 aobscanmodule(INJECT_XYZ_COORDS_END,$process,49 8B E3 41 5F 41 5E 5E 5B 5D C3 CC 4C) // should be unique
 alloc(newmem_end,$1000,INJECT_XYZ_COORDS_END)
 
+// 二個AOB共用的記憶體變數區塊
 alloc(shared_coords_data,64)
 
 label(x_coords)
@@ -651,7 +652,7 @@ newmem_start:
 
   push rax
 
-  // 備份原始係數
+  // 備份原始移動係數
   vmovss xmm15, [rbx+40]
   vmovss [backup_coef], xmm15
   vmovss xmm15, [rbx+44]
@@ -659,15 +660,15 @@ newmem_start:
   vmovss xmm15, [rbx+48]
   vmovss [backup_coef+8], xmm15
 
-  // 載入水平移動倍率
+  //
   vmovss xmm15, [speed_acc_factor]
 
-  // 加速 X 速度（水平）
+  // 加速 X 速度
   vmovss xmm14, [rbx+10]
   vmulss xmm14, xmm14, xmm15
   vmovss [rbx+10], xmm14
 
-  // 加速 Y 速度（水平）
+  // 加速 Y 速度
   vmovss xmm14, [rbx+18]
   vmulss xmm14, xmm14, xmm15
   vmovss [rbx+18], xmm14
@@ -678,7 +679,7 @@ newmem_start:
   vmulss xmm14, xmm14, xmm15
   vmovss [rbx+14], xmm14
 
-  // 放大位移係數
+  // 依 [speed_acc_factor] 來放大(調整)位移係數
   vmovss xmm15, [speed_acc_factor]
 
   vmovss xmm14, [rbx+40]  // X 係數（水平）
@@ -689,6 +690,7 @@ newmem_start:
   vmulss xmm14, xmm14, xmm15
   vmovss [rbx+48], xmm14
 
+  // 不更改Z方向：會reset pos
   // Z 係數（垂直）
   //vmovss xmm15, [speed_acc_factor]
   //vmovss xmm14, [rbx+44]  // Z 係數
@@ -701,7 +703,7 @@ newmem_start:
   jmp INJECT_XYZ_COORDS+5
 
 newmem_end:
-  // 恢復原始係數（避免影響其他系統）
+  // 恢復原始係數（因不知是否會影響其他系統或是物件）
   push rax
   vmovss xmm15, [backup_coef]
   vmovss [rbx+40], xmm15
@@ -711,6 +713,7 @@ newmem_end:
   vmovss [rbx+48], xmm15
   pop rax
 
+  //直接在 inject code中 ret ，不需jump back到原本routine (省去jmp cpu cycle)
   mov rsp,r11
   pop r15
   pop r14
@@ -731,6 +734,7 @@ INJECT_XYZ_COORDS:
   db F3 0F 10 5B 30
 INJECT_XYZ_COORDS_END:
   db 49 8B E3 41 5F
+
 unregistersymbol(*)
 dealloc(newmem_start)
 dealloc(newmem_end)
@@ -3834,7 +3838,7 @@ align 10 cc
   i_base_battleinfo_addr:
   dq 0
   vf_battle_ap_multi:
-  dd (float)3.3
+  dd (float)4.67
 
 
 INJECT_BATTLE_AP_MULTI:
@@ -4327,7 +4331,7 @@ Atelier_Ryza_DX.exe+574BC9: E8 32 96 F4 FF        - call Atelier_Ryza_DX.exe+4BE
             </CheatEntry>
             <CheatEntry>
               <ID>233</ID>
-              <Description>"Battle: core charges do not decrease"</Description>
+              <Description>"(X)Battle: core charges do not decrease"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza_DX.exe
   Version: 
@@ -5415,7 +5419,7 @@ Atelier_Ryza_DX.exe+59597A: CC                    - int 3
 
 [ENABLE]
 
-aobscanmodule(INJECT_PUNI_MOOD_ALWAYS_PLUS,Atelier_Ryza_DX.exe,8B 44 24 58 01 05 ?? ?? ?? ??) // should be unique
+aobscanmodule(INJECT_PUNI_MOOD_ALWAYS_PLUS,$process,8B 44 24 58 01 05 ?? ?? ?? ??) // should be unique
 alloc(newmem,$1000,INJECT_PUNI_MOOD_ALWAYS_PLUS)
 
 alloc(INJECT_PUNI_MOOD_ALWAYS_PLUSo, 10)
@@ -5694,7 +5698,7 @@ Atelier_Ryza_DX.exe+29C60F: CC                    - int 3
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>[ENABLE]
 
-aobscanmodule(INJECT_CLEAR_BOX_N_CONTAINER,$process.exe,C7 03 FF FF FF FF 48 8D 7B) // should be unique
+aobscanmodule(INJECT_CLEAR_BOX_N_CONTAINER,$process,C7 03 FF FF FF FF 48 8D 7B) // should be unique
 alloc(newmem,$1000,INJECT_CLEAR_BOX_N_CONTAINER)
 
 label(code)
