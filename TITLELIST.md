@@ -84,6 +84,12 @@ zh-TW: 萊莎的鍊金工房 ～常闇女王與秘密藏身處～ DX
 ja-JP: ライザのアトリエ2 ～失われた伝承と秘密の妖精  
 zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～  
 
+## Atelier Ryza 2 Lost Legends & the Secret Fairy DX
+[Atelier Ryza 2: Lost Legends & the Secret Fairy DX (Steam)](https://store.steampowered.com/app/3365040/2__DX/)  
+ja-JP: ライザのアトリエ２ ～失われた伝承と秘密の妖精～ DX  
+zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～ DX  
+
+
 ## Atelier Ryza 3
 [Atelier Ryza 2: Lost Legends & the Secret Fairy (Steam)](https://store.steampowered.com/app/1999770/_/)  
 zh-TW: 萊莎的鍊金工房３ ～終結之鍊金術士與秘密鑰匙～  
