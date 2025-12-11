@@ -104,6 +104,7 @@ local enableBattleScripts = {
   408, -- "Synthesis: material loop (マテリアル環) multiplier "
   412, -- "Synthesis: Fast unlock connected loops ( マテリアル環接続ロックを解除)"
   536, -- "Enable Synthesis rebuild Editor / 重組アイテムエディター"
+  233, -- "(Not working) Battle: core charges do not decrease"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -4416,60 +4417,87 @@ Atelier_Ryza_DX.exe+574BC9: E8 32 96 F4 FF        - call Atelier_Ryza_DX.exe+4BE
             </CheatEntry>
             <CheatEntry>
               <ID>233</ID>
-              <Description>"(Not working) Battle: core charges do not decrease"</Description>
+              <Description>"Battle: CC multiplier"</Description>
+              <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Atelier_Ryza_DX.exe
-  Version: 
-  Date   : 2025-11-16
+              <AssemblerScript>{ Game   : Atelier_Ryza_2_DX.exe
+  Version:
+  Date   : 2025-12-11
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_BATTLE_INF_CORE_USAGE,$process,29 7B 1C B9 00 00 00 00) // should be unique
+aobscanmodule(INJECT_BATTLE_CC_MULTI,$process,58 F0 F3 0F 58 73 38) // should be unique
+alloc(newmem,$1000,INJECT_BATTLE_CC_MULTI)
 
-INJECT_BATTLE_INF_CORE_USAGE:
-  db 83 6b 1c 00  //sub DWORD PTR [rbx+0x1c],0x0
-  db 31 c9        // xor ecx,ecx
-  db 90 90
+label(code)
+label(return vf_cc_multi)
+
+newmem:
+  xorps xmm15, xmm15
+  ucomiss xmm6, xmm15
+  jle code
+  mulss xmm6, [vf_cc_multi]
+
+code:
+  addss xmm6,[rbx+38]
+  jmp return
+align 10 cc
+  vf_cc_multi:
+  dd (float)3.333333333
+
+INJECT_BATTLE_CC_MULTI+02:
+  jmp newmem
 return:
-registersymbol(INJECT_BATTLE_INF_CORE_USAGE)
+registersymbol(INJECT_BATTLE_CC_MULTI vf_cc_multi)
 
 [DISABLE]
 
-INJECT_BATTLE_INF_CORE_USAGE:
-  db 29 7B 1C B9 00 00 00 00
+INJECT_BATTLE_CC_MULTI+02:
+  db F3 0F 58 73 38
 
-unregistersymbol(INJECT_BATTLE_INF_CORE_USAGE)
+unregistersymbol(INJECT_BATTLE_CC_MULTI vf_cc_multi)
+dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_DX.exe+3322B
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_2_DX.exe+5BAAF
 
-Atelier_Ryza_DX.exe+3320A: 48 8B D9              - mov rbx,rcx
-Atelier_Ryza_DX.exe+3320D: 8B FA                 - mov edi,edx
-Atelier_Ryza_DX.exe+3320F: 48 8D 0D A8 73 F0 01  - lea rcx,[Atelier_Ryza_DX.exe+1F3A5BE]
-Atelier_Ryza_DX.exe+33216: E8 DD E8 D6 00        - call Atelier_Ryza_DX.exe+DA1AF8
-Atelier_Ryza_DX.exe+3321B: 80 7B 18 00           - cmp byte ptr [rbx+18],00
-Atelier_Ryza_DX.exe+3321F: 74 23                 - je Atelier_Ryza_DX.exe+33244
-Atelier_Ryza_DX.exe+33221: 80 7B 2D 00           - cmp byte ptr [rbx+2D],00
-Atelier_Ryza_DX.exe+33225: 75 1D                 - jne Atelier_Ryza_DX.exe+33244
-Atelier_Ryza_DX.exe+33227: 85 FF                 - test edi,edi
-Atelier_Ryza_DX.exe+33229: 78 19                 - js Atelier_Ryza_DX.exe+33244
+Atelier_Ryza_2_DX.exe+5BA89: 79 09                    - jns Atelier_Ryza_2_DX.exe+5BA94
+Atelier_Ryza_2_DX.exe+5BA8B: C7 41 20 00 00 00 00     - mov [rcx+20],00000000
+Atelier_Ryza_2_DX.exe+5BA92: EB 1B                    - jmp Atelier_Ryza_2_DX.exe+5BAAF
+Atelier_Ryza_2_DX.exe+5BA94: 85 D2                    - test edx,edx
+Atelier_Ryza_2_DX.exe+5BA96: 7E 17                    - jle Atelier_Ryza_2_DX.exe+5BAAF
+Atelier_Ryza_2_DX.exe+5BA98: 66 0F 6E C2              - movd xmm0,edx
+Atelier_Ryza_2_DX.exe+5BA9C: 0F 5B C0                 - cvtdq2ps xmm0,xmm0
+Atelier_Ryza_2_DX.exe+5BA9F: F3 0F 59 C6              - mulss xmm0,xmm6
+Atelier_Ryza_2_DX.exe+5BAA3: F3 0F 5E 05 8D 58 0F 01  - divss xmm0,[Atelier_Ryza_2_DX.exe+1151338]
+Atelier_Ryza_2_DX.exe+5BAAB: F3 0F 58 F0              - addss xmm6,xmm0
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_DX.exe+3322B: 29 7B 1C              - sub [rbx+1C],edi
+Atelier_Ryza_2_DX.exe+5BAAF: F3 0F 58 73 38           - addss xmm6,[rbx+38]
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_DX.exe+3322E: B9 00 00 00 00        - mov ecx,00000000
-Atelier_Ryza_DX.exe+33233: 8B 43 1C              - mov eax,[rbx+1C]
-Atelier_Ryza_DX.exe+33236: 0F 48 C1              - cmovs eax,ecx
-Atelier_Ryza_DX.exe+33239: 89 43 1C              - mov [rbx+1C],eax
-Atelier_Ryza_DX.exe+3323C: 48 8B 43 10           - mov rax,[rbx+10]
-Atelier_Ryza_DX.exe+33240: C6 40 20 01           - mov byte ptr [rax+20],01
-Atelier_Ryza_DX.exe+33244: 48 8B 5C 24 30        - mov rbx,[rsp+30]
-Atelier_Ryza_DX.exe+33249: 48 83 C4 20           - add rsp,20
-Atelier_Ryza_DX.exe+3324D: 5F                    - pop rdi
-Atelier_Ryza_DX.exe+3324E: C3                    - ret
+Atelier_Ryza_2_DX.exe+5BAB4: F3 0F 10 43 3C           - movss xmm0,[rbx+3C]
+Atelier_Ryza_2_DX.exe+5BAB9: 0F 2F F0                 - comiss xmm6,xmm0
+Atelier_Ryza_2_DX.exe+5BABC: F3 0F 11 73 38           - movss [rbx+38],xmm6
+Atelier_Ryza_2_DX.exe+5BAC1: 76 05                    - jna Atelier_Ryza_2_DX.exe+5BAC8
+Atelier_Ryza_2_DX.exe+5BAC3: F3 0F 11 43 38           - movss [rbx+38],xmm0
+Atelier_Ryza_2_DX.exe+5BAC8: 48 8B CB                 - mov rcx,rbx
+Atelier_Ryza_2_DX.exe+5BACB: E8 A0 14 00 00           - call Atelier_Ryza_2_DX.exe+5CF70
+Atelier_Ryza_2_DX.exe+5BAD0: 84 C0                    - test al,al
+Atelier_Ryza_2_DX.exe+5BAD2: 74 0A                    - je Atelier_Ryza_2_DX.exe+5BADE
+Atelier_Ryza_2_DX.exe+5BAD4: B9 D6 03 00 00           - mov ecx,000003D6
 }
 </AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>540</ID>
+                  <Description>"multiplier"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>Float</VariableType>
+                  <Address>vf_cc_multi</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -6192,7 +6220,7 @@ Atelier_Ryza_2_DX.exe+7AD0CE: 83 F8 03           - cmp eax,03
             </CheatEntry>
             <CheatEntry>
               <ID>535</ID>
-              <Description>"Get CC AOB (readonly)"</Description>
+              <Description>"Get CC display AOB (readonly)"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza_2_DX.exe
   Version: 
