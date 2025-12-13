@@ -83,6 +83,7 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 
+
 local enableBattleScripts = {
   0, -- "Compact mode"
   2, -- "Init. (v1.00) &lt;==== Enable after save loaded"
@@ -92,20 +93,23 @@ local enableBattleScripts = {
   214, -- "+Battle scripts"
   234, -- "+Container, Basket &amp; drop item"
   251, -- "+Synthesis / 調合"
+  259, -- "+Puni stats / ぷに"
   344, -- "Item Editor / アイテムエディター"
   413, -- "SP: no decrease when use"
+  562, -- "Adjsut core crystal: no decrease"
   10, -- "Get daytime address"
   27, -- "Enable Synthesis Item Editor / 調合アイテムエディター"
   216, -- "Battle: AP increase multiplier"
   224, -- "Battle: AP decrease multiplier"
   226, -- "Battle: Damage control"
+  231, -- "Battle: EXP multiplier"
   233, -- "Battle: CC multiplier"
   235, -- "Set min. quality when store the item into container"
   258, -- "Synthesis: Gem no decrease"
+  332, -- "Puni Mood no decrease"
   408, -- "Synthesis: material loop (マテリアル環) multiplier "
   412, -- "Synthesis: Fast unlock connected loops ( マテリアル環接続ロックを解除)"
   536, -- "Enable Synthesis rebuild Editor / 重組アイテムエディター"
-  376, -- "Get data by script"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -185,6 +189,7 @@ local disableBattleScripts = {
   21, -- "Duplicate highlighted item (3x) to container (v1.00 only)"
   17, -- "Coords"
   10, -- "Get daytime address"
+  562, -- "Adjsut core crystal: no decrease"
   543, -- "Get side quests reputation data"
   413, -- "SP: no decrease when use"
   344, -- "Item Editor / アイテムエディター"
@@ -196,7 +201,7 @@ local disableBattleScripts = {
   268, -- "Patch coords calculation  code #3 (~ -8 cycles  * 40-60 times/sec)"
   267, -- "Patch coords calculation  code #2  (~ -18 cycles  * 1x times/sec)"
   266, -- "Patch coords calculation  code #1 (~ -12 cycles * 1x times/sec)"
-  259, -- "(not working) +Puni stats / ぷに"
+  259, -- "+Puni stats / ぷに"
   251, -- "+Synthesis / 調合"
   234, -- "+Container, Basket &amp; drop item"
   214, -- "+Battle scripts"
@@ -258,6 +263,7 @@ synchronize(function() getLuaEngine().Close() end)
 --       ID: 488, Description: "+Equip modifier", Depth: 3
 --   ID: 161, Description: "Get party quest accomplish count data", Depth: 1
 --   ID: 543, Description: "Get side quests reputation data", Depth: 1
+--   ID: 562, Description: "Adjsut core crystal: no decrease", Depth: 1
 --   ID: 214, Description: "+Battle scripts", Depth: 1
 --     ID: 215, Description: "Battle: Fast break", Depth: 2
 --     ID: 216, Description: "Battle: AP increase multiplier", Depth: 2
@@ -284,7 +290,7 @@ synchronize(function() getLuaEngine().Close() end)
 --     ID: 408, Description: "Synthesis: material loop (マテリアル環) multiplier ", Depth: 2
 --     ID: 412, Description: "Synthesis: Fast unlock connected loops ( マテリアル環接続ロックを解除)", Depth: 2
 --     ID: 258, Description: "Synthesis: Gem no decrease", Depth: 2
---   ID: 259, Description: "(not working) +Puni stats / ぷに", Depth: 1
+--   ID: 259, Description: "+Puni stats / ぷに", Depth: 1
 --     ID: 332, Description: "Puni Mood no decrease", Depth: 2
 --   ID: 273, Description: "_Debug / not working", Depth: 1
 --     ID: 274, Description: "Get container / basket size &amp; addr (open basket or container)", Depth: 2
@@ -302,7 +308,6 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 308, Description: "Remove stack overflow check routine (~-30 cycles * 400 calls/sec)", Depth: 1
 -- ID: 290, Description: "Atelier Ryza 2: Lost Legends &amp; the Secret Fairy DX 1.00  /  https://opencheattables.com  /  CE 7.6", Depth: 0
 --   ID: 291, Description: "Group 7", Depth: 1
-
 
 </AssemblerScript>
     </CheatEntry>
@@ -346,7 +351,7 @@ local _dbg = true
 
 if _dbg then
   local AOBs = {
-    --{["name"]="puni", ["aob"]="8B 0D ?? ?? ?? ?? 44 03 C1 4C 8B 6C", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="puni_base"},
+    {["name"]="puni", ["aob"]="8B 0D ?? ?? ?? ?? 44 03 C1 4C 8B B4", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="puni_base"},
     {name = "alchemy_lv", aob = "8B 15 ?? ?? ?? ?? 45 33 C0 48 8B C8", pos = 2, aoblen = 6, symbol = "alchemy_lv_base"},
     {name = "difficult", aob = "3B 05 ?? ?? ?? ?? 0F 85 ?? ?? ?/ ?? 48 8B 4B 08", pos = 2, aoblen = 6, symbol = "difficult_base"},
     {name = "cole", aob = "B9 09 00 00 00 EB ?? C7 05 ?? ?? ?? ?? 3F 42 0F 00", pos = 9, aoblen = 17, symbol = "cole_base"},
@@ -447,6 +452,14 @@ Atelier_Ryza_2_DX.exe+750D8A: 48 89 AC 24 A0 00 00 00  - mov [rsp+000000A0],rbp
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>cole_base+8</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>561</ID>
+              <Description>"Core crystals"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>cole_base+60</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>421</ID>
@@ -1268,6 +1281,13 @@ print(string.format("Current serial base: %d", currentSerial))
 local srcItemData = readBytes(itemBaseAddr, ItemSize, true)
 local srcQuality = readSmallInteger(itemBaseAddr + 0x06)  -- Ryza 2: quality at 0x06
 
+-- Check if source quality is invalid
+if srcQuality &gt; MAX_QUALITY then
+  print(string.format("Error: Source quality (%d) exceeds maximum (%d)", srcQuality, MAX_QUALITY))
+  print("Duplication cancelled")
+  return
+end
+
 -- Find empty slot
 local currentAddr = containerBaseAddress
 local emptySlotAddr = nil
@@ -1338,7 +1358,8 @@ closeLuaEngine()
                 <Hotkey OnlyWhileDown="1">
                   <Action>Activate</Action>
                   <Keys>
-                    <Key>22550</Key>
+                    <Key>22535</Key>
+                    <Key>22534</Key>
                   </Keys>
                   <ID>0</ID>
                 </Hotkey>
@@ -1346,7 +1367,7 @@ closeLuaEngine()
               <CheatEntries>
                 <CheatEntry>
                   <ID>541</ID>
-                  <Description>"Default hotkey: joypad L3"</Description>
+                  <Description>"Default hotkey: joypad RT+LT"</Description>
                   <Color>8000FF</Color>
                   <GroupHeader>1</GroupHeader>
                 </CheatEntry>
@@ -1884,6 +1905,18 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                         <Offset>2C</Offset>
                       </Offsets>
                     </CheatEntry>
+                    <CheatEntry>
+                      <ID>556</ID>
+                      <Description>"Enforced"</Description>
+                      <DropDownListLink>YesNo</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2E</Offset>
+                      </Offsets>
+                    </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
@@ -2255,6 +2288,18 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                         <Offset>2C</Offset>
                       </Offsets>
                     </CheatEntry>
+                    <CheatEntry>
+                      <ID>555</ID>
+                      <Description>"Enforced"</Description>
+                      <DropDownListLink>YesNo</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2E</Offset>
+                      </Offsets>
+                    </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
@@ -2576,6 +2621,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>450</ID>
                       <Description>"HP+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2586,6 +2632,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>451</ID>
                       <Description>"???"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2596,6 +2643,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>452</ID>
                       <Description>"ATK+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2606,6 +2654,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>453</ID>
                       <Description>"Def+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2616,10 +2665,23 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>454</ID>
                       <Description>"SPD+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
                         <Offset>2C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>557</ID>
+                      <Description>"Enforced"</Description>
+                      <DropDownListLink>YesNo</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2E</Offset>
                       </Offsets>
                     </CheatEntry>
                   </CheatEntries>
@@ -2943,6 +3005,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>489</ID>
                       <Description>"HP+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2953,6 +3016,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>490</ID>
                       <Description>"???"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2963,6 +3027,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>491</ID>
                       <Description>"ATK+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2973,6 +3038,7 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>492</ID>
                       <Description>"Def+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
@@ -2983,10 +3049,23 @@ Atelier_Ryza_2_DX.exe+3044FC: 0F 11 83 48 01 00 00  - movups [rbx+00000148],xmm0
                       <ID>493</ID>
                       <Description>"SPD+"</Description>
                       <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
                       <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
                         <Offset>2C</Offset>
+                      </Offsets>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>558</ID>
+                      <Description>"Enforced"</Description>
+                      <DropDownListLink>YesNo</DropDownListLink>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <Color>FF8080</Color>
+                      <VariableType>2 Bytes</VariableType>
+                      <Address>container_base_addr</Address>
+                      <Offsets>
+                        <Offset>2E</Offset>
                       </Offsets>
                     </CheatEntry>
                   </CheatEntries>
@@ -3938,7 +4017,7 @@ Atelier_Ryza_2_DX.exe+86B870: 83 F8 FF                 - cmp eax,-01
             </CheatEntry>
             <CheatEntry>
               <ID>547</ID>
-              <Description>"Whole city??"</Description>
+              <Description>"Whole city lv??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -4036,6 +4115,77 @@ Atelier_Ryza_2_DX.exe+86B870: 83 F8 FF                 - cmp eax,-01
               </Offsets>
             </CheatEntry>
           </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>562</ID>
+          <Description>"Adjsut core crystal: no decrease"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : Atelier_Ryza_2_DX.exe
+  Version: 
+  Date   : 2025-12-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CC_ADJUST_NO_DECREASE,$process,03 CB 81 F9 9F 86 01 00) // should be unique
+alloc(newmem,$1000,INJECT_CC_ADJUST_NO_DECREASE)
+
+label(code)
+label(return)
+
+newmem:
+  cmp ebx, 0
+  jge code
+  xor ebx, ebx
+
+code:
+  add ecx,ebx
+  cmp ecx,0001869F
+  jmp return
+
+INJECT_CC_ADJUST_NO_DECREASE:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_CC_ADJUST_NO_DECREASE)
+
+[DISABLE]
+
+INJECT_CC_ADJUST_NO_DECREASE:
+  db 03 CB 81 F9 9F 86 01 00
+
+unregistersymbol(INJECT_CC_ADJUST_NO_DECREASE)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_2_DX.exe+75265A
+
+Atelier_Ryza_2_DX.exe+75263C: CC                             - int 3 
+Atelier_Ryza_2_DX.exe+75263D: CC                             - int 3 
+Atelier_Ryza_2_DX.exe+75263E: CC                             - int 3 
+Atelier_Ryza_2_DX.exe+75263F: CC                             - int 3 
+Atelier_Ryza_2_DX.exe+752640: 40 53                          - push rbx
+Atelier_Ryza_2_DX.exe+752642: 48 83 EC 20                    - sub rsp,20
+Atelier_Ryza_2_DX.exe+752646: 8B D9                          - mov ebx,ecx
+Atelier_Ryza_2_DX.exe+752648: 48 8D 0D 57 96 CA 01           - lea rcx,[Atelier_Ryza_2_DX.exe+23FBCA6]
+Atelier_Ryza_2_DX.exe+75264F: E8 98 7F 96 00                 - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
+Atelier_Ryza_2_DX.exe+752654: 8B 0D A6 F9 89 01              - mov ecx,[Atelier_Ryza_2_DX.exe+1FF2000]
+// ---------- INJECTING HERE ----------
+Atelier_Ryza_2_DX.exe+75265A: 03 CB                          - add ecx,ebx
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza_2_DX.exe+75265C: 81 F9 9F 86 01 00              - cmp ecx,0001869F
+Atelier_Ryza_2_DX.exe+752662: 7C 10                          - jl Atelier_Ryza_2_DX.exe+752674
+Atelier_Ryza_2_DX.exe+752664: C7 05 92 F9 89 01 9F 86 01 00  - mov [Atelier_Ryza_2_DX.exe+1FF2000],0001869F
+Atelier_Ryza_2_DX.exe+75266E: 48 83 C4 20                    - add rsp,20
+Atelier_Ryza_2_DX.exe+752672: 5B                             - pop rbx
+Atelier_Ryza_2_DX.exe+752673: C3                             - ret 
+Atelier_Ryza_2_DX.exe+752674: 33 C0                          - xor eax,eax
+Atelier_Ryza_2_DX.exe+752676: 85 C9                          - test ecx,ecx
+Atelier_Ryza_2_DX.exe+752678: 0F 4E C8                       - cmovle ecx,eax
+Atelier_Ryza_2_DX.exe+75267B: 89 0D 7F F9 89 01              - mov [Atelier_Ryza_2_DX.exe+1FF2000],ecx
+}
+</AssemblerScript>
         </CheatEntry>
         <CheatEntry>
           <ID>214</ID>
@@ -4773,7 +4923,7 @@ label(return)
 label(i_min_quality_put_in_container is_assign_empty_trait1 is_modify_cc)
 label(i_last_store_item_in_container_addr is_remove_equip_enforced_flag)
 label(is_make_quality_difference is_open_all_slots is_reset_item_level)
-label(is_adjust_crit_p)
+label(is_adjust_crit_p is_remove_enforced)
 
 
 newmem:
@@ -4832,6 +4982,12 @@ chk_reduce_cc:
 
   mov byte ptr [rbx+C], -A
 
+
+chk_remove_enforced:
+  cmp dword ptr [is_remove_enforced], 1
+  jne @F
+
+  mov word ptr [rbx+2E], 0
 
   //*****************************************************************************
   // 特性調整
@@ -4936,6 +5092,18 @@ range_table:
   // 技能強化
   dw 0083, 0085, 0085
   db 32, 00
+  // 攻防、攻速、全能力++ ...強化
+  dw 012E, 012E, 012E
+  db 63, 00
+  dw 012F, 012F, 012F
+  db 63, 00
+  dw 0130, 0130, 0130
+  db 63, 00
+  dw 0131, 0131, 0131
+  db 63, 00
+  // 全能力
+  dw 0080, 0081, 0131
+  db 63, 00
   // end mark
   dw FFFF, 0000, 0000
   db 00, 00
@@ -5005,6 +5173,8 @@ align 10 cc
   dd 1
   is_adjust_crit_p:
   dd 1
+  is_remove_enforced:
+  dd 1
 
 INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER:
   jmp newmem
@@ -5014,7 +5184,7 @@ registersymbol(INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER)
 registersymbol(i_min_quality_put_in_container is_assign_empty_trait1 is_modify_cc)
 registersymbol(i_last_store_item_in_container_addr is_remove_equip_enforced_flag)
 registersymbol(is_make_quality_difference is_open_all_slots is_reset_item_level)
-registersymbol(is_adjust_crit_p)
+registersymbol(is_adjust_crit_p is_remove_enforced)
 
 [DISABLE]
 
@@ -5133,6 +5303,15 @@ Atelier_Ryza_2_DX.exe+3FCB99: E8 E2 B0 00 00        - call Atelier_Ryza_2_DX.exe
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_adjust_crit_p</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>559</ID>
+                  <Description>"Remove enforcd mark?"</Description>
+                  <DropDownListLink>YesNo</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_remove_enforced</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -5909,7 +6088,7 @@ Atelier_Ryza_2_DX.exe+750CCE: C3                    - ret
         </CheatEntry>
         <CheatEntry>
           <ID>259</ID>
-          <Description>"(not working) +Puni stats / ぷに"</Description>
+          <Description>"+Puni stats / ぷに"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
@@ -5925,74 +6104,63 @@ Atelier_Ryza_2_DX.exe+750CCE: C3                    - ret
 
 [ENABLE]
 
-aobscanmodule(INJECT_PUNI_MOOD_ALWAYS_PLUS,$process,8B 44 24 58 01 05 ?? ?? ?? ??) // should be unique
+aobscanmodule(INJECT_PUNI_MOOD_ALWAYS_PLUS,$process,8B 84 24 90 00 00 00 01) // should be unique
 alloc(newmem,$1000,INJECT_PUNI_MOOD_ALWAYS_PLUS)
-
-alloc(INJECT_PUNI_MOOD_ALWAYS_PLUSo, 10)
 
 label(code)
 label(return)
 
-INJECT_PUNI_MOOD_ALWAYS_PLUSo:
-  readmem(INJECT_PUNI_MOOD_ALWAYS_PLUS, 10)
 
 newmem:
 
 code:
-  mov eax,[rsp+58]
+  mov eax,[rsp+00000090]
   cmp eax, 0
   jge @F
   neg eax
-  mov [rsp+58], eax
 @@:
-  reassemble(INJECT_PUNI_MOOD_ALWAYS_PLUS+4)
-  //add [Atelier_Ryza_DX.exe+1AA3448],eax
   jmp return
 
 INJECT_PUNI_MOOD_ALWAYS_PLUS:
   jmp newmem
-  nop 5
+  nop 2
 return:
 registersymbol(INJECT_PUNI_MOOD_ALWAYS_PLUS)
-registersymbol(INJECT_PUNI_MOOD_ALWAYS_PLUSo)
 
 [DISABLE]
 
 INJECT_PUNI_MOOD_ALWAYS_PLUS:
-  //db 8B 44 24 58 01 05 C3 F4 50 01
-  readmem(INJECT_PUNI_MOOD_ALWAYS_PLUSo, 10)
+  db 8B 84 24 90 00 00 00
 
 unregistersymbol(INJECT_PUNI_MOOD_ALWAYS_PLUS)
 dealloc(newmem)
-unregistersymbol(INJECT_PUNI_MOOD_ALWAYS_PLUSo)
-dealloc(INJECT_PUNI_MOOD_ALWAYS_PLUSo)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_DX.exe+593F7B
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_2_DX.exe+732A6A
 
-Atelier_Ryza_DX.exe+593F45: 4C 8D 44 24 50           - lea r8,[rsp+50]
-Atelier_Ryza_DX.exe+593F4A: C7 44 24 50 00 00 00 00  - mov [rsp+50],00000000
-Atelier_Ryza_DX.exe+593F52: 48 8D 54 24 48           - lea rdx,[rsp+48]
-Atelier_Ryza_DX.exe+593F57: C7 44 24 58 00 00 00 00  - mov [rsp+58],00000000
-Atelier_Ryza_DX.exe+593F5F: 48 8B CE                 - mov rcx,rsi
-Atelier_Ryza_DX.exe+593F62: E8 A9 AF AC FF           - call Atelier_Ryza_DX.exe+5EF10
-Atelier_Ryza_DX.exe+593F67: 8B 44 24 48              - mov eax,[rsp+48]
-Atelier_Ryza_DX.exe+593F6B: 01 05 CF F4 50 01        - add [puni_base],eax
-Atelier_Ryza_DX.exe+593F71: 8B 44 24 50              - mov eax,[rsp+50]
-Atelier_Ryza_DX.exe+593F75: 01 05 C9 F4 50 01        - add [Atelier_Ryza_DX.exe+1AA3444],eax
+Atelier_Ryza_2_DX.exe+732A2C: EB 87                    - jmp Atelier_Ryza_2_DX.exe+7329B5
+Atelier_Ryza_2_DX.exe+732A2E: 4C 8D 8C 24 90 00 00 00  - lea r9,[rsp+00000090]
+Atelier_Ryza_2_DX.exe+732A36: 4C 8D 84 24 88 00 00 00  - lea r8,[rsp+00000088]
+Atelier_Ryza_2_DX.exe+732A3E: 48 8D 94 24 80 00 00 00  - lea rdx,[rsp+00000080]
+Atelier_Ryza_2_DX.exe+732A46: 48 8D 4C 24 20           - lea rcx,[rsp+20]
+Atelier_Ryza_2_DX.exe+732A4B: E8 20 DC 98 FF           - call Atelier_Ryza_2_DX.exe+C0670
+Atelier_Ryza_2_DX.exe+732A50: 8B 0D 9A E4 78 01        - mov ecx,[puni_base]
+Atelier_Ryza_2_DX.exe+732A56: 8B 15 98 E4 78 01        - mov edx,[Atelier_Ryza_2_DX.exe+1EC0EF4]
+Atelier_Ryza_2_DX.exe+732A5C: 03 8C 24 80 00 00 00     - add ecx,[rsp+00000080]
+Atelier_Ryza_2_DX.exe+732A63: 03 94 24 88 00 00 00     - add edx,[rsp+00000088]
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_DX.exe+593F7B: 8B 44 24 58              - mov eax,[rsp+58]
+Atelier_Ryza_2_DX.exe+732A6A: 8B 84 24 90 00 00 00     - mov eax,[rsp+00000090]
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_DX.exe+593F7F: 01 05 C3 F4 50 01        - add [Atelier_Ryza_DX.exe+1AA3448],eax
-Atelier_Ryza_DX.exe+593F85: 8B 05 C9 F4 50 01        - mov eax,[Atelier_Ryza_DX.exe+1AA3454]
-Atelier_Ryza_DX.exe+593F8B: FF 05 BB F4 50 01        - inc [Atelier_Ryza_DX.exe+1AA344C]
-Atelier_Ryza_DX.exe+593F91: FF C0                    - inc eax
-Atelier_Ryza_DX.exe+593F93: 89 05 BB F4 50 01        - mov [Atelier_Ryza_DX.exe+1AA3454],eax
-Atelier_Ryza_DX.exe+593F99: 83 F8 06                 - cmp eax,06
-Atelier_Ryza_DX.exe+593F9C: 7C 0B                    - jl Atelier_Ryza_DX.exe+593FA9
-Atelier_Ryza_DX.exe+593F9E: E8 4D D7 00 00           - call Atelier_Ryza_DX.exe+5A16F0
-Atelier_Ryza_DX.exe+593FA3: 89 05 AF F4 50 01        - mov [Atelier_Ryza_DX.exe+1AA3458],eax
-Atelier_Ryza_DX.exe+593FA9: 48 8B 5C 24 40           - mov rbx,[rsp+40]
+Atelier_Ryza_2_DX.exe+732A71: 01 05 81 E4 78 01        - add [Atelier_Ryza_2_DX.exe+1EC0EF8],eax
+Atelier_Ryza_2_DX.exe+732A77: 4C 8B 74 24 48           - mov r14,[rsp+48]
+Atelier_Ryza_2_DX.exe+732A7C: 48 8B 7C 24 60           - mov rdi,[rsp+60]
+Atelier_Ryza_2_DX.exe+732A81: 89 0D 69 E4 78 01        - mov [puni_base],ecx
+Atelier_Ryza_2_DX.exe+732A87: 89 15 67 E4 78 01        - mov [Atelier_Ryza_2_DX.exe+1EC0EF4],edx
+Atelier_Ryza_2_DX.exe+732A8D: 83 F9 64                 - cmp ecx,64
+Atelier_Ryza_2_DX.exe+732A90: 76 4A                    - jna Atelier_Ryza_2_DX.exe+732ADC
+Atelier_Ryza_2_DX.exe+732A92: 48 8D 0D 0F B4 A1 00     - lea rcx,[Atelier_Ryza_2_DX.exe+114DEA8]
+Atelier_Ryza_2_DX.exe+732A99: E8 22 D5 7A 00           - call Atelier_Ryza_2_DX.exe+EDFFC0
+Atelier_Ryza_2_DX.exe+732A9E: 48 8D 0D 73 B4 A1 00     - lea rcx,[Atelier_Ryza_2_DX.exe+114DF18]
 }
 </AssemblerScript>
             </CheatEntry>
@@ -6021,16 +6189,8 @@ Atelier_Ryza_DX.exe+593FA9: 48 8B 5C 24 40           - mov rbx,[rsp+40]
               <Address>puni_base+8</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>330</ID>
-              <Description>"Feed count"</Description>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
-              <VariableType>4 Bytes</VariableType>
-              <Address>puni_base+C</Address>
-            </CheatEntry>
-            <CheatEntry>
               <ID>331</ID>
-              <Description>"# to Outing "</Description>
+              <Description>"Feed count"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
