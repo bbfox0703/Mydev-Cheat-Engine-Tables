@@ -99,6 +99,8 @@ local enableBattleScripts = {
   312, -- "Battle: AP multiplier"
   314, -- "Battle: Damage control"
   318, -- "Battle: EXP multiplier"
+  320, -- "(?) Battle: CC multiplier"
+  322, -- "(?) Battle: Core shard multiplier"
   324, -- "Battle: Fast T-Lv."
   326, -- "Battle: berak control"
   335, -- "Battle: fast action for player"
@@ -348,7 +350,7 @@ define(container_base ,"Atelier_Ryza_3_DX.exe"+25E8690) // v1.00
 
 define(basket_base ,"Atelier_Ryza_3_DX.exe"+25CAB90)  // v1.00
 
-define(pristine_key_base ,"Atelier_Ryza_3_DX.exe"+25EB010) // xx
+define(pristine_key_base ,"Atelier_Ryza_3_DX.exe"+251C800) // xx
 
 define(important_item_base, "Atelier_Ryza_3_DX.exe"+27BD290)  // v1.00
 
@@ -367,7 +369,10 @@ g_containerBaseAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x25E8690 -- v1
 g_basketBaseAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x25CAB90 -- v1.00
 
 -- key
-g_pristineKeyAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x25EB010 -- xx
+g_pristineKeyAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x251C800 -- xx
+
+-- important item
+g_importantBaseAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x27BD290 -- v1.00
 
 --container size
 g_containerSizeAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x27C9ADC -- v1.00
@@ -392,7 +397,8 @@ if _dbg then
     {name = "alchemy_lv", aob = "8B 15 ?? ?? ?? ?? 45 33 C0 48 8B C8", pos = 2, aoblen = 6, symbol = "alchemy_lv_base"},
     {name = "puni_data", aob = "4C 8D 35 ?? ?? ?? ?? 48 69 D0 28 0C 00 00", pos = 3, aoblen = 7, symbol = "puni_data_base"},
     {name = "item_serial", aob = "0F B7 05 ?? ?? ?? ?? B9 17 7C 00 00", pos = 3, aoblen = 7, symbol = "item_serial_base"},
-
+    {name = "weather", aob = "8B 1D ?? ?? ?? ?? 48 89 AC 24 88 00 00 00 E8", pos = 2, aoblen = 6, symbol = "weather_base"},
+    {name = "minutes", aob = "8B 0D ?? ?? ?? ?? B8 89 88 88 88", pos = 2, aoblen = 6, symbol = "minutes_base"},
   }
 
   local module_name = 'Atelier_Ryza_3_DX.exe'
@@ -421,11 +427,13 @@ closeLuaEngine()
 {$asm}
 unregistersymbol(container_base)
 unregistersymbol(basket_base)
+unregistersymbol(pristine_key_base)
+unregistersymbol(important_item_base)
 //unregistersymbol(drop_item_box)
 {$lua}
 
 if syntaxcheck then return end
-local disable_array = {"vkey_base", "core_shard_base", "difficult_base", "cole_base", "gems_base","sp_base", "item_serial_base", "alchemy_lv_base", "puni_data_base"}
+local disable_array = {"vkey_base", "core_shard_base", "difficult_base", "cole_base", "gems_base","sp_base", "item_serial_base", "alchemy_lv_base", "puni_data_base", "weather_base", "minutes_base"}
 local a_len = #(disable_array)
 local i = 0
 for i = 1, a_len do
@@ -504,6 +512,45 @@ closeLuaEngine()
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
               <Address>difficult_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>452</ID>
+              <Description>"Weather"</Description>
+              <DropDownList DisplayValueAsItem="1">0:Sunny
+1:Cloudy/foggy
+2:Rain
+3:Windy
+4:Heavy rain
+5:Wet ground
+</DropDownList>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>weather_base</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>456</ID>
+              <Description>"Days"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>minutes_base-10</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>454</ID>
+              <Description>"Hour"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>minutes_base-4</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>453</ID>
+              <Description>"Minute"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>minutes_base</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>11</ID>
@@ -623,9 +670,9 @@ Atelier_Ryza_3.exe+9C017C: 48 8D 4F 10           - lea rcx,[rdi+10]
           <ID>19</ID>
           <Description>"(?) Inf. food buff duration"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version: 
-  Date   : 2023-03-31
+          <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
+  Version:
+  Date   : 2025-12-21
   Author : bbfox@https://opencheattables.com
 }
 
@@ -658,31 +705,31 @@ unregistersymbol(INJECT_INF_FOOD_BUFF_DUR)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3.exe+20F869
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+18B9C9
 
-Atelier_Ryza_3.exe+20F840: 0F 29 7C 24 20           - movaps [rsp+20],xmm7
-Atelier_Ryza_3.exe+20F845: E8 B6 FD FF FF           - call Atelier_Ryza_3.exe+20F600
-Atelier_Ryza_3.exe+20F84A: 48 8B 83 C8 00 00 00     - mov rax,[rbx+000000C8]
-Atelier_Ryza_3.exe+20F851: 0F 57 FF                 - xorps xmm7,xmm7
-Atelier_Ryza_3.exe+20F854: 48 85 C0                 - test rax,rax
-Atelier_Ryza_3.exe+20F857: 75 05                    - jne Atelier_Ryza_3.exe+20F85E
-Atelier_Ryza_3.exe+20F859: 0F 57 F6                 - xorps xmm6,xmm6
-Atelier_Ryza_3.exe+20F85C: EB 10                    - jmp Atelier_Ryza_3.exe+20F86E
-Atelier_Ryza_3.exe+20F85E: 48 8B 00                 - mov rax,[rax]
-Atelier_Ryza_3.exe+20F861: F3 0F 10 35 9F F0 15 01  - movss xmm6,[Atelier_Ryza_3.exe+136E908]
+Atelier_Ryza_3_DX.exe+18B9A0: 0F 29 7C 24 20           - movaps [rsp+20],xmm7
+Atelier_Ryza_3_DX.exe+18B9A5: E8 96 FD FF FF           - call Atelier_Ryza_3_DX.exe+18B740
+Atelier_Ryza_3_DX.exe+18B9AA: 48 8B 83 C0 00 00 00     - mov rax,[rbx+000000C0]
+Atelier_Ryza_3_DX.exe+18B9B1: 0F 57 FF                 - xorps xmm7,xmm7
+Atelier_Ryza_3_DX.exe+18B9B4: 48 85 C0                 - test rax,rax
+Atelier_Ryza_3_DX.exe+18B9B7: 75 05                    - jne Atelier_Ryza_3_DX.exe+18B9BE
+Atelier_Ryza_3_DX.exe+18B9B9: 0F 57 F6                 - xorps xmm6,xmm6
+Atelier_Ryza_3_DX.exe+18B9BC: EB 10                    - jmp Atelier_Ryza_3_DX.exe+18B9CE
+Atelier_Ryza_3_DX.exe+18B9BE: 48 8B 00                 - mov rax,[rax]
+Atelier_Ryza_3_DX.exe+18B9C1: F3 0F 10 35 2F 1E 39 01  - movss xmm6,[Atelier_Ryza_3_DX.exe+151D7F8]
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_3.exe+20F869: F3 0F 5C 70 10           - subss xmm6,[rax+10]
+Atelier_Ryza_3_DX.exe+18B9C9: F3 0F 5C 70 10           - subss xmm6,[rax+10]
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_3.exe+20F86E: E8 AD 31 83 00           - call Atelier_Ryza_3.exe+A42A20
-Atelier_Ryza_3.exe+20F873: F3 0F 59 C6              - mulss xmm0,xmm6
-Atelier_Ryza_3.exe+20F877: E8 B4 33 83 00           - call Atelier_Ryza_3.exe+A42C30
-Atelier_Ryza_3.exe+20F87C: 48 8B 4B 48              - mov rcx,[rbx+48]
-Atelier_Ryza_3.exe+20F880: 0F 28 CE                 - movaps xmm1,xmm6
-Atelier_Ryza_3.exe+20F883: F3 0F 59 0D F1 F7 15 01  - mulss xmm1,[Atelier_Ryza_3.exe+136F07C]
-Atelier_Ryza_3.exe+20F88B: E8 00 FB 68 00           - call Atelier_Ryza_3.exe+89F390
-Atelier_Ryza_3.exe+20F890: F3 0F 10 05 8C FC 15 01  - movss xmm0,[Atelier_Ryza_3.exe+136F524]
-Atelier_Ryza_3.exe+20F898: 0F 2F C6                 - comiss xmm0,xmm6
-Atelier_Ryza_3.exe+20F89B: 72 11                    - jb Atelier_Ryza_3.exe+20F8AE
+Atelier_Ryza_3_DX.exe+18B9CE: E8 CD 2D 8A 00           - call Atelier_Ryza_3_DX.exe+A2E7A0
+Atelier_Ryza_3_DX.exe+18B9D3: F3 0F 59 C6              - mulss xmm0,xmm6
+Atelier_Ryza_3_DX.exe+18B9D7: E8 F4 2F 8A 00           - call Atelier_Ryza_3_DX.exe+A2E9D0
+Atelier_Ryza_3_DX.exe+18B9DC: 48 8B 4B 48              - mov rcx,[rbx+48]
+Atelier_Ryza_3_DX.exe+18B9E0: 0F 28 CE                 - movaps xmm1,xmm6
+Atelier_Ryza_3_DX.exe+18B9E3: F3 0F 59 0D D9 25 39 01  - mulss xmm1,[Atelier_Ryza_3_DX.exe+151DFC4]
+Atelier_Ryza_3_DX.exe+18B9EB: E8 90 5E 6F 00           - call Atelier_Ryza_3_DX.exe+881880
+Atelier_Ryza_3_DX.exe+18B9F0: F3 0F 10 05 F0 1C 39 01  - movss xmm0,[Atelier_Ryza_3_DX.exe+151D6E8]
+Atelier_Ryza_3_DX.exe+18B9F8: 0F 2F C6                 - comiss xmm0,xmm6
+Atelier_Ryza_3_DX.exe+18B9FB: 72 11                    - jb Atelier_Ryza_3_DX.exe+18BA0E
 }
 </AssemblerScript>
         </CheatEntry>
@@ -690,9 +737,9 @@ Atelier_Ryza_3.exe+20F89B: 72 11                    - jb Atelier_Ryza_3.exe+20F8
           <ID>20</ID>
           <Description>"(?) Inf. hollow key (虚ろの鍵) usage"</Description>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version: 
-  Date   : 2023-03-29
+          <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
+  Version:
+  Date   : 2025-12-21
   Author : bbfox@https://opencheattables.com
 }
 
@@ -741,32 +788,33 @@ dealloc(newmem)
 
 unregistersymbol(INJECT_INF_KEY_MAKING_COUNTo)
 dealloc(INJECT_INF_KEY_MAKING_COUNTo)
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3.exe+A33A6A
 
-Atelier_Ryza_3.exe+A33A4C: C3                    - ret
-Atelier_Ryza_3.exe+A33A4D: CC                    - int 3
-Atelier_Ryza_3.exe+A33A4E: CC                    - int 3
-Atelier_Ryza_3.exe+A33A4F: CC                    - int 3
-Atelier_Ryza_3.exe+A33A50: 48 83 EC 28           - sub rsp,28
-Atelier_Ryza_3.exe+A33A54: 48 8D 0D B8 1E E2 01  - lea rcx,[Atelier_Ryza_3.exe+2855913]
-Atelier_Ryza_3.exe+A33A5B: E8 70 B3 85 00        - call Atelier_Ryza_3.exe+128EDD0
-Atelier_Ryza_3.exe+A33A60: 8B 05 CA CB 81 01     - mov eax,[Atelier_Ryza_3.exe+2250630]
-Atelier_Ryza_3.exe+A33A66: 85 C0                 - test eax,eax
-Atelier_Ryza_3.exe+A33A68: 7E 08                 - jle Atelier_Ryza_3.exe+A33A72
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+6D3A6A
+
+Atelier_Ryza_3_DX.exe+6D3A4C: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A4D: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A4E: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A4F: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A50: 48 83 EC 28           - sub rsp,28
+Atelier_Ryza_3_DX.exe+6D3A54: 48 8D 0D 28 87 57 02  - lea rcx,[Atelier_Ryza_3_DX.exe+2C4C183]
+Atelier_Ryza_3_DX.exe+6D3A5B: E8 C8 AC DA 00        - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
+Atelier_Ryza_3_DX.exe+6D3A60: 8B 05 EA 46 E7 01     - mov eax,[vkey_base]
+Atelier_Ryza_3_DX.exe+6D3A66: 85 C0                 - test eax,eax
+Atelier_Ryza_3_DX.exe+6D3A68: 7E 08                 - jle Atelier_Ryza_3_DX.exe+6D3A72
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_3.exe+A33A6A: FF C8                 - dec eax
+Atelier_Ryza_3_DX.exe+6D3A6A: FF C8                 - dec eax
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_3.exe+A33A6C: 89 05 BE CB 81 01     - mov [Atelier_Ryza_3.exe+2250630],eax
-Atelier_Ryza_3.exe+A33A72: 48 83 C4 28           - add rsp,28
-Atelier_Ryza_3.exe+A33A76: C3                    - ret
-Atelier_Ryza_3.exe+A33A77: CC                    - int 3
-Atelier_Ryza_3.exe+A33A78: CC                    - int 3
-Atelier_Ryza_3.exe+A33A79: CC                    - int 3
-Atelier_Ryza_3.exe+A33A7A: CC                    - int 3
-Atelier_Ryza_3.exe+A33A7B: CC                    - int 3
-Atelier_Ryza_3.exe+A33A7C: CC                    - int 3
-Atelier_Ryza_3.exe+A33A7D: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A6C: 89 05 DE 46 E7 01     - mov [vkey_base],eax
+Atelier_Ryza_3_DX.exe+6D3A72: 48 83 C4 28           - add rsp,28
+Atelier_Ryza_3_DX.exe+6D3A76: C3                    - ret
+Atelier_Ryza_3_DX.exe+6D3A77: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A78: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A79: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7A: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7B: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7C: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7D: CC                    - int 3
 }
 </AssemblerScript>
         </CheatEntry>
@@ -787,6 +835,7 @@ aobscanmodule(INJECT_INF_FIELD_KEY_BUFF,$process,F3 0F 5C C7 C6 05 ?? ?? ?? ?? 0
 INJECT_INF_FIELD_KEY_BUFF:
   nop 4
 
+registersymbol(INJECT_INF_FIELD_KEY_BUFF)
 [DISABLE]
 
 INJECT_INF_FIELD_KEY_BUFF:
@@ -828,9 +877,9 @@ Atelier_Ryza_3_DX.exe+93B98B: C1 E8 1F                 - shr eax,1F
           <Description>"(?) Field: Inf. key use count with criteria"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version: 
-  Date   : 2023-03-29
+          <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
+  Version:
+  Date   : 2025-12-21
   Author : bbfox@https://opencheattables.com
 }
 
@@ -879,31 +928,31 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3.exe+6817F4
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+661414
 
-Atelier_Ryza_3.exe+6817D7: 75 1E           - jne Atelier_Ryza_3.exe+6817F7
-Atelier_Ryza_3.exe+6817D9: BA 1B 00 00 00  - mov edx,0000001B
-Atelier_Ryza_3.exe+6817DE: 48 8B CB        - mov rcx,rbx
-Atelier_Ryza_3.exe+6817E1: E8 EA EA FF FF  - call Atelier_Ryza_3.exe+6802D0
-Atelier_Ryza_3.exe+6817E6: 84 C0           - test al,al
-Atelier_Ryza_3.exe+6817E8: 74 0A           - je Atelier_Ryza_3.exe+6817F4
-Atelier_Ryza_3.exe+6817EA: C6 43 27 00     - mov byte ptr [rbx+27],00
-Atelier_Ryza_3.exe+6817EE: 48 83 C4 20     - add rsp,20
-Atelier_Ryza_3.exe+6817F2: 5B              - pop rbx
-Atelier_Ryza_3.exe+6817F3: C3              - ret 
+Atelier_Ryza_3_DX.exe+6613F7: 75 1E           - jne Atelier_Ryza_3_DX.exe+661417
+Atelier_Ryza_3_DX.exe+6613F9: BA 1B 00 00 00  - mov edx,0000001B
+Atelier_Ryza_3_DX.exe+6613FE: 48 8B CB        - mov rcx,rbx
+Atelier_Ryza_3_DX.exe+661401: E8 4A E8 FF FF  - call Atelier_Ryza_3_DX.exe+65FC50
+Atelier_Ryza_3_DX.exe+661406: 84 C0           - test al,al
+Atelier_Ryza_3_DX.exe+661408: 74 0A           - je Atelier_Ryza_3_DX.exe+661414
+Atelier_Ryza_3_DX.exe+66140A: C6 43 27 00     - mov byte ptr [rbx+27],00
+Atelier_Ryza_3_DX.exe+66140E: 48 83 C4 20     - add rsp,20
+Atelier_Ryza_3_DX.exe+661412: 5B              - pop rbx
+Atelier_Ryza_3_DX.exe+661413: C3              - ret
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_3.exe+6817F4: FE 4B 27        - dec [rbx+27]
+Atelier_Ryza_3_DX.exe+661414: FE 4B 27        - dec [rbx+27]
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_3.exe+6817F7: 48 83 C4 20     - add rsp,20
-Atelier_Ryza_3.exe+6817FB: 5B              - pop rbx
-Atelier_Ryza_3.exe+6817FC: C3              - ret 
-Atelier_Ryza_3.exe+6817FD: CC              - int 3 
-Atelier_Ryza_3.exe+6817FE: CC              - int 3 
-Atelier_Ryza_3.exe+6817FF: CC              - int 3 
-Atelier_Ryza_3.exe+681800: 48 89 5C 24 08  - mov [rsp+08],rbx
-Atelier_Ryza_3.exe+681805: 48 89 74 24 10  - mov [rsp+10],rsi
-Atelier_Ryza_3.exe+68180A: 48 89 7C 24 18  - mov [rsp+18],rdi
-Atelier_Ryza_3.exe+68180F: 41 56           - push r14
+Atelier_Ryza_3_DX.exe+661417: 48 83 C4 20     - add rsp,20
+Atelier_Ryza_3_DX.exe+66141B: 5B              - pop rbx
+Atelier_Ryza_3_DX.exe+66141C: C3              - ret
+Atelier_Ryza_3_DX.exe+66141D: CC              - int 3
+Atelier_Ryza_3_DX.exe+66141E: CC              - int 3
+Atelier_Ryza_3_DX.exe+66141F: CC              - int 3
+Atelier_Ryza_3_DX.exe+661420: 48 89 5C 24 08  - mov [rsp+08],rbx
+Atelier_Ryza_3_DX.exe+661425: 48 89 74 24 10  - mov [rsp+10],rsi
+Atelier_Ryza_3_DX.exe+66142A: 48 89 7C 24 18  - mov [rsp+18],rdi
+Atelier_Ryza_3_DX.exe+66142F: 41 56           - push r14
 }
 </AssemblerScript>
           <CheatEntries>
@@ -928,9 +977,9 @@ Atelier_Ryza_3.exe+68180F: 41 56           - push r14
           <Description>"(?) Set a minimum key usage count in key ring"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version: 
-  Date   : 2023-03-30
+          <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
+  Version:
+  Date   : 2025-12-21
   Author : bbfox@https://opencheattables.com
 }
 
@@ -976,31 +1025,31 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3.exe+34AB05
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+300F05
 
-Atelier_Ryza_3.exe+34AAE2: 8B CD              - mov ecx,ebp
-Atelier_Ryza_3.exe+34AAE4: E8 47 92 6E 00     - call Atelier_Ryza_3.exe+A33D30
-Atelier_Ryza_3.exe+34AAE9: 48 85 C0           - test rax,rax
-Atelier_Ryza_3.exe+34AAEC: 74 5D              - je Atelier_Ryza_3.exe+34AB4B
-Atelier_Ryza_3.exe+34AAEE: 49 8B 16           - mov rdx,[r14]
-Atelier_Ryza_3.exe+34AAF1: 49 8B 4E 08        - mov rcx,[r14+08]
-Atelier_Ryza_3.exe+34AAF5: 48 2B CA           - sub rcx,rdx
-Atelier_Ryza_3.exe+34AAF8: 48 C1 F9 07        - sar rcx,07
-Atelier_Ryza_3.exe+34AAFC: 48 3B CF           - cmp rcx,rdi
-Atelier_Ryza_3.exe+34AAFF: 0F 86 80 00 00 00  - jbe Atelier_Ryza_3.exe+34AB85
+Atelier_Ryza_3_DX.exe+300EE2: 8B CD              - mov ecx,ebp
+Atelier_Ryza_3_DX.exe+300EE4: E8 67 42 72 00     - call Atelier_Ryza_3_DX.exe+A25150
+Atelier_Ryza_3_DX.exe+300EE9: 48 85 C0           - test rax,rax
+Atelier_Ryza_3_DX.exe+300EEC: 74 5D              - je Atelier_Ryza_3_DX.exe+300F4B
+Atelier_Ryza_3_DX.exe+300EEE: 49 8B 16           - mov rdx,[r14]
+Atelier_Ryza_3_DX.exe+300EF1: 49 8B 4E 08        - mov rcx,[r14+08]
+Atelier_Ryza_3_DX.exe+300EF5: 48 2B CA           - sub rcx,rdx
+Atelier_Ryza_3_DX.exe+300EF8: 48 C1 F9 07        - sar rcx,07
+Atelier_Ryza_3_DX.exe+300EFC: 48 3B CF           - cmp rcx,rdi
+Atelier_Ryza_3_DX.exe+300EFF: 0F 86 80 00 00 00  - jbe Atelier_Ryza_3_DX.exe+300F85
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_3.exe+34AB05: 0F 10 00           - movups xmm0,[rax]
+Atelier_Ryza_3_DX.exe+300F05: 0F 10 00           - movups xmm0,[rax]
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_3.exe+34AB08: 0F 11 04 32        - movups [rdx+rsi],xmm0
-Atelier_Ryza_3.exe+34AB0C: 0F 10 48 10        - movups xmm1,[rax+10]
-Atelier_Ryza_3.exe+34AB10: 0F 11 4C 32 10     - movups [rdx+rsi+10],xmm1
-Atelier_Ryza_3.exe+34AB15: 0F 10 40 20        - movups xmm0,[rax+20]
-Atelier_Ryza_3.exe+34AB19: 0F 11 44 32 20     - movups [rdx+rsi+20],xmm0
-Atelier_Ryza_3.exe+34AB1E: 0F 10 48 30        - movups xmm1,[rax+30]
-Atelier_Ryza_3.exe+34AB22: 0F 11 4C 32 30     - movups [rdx+rsi+30],xmm1
-Atelier_Ryza_3.exe+34AB27: 0F 10 40 40        - movups xmm0,[rax+40]
-Atelier_Ryza_3.exe+34AB2B: 0F 11 44 32 40     - movups [rdx+rsi+40],xmm0
-Atelier_Ryza_3.exe+34AB30: 0F 10 48 50        - movups xmm1,[rax+50]
+Atelier_Ryza_3_DX.exe+300F08: 0F 11 04 32        - movups [rdx+rsi],xmm0
+Atelier_Ryza_3_DX.exe+300F0C: 0F 10 48 10        - movups xmm1,[rax+10]
+Atelier_Ryza_3_DX.exe+300F10: 0F 11 4C 32 10     - movups [rdx+rsi+10],xmm1
+Atelier_Ryza_3_DX.exe+300F15: 0F 10 40 20        - movups xmm0,[rax+20]
+Atelier_Ryza_3_DX.exe+300F19: 0F 11 44 32 20     - movups [rdx+rsi+20],xmm0
+Atelier_Ryza_3_DX.exe+300F1E: 0F 10 48 30        - movups xmm1,[rax+30]
+Atelier_Ryza_3_DX.exe+300F22: 0F 11 4C 32 30     - movups [rdx+rsi+30],xmm1
+Atelier_Ryza_3_DX.exe+300F27: 0F 10 40 40        - movups xmm0,[rax+40]
+Atelier_Ryza_3_DX.exe+300F2B: 0F 11 44 32 40     - movups [rdx+rsi+40],xmm0
+Atelier_Ryza_3_DX.exe+300F30: 0F 10 48 50        - movups xmm1,[rax+50]
 }
 </AssemblerScript>
           <CheatEntries>
@@ -1271,17 +1320,82 @@ if syntaxcheck then return end
 if memrec then print(memrec.Description) end
 print("Start")
 
+-- Helper function to write message to memory with null termination
+local function writeMessage(address, message)
+  if not address then return end
+
+  local MAX_MSG_LENGTH = 60
+  -- Truncate message if too long (reserve 1 byte for null)
+  if #message &gt;= MAX_MSG_LENGTH then
+    message = message:sub(1, MAX_MSG_LENGTH - 1)
+  end
+
+  -- Write message string
+  writeString(address, message)
+
+  -- Ensure null termination
+  writeByte(address + #message, 0)
+end
+
+-- Helper function to clear message buffer
+local function clearMessage(address)
+  if not address then return end
+  -- Write null at start to clear the string
+  writeByte(address, 0)
+end
+
+-- Helper function to write error messages (also prints to console)
+local function writeError(msg1Addr, msg2Addr, msg3Addr, errorMsg1, errorMsg2)
+  -- Print to console
+  if errorMsg1 then
+    print(errorMsg1)
+  end
+  if errorMsg2 then
+    print(errorMsg2)
+  end
+
+  -- Write to memory
+  if msg1Addr then
+    writeMessage(msg1Addr, errorMsg1 or "")
+  end
+  if msg2Addr then
+    writeMessage(msg2Addr, errorMsg2 or "")
+  end
+  if msg3Addr then
+    -- Write timestamp
+    local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+    writeMessage(msg3Addr, timestamp)
+    print("Timestamp: " .. timestamp)
+  end
+  closeLuaEngine()
+end
+
+-- Get message buffer addresses
+local msgAddr1 = getAddressSafe('str_msg1')
+local msgAddr2 = getAddressSafe('str_msg2')
+local msgAddr3 = getAddressSafe('str_msg3')
+
+-- Clear message buffers at start
+print("Clearing message buffers...")
+clearMessage(msgAddr1)
+clearMessage(msgAddr2)
+clearMessage(msgAddr3)
+
 -- Check if container base address is available
 local containerBaseAddr = getAddressSafe('container_base_addr')
 if not containerBaseAddr then
-  print("Error: container_base_addr symbol not found")
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: container_base_addr symbol not found",
+    "Cannot proceed without container address")
   return
 end
 
 -- Check if serial number system is available
 local serialBaseAddr = getAddressSafe('item_serial_base')
 if not serialBaseAddr then
-  print("Error: item_serial_base symbol not found")
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: item_serial_base symbol not found",
+    "Cannot proceed without serial base")
   return
 end
 
@@ -1289,22 +1403,51 @@ local itemBaseAddr = readPointer("container_base_addr")
 print(string.format("Source item addr: %08X", itemBaseAddr))
 
 if itemBaseAddr == 0 then
-  print("Please select item first")
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: No item selected",
+    "Please select an item first")
   return
 end
 
 if not getAddressSafe('Atelier_Ryza_3_DX.exe') then
-  print("Atelier_Ryza_3_DX.exe not found")
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: Game not found",
+    "Atelier_Ryza_3_DX.exe not loaded")
   return
 end
 
--- Check if message symbols are available
-local msgAddr1 = getAddressSafe('str_msg1')
-local msgAddr2 = getAddressSafe('str_msg2')
-local msgAddr3 = getAddressSafe('str_msg3')
+-- **Check if source is in protected address ranges**
+local importantBaseAddr = g_importantBaseAddress
+local pristineKeyAddr = g_pristineKeyAddress
+local IMPORTANT_COUNT = 0x64  -- 100 items
+local PRISTINE_KEY_COUNT = 0x20  -- 32 keys
 
-if not msgAddr1 or not msgAddr2 or not msgAddr3 then
-  print("Warning: str_msg symbols not found, messages will only be printed")
+-- Check important items range
+if importantBaseAddr then
+  local importantRangeStart = importantBaseAddr
+  local importantRangeEnd = importantBaseAddr + (0x80 * IMPORTANT_COUNT)
+
+  if itemBaseAddr &gt;= importantRangeStart and itemBaseAddr &lt; importantRangeEnd then
+    print(string.format("Protected range: %08X - %08X", importantRangeStart, importantRangeEnd))
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      "Error: Protected item",
+      "Cannot duplicate important items")
+    return
+  end
+end
+
+-- Check pristine key range
+if pristineKeyAddr then
+  local pristineRangeStart = pristineKeyAddr
+  local pristineRangeEnd = pristineKeyAddr + (0x80 * PRISTINE_KEY_COUNT)
+
+  if itemBaseAddr &gt;= pristineRangeStart and itemBaseAddr &lt; pristineRangeEnd then
+    print(string.format("Protected range: %08X - %08X", pristineRangeStart, pristineRangeEnd))
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      "Error: Protected item",
+      "Cannot duplicate pristine keys")
+    return
+  end
 end
 
 -- Cache frequently used values
@@ -1314,7 +1457,6 @@ local ItemSize = ItemRecordSize
 local dupCount = 3
 local MAX_QUALITY = 999
 local MAX_SERIAL = 32267  -- Hard cap at 32267
-local MAX_MSG_LENGTH = 60  -- Maximum message length including null terminator
 
 print(string.format("Container addr: %08X", containerBaseAddress))
 
@@ -1330,8 +1472,9 @@ print(string.format("Source quality: %d", srcQuality))
 
 -- Check if source quality is invalid
 if srcQuality &gt; MAX_QUALITY then
-  print(string.format("Error: Source quality (%d) exceeds maximum (%d)", srcQuality, MAX_QUALITY))
-  print("Duplication cancelled")
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    string.format("Error: Invalid quality (%d)", srcQuality),
+    string.format("Maximum allowed is %d", MAX_QUALITY))
   return
 end
 
@@ -1350,24 +1493,10 @@ for i = 1, MaxCount - 5 do
 end
 
 if not emptySlotAddr then
-  print("No empty slots found")
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: Container full",
+    "No empty slots available")
   return
-end
-
--- Helper function to write message to memory with null termination
-local function writeMessage(address, message)
-  if not address then return end
-
-  -- Truncate message if too long (reserve 1 byte for null)
-  if #message &gt;= MAX_MSG_LENGTH then
-    message = message:sub(1, MAX_MSG_LENGTH - 1)
-  end
-
-  -- Write message string
-  writeString(address, message)
-
-  -- Ensure null termination
-  writeByte(address + #message, 0)
 end
 
 -- **Duplicate items with managed serial numbers and quality**
@@ -5422,7 +5551,7 @@ code:
   jmp return
 align 10 cc
   vf_battle_exp_multi:
-  dd (float)1.15
+  dd (float)2.15
 
 INJECT_BATTLE_EXP_MULTI:
   jmp newmem
@@ -5484,7 +5613,7 @@ Atelier_Ryza_3.exe+9BB909: E8 62 0C F1 FF        - call Atelier_Ryza_3.exe+8CC57
             </CheatEntry>
             <CheatEntry>
               <ID>320</ID>
-              <Description>"(?) Battle: CC multiplier"</Description>
+              <Description>"Battle: CC multiplier"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
@@ -5505,6 +5634,10 @@ label(vf_cc_multi)
 newmem:
   vmovss xmm14, [vf_cc_multi]
   vmulss xmm6, xmm6, xmm14
+  vmovss xmm14, [vf_3]
+  vucomiss xmm1, xmm14
+  jae @F
+  movss xmm1, xmm14
 
 code:
   addss xmm1,xmm6
@@ -5512,7 +5645,9 @@ code:
   jmp return
 align 10 cc
   vf_cc_multi:
-  dd (float)2
+  dd (float)3.33333333
+  vf_3:
+  dd (float)3
 
 INJECT_CC_MULTI:
   jmp newmem
@@ -5570,12 +5705,12 @@ Atelier_Ryza_3_DX.exe+927B6: E8 15 DF 05 00        - call Atelier_Ryza_3_DX.exe+
             </CheatEntry>
             <CheatEntry>
               <ID>322</ID>
-              <Description>"(?) Battle: Core shard multiplier"</Description>
+              <Description>"Battle: Core shard multiplier"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version: 
-  Date   : 2023-03-27
+  Version:
+  Date   : 2025-12-20
   Author : bbfox@https://opencheattables.com
 }
 
@@ -5602,7 +5737,7 @@ code:
   jmp return
 align 10 cc
   vf_core_shard_multi:
-  dd (float)2
+  dd (float)1.3333333
 INJECT_CORE_SHARD_MULTI:
   jmp newmem
   nop 3
@@ -5619,31 +5754,31 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3.exe+A3AE7A
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+A3914B
 
-Atelier_Ryza_3.exe+A3AE5C: CC                             - int 3 
-Atelier_Ryza_3.exe+A3AE5D: CC                             - int 3 
-Atelier_Ryza_3.exe+A3AE5E: CC                             - int 3 
-Atelier_Ryza_3.exe+A3AE5F: CC                             - int 3 
-Atelier_Ryza_3.exe+A3AE60: 40 53                          - push rbx
-Atelier_Ryza_3.exe+A3AE62: 48 83 EC 20                    - sub rsp,20
-Atelier_Ryza_3.exe+A3AE66: 8B D9                          - mov ebx,ecx
-Atelier_Ryza_3.exe+A3AE68: 48 8D 0D 86 48 E0 01           - lea rcx,[Atelier_Ryza_3.exe+283F6F5]
-Atelier_Ryza_3.exe+A3AE6F: E8 CC 86 84 00                 - call Atelier_Ryza_3.exe+1283540
-Atelier_Ryza_3.exe+A3AE74: 8B 0D 96 6F 97 01              - mov ecx,[Atelier_Ryza_3.exe+23B1E10]
+Atelier_Ryza_3_DX.exe+A3912A: 03 CB                          - add ecx,ebx
+Atelier_Ryza_3_DX.exe+A3912C: 81 F9 9F 86 01 00              - cmp ecx,0001869F
+Atelier_Ryza_3_DX.exe+A39132: 7C 10                          - jl Atelier_Ryza_3_DX.exe+A39144
+Atelier_Ryza_3_DX.exe+A39134: C7 05 62 1C D9 01 9F 86 01 00  - mov [core_shard_base],0001869F
+Atelier_Ryza_3_DX.exe+A3913E: 48 83 C4 20                    - add rsp,20
+Atelier_Ryza_3_DX.exe+A39142: 5B                             - pop rbx
+Atelier_Ryza_3_DX.exe+A39143: C3                             - ret
+Atelier_Ryza_3_DX.exe+A39144: 33 C0                          - xor eax,eax
+Atelier_Ryza_3_DX.exe+A39146: 85 C9                          - test ecx,ecx
+Atelier_Ryza_3_DX.exe+A39148: 0F 4E C8                       - cmovle ecx,eax
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_3.exe+A3AE7A: 03 CB                          - add ecx,ebx
+Atelier_Ryza_3_DX.exe+A3914B: 89 0D 4F 1C D9 01              - mov [core_shard_base],ecx
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_3.exe+A3AE7C: 81 F9 9F 86 01 00              - cmp ecx,0001869F
-Atelier_Ryza_3.exe+A3AE82: 7C 10                          - jl Atelier_Ryza_3.exe+A3AE94
-Atelier_Ryza_3.exe+A3AE84: C7 05 82 6F 97 01 9F 86 01 00  - mov [Atelier_Ryza_3.exe+23B1E10],0001869F
-Atelier_Ryza_3.exe+A3AE8E: 48 83 C4 20                    - add rsp,20
-Atelier_Ryza_3.exe+A3AE92: 5B                             - pop rbx
-Atelier_Ryza_3.exe+A3AE93: C3                             - ret 
-Atelier_Ryza_3.exe+A3AE94: 33 C0                          - xor eax,eax
-Atelier_Ryza_3.exe+A3AE96: 85 C9                          - test ecx,ecx
-Atelier_Ryza_3.exe+A3AE98: 0F 4E C8                       - cmovle ecx,eax
-Atelier_Ryza_3.exe+A3AE9B: 89 0D 6F 6F 97 01              - mov [Atelier_Ryza_3.exe+23B1E10],ecx
+Atelier_Ryza_3_DX.exe+A39151: 48 83 C4 20                    - add rsp,20
+Atelier_Ryza_3_DX.exe+A39155: 5B                             - pop rbx
+Atelier_Ryza_3_DX.exe+A39156: C3                             - ret
+Atelier_Ryza_3_DX.exe+A39157: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A39158: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A39159: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915A: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915B: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915C: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915D: CC                             - int 3
 }
 </AssemblerScript>
               <CheatEntries>
@@ -5866,9 +6001,9 @@ Atelier_Ryza_3_DX.exe+76C62C: 74 0E                       - je Atelier_Ryza_3_DX
               <Description>"(?) Battle: inf. key use count with criteria"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version: 
-  Date   : 2023-03-31
+              <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
+  Version:
+  Date   : 2025-12-21
   Author : bbfox@https://opencheattables.com
 }
 
@@ -5919,31 +6054,31 @@ unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3.exe+685BAD
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+65BFBD
 
-Atelier_Ryza_3.exe+685B86: 48 83 EC 20           - sub rsp,20
-Atelier_Ryza_3.exe+685B8A: 48 8B D9              - mov rbx,rcx
-Atelier_Ryza_3.exe+685B8D: 8B FA                 - mov edi,edx
-Atelier_Ryza_3.exe+685B8F: 48 8D 0D 25 84 19 02  - lea rcx,[Atelier_Ryza_3.exe+281DFBB]
-Atelier_Ryza_3.exe+685B96: E8 35 92 C0 00        - call Atelier_Ryza_3.exe+128EDD0
-Atelier_Ryza_3.exe+685B9B: 0F BF 4B 04           - movsx ecx,word ptr [rbx+04]
-Atelier_Ryza_3.exe+685B9F: E8 DC 4D 32 00        - call Atelier_Ryza_3.exe+9AA980
-Atelier_Ryza_3.exe+685BA4: 48 85 C0              - test rax,rax
-Atelier_Ryza_3.exe+685BA7: 74 0A                 - je Atelier_Ryza_3.exe+685BB3
-Atelier_Ryza_3.exe+685BA9: 83 78 10 0E           - cmp dword ptr [rax+10],0E
+Atelier_Ryza_3_DX.exe+65BF96: 48 83 EC 20           - sub rsp,20
+Atelier_Ryza_3_DX.exe+65BF9A: 48 8B D9              - mov rbx,rcx
+Atelier_Ryza_3_DX.exe+65BF9D: 8B FA                 - mov edi,edx
+Atelier_Ryza_3_DX.exe+65BF9F: 48 8D 0D 0B 72 5E 02  - lea rcx,[Atelier_Ryza_3_DX.exe+2C431B1]
+Atelier_Ryza_3_DX.exe+65BFA6: E8 7D 27 E2 00        - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
+Atelier_Ryza_3_DX.exe+65BFAB: 0F BF 4B 04           - movsx ecx,word ptr [rbx+04]
+Atelier_Ryza_3_DX.exe+65BFAF: E8 1C E2 33 00        - call Atelier_Ryza_3_DX.exe+99A1D0
+Atelier_Ryza_3_DX.exe+65BFB4: 48 85 C0              - test rax,rax
+Atelier_Ryza_3_DX.exe+65BFB7: 74 0A                 - je Atelier_Ryza_3_DX.exe+65BFC3
+Atelier_Ryza_3_DX.exe+65BFB9: 83 78 10 0E           - cmp dword ptr [rax+10],0E
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_3.exe+685BAD: 75 04                 - jne Atelier_Ryza_3.exe+685BB3
+Atelier_Ryza_3_DX.exe+65BFBD: 75 04                 - jne Atelier_Ryza_3_DX.exe+65BFC3
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_3.exe+685BAF: 40 00 7B 27           - add [rbx+27],dil
-Atelier_Ryza_3.exe+685BB3: 48 8B 5C 24 30        - mov rbx,[rsp+30]
-Atelier_Ryza_3.exe+685BB8: 48 83 C4 20           - add rsp,20
-Atelier_Ryza_3.exe+685BBC: 5F                    - pop rdi
-Atelier_Ryza_3.exe+685BBD: C3                    - ret 
-Atelier_Ryza_3.exe+685BBE: CC                    - int 3 
-Atelier_Ryza_3.exe+685BBF: CC                    - int 3 
-Atelier_Ryza_3.exe+685BC0: 48 89 5C 24 08        - mov [rsp+08],rbx
-Atelier_Ryza_3.exe+685BC5: 48 89 6C 24 10        - mov [rsp+10],rbp
-Atelier_Ryza_3.exe+685BCA: 48 89 74 24 18        - mov [rsp+18],rsi
+Atelier_Ryza_3_DX.exe+65BFBF: 40 00 7B 27           - add [rbx+27],dil
+Atelier_Ryza_3_DX.exe+65BFC3: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+Atelier_Ryza_3_DX.exe+65BFC8: 48 83 C4 20           - add rsp,20
+Atelier_Ryza_3_DX.exe+65BFCC: 5F                    - pop rdi
+Atelier_Ryza_3_DX.exe+65BFCD: C3                    - ret
+Atelier_Ryza_3_DX.exe+65BFCE: CC                    - int 3
+Atelier_Ryza_3_DX.exe+65BFCF: CC                    - int 3
+Atelier_Ryza_3_DX.exe+65BFD0: 48 89 5C 24 08        - mov [rsp+08],rbx
+Atelier_Ryza_3_DX.exe+65BFD5: 48 89 6C 24 10        - mov [rsp+10],rbp
+Atelier_Ryza_3_DX.exe+65BFDA: 48 89 74 24 18        - mov [rsp+18],rsi
 }
 </AssemblerScript>
               <CheatEntries>
@@ -6450,7 +6585,7 @@ range_table:
   dw 0078, 007C, 007A
   db 32, 00
   // 技能強化
-  dw 008A, 008C, 008E
+  dw 008A, 008E, 008C
   db 32, 00
   // 攻防
   dw 007D, 007D, 0086
@@ -7407,84 +7542,6 @@ Atelier_Ryza_3_DX.exe+A3660E: C3                    - ret
 }
 </AssemblerScript>
             </CheatEntry>
-            <CheatEntry>
-              <ID>365</ID>
-              <Description>"(?) Synthesis: Essences no decrease"</Description>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Atelier_Ryza_2_DX.exe
-  Version: 
-  Date   : 2025-12-14
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_INF_ESSENCES,$process,40 88 7B 02 48 8B 5C 24 30) // should be unique
-alloc(newmem,$1000,INJECT_INF_ESSENCES)
-
-label(code)
-label(return)
-
-newmem:
-  cmp word ptr [rbx+4], 2A2
-  jb code_pre
-  cmp word ptr [rbx+4], 2AA
-  ja code_pre
-
-  cmp [rbx+02],dil
-  jae code
-
-code_pre:
-  mov [rbx+02],dil
-
-code:
-  //mov [rbx+02],dil
-  mov rbx,[rsp+30]
-  jmp return
-
-INJECT_INF_ESSENCES:
-  jmp newmem
-  nop 4
-return:
-registersymbol(INJECT_INF_ESSENCES)
-
-[DISABLE]
-
-INJECT_INF_ESSENCES:
-  db 40 88 7B 02 48 8B 5C 24 30
-
-unregistersymbol(INJECT_INF_ESSENCES)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_2_DX.exe+40A54B
-
-Atelier_Ryza_2_DX.exe+40A52D: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A52E: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A52F: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A530: 48 89 5C 24 08        - mov [rsp+08],rbx
-Atelier_Ryza_2_DX.exe+40A535: 57                    - push rdi
-Atelier_Ryza_2_DX.exe+40A536: 48 83 EC 20           - sub rsp,20
-Atelier_Ryza_2_DX.exe+40A53A: 48 8B D9              - mov rbx,rcx
-Atelier_Ryza_2_DX.exe+40A53D: 8B FA                 - mov edi,edx
-Atelier_Ryza_2_DX.exe+40A53F: 48 8D 0D 4B AB FB 01  - lea rcx,[Atelier_Ryza_2_DX.exe+23C5091]
-Atelier_Ryza_2_DX.exe+40A546: E8 A1 00 CB 00        - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
-// ---------- INJECTING HERE ----------
-Atelier_Ryza_2_DX.exe+40A54B: 40 88 7B 02           - mov [rbx+02],dil
-// ---------- DONE INJECTING  ----------
-Atelier_Ryza_2_DX.exe+40A54F: 48 8B 5C 24 30        - mov rbx,[rsp+30]
-Atelier_Ryza_2_DX.exe+40A554: 48 83 C4 20           - add rsp,20
-Atelier_Ryza_2_DX.exe+40A558: 5F                    - pop rdi
-Atelier_Ryza_2_DX.exe+40A559: C3                    - ret 
-Atelier_Ryza_2_DX.exe+40A55A: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A55B: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A55C: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A55D: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A55E: CC                    - int 3 
-Atelier_Ryza_2_DX.exe+40A55F: CC                    - int 3 
-}
-</AssemblerScript>
-            </CheatEntry>
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
@@ -8269,6 +8326,84 @@ Atelier_Ryza_3_DX.exe+AF51BC: 48 8B 7C 24 30  - mov rdi,[rsp+30]
               <Color>FF8080</Color>
               <VariableType>2 Bytes</VariableType>
               <Address>Atelier_Ryza_3_DX.exe+25CAB90</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>365</ID>
+              <Description>"(?) Synthesis: Essences no decrease"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza_2_DX.exe
+  Version: 
+  Date   : 2025-12-14
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_ESSENCES,$process,40 88 7B 02 48 8B 5C 24 30) // should be unique
+alloc(newmem,$1000,INJECT_INF_ESSENCES)
+
+label(code)
+label(return)
+
+newmem:
+  cmp word ptr [rbx+4], 2A2
+  jb code_pre
+  cmp word ptr [rbx+4], 2AA
+  ja code_pre
+
+  cmp [rbx+02],dil
+  jae code
+
+code_pre:
+  mov [rbx+02],dil
+
+code:
+  //mov [rbx+02],dil
+  mov rbx,[rsp+30]
+  jmp return
+
+INJECT_INF_ESSENCES:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_INF_ESSENCES)
+
+[DISABLE]
+
+INJECT_INF_ESSENCES:
+  db 40 88 7B 02 48 8B 5C 24 30
+
+unregistersymbol(INJECT_INF_ESSENCES)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_2_DX.exe+40A54B
+
+Atelier_Ryza_2_DX.exe+40A52D: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A52E: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A52F: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A530: 48 89 5C 24 08        - mov [rsp+08],rbx
+Atelier_Ryza_2_DX.exe+40A535: 57                    - push rdi
+Atelier_Ryza_2_DX.exe+40A536: 48 83 EC 20           - sub rsp,20
+Atelier_Ryza_2_DX.exe+40A53A: 48 8B D9              - mov rbx,rcx
+Atelier_Ryza_2_DX.exe+40A53D: 8B FA                 - mov edi,edx
+Atelier_Ryza_2_DX.exe+40A53F: 48 8D 0D 4B AB FB 01  - lea rcx,[Atelier_Ryza_2_DX.exe+23C5091]
+Atelier_Ryza_2_DX.exe+40A546: E8 A1 00 CB 00        - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
+// ---------- INJECTING HERE ----------
+Atelier_Ryza_2_DX.exe+40A54B: 40 88 7B 02           - mov [rbx+02],dil
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza_2_DX.exe+40A54F: 48 8B 5C 24 30        - mov rbx,[rsp+30]
+Atelier_Ryza_2_DX.exe+40A554: 48 83 C4 20           - add rsp,20
+Atelier_Ryza_2_DX.exe+40A558: 5F                    - pop rdi
+Atelier_Ryza_2_DX.exe+40A559: C3                    - ret 
+Atelier_Ryza_2_DX.exe+40A55A: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A55B: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A55C: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A55D: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A55E: CC                    - int 3 
+Atelier_Ryza_2_DX.exe+40A55F: CC                    - int 3 
+}
+</AssemblerScript>
             </CheatEntry>
             <CheatEntry>
               <ID>400</ID>
