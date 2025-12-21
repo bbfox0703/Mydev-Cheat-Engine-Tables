@@ -89,11 +89,15 @@ zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～
 ja-JP: ライザのアトリエ２ ～失われた伝承と秘密の妖精～ DX  
 zh-TW: 萊莎的鍊金工房２ ～失落傳說與秘密妖精～ DX  
 
-
 ## Atelier Ryza 3
 [Atelier Ryza 2: Lost Legends & the Secret Fairy (Steam)](https://store.steampowered.com/app/1999770/_/)  
 zh-TW: 萊莎的鍊金工房３ ～終結之鍊金術士與秘密鑰匙～  
 ja-JP: ライザのアトリエ３ ～終わりの錬金術士と秘密の鍵～  
+
+## Atelier Ryza 3 Alchemist of the End & the Secret Key DX
+[Atelier Ryza 3: Alchemist of the End & the Secret Key DX (Steam)](https://store.steampowered.com/app/3365050/3__DX/)  
+zh-TW: 萊莎的鍊金工房３ ～終結之鍊金術士與秘密鑰匙～ DX  
+ja-JP: ライザのアトリエ３ ～終わりの錬金術士と秘密の鍵～ DX  
 
 ## Atelier Sophie 2
 [Atelier Sophie 2: The Alchemist of the Mysterious Dream (Steam)](https://store.steampowered.com/app/1621310/_/)  
