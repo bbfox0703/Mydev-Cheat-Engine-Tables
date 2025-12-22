@@ -88,6 +88,7 @@ local enableBattleScripts = {
   408, -- "Very, very minor performance improvement"
   3, -- "+Static values"
   17, -- "Recover HP after battle"
+  20, -- "Inf. hollow key (虚ろの鍵) usage"
   28, -- "SP: no decrease when use"
   29, -- "Item Editor / アイテムエディター / 道具編輯器"
   311, -- "+Battle scripts"
@@ -99,10 +100,12 @@ local enableBattleScripts = {
   312, -- "Battle: AP multiplier"
   314, -- "Battle: Damage control"
   318, -- "Battle: EXP multiplier"
-  320, -- "(?) Battle: CC multiplier"
-  322, -- "(?) Battle: Core shard multiplier"
+  320, -- "Battle: CC multiplier"
+  322, -- "Battle: Core shard multiplier"
   324, -- "Battle: Fast T-Lv."
   326, -- "Battle: berak control"
+  332, -- "Battle: faster order drive grow"
+  334, -- "Battle: keep min. order drive after use"
   335, -- "Battle: fast action for player"
   337, -- "Set item properties when store into container"
   347, -- "+Set Container items quality"
@@ -188,13 +191,13 @@ local disableBattleScripts = {
   347, -- "+Set Container items quality"
   337, -- "Set item properties when store into container"
   335, -- "Battle: fast action for player"
-  334, -- "(?) Battle: keep min. order drive after use"
-  332, -- "(?) Battle: faster order drive grow"
+  334, -- "Battle: keep min. order drive after use"
+  332, -- "Battle: faster order drive grow"
   329, -- "(?) Battle: inf. key use count with criteria"
   326, -- "Battle: berak control"
   324, -- "Battle: Fast T-Lv."
-  322, -- "(?) Battle: Core shard multiplier"
-  320, -- "(?) Battle: CC multiplier"
+  322, -- "Battle: Core shard multiplier"
+  320, -- "Battle: CC multiplier"
   318, -- "Battle: EXP multiplier"
   314, -- "Battle: Damage control"
   312, -- "Battle: AP multiplier"
@@ -350,7 +353,7 @@ define(container_base ,"Atelier_Ryza_3_DX.exe"+25E8690) // v1.00
 
 define(basket_base ,"Atelier_Ryza_3_DX.exe"+25CAB90)  // v1.00
 
-define(pristine_key_base ,"Atelier_Ryza_3_DX.exe"+251C800) // xx
+define(pristine_key_base ,"Atelier_Ryza_3_DX.exe"+25B0150) // v1.00
 
 define(important_item_base, "Atelier_Ryza_3_DX.exe"+27BD290)  // v1.00
 
@@ -369,7 +372,7 @@ g_containerBaseAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x25E8690 -- v1
 g_basketBaseAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x25CAB90 -- v1.00
 
 -- key
-g_pristineKeyAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x251C800 -- xx
+g_pristineKeyAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x25B0150 -- v1.00
 
 -- important item
 g_importantBaseAddress = getAddressSafe("Atelier_Ryza_3_DX.exe")+0x27BD290 -- v1.00
@@ -388,13 +391,13 @@ local _dbg = true
 
 if _dbg then
   local AOBs = {
-    {name = "vkey", ["aob"]="8B 05 ?? ?? ?? ?? 85 C0 7E 08", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="vkey_base"},
+    {name = "vkey", ["aob"]="C7 05 ?? ?? ?? ?? 05 00 00 00 48 83 C4 28 C3 CC 48 89", ["pos"]= 2,  ["aoblen"]= 10 , ["symbol"]="vkey_base"},
     {name = "core_shard", ["aob"]="8B 05 ?? ?? ?? ?? 33 DB 39 47 0C", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="core_shard_base"},
     {name = "difficult", ["aob"]="8B 05 ?? ?? ?? ?? 39 43 20", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="difficult_base"},
     {name = "cole", ["aob"]="89 05 ?? ?? ?? ?? 85 DB 74 11", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="cole_base"},
     {name = "gems", ["aob"]="8B 05 ?? ?? ?? ?? 48 8D 54 24 20 48 8B", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="gems_base"},
     {name = "SPs", ["aob"]="29 1D ?? ?? ?? ?? 48 83 C4 20 5B C3", ["pos"]= 2,  ["aoblen"]= 6 , ["symbol"]="sp_base"},
-    {name = "alchemy_lv", aob = "8B 15 ?? ?? ?? ?? 45 33 C0 48 8B C8", pos = 2, aoblen = 6, symbol = "alchemy_lv_base"},
+    {name = "puni_lv", aob = "48 8D 05 ?? ?? ?? ?? 48 69 CB 28 0C 00 00", pos = 3, aoblen = 7, symbol = "puni_lv_base"},
     {name = "puni_data", aob = "4C 8D 35 ?? ?? ?? ?? 48 69 D0 28 0C 00 00", pos = 3, aoblen = 7, symbol = "puni_data_base"},
     {name = "item_serial", aob = "0F B7 05 ?? ?? ?? ?? B9 17 7C 00 00", pos = 3, aoblen = 7, symbol = "item_serial_base"},
     {name = "weather", aob = "8B 1D ?? ?? ?? ?? 48 89 AC 24 88 00 00 00 E8", pos = 2, aoblen = 6, symbol = "weather_base"},
@@ -433,7 +436,7 @@ unregistersymbol(important_item_base)
 {$lua}
 
 if syntaxcheck then return end
-local disable_array = {"vkey_base", "core_shard_base", "difficult_base", "cole_base", "gems_base","sp_base", "item_serial_base", "alchemy_lv_base", "puni_data_base", "weather_base", "minutes_base"}
+local disable_array = {"vkey_base", "core_shard_base", "difficult_base", "cole_base", "gems_base","sp_base", "item_serial_base", "puni_lv_base", "puni_data_base", "weather_base", "minutes_base"}
 local a_len = #(disable_array)
 local i = 0
 for i = 1, a_len do
@@ -558,7 +561,7 @@ closeLuaEngine()
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>alchemy_lv_base</Address>
+              <Address>puni_lv_base</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>12</ID>
@@ -566,7 +569,7 @@ closeLuaEngine()
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
-              <Address>alchemy_lv_base+4</Address>
+              <Address>puni_lv_base+4</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -735,9 +738,91 @@ Atelier_Ryza_3_DX.exe+18B9FB: 72 11                    - jb Atelier_Ryza_3_DX.ex
         </CheatEntry>
         <CheatEntry>
           <ID>20</ID>
-          <Description>"(?) Inf. hollow key (虚ろの鍵) usage"</Description>
+          <Description>"Inf. hollow key (虚ろの鍵) usage"</Description>
+          <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
+  Version:
+  Date   : 2025-12-21
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_INF_KEY_MAKING_COUNT_TMP1,$process,FF C8 89 05 ?? ?? ?? ?? 48 83) // should be unique
+alloc(newmem,$1000,INJECT_INF_KEY_MAKING_COUNT_TMP1)
+
+alloc(INJECT_INF_KEY_MAKING_COUNT_TMP1o, 8)
+
+label(code)
+label(return)
+
+INJECT_INF_KEY_MAKING_COUNT_TMP1o:
+  readmem(INJECT_INF_KEY_MAKING_COUNT_TMP1, 8)
+
+newmem:
+
+code:
+  dec eax
+  //mov [vkey_base],eax
+  reassemble(INJECT_INF_KEY_MAKING_COUNT_TMP1+2)
+
+  //reassemble bug in CE 7.5 public release: eax will be overwrite
+  //reassemble(INJECT_INF_KEY_MAKING_COUNT+2)
+  jmp return
+
+INJECT_INF_KEY_MAKING_COUNT_TMP1:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_INF_KEY_MAKING_COUNT_TMP1)
+registersymbol(INJECT_INF_KEY_MAKING_COUNT_TMP1o)
+[DISABLE]
+
+INJECT_INF_KEY_MAKING_COUNT_TMP1:
+  //db FF C8 89 05 CE 2C 81 01
+  readmem(INJECT_INF_KEY_MAKING_COUNT_TMP1o, 8)
+
+unregistersymbol(INJECT_INF_KEY_MAKING_COUNT_TMP1)
+dealloc(newmem)
+
+unregistersymbol(INJECT_INF_KEY_MAKING_COUNT_TMP1o)
+dealloc(INJECT_INF_KEY_MAKING_COUNT_TMP1o)
+
+{
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+6D3A6A
+
+Atelier_Ryza_3_DX.exe+6D3A4C: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A4D: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A4E: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A4F: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A50: 48 83 EC 28           - sub rsp,28
+Atelier_Ryza_3_DX.exe+6D3A54: 48 8D 0D 28 87 57 02  - lea rcx,[Atelier_Ryza_3_DX.exe+2C4C183]
+Atelier_Ryza_3_DX.exe+6D3A5B: E8 C8 AC DA 00        - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
+Atelier_Ryza_3_DX.exe+6D3A60: 8B 05 EA 46 E7 01     - mov eax,[vkey_base]
+Atelier_Ryza_3_DX.exe+6D3A66: 85 C0                 - test eax,eax
+Atelier_Ryza_3_DX.exe+6D3A68: 7E 08                 - jle Atelier_Ryza_3_DX.exe+6D3A72
+// ---------- INJECTING HERE ----------
+Atelier_Ryza_3_DX.exe+6D3A6A: FF C8                 - dec eax
+// ---------- DONE INJECTING  ----------
+Atelier_Ryza_3_DX.exe+6D3A6C: 89 05 DE 46 E7 01     - mov [vkey_base],eax
+Atelier_Ryza_3_DX.exe+6D3A72: 48 83 C4 28           - add rsp,28
+Atelier_Ryza_3_DX.exe+6D3A76: C3                    - ret
+Atelier_Ryza_3_DX.exe+6D3A77: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A78: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A79: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7A: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7B: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7C: CC                    - int 3
+Atelier_Ryza_3_DX.exe+6D3A7D: CC                    - int 3
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>458</ID>
+              <Description>"Enable"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
   Version:
   Date   : 2025-12-21
   Author : bbfox@https://opencheattables.com
@@ -817,6 +902,8 @@ Atelier_Ryza_3_DX.exe+6D3A7C: CC                    - int 3
 Atelier_Ryza_3_DX.exe+6D3A7D: CC                    - int 3
 }
 </AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>21</ID>
@@ -874,7 +961,7 @@ Atelier_Ryza_3_DX.exe+93B98B: C1 E8 1F                 - shr eax,1F
         </CheatEntry>
         <CheatEntry>
           <ID>22</ID>
-          <Description>"(?) Field: Inf. key use count with criteria"</Description>
+          <Description>"Field: Inf. key use count with criteria"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
@@ -974,7 +1061,7 @@ Atelier_Ryza_3_DX.exe+66142F: 41 56           - push r14
         </CheatEntry>
         <CheatEntry>
           <ID>25</ID>
-          <Description>"(?) Set a minimum key usage count in key ring"</Description>
+          <Description>"Set a minimum key usage count in key ring"</Description>
           <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
@@ -1008,7 +1095,7 @@ code:
   jmp return
 align 10 cc
   i_min_cnt:
-  db 3
+  db 4
 
 INJECT_REFRESH_KEYCHAIN_USE_CNT+04:
   jmp newmem
@@ -3700,7 +3787,7 @@ closeLuaEngine()
             </CheatEntry>
             <CheatEntry>
               <ID>192</ID>
-              <Description>"+Korean (ko-KR)"</Description>
+              <Description>"+Korean (ko-KR) / partial"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <Color>4080FF</Color>
               <GroupHeader>1</GroupHeader>
@@ -4145,7 +4232,7 @@ closeLuaEngine()
                 <CheatEntry>
                   <ID>226</ID>
                   <Description>"Key: acquire from (landmark)"</Description>
-                  <DropDownListLink>-Landmark ID-Kr</DropDownListLink>
+                  <DropDownListLink>-Landmark ID-En</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -4158,7 +4245,7 @@ closeLuaEngine()
                 <CheatEntry>
                   <ID>227</ID>
                   <Description>"Key: acquire from (monster)"</Description>
-                  <DropDownListLink>-Monster ID-Kr</DropDownListLink>
+                  <DropDownListLink>-Monster ID-En</DropDownListLink>
                   <ShowAsHex>1</ShowAsHex>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -5177,75 +5264,109 @@ Atelier_Ryza_DX.exe+463E90 - E8 37488F00           - call Atelier_Ryza_DX.exe+D5
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>310</ID>
-          <Description>"(?) Adjsut core crystal: no decrease"</Description>
+          <ID>322</ID>
+          <Description>"Core shard multiplier"</Description>
+          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{ Game   : Atelier_Ryza_2_DX.exe
-  Version: 
-  Date   : 2025-12-13
+          <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
+  Version:
+  Date   : 2025-12-20
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_CC_ADJUST_NO_DECREASE,$process,03 CB 81 F9 9F 86 01 00) // should be unique
-alloc(newmem,$1000,INJECT_CC_ADJUST_NO_DECREASE)
+aobscanmodule(INJECT_CORE_SHARD_MULTI,$process,03 CB 81 F9 9F 86 01 00) // should be unique
+alloc(newmem,$1000,INJECT_CORE_SHARD_MULTI)
 
 label(code)
 label(return)
+label(vf_core_shard_multi is_cs_no_dec)
 
 newmem:
   cmp ebx, 0
-  jge code
+  jl to_dec
+  je code
+  vmovss xmm14, [vf_core_shard_multi]
+  vcvtsi2ss xmm15, xmm15, ebx
+  vmulss xmm13, xmm14, xmm15
+  vcvtss2si ebx, xmm13
+  jmp code
+
+to_dec:
   xor ebx, ebx
 
 code:
   add ecx,ebx
   cmp ecx,0001869F
   jmp return
-
-INJECT_CC_ADJUST_NO_DECREASE:
+align 10 cc
+  vf_core_shard_multi:
+  dd (float)1.3333333
+  is_cs_no_dec:
+  dd 1
+INJECT_CORE_SHARD_MULTI:
   jmp newmem
   nop 3
 return:
-registersymbol(INJECT_CC_ADJUST_NO_DECREASE)
+registersymbol(INJECT_CORE_SHARD_MULTI)
+registersymbol(vf_core_shard_multi is_cs_no_dec)
 
 [DISABLE]
 
-INJECT_CC_ADJUST_NO_DECREASE:
+INJECT_CORE_SHARD_MULTI:
   db 03 CB 81 F9 9F 86 01 00
 
-unregistersymbol(INJECT_CC_ADJUST_NO_DECREASE)
+unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_2_DX.exe+75265A
+// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+A3914B
 
-Atelier_Ryza_2_DX.exe+75263C: CC                             - int 3 
-Atelier_Ryza_2_DX.exe+75263D: CC                             - int 3 
-Atelier_Ryza_2_DX.exe+75263E: CC                             - int 3 
-Atelier_Ryza_2_DX.exe+75263F: CC                             - int 3 
-Atelier_Ryza_2_DX.exe+752640: 40 53                          - push rbx
-Atelier_Ryza_2_DX.exe+752642: 48 83 EC 20                    - sub rsp,20
-Atelier_Ryza_2_DX.exe+752646: 8B D9                          - mov ebx,ecx
-Atelier_Ryza_2_DX.exe+752648: 48 8D 0D 57 96 CA 01           - lea rcx,[Atelier_Ryza_2_DX.exe+23FBCA6]
-Atelier_Ryza_2_DX.exe+75264F: E8 98 7F 96 00                 - call INJECT_OPT_CODE_REMOVE_DEBUG_OVERHEAD
-Atelier_Ryza_2_DX.exe+752654: 8B 0D A6 F9 89 01              - mov ecx,[Atelier_Ryza_2_DX.exe+1FF2000]
+Atelier_Ryza_3_DX.exe+A3912A: 03 CB                          - add ecx,ebx
+Atelier_Ryza_3_DX.exe+A3912C: 81 F9 9F 86 01 00              - cmp ecx,0001869F
+Atelier_Ryza_3_DX.exe+A39132: 7C 10                          - jl Atelier_Ryza_3_DX.exe+A39144
+Atelier_Ryza_3_DX.exe+A39134: C7 05 62 1C D9 01 9F 86 01 00  - mov [core_shard_base],0001869F
+Atelier_Ryza_3_DX.exe+A3913E: 48 83 C4 20                    - add rsp,20
+Atelier_Ryza_3_DX.exe+A39142: 5B                             - pop rbx
+Atelier_Ryza_3_DX.exe+A39143: C3                             - ret
+Atelier_Ryza_3_DX.exe+A39144: 33 C0                          - xor eax,eax
+Atelier_Ryza_3_DX.exe+A39146: 85 C9                          - test ecx,ecx
+Atelier_Ryza_3_DX.exe+A39148: 0F 4E C8                       - cmovle ecx,eax
 // ---------- INJECTING HERE ----------
-Atelier_Ryza_2_DX.exe+75265A: 03 CB                          - add ecx,ebx
+Atelier_Ryza_3_DX.exe+A3914B: 89 0D 4F 1C D9 01              - mov [core_shard_base],ecx
 // ---------- DONE INJECTING  ----------
-Atelier_Ryza_2_DX.exe+75265C: 81 F9 9F 86 01 00              - cmp ecx,0001869F
-Atelier_Ryza_2_DX.exe+752662: 7C 10                          - jl Atelier_Ryza_2_DX.exe+752674
-Atelier_Ryza_2_DX.exe+752664: C7 05 92 F9 89 01 9F 86 01 00  - mov [Atelier_Ryza_2_DX.exe+1FF2000],0001869F
-Atelier_Ryza_2_DX.exe+75266E: 48 83 C4 20                    - add rsp,20
-Atelier_Ryza_2_DX.exe+752672: 5B                             - pop rbx
-Atelier_Ryza_2_DX.exe+752673: C3                             - ret 
-Atelier_Ryza_2_DX.exe+752674: 33 C0                          - xor eax,eax
-Atelier_Ryza_2_DX.exe+752676: 85 C9                          - test ecx,ecx
-Atelier_Ryza_2_DX.exe+752678: 0F 4E C8                       - cmovle ecx,eax
-Atelier_Ryza_2_DX.exe+75267B: 89 0D 7F F9 89 01              - mov [Atelier_Ryza_2_DX.exe+1FF2000],ecx
+Atelier_Ryza_3_DX.exe+A39151: 48 83 C4 20                    - add rsp,20
+Atelier_Ryza_3_DX.exe+A39155: 5B                             - pop rbx
+Atelier_Ryza_3_DX.exe+A39156: C3                             - ret
+Atelier_Ryza_3_DX.exe+A39157: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A39158: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A39159: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915A: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915B: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915C: CC                             - int 3
+Atelier_Ryza_3_DX.exe+A3915D: CC                             - int 3
 }
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>323</ID>
+              <Description>"multiplier"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_core_shard_multi</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>457</ID>
+              <Description>"No decrease?"</Description>
+              <DropDownListLink>YesNo</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_cs_no_dec</Address>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>311</ID>
@@ -5487,6 +5608,7 @@ Atelier_Ryza_3.exe+71D047: 3D B2 00 00 00        - cmp eax,000000B2
                   <ID>316</ID>
                   <Description>"Multiplier to player"</Description>
                   <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">1:1
+0.3330000043:0.333
 0.8000000119:0.8
 0.00009999999747:Almost no dmg
 </DropDownList>
@@ -5551,7 +5673,7 @@ code:
   jmp return
 align 10 cc
   vf_battle_exp_multi:
-  dd (float)2.15
+  dd (float)6.66666666
 
 INJECT_BATTLE_EXP_MULTI:
   jmp newmem
@@ -5700,95 +5822,6 @@ Atelier_Ryza_3_DX.exe+927B6: E8 15 DF 05 00        - call Atelier_Ryza_3_DX.exe+
                   <Color>C08000</Color>
                   <VariableType>Float</VariableType>
                   <Address>vf_cc_multi</Address>
-                </CheatEntry>
-              </CheatEntries>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>322</ID>
-              <Description>"Battle: Core shard multiplier"</Description>
-              <Options moHideChildren="1"/>
-              <VariableType>Auto Assembler Script</VariableType>
-              <AssemblerScript>{ Game   : Atelier_Ryza_3.exe
-  Version:
-  Date   : 2025-12-20
-  Author : bbfox@https://opencheattables.com
-}
-
-[ENABLE]
-
-aobscanmodule(INJECT_CORE_SHARD_MULTI,$process,03 CB 81 F9 9F 86 01 00) // should be unique
-alloc(newmem,$1000,INJECT_CORE_SHARD_MULTI)
-
-label(code)
-label(return)
-label(vf_core_shard_multi)
-
-newmem:
-  cmp ebx, 0
-  jle code
-  vmovss xmm14, [vf_core_shard_multi]
-  vcvtsi2ss xmm15, xmm15, ebx
-  vmulss xmm13, xmm14, xmm15
-  vcvtss2si ebx, xmm13
-
-code:
-  add ecx,ebx
-  cmp ecx,0001869F
-  jmp return
-align 10 cc
-  vf_core_shard_multi:
-  dd (float)1.3333333
-INJECT_CORE_SHARD_MULTI:
-  jmp newmem
-  nop 3
-return:
-registersymbol(INJECT_CORE_SHARD_MULTI)
-registersymbol(vf_core_shard_multi)
-
-[DISABLE]
-
-INJECT_CORE_SHARD_MULTI:
-  db 03 CB 81 F9 9F 86 01 00
-
-unregistersymbol(*)
-dealloc(newmem)
-
-{
-// ORIGINAL CODE - INJECTION POINT: Atelier_Ryza_3_DX.exe+A3914B
-
-Atelier_Ryza_3_DX.exe+A3912A: 03 CB                          - add ecx,ebx
-Atelier_Ryza_3_DX.exe+A3912C: 81 F9 9F 86 01 00              - cmp ecx,0001869F
-Atelier_Ryza_3_DX.exe+A39132: 7C 10                          - jl Atelier_Ryza_3_DX.exe+A39144
-Atelier_Ryza_3_DX.exe+A39134: C7 05 62 1C D9 01 9F 86 01 00  - mov [core_shard_base],0001869F
-Atelier_Ryza_3_DX.exe+A3913E: 48 83 C4 20                    - add rsp,20
-Atelier_Ryza_3_DX.exe+A39142: 5B                             - pop rbx
-Atelier_Ryza_3_DX.exe+A39143: C3                             - ret
-Atelier_Ryza_3_DX.exe+A39144: 33 C0                          - xor eax,eax
-Atelier_Ryza_3_DX.exe+A39146: 85 C9                          - test ecx,ecx
-Atelier_Ryza_3_DX.exe+A39148: 0F 4E C8                       - cmovle ecx,eax
-// ---------- INJECTING HERE ----------
-Atelier_Ryza_3_DX.exe+A3914B: 89 0D 4F 1C D9 01              - mov [core_shard_base],ecx
-// ---------- DONE INJECTING  ----------
-Atelier_Ryza_3_DX.exe+A39151: 48 83 C4 20                    - add rsp,20
-Atelier_Ryza_3_DX.exe+A39155: 5B                             - pop rbx
-Atelier_Ryza_3_DX.exe+A39156: C3                             - ret
-Atelier_Ryza_3_DX.exe+A39157: CC                             - int 3
-Atelier_Ryza_3_DX.exe+A39158: CC                             - int 3
-Atelier_Ryza_3_DX.exe+A39159: CC                             - int 3
-Atelier_Ryza_3_DX.exe+A3915A: CC                             - int 3
-Atelier_Ryza_3_DX.exe+A3915B: CC                             - int 3
-Atelier_Ryza_3_DX.exe+A3915C: CC                             - int 3
-Atelier_Ryza_3_DX.exe+A3915D: CC                             - int 3
-}
-</AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>323</ID>
-                  <Description>"multiplier"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>C08000</Color>
-                  <VariableType>Float</VariableType>
-                  <Address>vf_core_shard_multi</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -6100,7 +6133,7 @@ Atelier_Ryza_3_DX.exe+65BFDA: 48 89 74 24 18        - mov [rsp+18],rsi
             </CheatEntry>
             <CheatEntry>
               <ID>332</ID>
-              <Description>"(?) Battle: faster order drive grow"</Description>
+              <Description>"Battle: faster order drive grow"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
@@ -6120,9 +6153,9 @@ label(i_od_addr1)
 
 newmem:
   mov [i_od_addr1], rbx
-  cmp edx, 3
+  cmp edx, 4
   jae code
-  mov edx, 2
+  mov edx, 3
 
 code:
   mov rcx,[rbx+08]
@@ -6191,7 +6224,7 @@ Atelier_Ryza_3_DX.exe+BECAA: C3                    - ret
             </CheatEntry>
             <CheatEntry>
               <ID>334</ID>
-              <Description>"(?) Battle: keep min. order drive after use"</Description>
+              <Description>"Battle: keep min. order drive after use"</Description>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{ Game   : Atelier_Ryza_3_DX.exe
   Version:
@@ -6213,12 +6246,11 @@ code:
   sub [rsi+18],eax
 
   // *************
-  cmp dword ptr [rsi+18], 3
+  cmp dword ptr [rsi+18], 4
   jae endp
-  mov dword ptr [rsi+18], 3
+  mov dword ptr [rsi+18], 4
 
 endp:
-  pop rax
   // *************
 
   mov edx,[rsi+18]
@@ -8084,7 +8116,7 @@ aobscanmodule(INJECT_CLEAR_BOX_N_CONTAINER,$process,66 89 33 66 89 7B 0C) // sho
 alloc(newmem,$1000,INJECT_CLEAR_BOX_N_CONTAINER)
 
 label(code)
-label(return i_basket_addr1 i_container_addr1 i_important_addr1)
+label(return i_basket_addr1 i_container_addr1 i_important_addr1 i_secret_keys_addr)
 
 newmem:
   // clear fdata when back to title
@@ -8098,6 +8130,8 @@ newmem:
   je container
   cmp dword ptr [i_important_addr1], #15953
   je important
+  cmp dword ptr [i_important_addr1], #17773
+  je important
   jmp code
 basket:
   mov [i_basket_addr1], rbx
@@ -8107,7 +8141,12 @@ container:
   jmp code
 important:
   mov [i_important_addr1], rbx
-  //jmp code
+  jmp code
+
+secret_keys:
+  mov [i_secret_keys_addr], rbx
+  jmp code
+
 code:
   mov [rbx],si
   mov [rbx+0C],di
@@ -8121,12 +8160,14 @@ align 10 cc
   dq 0
   i_important_addr1:
   dq 0
+  i_secret_keys_addr:
+  dq 0
 
 INJECT_CLEAR_BOX_N_CONTAINER:
   jmp newmem
   nop 2
 return:
-registersymbol(INJECT_CLEAR_BOX_N_CONTAINER i_basket_addr1 i_container_addr1 i_important_addr1)
+registersymbol(INJECT_CLEAR_BOX_N_CONTAINER i_basket_addr1 i_container_addr1 i_important_addr1 i_secret_keys_addr)
 
 [DISABLE]
 
@@ -13953,141 +13994,135 @@ FFFF:N/A
               <ID>419</ID>
               <Description>"-Landmark ID-Ja"</Description>
               <DropDownList DisplayValueAsItem="1">0000:大灯台
-0001:大灯台
-0002:三剣の地
-0003:噴煙丘
-0004:碧命泉
-0005:星見の高台
-0006:光浴の大樹
-0007:望郷岬
-0008:ヤギの放牧地
-0009:尖塔の貯水池
-000A:沈んだ住居跡
-000B:水源の滝つぼ
-000C:魔石の灯台
-000D:高台の遺構
-000E:オオイタチの花園
-000F:旧街道遺跡
-0010:道分かつ大樹
-0011:稀なる者の祭壇
-0012:彩花の円環
-0013:ランタン樹
-0014:切り株のステージ
-0015:狭間の小島
-0016:蜜溜まり
-0017:魔喰い樹の水辺
-0018:川沿いの岩壁
-0019:去りし乙女の水鏡
-001A:聖堂臨む隠れ浜
-001B:時告げぬ大鐘
-001C:封印の祭壇
-001D:浮上装置の動力炉
-001E:浮上装置の動力炉
-001F:小さな港町
-0020:旧採掘場跡
-0021:水源の清湖
-0022:マルモ広場
-0023:高原の休息所
-0024:ライザの家
-0025:憩いの広場
-0026:対岸の砂浜
-0027:忘れられた祠
-0028:虹の魔力結晶
-0029:水晶壕
-002A:ガラス細工の建屋
-002B:滝壺の中州
-002C:渓谷の湧水
-002D:幻晶の大滝
-002E:逆さ水晶
-002F:シンティラの地底湖
-0030:ステンドグラスの回廊
-004A:大結晶の灯火
-004B:巨大水汲み水車
-004C:旧魔石貯蔵庫
-004D:採掘施設中枢
-004E:鉱山の休憩所
-004F:森の隠れ処
-0050:尖晶の森
-0051:溶岩坑道入口
-0052:フォウレの里
-0053:竜樹
-0054:崩壊した防壁
-0055:中央封鎖区画
-0056:正門前廃墟群
-0057:山間の集落
-0058:入り江の漁村
-0059:遠望の崖
-005A:崖下の離れ小島
-005B:苔むした古塔
-005C:狩人の泊まり場
-005D:菜畑の集落
-005E:沿岸灯台
-005F:鐘の岬
-0060:ウィンドル
-0061:狂気の暗窟
-0062:ウルディスの大樹
-0063:古竜の祠
-0064:威光の霊碑
-0065:旧跡へと続く門
-0066:隠れ家前
-0067:かつての集会所
-0068:廃れた中央広場
-0069:物見の社
-006A:紅の箱庭
-006B:噴水庭園
-006C:寂れた炊事場
-006D:歌無き舞台
-006E:旧王国の守護竜像
-006F:騎士の武器庫
-0070:荒らされた宝物庫
-0071:守護竜の巣
-0072:古い吊り橋
-0073:職人里の跡地
-0074:黒鉄の祭壇
-0075:峡谷の門
-0076:石巨人塚
-0077:門前大階段
-0078:聖塔を繋ぐ橋
-0079:崇高なるぷに像
-007A:４つの尖塔
-007B:高台のカルデラ
-007C:不揃いの台座
-007D:岩山の神木
-007E:信仰無き拝殿
-007F:最奥へ続く跳ね橋
-0080:縦貫大空洞
-0081:導きの岩
-0082:参道の小洞穴
-0083:奏波の墓
-0084:立ち並ぶ巨像
-0085:映し陽の祭壇
-0086:縦断跳ね橋
-0087:祀られた精霊石
-0088:太古の魔石壁
-0089:万象の大典入口
-008A:長の家屋
-008B:工作室
-008C:最後の住処
-008D:審判の門
-008E:ガラス細工の工房
-008F:魔石の工房
-0090:工匠組合本部
-0091:海岸の小廃墟
-0092:開明の社
-0093:創世の社
-0094:異空の社
-0095:中央制御塔
-0096:制御塔内部
-0097:忘れられた集落
-0098:静寂の丘
-0099:開かずの遺跡
-009A:カラの天幕
-009B:上陸地点
-009C:彩りの大木
-009D:遺跡へ渡す橋
-009E:廃都広場
-009F:寂寞の古跡
-00A0:眠りし白殿
+0001:三剣の地
+0002:噴煙丘
+0003:碧命泉
+0004:星見の高台
+0005:光浴の大樹
+0006:望郷岬
+0007:ヤギの放牧地
+0008:尖塔の貯水池
+0009:沈んだ住居跡
+000A:水源の滝つぼ
+000B:魔石の灯台
+000C:高台の遺構
+000D:オオイタチの花園
+000E:旧街道遺跡
+000F:道分かつ大樹
+0010:稀なる者の祭壇
+0011:彩花の円環
+0012:ランタン樹
+0013:切り株のステージ
+0014:狭間の小島
+0015:蜜溜まり
+0016:魔喰い樹の水辺
+0017:川沿いの岩壁
+0018:去りし乙女の水鏡
+0019:聖堂臨む隠れ浜
+001A:時告げぬ大鐘
+001B:封印の祭壇
+001C:浮上装置の動力炉
+001D:小さな港町
+001E:旧採掘場跡
+001F:水源の清湖
+0020:マルモ広場
+0021:ライザの家/高原の休息所
+0022:憩いの広場
+0023:対岸の砂浜/忘れられた祠
+0024:虹の魔力結晶
+0025:水晶壕
+0026:ガラス細工の建屋
+0027:滝壺の中州
+0028:渓谷の湧水
+0029:幻晶の大滝
+002A:逆さ水晶
+002B:シンティラの地底湖
+002C:ステンドグラスの回廊
+002D:大結晶の灯火
+002E:巨大水汲み水車
+002F:旧魔石貯蔵庫
+0030:採掘施設中枢
+0031:鉱山の休憩所
+0032:森の隠れ処
+0033:尖晶の森
+0034:溶岩坑道入口
+0035:フォウレの里
+0036:竜樹
+0037:崩壊した防壁
+0038:中央封鎖区画
+0039:正門前廃墟群
+003A:山間の集落
+003B:入り江の漁村
+003C:遠望の崖
+003D:崖下の離れ小島
+003E:苔むした古塔
+003F:狩人の泊まり場
+0040:菜畑の集落
+0041:沿岸灯台
+0042:鐘の岬
+0043:ウィンドル
+0044:狂気の暗窟
+0045:ウルディスの大樹
+0046:古竜の祠
+0047:威光の霊碑
+0048:旧跡へと続く門
+0049:隠れ家前
+004A:かつての集会所
+004B:廃れた中央広場
+004C:物見の社
+004D:紅の箱庭
+004E:噴水庭園
+004F:寂れた炊事場
+0050:歌無き舞台
+0051:旧王国の守護竜像
+0052:荒らされた宝物庫/騎士の武器庫
+0053:古い吊り橋
+0054:職人里の跡地
+0055:黒鉄の祭壇
+0056:峡谷の門
+0057:石巨人塚
+0058:門前大階段
+0059:聖塔を繋ぐ橋
+005A:崇高なるぷに像
+005B:４つの尖塔
+005C:高台のカルデラ
+005D:不揃いの台座
+005E:岩山の神木
+005F:信仰無き拝殿
+0060:最奥へ続く跳ね橋
+0061:縦貫大空洞
+0062:導きの岩
+0063:参道の小洞穴
+0064:奏波の墓
+0065:立ち並ぶ巨像
+0066:映し陽の祭壇
+0067:縦断跳ね橋
+0068:祀られた精霊石
+0069:太古の魔石壁
+006A:万象の大典入口
+006B:長の家屋
+006C:工作室
+006D:最後の住処
+006E:審判の門
+006F:ガラス細工の工房
+0070:魔石の工房
+0071:工匠組合本部
+0072:海岸の小廃墟
+0073:開明の社
+0074:創世の社
+0075:異空の社
+0076:中央制御塔
+0077:制御塔内部
+0078:忘れられた集落
+0079:静寂の丘
+007A:開かずの遺跡
+007B:カラの天幕
+007C:上陸地点
+007D:彩りの大木
+007E:遺跡へ渡す橋
+007F:廃都広場
+0080:寂寞の古跡
+0081:眠りし白殿
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
@@ -14109,176 +14144,179 @@ FFFF:N/A
 000A:ラフレシアぷに
 000B:ダークネスぷに
 000C:プレシャスぷに
-000D:オオイタチ
-000E:ブルーフィン
-000F:シルキーファー
-0010:スカーフバニー
-0011:ナイトハンター
-0012:ルインコラプター
-0013:ハイドストーカー
-0014:ロップイヤー
-0015:オオイタチマザー
-0016:サベージアサシン
-0017:ヘクスラビット
-0018:ラージアントラー
-0019:星の聖獣
-001A:花の精
-001B:イルミネイトシルフ
-001C:フラワーガーデナー
-001D:ゼファーピクシー
-001E:悠久の守り手
-001F:光熱の乙女
-0020:ホーリースピリット
-0021:プルームローレライ
-0022:エルダーフェアリー
-0023:幻を司る者
-0024:ルナリアエンゼル
-0025:悪夢の精
-0026:シュヴァルツレイス
-0027:スイートノクターナル
-0028:ムーンヴェイル
-0029:ストーンゴーレム
-002A:ロックパペット
-002B:ジュエルガード
-002C:魔石の傀儡
-002D:メタルゴーレム
-002E:メテオライトドール
-002F:土塊の使役者
-0030:ラスティオニキス
-0031:コロッサスゴーレム
-0032:不朽の彫像
-0033:巨石の兵士
-0034:ダークマタ
-0035:ノワールドール
-0036:クラムベリー
-0037:豊穣を祈る者
-0038:つのひつじ
-0039:アッシュウール
-003A:フラッフィーシープ
-003B:ドリームキャッチャー
-003C:きょだいひつじ
-003D:暗い思い出の獣
-003E:マッドビースト
-003F:スケイルアルマジロ
-0040:インタクトカラパス
-0041:タイニーデビル
-0042:ブルーフィーンド
-0043:ホットイービル
-0044:アッシュデーモン
-0045:ダイアクマ
-0046:ストームエレメンタル
-0047:アイシークリスタル
-0048:自然の精霊
-0049:スクランブルエナジー
-004A:ディザスターコア
-004B:アースプラント
-004C:ルートスプレッダー
-004D:大樹の使い
-004E:グリームミストルード
-004F:ユグドラシル
-0050:レイジネス
-0051:グランドビルダー
-0052:森の支配者
-0053:スパークライザー
-0054:巨大ナマケモノ
-0055:フェラルクロウ
-0056:スマートリッパー
-0057:バッダスホッパー
-0058:獰猛たる狩人
-0059:タイラント
-005A:動く甲冑
-005B:ゴーストアーマー
-005C:亡国の近衛鎧
-005D:グラディエーター
-005E:伝承の古強者
-005F:イモータルナイト
-0060:ロイヤルアドミラル
-0061:戦士の大鎧
-0062:ノーブルパラディン
-0063:グレートガーディアン
-0064:幻影の幽鬼
-0065:狂戦士の影
-0066:テンプルウォーリアー
-0067:シャタードブレイカー
-0068:スティンガー
-0069:シャープシザーズ
-006A:パイルバンカー
-006B:渇きの悪魔
-006C:常闇の斥候
-006D:スパインラット
-006E:オーガヘッド
-006F:影の尖兵
-0070:スラストヘッジ
-0071:シャドウイーター
-0072:レジオンニードル
-0073:ミニワイバーン
-0074:ウィンドフェザー
-0075:イービルオーキス
-0076:ファットドレイク
-0077:マッハホーク
-0078:ウォッチャー
-0079:ドラゴニックロード
-007A:ジャイアントモー
-007B:メガワイバーン
-007C:キングオブストーム
-007D:クラウドライナー
-007E:地縛竜
-007F:呪われた翼
-0080:アーマーウィング
-0081:鋼の猛禽
-0082:スプリントバード
-0083:マッシブビーク
-0084:アルバトロス
-0085:ワイルドクレスト
-0086:狂奔する怪鳥
-0087:宵鳴鳥
-0088:亡き巨鳥の影
-0089:宵闇の刺客
-008A:クロークインダガー
-008B:影の暗殺者
-008C:サイファーコード
-008D:地獄の番人
-008E:スラッシュブレイダー
-008F:クリムゾンアームズ
-0090:魔剣の遣い手
-0091:破邪の月狼
-0092:スレイプニル
-0093:ハイドシャーク
-0094:大顎鮫
-0095:スピネルフィン
-0096:グランタスカー
-0097:砂塵の暴君
-0098:デザートラグーン
-0099:思念の捕食者
-009A:大地を這う大魚
-009B:ソウルクリーバー
-009C:常闇の将軍
-009D:クラストビートル
-009E:影の司令
-009F:ホーンデーモン
-00A0:ライノフィーンド
-00A1:古城の翼竜
-00A2:天統べる覇竜
-00A3:闇を裂く光竜
-00A4:常闇の女王
-00A5:影の女王
-00A6:無冠の女王
-00A7:浮遊する骸
-00A8:スケルトンエンペラー
-00A9:オートマトン
-00AA:セントリーガード
-00AB:エルダートレント
-00AC:エンシェントドラゴン
-00AD:狂気の王
-00AE:ゲートキーパー
-00AF:万象の大典
-00B0:万象の大典・終章
-00B1:巨像の兵士
-00B2:万象の大典・腕
-00B3:ラムロースト２号
-00B4:ラムロースト３号
-00B5:万象の原典
-00B6:万象の原典・腕
+000D:でかぷに
+000E:オオイタチ
+000F:ブルーフィン
+0010:シルキーファー
+0011:スカーフバニー
+0012:ナイトハンター
+0013:ルインコラプター
+0014:ハイドストーカー
+0015:ロップイヤー
+0016:オオイタチマザー
+0017:サベージアサシン
+0018:ヘクスラビット
+0019:ラージアントラー
+001A:星の聖獣
+001B:花の精
+001C:イルミネイトシルフ
+001D:フラワーガーデナー
+001E:ゼファーピクシー
+001F:悠久の守り手
+0020:光熱の乙女
+0021:ホーリースピリット
+0022:プルームローレライ
+0023:エルダーフェアリー
+0024:幻を司る者
+0025:ルナリアエンゼル
+0026:悪夢の精
+0027:シュヴァルツレイス
+0028:スイートノクターナル
+0029:ムーンヴェイル
+002A:ストーンゴーレム
+002B:ロックパペット
+002C:ジュエルガード
+002D:魔石の傀儡
+002E:メタルゴーレム
+002F:メテオライトドール
+0030:土塊の使役者
+0031:ラスティオニキス
+0032:コロッサスゴーレム
+0033:不朽の彫像
+0034:巨石の兵士
+0035:ダークマタ
+0036:ノワールドール
+0037:クラムベリー
+0038:豊穣を祈る者
+0039:つのひつじ
+003A:アッシュウール
+003B:フラッフィーシープ
+003C:ドリームキャッチャー
+003D:きょだいひつじ
+003E:暗い思い出の獣
+003F:マッドビースト
+0040:スケイルアルマジロ
+0041:インタクトカラパス
+0042:タイニーデビル
+0043:ブルーフィーンド
+0044:ホットイービル
+0045:アッシュデーモン
+0046:ダイアクマ
+0047:ストームエレメンタル
+0048:アイシークリスタル
+0049:自然の精霊
+004A:スクランブルエナジー
+004B:ディザスターコア
+004C:アースプラント
+004D:ルートスプレッダー
+004E:大樹の使い
+004F:グリームミストルード
+0050:ユグドラシル
+0051:レイジネス
+0052:グランドビルダー
+0053:森の支配者
+0054:スパークライザー
+0055:地獄の番人
+0056:巨大ナマケモノ
+0057:フェラルクロウ
+0058:スマートリッパー
+0059:バッダスホッパー
+005A:獰猛たる狩人
+005B:タイラント
+005C:動く甲冑
+005D:ゴーストアーマー
+005E:亡国の近衛鎧
+005F:グラディエーター
+0060:伝承の古強者
+0061:イモータルナイト
+0062:ロイヤルアドミラル
+0063:戦士の大鎧
+0064:ノーブルパラディン
+0065:グレートガーディアン
+0066:幻影の幽鬼
+0067:狂戦士の影
+0068:テンプルウォーリアー
+0069:シャタードブレイカー
+006A:スティンガー
+006B:シャープシザーズ
+006C:パイルバンカー
+006D:渇きの悪魔
+006E:スレイプニル
+006F:常闇の斥候
+0070:スパインラット
+0071:オーガヘッド
+0072:影の尖兵
+0073:スラストヘッジ
+0074:シャドウイーター
+0075:レジオンニードル
+0076:ミニワイバーン
+0077:ウィンドフェザー
+0078:イービルオーキス
+0079:ファットドレイク
+007A:マッハホーク
+007B:ウォッチャー
+007C:ドラゴニックロード
+007D:ジャイアントモー
+007E:メガワイバーン
+007F:キングオブストーム
+0080:クラウドライナー
+0081:地縛竜
+0082:呪われた翼
+0083:アーマーウィング
+0084:鋼の猛禽
+0085:スプリントバード
+0086:マッシブビーク
+0087:アルバトロス
+0088:ワイルドクレスト
+0089:狂奔する怪鳥
+008A:宵鳴鳥
+008B:亡き巨鳥の影
+008C:宵闇の刺客
+008D:クロークインダガー
+008E:影の暗殺者
+008F:サイファーコード
+0090:地獄の番人
+0091:スラッシュブレイダー
+0092:クリムゾンアームズ
+0093:魔剣の遣い手
+0094:破邪の月狼
+0095:スレイプニル
+0096:ハイドシャーク
+0097:大顎鮫
+0098:スピネルフィン
+0099:グランタスカー
+009A:砂塵の暴君
+009B:デザートラグーン
+009C:思念の捕食者
+009D:大地を這う大魚
+009E:ソウルクリーバー
+009F:常闇の将軍
+00A0:クラストビートル
+00A1:影の司令
+00A2:ホーンデーモン
+00A3:ライノフィーンド
+00A4:古城の翼竜
+00A5:天統べる覇竜
+00A6:闇を裂く光竜
+00A7:常闇の女王
+00A8:影の女王
+00A9:無冠の女王
+00AA:浮遊する骸
+00AB:スケルトンエンペラー
+00AC:オートマトン
+00AD:セントリーガード
+00AE:エルダートレント
+00AF:エンシェントドラゴン
+00B0:狂気の王
+00B1:ゲートキーパー
+00B2:万象の大典
+00B3:万象の大典・終章
+00B4:万象の大典・腕
+00B5:万象の大典・終章
+00B6:ラムロースト２号
+00B7:ラムロースト３号
+00B8:万象の原典
+00B9:万象の原典・腕
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
@@ -18913,141 +18951,135 @@ FFFF:N/A
               <ID>426</ID>
               <Description>"-Landmark ID-En"</Description>
               <DropDownList DisplayValueAsItem="1">0000:Big Lighthouse
-0001:Big Lighthouse
-0002:Land of Three Swords
-0003:Erupting Hill
-0004:Blue Life Spring
-0005:Star Gazing Hill
-0006:Tree of Light
-0007:Homesick Cape
-0008:Goat Pasture
-0009:Steeple Reservoir
-000A:Sunken Residence
-000B:Waterfall Basin
-000C:Fairystone Lighthouse
-000D:Hillside Relic
-000E:Weasels' Flower Garden
-000F:Old Highway Ruins
-0010:Road Fork Tree
-0011:Scarce Altar
-0012:Flower Ring
-0013:Lantern Tree
-0014:Stump Stage
-0015:Middle Islet
-0016:Honey Pool
-0017:Evileater Tree Shore
-0018:Riverside Rock Wall
-0019:Maiden's Mirror
-001A:Hidden Cove Temple
-001B:Silent Bell
-001C:Sealed Altar
-001D:Flotation Reactor
-001E:Flotation Reactor
-001F:Small Port City
-0020:Old Mining Site Ruins
-0021:Lake Source
-0022:Marmo Square
-0023:Plateau Resting Area
-0024:Ryza's Home
-0025:Relaxing Plaza
-0026:Beach of Far Bank
-0027:Forgotten Shrine
-0028:Rainbow Magic Crystal
-0029:Crystal Ditch
-002A:Glasswork Building
-002B:Waterfall Basin Sandbank
-002C:Valley Spring Water
-002D:Phantom Waterfall
-002E:Inverted Crystal
-002F:Scintilla Underground Lake
-0030:Stained-Glass Corridor
-004A:Large Crystal Light
-004B:Giant Water Wheel
-004C:Old Fairystone Silo
-004D:Mining Facility Center
-004E:Mine Resthouse
-004F:Hideout in the Forest
-0050:Spinel Forest
-0051:Fountain Square Entrance
-0052:Village of Faurre
-0053:Dragon Tree
-0054:Collapsed Wall
-0055:Central Blockade Area
-0056:Front Gate Ruins
-0057:Village Between Mountains
-0058:Fishing Village in the Bay
-0059:Distant Cliff
-005A:Island Below the Cliff
-005B:Old Moss-Covered Tower
-005C:Hunters' Inn
-005D:Village of Green Gardens
-005E:Coastal Lighthouse
-005F:Bell Cape
-0060:Windle
-0061:Cavern of Insanity
-0062:Great Tree of Urdis
-0063:Old Dragon Srine
-0064:Prestigious Monument
-0065:Gate to the Old Ruins
-0066:In front of the Hideout
-0067:Former Meeting Place
-0068:Abandoned Central Square
-0069:Guards Shrine
-006A:Crimson Garden
-006B:Water Fountain Park
-006C:Deserted Cooking Area
-006D:Songless Stage
-006E:Dragon Statue
-006F:Knight's Armory
-0070:Pillaged Treasure Trove
-0071:Dragon Nest
-0072:Old Drawbridge
-0073:Artisan District Ruins
-0074:Black Iron Altar
-0075:Canyon Gate
-0076:Stone Giant's Mound
-0077:Grand Stairway
-0078:Holy Towers Bridge
-0079:Sublime Puni Statue
-007A:Four Steeples
-007B:Caldera at the Hill
-007C:Uneven Pedestal
-007D:Rocky Mountain Tree
-007E:Faithless Worship Hall
-007F:Depths Drawbridge
-0080:Grand Cavity
-0081:Guiding Rock
-0082:Small Roadside Cave
-0083:Tomb of the Wave Tuners
-0084:A Row of Giant Statues
-0085:Altar of Reflecting Sun
-0086:Drawbridge Crossing
-0087:Worshiped Spirit Stone
-0088:Ancient Fairystone Wall
-0089:Code of the Universe Entrance
-008A:Chief's House
-008B:Workshop
-008C:The Last Residence
-008D:Judgment Gate
-008E:Glasswork Workshop
-008F:Fairystone Workshop
-0090:Artisans' Union Headquarters
-0091:Small Beach Ruins
-0092:Shrine of Enlightenment
-0093:Shrine of Genesis
-0094:Shrine of Another Sky
-0095:Central Control Tower
-0096:Inside the Control Tower
-0097:Forgotten Village
-0098:Hill of Silence
-0099:Undisturbed Ruins
-009A:Kala's Tent
-009B:Landing Point
-009C:Great Colorful Tree
-009D:Bridge to the Ruins
-009E:Abandoned City Square
-009F:Desolate Remnants
-00A0:Slumbering White Hall
+0001:Land of Three Swords
+0002:Erupting Hill
+0003:Blue Life Spring
+0004:Star Gazing Hill
+0005:Tree of Light
+0006:Homesick Cape
+0007:Goat Pasture
+0008:Steeple Reservoir
+0009:Sunken Residence
+000A:Waterfall Basin
+000B:Fairystone Lighthouse
+000C:Hillside Relic
+000D:Weasels' Flower Garden
+000E:Old Highway Ruins
+000F:Road Fork Tree
+0010:Scarce Altar
+0011:Flower Ring
+0012:Lantern Tree
+0013:Stump Stage
+0014:Middle Islet
+0015:Honey Pool
+0016:Evileater Tree Shore
+0017:Riverside Rock Wall
+0018:Maiden's Mirror
+0019:Hidden Cove Temple
+001A:Silent Bell
+001B:Sealed Altar
+001C:Flotation Reactor
+001D:Small Port City
+001E:Old Mining Site Ruins
+001F:Lake Source
+0020:Marmo Square
+0021:Ryza's Home/Plateau Resting Area
+0022:Relaxing Plaza
+0023:Beach of Far Bank/Forgotten Shrine
+0024:Rainbow Magic Crystal
+0025:Crystal Ditch
+0026:Glasswork Building
+0027:Waterfall Basin Sandbank
+0028:Valley Spring Water
+0029:Phantom Waterfall
+002A:Inverted Crystal
+002B:Scintilla Underground Lake
+002C:Stained-Glass Corridor
+002D:Large Crystal Light
+002E:Giant Water Wheel
+002F:Old Fairystone Silo
+0030:Mining Facility Center
+0031:Mine Resthouse
+0032:Hideout in the Forest
+0033:Spinel Forest
+0034:Fountain Square Entrance
+0035:Village of Faurre
+0036:Dragon Tree
+0037:Collapsed Wall
+0038:Central Blockade Area
+0039:Front Gate Ruins
+003A:Village Between Mountains
+003B:Fishing Village in the Bay
+003C:Distant Cliff
+003D:Island Below the Cliff
+003E:Old Moss-Covered Tower
+003F:Hunters' Inn
+0040:Village of Green Gardens
+0041:Coastal Lighthouse
+0042:Bell Cape
+0043:Windle
+0044:Cavern of Insanity
+0045:Great Tree of Urdis
+0046:Old Dragon Srine
+0047:Prestigious Monument
+0048:Gate to the Old Ruins
+0049:In front of the Hideout
+004A:Former Meeting Place
+004B:Abandoned Central Square
+004C:Guards Shrine
+004D:Crimson Garden
+004E:Water Fountain Park
+004F:Deserted Cooking Area
+0050:Songless Stage
+0051:Dragon Statue
+0052:Pillaged Treasure Trove/Knight's Armory
+0053:Old Drawbridge
+0054:Artisan District Ruins
+0055:Black Iron Altar
+0056:Canyon Gate
+0057:Stone Giant's Mound
+0058:Grand Stairway
+0059:Holy Towers Bridge
+005A:Sublime Puni Statue
+005B:Four Steeples
+005C:Caldera at the Hill
+005D:Uneven Pedestal
+005E:Rocky Mountain Tree
+005F:Faithless Worship Hall
+0060:Depths Drawbridge
+0061:Grand Cavity
+0062:Guiding Rock
+0063:Small Roadside Cave
+0064:Tomb of the Wave Tuners
+0065:A Row of Giant Statues
+0066:Altar of Reflecting Sun
+0067:Drawbridge Crossing
+0068:Worshiped Spirit Stone
+0069:Ancient Fairystone Wall
+006A:Code of the Universe Entrance
+006B:Chief's House
+006C:Workshop
+006D:The Last Residence
+006E:Judgment Gate
+006F:Glasswork Workshop
+0070:Fairystone Workshop
+0071:Artisans' Union Headquarters
+0072:Small Beach Ruins
+0073:Shrine of Enlightenment
+0074:Shrine of Genesis
+0075:Shrine of Another Sky
+0076:Central Control Tower
+0077:Inside the Control Tower
+0078:Forgotten Village
+0079:Hill of Silence
+007A:Undisturbed Ruins
+007B:Kala's Tent
+007C:Landing Point
+007D:Great Colorful Tree
+007E:Bridge to the Ruins
+007F:Abandoned City Square
+0080:Desolate Remnants
+0081:Slumbering White Hall
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
@@ -19069,176 +19101,179 @@ FFFF:N/A
 000A:Rafflesia Puni
 000B:Darkness Puni
 000C:Precious Puni
-000D:Giant Weasel
-000E:Bluefin
-000F:Silky Fur
-0010:Scarf Bunny
-0011:Night Hunter
-0012:Ruined Corrupter
-0013:Hide Stalker
-0014:Loppy Ear
-0015:Mother Weasel
-0016:Savage Assassin
-0017:Hex Rabbit
-0018:Large Antler
-0019:Holy Beast of the Stars
-001A:Flower Pixie
-001B:Illuminated Sylph
-001C:Flower Gardener
-001D:Zephyr Pixie
-001E:Eternal Guardian
-001F:Blazing Maiden
-0020:Hallowed Spirit
-0021:Plumed Lorelei
-0022:Elder Fairy
-0023:Mirage Master
-0024:Lunaria Angel
-0025:Nightmare Spirit
-0026:Schwarzwraith
-0027:Sweet Nocturnal
-0028:Moon Veil
-0029:Stone Golem
-002A:Rock Puppet
-002B:Jewel Guard
-002C:Fairystone Puppet
-002D:Metal Golem
-002E:Meteorite Doll
-002F:Earth Master
-0030:Rusty Onyx
-0031:Colossus Golem
-0032:Eternal Sculpture
-0033:Boulder Soldier
-0034:Darkomaton
-0035:Noir Doll
-0036:Cramberry
-0037:Harvest Prayer
-0038:Horned Sheep
-0039:Ashen Wool
-003A:Fluffy Sheep
-003B:Dreamcatcher
-003C:Giant Sheep
-003D:Mindlurker
-003E:Mad Beast
-003F:Scaled Armadillo
-0040:Intact Carapace
-0041:Tiny Devil
-0042:Blue Fiend
-0043:Hot Evil
-0044:Ash Demon
-0045:King Devil
-0046:Storm Elemental
-0047:Icy Crystal
-0048:Spirit of Nature
-0049:Scrambled Energy
-004A:Disaster Core
-004B:Earth Plant
-004C:Root Spreader
-004D:Great Tree Messenger
-004E:Great Mistread
-004F:Yggdrasil
-0050:Rageness
-0051:Ground Builder
-0052:Ruler of the Forest
-0053:Spark Riser
-0054:Giant Sloth
-0055:Feral Crow
-0056:Smart Ripper
-0057:Ferocious Hopper
-0058:Fierce Hunter
-0059:Tyrant
-005A:Living Armor
-005B:Ghost Armor
-005C:Honor Guard Armor
-005D:Gladiator
-005E:Legendary Warrior
-005F:Immortal Knight
-0060:Royal Admiral
-0061:Heavy Warrior Armor
-0062:Noble Paladin
-0063:Great Guardian
-0064:Demonic Phantom
-0065:Berserker Shadow
-0066:Temple Warrior
-0067:Shattered Breaker
-0068:Stinger
-0069:Sharpened Scissors
-006A:Pile Bunker
-006B:Parching Demon
-006C:Dark Scout
-006D:Spine Rat
-006E:Ogre Head
-006F:Shadow Vanguard
-0070:Thrust Hedge
-0071:Shadow Eater
-0072:Legion Needle
-0073:Mini Wyvern
-0074:Zephyr Feather
-0075:Evil Orchis
-0076:Stout Drake
-0077:Mach Hawk
-0078:Watcher
-0079:Draconic Lord
-007A:Giant Maw
-007B:Mega Wyvern
-007C:King of Storms
-007D:Cloud Liner
-007E:Landbound Dragon
-007F:Cursed Wing
-0080:Armored Wing
-0081:Steel Raptor
-0082:Sprinting Bird
-0083:Massive Beak
-0084:Albatross
-0085:Wild Crest
-0086:Overwhelming Bird
-0087:Twilight Songbird
-0088:Lifeless Shadow
-0089:Twilight Assassin
-008A:Cloak-in-dagger
-008B:Shadow Assassin
-008C:Cipher Code
-008D:Hell Keeper
-008E:Slashblader
-008F:Crimson Arms
-0090:Spellblade Wielder
-0091:Demon Slayer Wolf
-0092:Sleipnir
-0093:Hide Shark
-0094:Megamouth
-0095:Spinal Fin
-0096:Grand Tusk
-0097:Sandstorm Tyrant
-0098:Desert Lagoon
-0099:Mind Ravager
-009A:Land Crawler
-009B:Soul Cleaver
-009C:Dark General
-009D:Cluster Beetle
-009E:Shadow Commander
-009F:Horned Demon
-00A0:Rhino Fiend
-00A1:Old Castle Dragon
-00A2:Dragon Lord
-00A3:Dragon of Light
-00A4:Ravaging Queen
-00A5:Queen of Shadows
-00A6:Crownless Queen
-00A7:Floating Skeleton
-00A8:Skeleton Emperor
-00A9:Automaton
-00AA:Sentry Guard
-00AB:Elder Treant
-00AC:Ancient Dragon
-00AD:Deranged King
-00AE:Gatekeeper
-00AF:Code of the Universe
-00B0:Code of the Universe - Final
-00B1:Colossus Soldier
-00B2:Code of the Universe (Arm)
-00B3:Weasel Roast
-00B4:Lamb Roast
-00B5:Orig. Code of the Universe
-00B6:Orig. Code of the Universe (Arm)
+000D:Big Puni
+000E:Giant Weasel
+000F:Bluefin
+0010:Silky Fur
+0011:Scarf Bunny
+0012:Night Hunter
+0013:Ruined Corrupter
+0014:Hide Stalker
+0015:Loppy Ear
+0016:Mother Weasel
+0017:Savage Assassin
+0018:Hex Rabbit
+0019:Large Antler
+001A:Holy Beast of the Stars
+001B:Flower Pixie
+001C:Illuminated Sylph
+001D:Flower Gardener
+001E:Zephyr Pixie
+001F:Eternal Guardian
+0020:Blazing Maiden
+0021:Hallowed Spirit
+0022:Plumed Lorelei
+0023:Elder Fairy
+0024:Mirage Master
+0025:Lunaria Angel
+0026:Nightmare Spirit
+0027:Schwarzwraith
+0028:Sweet Nocturnal
+0029:Moon Veil
+002A:Stone Golem
+002B:Rock Puppet
+002C:Jewel Guard
+002D:Fairystone Puppet
+002E:Metal Golem
+002F:Meteorite Doll
+0030:Earth Master
+0031:Rusty Onyx
+0032:Colossus Golem
+0033:Eternal Sculpture
+0034:Boulder Soldier
+0035:Darkomaton
+0036:Noir Doll
+0037:Cramberry
+0038:Harvest Prayer
+0039:Horned Sheep
+003A:Ashen Wool
+003B:Fluffy Sheep
+003C:Dreamcatcher
+003D:Giant Sheep
+003E:Mindlurker
+003F:Mad Beast
+0040:Scaled Armadillo
+0041:Intact Carapace
+0042:Tiny Devil
+0043:Blue Fiend
+0044:Hot Evil
+0045:Ash Demon
+0046:King Devil
+0047:Storm Elemental
+0048:Icy Crystal
+0049:Spirit of Nature
+004A:Scrambled Energy
+004B:Disaster Core
+004C:Earth Plant
+004D:Root Spreader
+004E:Great Tree Messenger
+004F:Great Mistread
+0050:Yggdrasil
+0051:Rageness
+0052:Ground Builder
+0053:Ruler of the Forest
+0054:Spark Riser
+0055:Hell Keeper
+0056:Giant Sloth
+0057:Feral Crow
+0058:Smart Ripper
+0059:Ferocious Hopper
+005A:Fierce Hunter
+005B:Tyrant
+005C:Living Armor
+005D:Ghost Armor
+005E:Honor Guard Armor
+005F:Gladiator
+0060:Legendary Warrior
+0061:Immortal Knight
+0062:Royal Admiral
+0063:Heavy Warrior Armor
+0064:Noble Paladin
+0065:Great Guardian
+0066:Demonic Phantom
+0067:Berserker Shadow
+0068:Temple Warrior
+0069:Shattered Breaker
+006A:Stinger
+006B:Sharpened Scissors
+006C:Pile Bunker
+006D:Parching Demon
+006E:Sleipnir
+006F:Dark Scout
+0070:Spine Rat
+0071:Ogre Head
+0072:Shadow Vanguard
+0073:Thrust Hedge
+0074:Shadow Eater
+0075:Legion Needle
+0076:Mini Wyvern
+0077:Zephyr Feather
+0078:Evil Orchis
+0079:Stout Drake
+007A:Mach Hawk
+007B:Watcher
+007C:Draconic Lord
+007D:Giant Maw
+007E:Mega Wyvern
+007F:King of Storms
+0080:Cloud Liner
+0081:Landbound Dragon
+0082:Cursed Wing
+0083:Armored Wing
+0084:Steel Raptor
+0085:Sprinting Bird
+0086:Massive Beak
+0087:Albatross
+0088:Wild Crest
+0089:Overwhelming Bird
+008A:Twilight Songbird
+008B:Lifeless Shadow
+008C:Twilight Assassin
+008D:Cloak-in-dagger
+008E:Shadow Assassin
+008F:Cipher Code
+0090:Hell Keeper
+0091:Slashblader
+0092:Crimson Arms
+0093:Spellblade Wielder
+0094:Demon Slayer Wolf
+0095:Sleipnir
+0096:Hide Shark
+0097:Megamouth
+0098:Spinal Fin
+0099:Grand Tusk
+009A:Sandstorm Tyrant
+009B:Desert Lagoon
+009C:Mind Ravager
+009D:Land Crawler
+009E:Soul Cleaver
+009F:Dark General
+00A0:Cluster Beetle
+00A1:Shadow Commander
+00A2:Horned Demon
+00A3:Rhino Fiend
+00A4:Old Castle Dragon
+00A5:Dragon Lord
+00A6:Dragon of Light
+00A7:Ravaging Queen
+00A8:Queen of Shadows
+00A9:Crownless Queen
+00AA:Floating Skeleton
+00AB:Skeleton Emperor
+00AC:Automaton
+00AD:Sentry Guard
+00AE:Elder Treant
+00AF:Ancient Dragon
+00B0:Deranged King
+00B1:Gatekeeper
+00B2:Code of the Universe
+00B3:Code of the Universe - Final
+00B4:Code of the Universe (Arm)
+00B5:Code of the Universe - Final
+00B6:Weasel Roast
+00B7:Lamb Roast
+00B8:Orig. Code of the Universe
+00B9:Orig. Code of the Universe (Arm)
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
@@ -23871,141 +23906,135 @@ FFFF:N/A
               <ID>433</ID>
               <Description>"-Landmark ID-Tc"</Description>
               <DropDownList DisplayValueAsItem="1">0000:大燈塔
-0001:大燈塔
-0002:三劍之地
-0003:噴煙丘陵
-0004:碧命泉
-0005:占星高地
-0006:沐光大樹
-0007:望鄉岬
-0008:山羊放牧場
-0009:尖塔的蓄水池
-000A:沉沒的住宅遺址
-000B:水源的瀑底潭
-000C:魔石燈塔
-000D:高地遺構
-000E:大鼬花園
-000F:舊街道遺跡
-0010:分道大樹
-0011:罕見者祭壇
-0012:彩花圓環
-0013:燈籠樹
-0014:樹樁舞台
-0015:狹縫小島
-0016:蜜潭
-0017:噬魔樹的水邊
-0018:河畔岩壁
-0019:離去少女的水鏡
-001A:聖堂前的秘密海岸
-001B:不報時的大鐘
-001C:封印祭壇
-001D:漂浮裝置的動力爐
-001E:漂浮裝置的動力爐
-001F:小港都
-0020:舊採掘場遺跡
-0021:水源的清湖
-0022:瑪爾摩廣場
-0023:高原休息處
-0024:萊莎家
-0025:休憩廣場
-0026:對岸的沙灘
-0027:被遺忘的神祠
-0028:彩虹的魔力結晶
-0029:水晶壕溝
-002A:玻璃工藝工廠
-002B:瀑底潭的河島
-002C:溪谷的湧水
-002D:幻晶大瀑布
-002E:逆轉水晶
-002F:火花的地底湖
-0030:彩繪玻璃迴廊
-004A:大結晶燈火
-004B:巨大水車
-004C:舊魔石儲藏庫
-004D:採掘設施中心
-004E:礦山休息處
-004F:森林藏身處
-0050:尖晶森林
-0051:熔岩坑道入口
-0052:弗雷村
-0053:龍樹
-0054:崩塌的屏障
-0055:中央封鎖區域
-0056:正門前廢墟群
-0057:山間的部落
-0058:海灣的漁村
-0059:眺望之崖
-005A:懸崖下的小離島
-005B:長苔蘚的古塔
-005C:獵人的過夜處
-005D:菜田的部落
-005E:沿岸燈塔
-005F:鐘岬角
-0060:溫德爾
-0061:癲狂暗窟
-0062:烏爾迪斯大樹
-0063:古龍神祠
-0064:威勢靈碑
-0065:通往舊跡的門扉
-0066:藏身處前
-0067:往昔的集會所
-0068:廢棄的中央廣場
-0069:瞭望社殿
-006A:紅之庭院
-006B:噴水池庭園
-006C:冷清的廚房
-006D:無歌舞台
-006E:舊王國的守護龍雕像
-006F:騎士的武器庫
-0070:凌亂的寶庫
-0071:守護龍巢穴
-0072:古老吊橋
-0073:工匠村遺址
-0074:黑鐵祭壇
-0075:峽谷之門
-0076:石巨人塚
-0077:門前大階梯
-0078:連結聖塔的橋
-0079:崇高的噗尼雕像
-007A:四座尖塔
-007B:高地的火山臼
-007C:大小不齊的底座
-007D:岩山的神木
-007E:無信仰的拜殿
-007F:通往最深處的釣橋
-0080:縱貫大空洞
-0081:引導之岩
-0082:參拜道的小洞穴
-0083:奏波之墓
-0084:並立的巨像
-0085:映陽祭壇
-0086:縱斷釣橋
-0087:受供奉的精靈石
-0088:太古的魔石壁
-0089:萬象大典入口
-008A:首領的房屋
-008B:工作室
-008C:最後的住處
-008D:審判之門
-008E:玻璃工藝工房
-008F:魔石工房
-0090:工匠公會總部
-0091:海岸邊的小型廢墟
-0092:開明社殿
-0093:創世社殿
-0094:異空社殿
-0095:中央控制塔
-0096:控制塔內部
-0097:被遺忘的部落
-0098:靜寂之丘
-0099:閉鎖的遺跡
-009A:卡菈的帳篷
-009B:登陸地點
-009C:彩色的大樹
-009D:通往遺跡的橋
-009E:廢都廣場
-009F:冷清的古跡
-00A0:沉睡的白色宮殿
+0001:三劍之地
+0002:噴煙丘陵
+0003:碧命泉
+0004:占星高地
+0005:沐光大樹
+0006:望鄉岬
+0007:山羊放牧場
+0008:尖塔的蓄水池
+0009:沉沒的住宅遺址
+000A:水源的瀑底潭
+000B:魔石燈塔
+000C:高地遺構
+000D:大鼬花園
+000E:舊街道遺跡
+000F:分道大樹
+0010:罕見者祭壇
+0011:彩花圓環
+0012:燈籠樹
+0013:樹樁舞台
+0014:狹縫小島
+0015:蜜潭
+0016:噬魔樹的水邊
+0017:河畔岩壁
+0018:離去少女的水鏡
+0019:聖堂前的秘密海岸
+001A:不報時的大鐘
+001B:封印祭壇
+001C:漂浮裝置的動力爐
+001D:小港都
+001E:舊採掘場遺跡
+001F:水源的清湖
+0020:瑪爾摩廣場
+0021:萊莎家/高原休息處
+0022:休憩廣場
+0023:對岸的沙灘/被遺忘的神祠
+0024:彩虹的魔力結晶
+0025:水晶壕溝
+0026:玻璃工藝工廠
+0027:瀑底潭的河島
+0028:溪谷的湧水
+0029:幻晶大瀑布
+002A:逆轉水晶
+002B:火花的地底湖
+002C:彩繪玻璃迴廊
+002D:大結晶燈火
+002E:巨大水車
+002F:舊魔石儲藏庫
+0030:採掘設施中心
+0031:礦山休息處
+0032:森林藏身處
+0033:尖晶森林
+0034:熔岩坑道入口
+0035:弗雷村
+0036:龍樹
+0037:崩塌的屏障
+0038:中央封鎖區域
+0039:正門前廢墟群
+003A:山間的部落
+003B:海灣的漁村
+003C:眺望之崖
+003D:懸崖下的小離島
+003E:長苔蘚的古塔
+003F:獵人的過夜處
+0040:菜田的部落
+0041:沿岸燈塔
+0042:鐘岬角
+0043:溫德爾
+0044:癲狂暗窟
+0045:烏爾迪斯大樹
+0046:古龍神祠
+0047:威勢靈碑
+0048:通往舊跡的門扉
+0049:藏身處前
+004A:往昔的集會所
+004B:廢棄的中央廣場
+004C:瞭望社殿
+004D:紅之庭院
+004E:噴水池庭園
+004F:冷清的廚房
+0050:無歌舞台
+0051:舊王國的守護龍雕像
+0052:凌亂的寶庫/騎士的武器庫
+0053:古老吊橋
+0054:工匠村遺址
+0055:黑鐵祭壇
+0056:峽谷之門
+0057:石巨人塚
+0058:門前大階梯
+0059:連結聖塔的橋
+005A:崇高的噗尼雕像
+005B:四座尖塔
+005C:高地的火山臼
+005D:大小不齊的底座
+005E:岩山的神木
+005F:無信仰的拜殿
+0060:通往最深處的釣橋
+0061:縱貫大空洞
+0062:引導之岩
+0063:參拜道的小洞穴
+0064:奏波之墓
+0065:並立的巨像
+0066:映陽祭壇
+0067:縱斷釣橋
+0068:受供奉的精靈石
+0069:太古的魔石壁
+006A:萬象大典入口
+006B:首領的房屋
+006C:工作室
+006D:最後的住處
+006E:審判之門
+006F:玻璃工藝工房
+0070:魔石工房
+0071:工匠公會總部
+0072:海岸邊的小型廢墟
+0073:開明社殿
+0074:創世社殿
+0075:異空社殿
+0076:中央控制塔
+0077:控制塔內部
+0078:被遺忘的部落
+0079:靜寂之丘
+007A:閉鎖的遺跡
+007B:卡菈的帳篷
+007C:登陸地點
+007D:彩色的大樹
+007E:通往遺跡的橋
+007F:廢都廣場
+0080:冷清的古跡
+0081:沉睡的白色宮殿
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
@@ -24027,176 +24056,179 @@ FFFF:N/A
 000A:大王花噗尼
 000B:暗黑噗尼
 000C:珍奇噗尼
-000D:大鼬
-000E:藍鰭鼬
-000F:柔滑皮鼬
-0010:圍巾兔
-0011:暗夜獵人
-0012:毀滅的侵蝕者
-0013:暗地追跡者
-0014:垂耳兔
-0015:大鼬媽媽
-0016:野性刺客
-0017:咒術兔
-0018:巨大鹿角
-0019:星辰聖獸
-001A:花精
-001B:微光靈者
-001C:護花園丁
-001D:微風仙子
-001E:悠久守護者
-001F:光熱少女
-0020:聖光靈體
-0021:羽毛女妖
-0022:妖精長老
-0023:控幻者
-0024:月光天使
-0025:惡夢之靈
-0026:黑色巨靈
-0027:美好之夜
-0028:月之面紗
-0029:硬石魔巨人
-002A:石傀儡
-002B:寶石衛兵
-002C:魔石傀儡
-002D:金屬魔巨人
-002E:隕石魔偶
-002F:土塊使役者
-0030:鏽瑪瑙巨魔
-0031:巨像魔巨人
-0032:不朽雕像
-0033:巨石士兵
-0034:暗黑魔巨人
-0035:漆黑魔偶
-0036:蔓越莓
-0037:祈求豐收者
-0038:角綿羊
-0039:灰毛綿羊
-003A:柔毛綿羊
-003B:捕夢者
-003C:巨大綿羊
-003D:灰暗回憶之獸
-003E:狂暴猛獸
-003F:鱗甲犰狳
-0040:完美甲殼
-0041:迷你惡魔
-0042:藍惡魔
-0043:炙熱惡魔
-0044:灰惡魔
-0045:大惡魔
-0046:風暴元素
-0047:寒冰水晶
-0048:自然精靈
-0049:能量爭奪者
-004A:災難核心
-004B:大地草
-004C:根莖傳播者
-004D:大樹使者
-004E:閃霧狂暴
-004F:世界樹
-0050:怠惰者
-0051:大地建築工
-0052:森林支配者
-0053:閃耀統籌者
-0054:巨大樹懶
-0055:兇猛鉤爪
-0056:狡猾開膛手
-0057:卑鄙跳躍者
-0058:凶猛獵人
-0059:狂怒暴君
-005A:移動盔甲
-005B:鬼魂鎧甲
-005C:亡國的近衛鎧
-005D:角鬥士
-005E:傳承古強者
-005F:不朽騎士
-0060:皇家上將
-0061:戰士的大鎧
-0062:貴族聖騎士
-0063:偉大守護者
-0064:幻影幽鬼
-0065:狂戰士之影
-0066:神殿戰士
-0067:粉碎破壞者
-0068:毒刺
-0069:銳剪
-006A:貫釘
-006B:旱季惡魔
-006C:常闇斥候
-006D:脊柱鼠
-006E:巨獸首領
-006F:魅影尖兵
-0070:猛刺之蝟
-0071:食影者
-0072:針山刺蝟
-0073:迷你雙足飛龍
-0074:風羽
-0075:惡魔蘭龍
-0076:大肚龍
-0077:馬赫飛翼
-0078:守望者
-0079:飛龍領主
-007A:巨咽龍
-007B:巨型雙足飛龍
-007C:風暴之王
-007D:雲端行者
-007E:地縛龍
-007F:詛咒之翼
-0080:鎧甲之翼
-0081:鋼鐵猛禽
-0082:快跑鳥
-0083:巨喙鳥
-0084:信天翁
-0085:野生大冠雞
-0086:狂奔怪鳥
-0087:宵鳴鳥
-0088:死亡巨鳥之影
-0089:宵闇刺客
-008A:身披短刃者
-008B:暗影刺客
-008C:暗號代碼
-008D:地獄守衛
-008E:斬擊劍狼
-008F:緋紅刃狼
-0090:魔劍好手
-0091:破邪月狼
-0092:斯雷普尼爾
-0093:暗穴鯊魚
-0094:大顎鮫
-0095:尖晶鰭鯊
-0096:巨型獠牙
-0097:砂塵暴君
-0098:沙漠潟湖鯊
-0099:思念捕食者
-009A:盤踞大地的大魚
-009B:斷魂者
-009C:常闇將軍
-009D:地殼甲蟲
-009E:魅影司令
-009F:巨角惡魔
-00A0:犀角魔鬼
-00A1:古城飛龍
-00A2:統天霸龍
-00A3:撕裂黑暗的光龍
-00A4:常闇女王
-00A5:魅影女王
-00A6:無冠女王
-00A7:懸浮屍骸
-00A8:骷髏皇帝
-00A9:自動機器人
-00AA:哨衛
-00AB:樹人長老
-00AC:古代巨龍
-00AD:癲狂之王
-00AE:守門人
-00AF:萬象大典
-00B0:萬象大典‧終章
-00B1:巨像士兵
-00B2:萬象大典‧巨臂
-00B3:烤羊肉2號
-00B4:烤羊肉3號
-00B5:萬象原典
-00B6:萬象原典‧巨臂
+000D:巨大噗尼
+000E:大鼬
+000F:藍鰭鼬
+0010:柔滑皮鼬
+0011:圍巾兔
+0012:暗夜獵人
+0013:毀滅的侵蝕者
+0014:暗地追跡者
+0015:垂耳兔
+0016:大鼬媽媽
+0017:野性刺客
+0018:咒術兔
+0019:巨大鹿角
+001A:星辰聖獸
+001B:花精
+001C:微光靈者
+001D:護花園丁
+001E:微風仙子
+001F:悠久守護者
+0020:光熱少女
+0021:聖光靈體
+0022:羽毛女妖
+0023:妖精長老
+0024:控幻者
+0025:月光天使
+0026:惡夢之靈
+0027:黑色巨靈
+0028:美好之夜
+0029:月之面紗
+002A:硬石魔巨人
+002B:石傀儡
+002C:寶石衛兵
+002D:魔石傀儡
+002E:金屬魔巨人
+002F:隕石魔偶
+0030:土塊使役者
+0031:鏽瑪瑙巨魔
+0032:巨像魔巨人
+0033:不朽雕像
+0034:巨石士兵
+0035:暗黑魔巨人
+0036:漆黑魔偶
+0037:蔓越莓
+0038:祈求豐收者
+0039:角綿羊
+003A:灰毛綿羊
+003B:柔毛綿羊
+003C:捕夢者
+003D:巨大綿羊
+003E:灰暗回憶之獸
+003F:狂暴猛獸
+0040:鱗甲犰狳
+0041:完美甲殼
+0042:迷你惡魔
+0043:藍惡魔
+0044:炙熱惡魔
+0045:灰惡魔
+0046:大惡魔
+0047:風暴元素
+0048:寒冰水晶
+0049:自然精靈
+004A:能量爭奪者
+004B:災難核心
+004C:大地草
+004D:根莖傳播者
+004E:大樹使者
+004F:閃霧狂暴
+0050:世界樹
+0051:怠惰者
+0052:大地建築工
+0053:森林支配者
+0054:閃耀統籌者
+0055:地獄守衛
+0056:巨大樹懶
+0057:兇猛鉤爪
+0058:狡猾開膛手
+0059:卑鄙跳躍者
+005A:凶猛獵人
+005B:狂怒暴君
+005C:移動盔甲
+005D:鬼魂鎧甲
+005E:亡國的近衛鎧
+005F:角鬥士
+0060:傳承古強者
+0061:不朽騎士
+0062:皇家上將
+0063:戰士的大鎧
+0064:貴族聖騎士
+0065:偉大守護者
+0066:幻影幽鬼
+0067:狂戰士之影
+0068:神殿戰士
+0069:粉碎破壞者
+006A:毒刺
+006B:銳剪
+006C:貫釘
+006D:旱季惡魔
+006E:斯雷普尼爾
+006F:常闇斥候
+0070:脊柱鼠
+0071:巨獸首領
+0072:魅影尖兵
+0073:猛刺之蝟
+0074:食影者
+0075:針山刺蝟
+0076:迷你雙足飛龍
+0077:風羽
+0078:惡魔蘭龍
+0079:大肚龍
+007A:馬赫飛翼
+007B:守望者
+007C:飛龍領主
+007D:巨咽龍
+007E:巨型雙足飛龍
+007F:風暴之王
+0080:雲端行者
+0081:地縛龍
+0082:詛咒之翼
+0083:鎧甲之翼
+0084:鋼鐵猛禽
+0085:快跑鳥
+0086:巨喙鳥
+0087:信天翁
+0088:野生大冠雞
+0089:狂奔怪鳥
+008A:宵鳴鳥
+008B:死亡巨鳥之影
+008C:宵闇刺客
+008D:身披短刃者
+008E:暗影刺客
+008F:暗號代碼
+0090:地獄守衛
+0091:斬擊劍狼
+0092:緋紅刃狼
+0093:魔劍好手
+0094:破邪月狼
+0095:斯雷普尼爾
+0096:暗穴鯊魚
+0097:大顎鮫
+0098:尖晶鰭鯊
+0099:巨型獠牙
+009A:砂塵暴君
+009B:沙漠潟湖鯊
+009C:思念捕食者
+009D:盤踞大地的大魚
+009E:斷魂者
+009F:常闇將軍
+00A0:地殼甲蟲
+00A1:魅影司令
+00A2:巨角惡魔
+00A3:犀角魔鬼
+00A4:古城飛龍
+00A5:統天霸龍
+00A6:撕裂黑暗的光龍
+00A7:常闇女王
+00A8:魅影女王
+00A9:無冠女王
+00AA:懸浮屍骸
+00AB:骷髏皇帝
+00AC:自動機器人
+00AD:哨衛
+00AE:樹人長老
+00AF:古代巨龍
+00B0:癲狂之王
+00B1:守門人
+00B2:萬象大典
+00B3:萬象大典‧終章
+00B4:萬象大典‧巨臂
+00B5:萬象大典‧終章
+00B6:烤羊肉2號
+00B7:烤羊肉3號
+00B8:萬象原典
+00B9:萬象原典‧巨臂
 </DropDownList>
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
@@ -28826,341 +28858,6 @@ FFFF:N/A
               <ShowAsSigned>0</ShowAsSigned>
               <VariableType>4 Bytes</VariableType>
               <Address>000</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>440</ID>
-              <Description>"-Landmark ID-Kr"</Description>
-              <DropDownList DisplayValueAsItem="1">0000:거대 등대
-0001:거대 등대
-0002:세자루검의 땅
-0003:연기 언덕
-0004:벽명천
-0005:별구경 고지대
-0006:일광욕 거목
-0007:망향곶
-0008:염소 방목지
-0009:첨탑의 저수지
-000A:가라앉은 집터
-000B:수원의 용소
-000C:마석의 등대
-000D:고지대의 고적
-000E:왕족제비의 화원
-000F:옛 가도 유적
-0010:두 줄기의 거목
-0011:드문 자의 제단
-0012:꽃의 고리
-0013:랜턴 나무
-0014:그루터기 스테이지
-0015:틈새의 작은 섬
-0016:꿀 웅덩이
-0017:식마수의 물가
-0018:강가의 암벽
-0019:소녀의 수경
-001A:성당의 숨은 해변
-001B:침묵의 대종
-001C:봉인의 제단
-001D:부상장치의 동력로
-001E:부상장치의 동력로
-001F:작은 항구도시
-0020:옛 채굴장 터
-0021:수원의 호수
-0022:마르모 광장
-0023:고원의 쉼터
-0024:라이자의 집
-0025:안식의 광장
-0026:강기슭 모래밭
-0027:잊혀진 사당
-0028:무지개 마력결정
-0029:수정동굴
-002A:유리세공 건물
-002B:용소의 모래섬
-002C:계곡의 용수
-002D:환정의 대폭포
-002E:거꾸로 수정
-002F:신티라 지저호
-0030:스테인드글라스 회랑
-004A:대결정의 등불
-004B:거대 물레방아
-004C:옛 마석저장고
-004D:채굴시설 중심부
-004E:광산 쉼터
-004F:숲의 은신처
-0050:첨정의 숲
-0051:용암 갱도 입구
-0052:포레 마을
-0053:용나무
-0054:무너진 방벽
-0055:중앙봉쇄구역
-0056:정문 앞 폐허
-0057:산골짜기 취락
-0058:포구의 어촌
-0059:전망의 벼랑
-005A:벼랑 아래 외딴섬
-005B:이끼 덮인 탑
-005C:사냥꾼의 거처
-005D:유채밭 취락
-005E:연안 등대
-005F:종이 울리는 곶
-0060:윈돌
-0061:광기의 암굴
-0062:우르디스 거목
-0063:고룡의 사당
-0064:위광의 위령비
-0065:옛 터로 가는 문
-0066:은신처 앞
-0067:과거 집회소
-0068:오래된 중앙광장
-0069:척후 신사
-006A:붉은 정원
-006B:분수 정원
-006C:낡은 취사장
-006D:노래 없는 무대
-006E:옛 왕국의 수호용상
-006F:기사의 무기고
-0070:황폐해진 보물고
-0071:수호용의 둥지
-0072:오래된 현수교
-0073:장인마을의 터
-0074:흑철의 제단
-0075:협곡의 문
-0076:돌거인 무덤
-0077:대계단
-0078:성탑을 잇는 다리
-0079:숭고한 푸니상
-007A:4개의 첨탑
-007B:고지대 칼데라
-007C:불규칙한 대좌
-007D:바위산의 신목
-007E:신앙 없는 예배소
-007F:최심부의 도개교
-0080:종관 대공동
-0081:길잡이 바위
-0082:순례길의 동굴
-0083:주파의 무덤
-0084:가지런한 거상
-0085:투영의 제단
-0086:종단 도개교
-0087:안치된 정령석
-0088:태고의 마석벽
-0089:만상의 대전 입구
-008A:장로의 가옥
-008B:공작실
-008C:마지막 거처
-008D:심판의 문
-008E:유리공예 공방
-008F:마석 공방
-0090:장인조합본부
-0091:해안의 작은 페허
-0092:개명의 사원
-0093:창세의 사원
-0094:이공의 사원
-0095:중앙 제어탑
-0096:제어탑 내부
-0097:잊혀진 취락
-0098:정적의 언덕
-0099:열리지 않는 유적
-009A:칼라의 천막
-009B:상륙지점
-009C:예쁘게 물든 거목
-009D:유적으로 가는 다리
-009E:폐도시 광장
-009F:적막한 고적
-00A0:잠자는 하얀 신전
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>000000000</Address>
-            </CheatEntry>
-            <CheatEntry>
-              <ID>441</ID>
-              <Description>"-Monster ID-Kr"</Description>
-              <DropDownList DisplayValueAsItem="1">0000:파랑 푸니
-0001:초록 푸니
-0002:빨강 푸니
-0003:꽃 푸니
-0004:블랙 푸니
-0005:실버 푸니
-0006:골드 푸니
-0007:라벤더 푸니
-0008:거대 푸니
-0009:샤이닝 푸니
-000A:라플레시아 푸니
-000B:다크니스 푸니
-000C:프레셔스 푸니
-000D:왕족제비
-000E:블루핀
-000F:실키 퍼
-0010:스카프 버니
-0011:나이트 헌터
-0012:루인 커럽터
-0013:하이드 스토커
-0014:롭 이어
-0015:어미 왕족제비
-0016:새비지 어쌔신
-0017:헥스 래빗
-0018:라지 앤틀러
-0019:별의 성수
-001A:꽃의 요정
-001B:일루미네이트 실프
-001C:플라워 가드너
-001D:제퍼 픽시
-001E:유구의 수호자
-001F:광열의 소녀
-0020:홀리 스피릿
-0021:플룸 로렐라이
-0022:엘더 페어리
-0023:환영의 지배자
-0024:루나리아 엔젤
-0025:악몽의 정령
-0026:슈바르츠 레이스
-0027:스위트 녹터널
-0028:문 베일
-0029:스톤 골렘
-002A:록 퍼핏
-002B:쥬얼 가드
-002C:마석의 괴뢰
-002D:메탈 골렘
-002E:메테오라이트 돌
-002F:토괴의 사역자
-0030:러스티 오닉스
-0031:콜로서스 골렘
-0032:불후의 조각상
-0033:거석 병사
-0034:다크마타
-0035:느와 돌
-0036:크랜베리
-0037:풍작을 바라는 자
-0038:뿔 양
-0039:애쉬 울
-003A:플러피 십
-003B:드림 캐처
-003C:거대 양
-003D:어두운 추억의 짐승
-003E:광기에 물든 짐승
-003F:스케일 아르마딜로
-0040:인택트 캐러페이스
-0041:타이니 데빌
-0042:블루 핀드
-0043:핫 이빌
-0044:애시 데몬
-0045:대악마
-0046:스톰 엘리먼트
-0047:아이시 크리스털
-0048:자연의 정령
-0049:스크램블 에너지
-004A:디재스터 코어
-004B:어스 플랜트
-004C:루트 스프레더
-004D:거목의 사자
-004E:그림 미스트루드
-004F:위그드라실
-0050:레이지니스
-0051:그랜드 빌더
-0052:숲의 지배자
-0053:슈퍼 크라이저
-0054:거대 나무늘보
-0055:페럴 크로우
-0056:스마트 리퍼
-0057:배드애스 호퍼
-0058:영악한 사냥꾼
-0059:타이런트
-005A:움직이는 갑주
-005B:고스트 아머
-005C:망국의 근위갑옷
-005D:글래디에이터
-005E:전승의 전사
-005F:불멸의 나이트
-0060:로열 애드미럴
-0061:전사의 대갑옷
-0062:노블 팔라딘
-0063:그레이트 가디언
-0064:허상의 망령
-0065:광전사의 그림자
-0066:템플 워리어
-0067:셰터드 브레이커
-0068:스팅거
-0069:샤프 시저스
-006A:파일 벙커
-006B:굶주린 악마
-006C:암흑의 척후
-006D:스파인 래트
-006E:오거 헤드
-006F:그림자 첨병
-0070:스러스트 헤지
-0071:섀도우 이터
-0072:리전 니들
-0073:미니 와이번
-0074:윈드 페더
-0075:이블 오키스
-0076:팻 드레이크
-0077:마하 호크
-0078:워처
-0079:드래고닉 로드
-007A:자이언트 모
-007B:메가 와이번
-007C:킹 오브 스톰
-007D:클라우드 라이너
-007E:지박룡
-007F:저주받은 날개
-0080:아머 윙
-0081:강철 맹금
-0082:스프린트 버드
-0083:매시브 비크
-0084:알바트로스
-0085:와일드 크레스트
-0086:광분하는 괴조
-0087:소명조
-0088:죽은 새의 그림자
-0089:황혼의 자객
-008A:클록 인 더거
-008B:그림자 암살자
-008C:사이퍼 코드
-008D:지옥의 파수꾼
-008E:슬래시 블레이더
-008F:크림슨 암스
-0090:마검의 사자
-0091:파사의 월랑
-0092:슬레이프니르
-0093:하이드 샤크
-0094:대악교
-0095:스피넬 핀
-0096:그랜 터스커
-0097:모래의 폭군
-0098:데저트 라군
-0099:사념 포식자
-009A:대지를 기는 생선
-009B:소울 클리버
-009C:어둠의 장군
-009D:클러스트 비틀
-009E:그림자 사령
-009F:혼 데몬
-00A0:라이노 핀드
-00A1:고성의 익룡
-00A2:하늘의 지배자
-00A3:어둠을 가르는 광룡
-00A4:침식의 여왕
-00A5:그림자 여왕
-00A6:무관의 여왕
-00A7:부유하는 뼈
-00A8:황제 스켈레톤
-00A9:오토마톤
-00AA:센트리 가드
-00AB:엘더 트렌트
-00AC:에인션트 드래곤
-00AD:광기의 왕
-00AE:게이트 키퍼
-00AF:만상의 대전
-00B0:만상의 대전ㆍ종장
-00B1:거상의 병사
-00B2:만상의 대전ㆍ팔
-00B3:램 로스트 2호
-00B4:램 로스트 3호
-00B5:만상의 원전
-00B6:만상의 원전ㆍ팔
-</DropDownList>
-              <ShowAsSigned>0</ShowAsSigned>
-              <VariableType>4 Bytes</VariableType>
-              <Address>000000000</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
