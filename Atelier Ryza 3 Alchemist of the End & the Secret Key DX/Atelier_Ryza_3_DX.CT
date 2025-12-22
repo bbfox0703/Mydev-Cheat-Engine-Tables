@@ -1399,6 +1399,76 @@ Atelier_Ryza_3_DX.exe+3D4101: 0F 10 4D 50           - movups xmm1,[rbp+50]
 --NO_ACTIVATE
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
+
+--[[
+================================================================================
+Item Duplication Script for Atelier Ryza 3 DX
+================================================================================
+Author: bbfox @ https://opencheattables.com/
+Version: 3.0
+Last Updated: 2025-12-22
+
+DESCRIPTION:
+  Duplicates selected item 3 times with managed serial numbers and quality.
+  Supports both normal items and special replicable keys with different rules.
+
+FEATURES:
+  - Automatic serial number management with hard cap at 32267
+  - Quality increment for normal items (caps at 999)
+  - Special handling for replicable keys (quality must be 0xFFFF)
+  - Protected item ranges (Important Items, Pristine Keys)
+  - Error messages written to memory (str_msg1/2/3) with timestamps
+  - Message buffers cleared before each run
+
+ITEM TYPES:
+  1. Normal Items:
+     - Quality range: 0-999
+     - Quality increments by 1 for each duplicate
+     - Serial number managed via item_serial_base
+
+  2. Replicable Keys:
+     - Item ID range: 0x20E - 0x241
+     - Must be in Container (0x3A94 items) or Basket (0x2BB items) range
+     - Quality must be 0xFFFF at both offset +0x06 and +0x08
+     - Quality remains 0xFFFF after duplication
+     - Serial number managed same as normal items
+
+PROTECTED RANGES:
+  - Important Items: g_importantBaseAddress + (0x80 × 0x64)
+  - Pristine Keys: g_pristineKeyAddress + (0x80 × 0x20)
+
+SERIAL NUMBER MANAGEMENT:
+  - Reads from: item_serial_base symbol
+  - Range: 0 - 32267 (hard cap)
+  - Increments by 1 for each duplicate
+  - Locks at 32267 when cap is reached
+
+ERROR HANDLING:
+  All errors write to memory symbols and console:
+  - str_msg1: Error type
+  - str_msg2: Error details
+  - str_msg3: Timestamp (YYYY-MM-DD HH:MM:SS)
+
+REQUIREMENTS:
+  - Atelier_Ryza_3_DX.exe loaded
+  - Symbols: container_base_addr, item_serial_base, str_msg1/2/3
+  - Global variables: g_containerBaseAddress, g_basketBaseAddress,
+                      g_importantBaseAddress, g_pristineKeyAddress,
+                      MaxContainerCount, ItemRecordSize
+
+USAGE:
+  1. Enable item editor, select an item in-game
+  2. Run this script
+  3. Check console output or str_msg symbols for results
+
+NOTES:
+  - Message buffers (str_msg1/2/3) are cleared at script start
+  - All operations logged to both console and memory
+  - Script auto-closes LuaEngine on completion or error
+================================================================================
+--]]
+
+
 print("Start")
 
 -- Helper function to write message to memory with null termination
@@ -1517,7 +1587,7 @@ if importantBaseAddr then
   end
 end
 
--- Check pristine key range
+-- Check pristine key (equipped keys in keyring) range
 if pristineKeyAddr then
   local pristineRangeStart = pristineKeyAddr
   local pristineRangeEnd = pristineKeyAddr + (0x80 * PRISTINE_KEY_COUNT)
@@ -1526,18 +1596,26 @@ if pristineKeyAddr then
     print(string.format("Protected range: %08X - %08X", pristineRangeStart, pristineRangeEnd))
     writeError(msgAddr1, msgAddr2, msgAddr3,
       "Error: Protected item",
-      "Cannot duplicate pristine keys")
+      "Cannot duplicate equpiied keys in keyring")
     return
   end
 end
 
 -- Cache frequently used values
 local containerBaseAddress = g_containerBaseAddress
+local basketBaseAddress = g_basketBaseAddress
 local MaxCount = MaxContainerCount
 local ItemSize = ItemRecordSize
 local dupCount = 3
 local MAX_QUALITY = 999
 local MAX_SERIAL = 32267  -- Hard cap at 32267
+
+-- Key-specific constants
+local KEY_ID_MIN = 0x20E
+local KEY_ID_MAX = 0x241
+local KEY_QUALITY_VALUE = 0xFFFF
+local CONTAINER_KEY_COUNT = 0x3A94
+local BASKET_KEY_COUNT = 0x2BB
 
 print(string.format("Container addr: %08X", containerBaseAddress))
 
@@ -1547,16 +1625,47 @@ print(string.format("Current serial base: %d", currentSerialBase))
 
 -- Pre-read source item data
 local srcItemData = readBytes(itemBaseAddr, ItemSize, true)
+local srcItemID = readSmallInteger(itemBaseAddr + 0x04)  -- Item ID at offset +0x02
 local srcQuality = readSmallInteger(itemBaseAddr + 0x06)
+local srcQuality2 = readSmallInteger(itemBaseAddr + 0x08)
 
-print(string.format("Source quality: %d", srcQuality))
+print(string.format("Source Item ID: %03X", srcItemID))
+print(string.format("Source quality: %d (0x%04X)", srcQuality, srcQuality))
 
--- Check if source quality is invalid
-if srcQuality &gt; MAX_QUALITY then
-  writeError(msgAddr1, msgAddr2, msgAddr3,
-    string.format("Error: Invalid quality (%d)", srcQuality),
-    string.format("Maximum allowed is %d", MAX_QUALITY))
-  return
+-- **Determine if this is a replicable Key**
+local isKey = false
+local containerKeyRangeStart = containerBaseAddress
+local containerKeyRangeEnd = containerBaseAddress + (0x80 * CONTAINER_KEY_COUNT)
+local basketKeyRangeStart = basketBaseAddress
+local basketKeyRangeEnd = basketBaseAddress + (0x80 * BASKET_KEY_COUNT)
+
+if srcItemID &gt;= KEY_ID_MIN and srcItemID &lt;= KEY_ID_MAX then
+  -- Check if in valid key address ranges
+  if (itemBaseAddr &gt;= containerKeyRangeStart and itemBaseAddr &lt; containerKeyRangeEnd) or
+     (itemBaseAddr &gt;= basketKeyRangeStart and itemBaseAddr &lt; basketKeyRangeEnd) then
+    isKey = true
+    print(string.format("Detected as replicable Key (ID: 0x%03X)", srcItemID))
+  end
+end
+
+-- **Quality validation based on item type**
+if isKey then
+  -- Key must have quality 0xFFFF
+  if srcQuality ~= KEY_QUALITY_VALUE or srcQuality2 ~= KEY_QUALITY_VALUE then
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      string.format("Error: Invalid Key quality (0x%04X, 0x%04X)", srcQuality, srcQuality2),
+      "Key quality must be 0xFFFF")
+    return
+  end
+  print("Key quality validation passed (0xFFFF)")
+else
+  -- Normal item must have quality &lt;= 999
+  if srcQuality &gt; MAX_QUALITY then
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      string.format("Error: Invalid quality (%d)", srcQuality),
+      string.format("Maximum allowed is %d", MAX_QUALITY))
+    return
+  end
 end
 
 -- **Find empty slot**
@@ -1567,7 +1676,7 @@ for i = 1, MaxCount - 5 do
   local currentID = readSmallInteger(currentAddr)
   if currentID == 0xFFFF and i &gt; 1 then
     emptySlotAddr = currentAddr
-    print(string.format("Found empty slot #%d at %08X, src quality: %d", i, currentAddr, srcQuality))
+    print(string.format("Found empty slot #%d at %08X", i, currentAddr))
     break
   end
   currentAddr = currentAddr + ItemSize
@@ -1598,28 +1707,43 @@ for i = 0, dupCount - 1 do
   -- Write entire item data at once
   writeBytes(destAddr, srcItemData)
 
-  -- Calculate quality for this duplicate
+  -- Assign serial number
+  writeSmallInteger(destAddr, nextSerial)
+
+  -- Handle quality based on item type
   local newQuality
-  if currentQuality &gt;= MAX_QUALITY then
-    newQuality = MAX_QUALITY  -- Lock at 999
+  if isKey then
+    -- Key: always use 0xFFFF
+    writeSmallInteger(destAddr + 0x06, KEY_QUALITY_VALUE)
+    writeSmallInteger(destAddr + 0x08, KEY_QUALITY_VALUE)
+    newQuality = KEY_QUALITY_VALUE
+    print(string.format("Key #%d, addr: %08X, Serial: %d, Quality: 0x%04X",
+      i + 1, destAddr, nextSerial, newQuality))
   else
-    newQuality = currentQuality + i
-    if newQuality &gt; MAX_QUALITY then
-      newQuality = MAX_QUALITY  -- Cap at 999
+    -- Normal item: calculate quality with increment
+    if currentQuality &gt;= MAX_QUALITY then
+      newQuality = MAX_QUALITY  -- Lock at 999
+    else
+      newQuality = currentQuality + i
+      if newQuality &gt; MAX_QUALITY then
+        newQuality = MAX_QUALITY  -- Cap at 999
+      end
     end
+    writeSmallInteger(destAddr + 0x06, newQuality)
+    writeSmallInteger(destAddr + 0x08, newQuality)
+    print(string.format("Item #%d, addr: %08X, Serial: %d, Quality: %d",
+      i + 1, destAddr, nextSerial, newQuality))
   end
 
-  -- Assign serial number and quality
-  writeSmallInteger(destAddr, nextSerial)  -- Use managed serial
-  writeSmallInteger(destAddr + 0x06, newQuality)  -- Quality at 0x06
-  writeSmallInteger(destAddr + 0x08, newQuality)  -- Secondary quality field
-
-  -- Create message
-  local message = string.format("#%d, addr: %08X, Serial: %d, Quality: %d",
-    i + 1, destAddr, nextSerial, newQuality)
-
-  -- Print to console
-  print(message)
+  -- Create message for memory
+  local message
+  if isKey then
+    message = string.format("#%d, addr: %08X, Serial: %d, Quality: 0xFFFF",
+      i + 1, destAddr, nextSerial)
+  else
+    message = string.format("#%d, addr: %08X, Serial: %d, Quality: %d",
+      i + 1, destAddr, nextSerial, newQuality)
+  end
 
   -- Write to corresponding symbol address
   writeMessage(msgAddresses[i + 1], message)
@@ -1634,7 +1758,11 @@ end
 writeSmallInteger(serialBaseAddr, nextSerial)
 print(string.format("Updated serial base: %d", nextSerial))
 
-print("Done - Duplicated " .. dupCount .. " items")
+if isKey then
+  print("Done - Duplicated " .. dupCount .. " keys")
+else
+  print("Done - Duplicated " .. dupCount .. " items")
+end
 closeLuaEngine()
 {$asm}
 
