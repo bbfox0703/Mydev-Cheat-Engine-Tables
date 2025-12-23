@@ -659,17 +659,6 @@ Atelier_Ryza_3.exe+9C0175: 44 8B 87 10 01 00 00  - mov r8d,[rdi+00000110]
 Atelier_Ryza_3.exe+9C017C: 48 8D 4F 10           - lea rcx,[rdi+10]
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>18</ID>
-              <Description>"1st addr."</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>i_1st_HP_addr</Address>
-            </CheatEntry>
-          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>19</ID>
@@ -1521,6 +1510,29 @@ local function writeError(msg1Addr, msg2Addr, msg3Addr, errorMsg1, errorMsg2)
   closeLuaEngine()
 end
 
+if not getAddressSafe('Atelier_Ryza_3_DX.exe') then
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: Game not found",
+    "Atelier_Ryza_3_DX.exe not loaded")
+  return
+end
+
+-- Cache frequently used values
+local containerBaseAddress = g_containerBaseAddress
+local basketBaseAddress = g_basketBaseAddress
+local MaxCount = MaxContainerCount
+local ItemSize = ItemRecordSize
+local dupCount = 3
+local MAX_QUALITY = 999
+local MAX_SERIAL = 32267  -- Hard cap at 32267 (in game logic is 31767)
+
+-- Key-specific constants
+local KEY_ID_MIN = 0x20E
+local KEY_ID_MAX = 0x241
+local KEY_QUALITY_VALUE = 0xFFFF
+local CONTAINER_KEY_COUNT = 0x3A94 -- 14996
+local BASKET_KEY_COUNT = 0x2BB -- 699
+
 -- Get message buffer addresses
 local msgAddr1 = getAddressSafe('str_msg1')
 local msgAddr2 = getAddressSafe('str_msg2')
@@ -1560,13 +1572,6 @@ if itemBaseAddr == 0 then
   return
 end
 
-if not getAddressSafe('Atelier_Ryza_3_DX.exe') then
-  writeError(msgAddr1, msgAddr2, msgAddr3,
-    "Error: Game not found",
-    "Atelier_Ryza_3_DX.exe not loaded")
-  return
-end
-
 -- **Check if source is in protected address ranges**
 local importantBaseAddr = g_importantBaseAddress
 local pristineKeyAddr = g_pristineKeyAddress
@@ -1576,7 +1581,7 @@ local PRISTINE_KEY_COUNT = 0x20  -- 32 keys
 -- Check important items range
 if importantBaseAddr then
   local importantRangeStart = importantBaseAddr
-  local importantRangeEnd = importantBaseAddr + (0x80 * IMPORTANT_COUNT)
+  local importantRangeEnd = importantBaseAddr + (ItemSize * IMPORTANT_COUNT)
 
   if itemBaseAddr &gt;= importantRangeStart and itemBaseAddr &lt; importantRangeEnd then
     print(string.format("Protected range: %08X - %08X", importantRangeStart, importantRangeEnd))
@@ -1588,6 +1593,7 @@ if importantBaseAddr then
 end
 
 -- Check pristine key (equipped keys in keyring) range
+--[[
 if pristineKeyAddr then
   local pristineRangeStart = pristineKeyAddr
   local pristineRangeEnd = pristineKeyAddr + (0x80 * PRISTINE_KEY_COUNT)
@@ -1600,22 +1606,7 @@ if pristineKeyAddr then
     return
   end
 end
-
--- Cache frequently used values
-local containerBaseAddress = g_containerBaseAddress
-local basketBaseAddress = g_basketBaseAddress
-local MaxCount = MaxContainerCount
-local ItemSize = ItemRecordSize
-local dupCount = 3
-local MAX_QUALITY = 999
-local MAX_SERIAL = 32267  -- Hard cap at 32267
-
--- Key-specific constants
-local KEY_ID_MIN = 0x20E
-local KEY_ID_MAX = 0x241
-local KEY_QUALITY_VALUE = 0xFFFF
-local CONTAINER_KEY_COUNT = 0x3A94
-local BASKET_KEY_COUNT = 0x2BB
+]]--
 
 print(string.format("Container addr: %08X", containerBaseAddress))
 
@@ -1635,9 +1626,9 @@ print(string.format("Source quality: %d (0x%04X)", srcQuality, srcQuality))
 -- **Determine if this is a replicable Key**
 local isKey = false
 local containerKeyRangeStart = containerBaseAddress
-local containerKeyRangeEnd = containerBaseAddress + (0x80 * CONTAINER_KEY_COUNT)
+local containerKeyRangeEnd = containerBaseAddress + (ItemSize * CONTAINER_KEY_COUNT)
 local basketKeyRangeStart = basketBaseAddress
-local basketKeyRangeEnd = basketBaseAddress + (0x80 * BASKET_KEY_COUNT)
+local basketKeyRangeEnd = basketBaseAddress + (ItemSize * BASKET_KEY_COUNT)
 
 if srcItemID &gt;= KEY_ID_MIN and srcItemID &lt;= KEY_ID_MAX then
   -- Check if in valid key address ranges
@@ -1663,6 +1654,12 @@ else
   if srcQuality &gt; MAX_QUALITY then
     writeError(msgAddr1, msgAddr2, msgAddr3,
       string.format("Error: Invalid quality (%d)", srcQuality),
+      string.format("Maximum allowed is %d", MAX_QUALITY))
+    return
+  end
+  if srcQuality2 &gt; MAX_QUALITY then
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      string.format("Error: Invalid quality #2 (%d)", srcQuality2),
       string.format("Maximum allowed is %d", MAX_QUALITY))
     return
   end
