@@ -659,17 +659,6 @@ Atelier_Ryza_3.exe+9C0175: 44 8B 87 10 01 00 00  - mov r8d,[rdi+00000110]
 Atelier_Ryza_3.exe+9C017C: 48 8D 4F 10           - lea rcx,[rdi+10]
 }
 </AssemblerScript>
-          <CheatEntries>
-            <CheatEntry>
-              <ID>18</ID>
-              <Description>"1st addr."</Description>
-              <ShowAsHex>1</ShowAsHex>
-              <ShowAsSigned>0</ShowAsSigned>
-              <Color>808080</Color>
-              <VariableType>8 Bytes</VariableType>
-              <Address>i_1st_HP_addr</Address>
-            </CheatEntry>
-          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>19</ID>
@@ -1399,6 +1388,76 @@ Atelier_Ryza_3_DX.exe+3D4101: 0F 10 4D 50           - movups xmm1,[rbp+50]
 --NO_ACTIVATE
 if syntaxcheck then return end
 if memrec then print(memrec.Description) end
+
+--[[
+================================================================================
+Item Duplication Script for Atelier Ryza 3 DX
+================================================================================
+Author: bbfox @ https://opencheattables.com/
+Version: 3.0
+Last Updated: 2025-12-22
+
+DESCRIPTION:
+  Duplicates selected item 3 times with managed serial numbers and quality.
+  Supports both normal items and special replicable keys with different rules.
+
+FEATURES:
+  - Automatic serial number management with hard cap at 32267
+  - Quality increment for normal items (caps at 999)
+  - Special handling for replicable keys (quality must be 0xFFFF)
+  - Protected item ranges (Important Items, Pristine Keys)
+  - Error messages written to memory (str_msg1/2/3) with timestamps
+  - Message buffers cleared before each run
+
+ITEM TYPES:
+  1. Normal Items:
+     - Quality range: 0-999
+     - Quality increments by 1 for each duplicate
+     - Serial number managed via item_serial_base
+
+  2. Replicable Keys:
+     - Item ID range: 0x20E - 0x241
+     - Must be in Container (0x3A94 items) or Basket (0x2BB items) range
+     - Quality must be 0xFFFF at both offset +0x06 and +0x08
+     - Quality remains 0xFFFF after duplication
+     - Serial number managed same as normal items
+
+PROTECTED RANGES:
+  - Important Items: g_importantBaseAddress + (0x80 × 0x64)
+  - Pristine Keys: g_pristineKeyAddress + (0x80 × 0x20)
+
+SERIAL NUMBER MANAGEMENT:
+  - Reads from: item_serial_base symbol
+  - Range: 0 - 32267 (hard cap)
+  - Increments by 1 for each duplicate
+  - Locks at 32267 when cap is reached
+
+ERROR HANDLING:
+  All errors write to memory symbols and console:
+  - str_msg1: Error type
+  - str_msg2: Error details
+  - str_msg3: Timestamp (YYYY-MM-DD HH:MM:SS)
+
+REQUIREMENTS:
+  - Atelier_Ryza_3_DX.exe loaded
+  - Symbols: container_base_addr, item_serial_base, str_msg1/2/3
+  - Global variables: g_containerBaseAddress, g_basketBaseAddress,
+                      g_importantBaseAddress, g_pristineKeyAddress,
+                      MaxContainerCount, ItemRecordSize
+
+USAGE:
+  1. Enable item editor, select an item in-game
+  2. Run this script
+  3. Check console output or str_msg symbols for results
+
+NOTES:
+  - Message buffers (str_msg1/2/3) are cleared at script start
+  - All operations logged to both console and memory
+  - Script auto-closes LuaEngine on completion or error
+================================================================================
+--]]
+
+
 print("Start")
 
 -- Helper function to write message to memory with null termination
@@ -1451,6 +1510,29 @@ local function writeError(msg1Addr, msg2Addr, msg3Addr, errorMsg1, errorMsg2)
   closeLuaEngine()
 end
 
+if not getAddressSafe('Atelier_Ryza_3_DX.exe') then
+  writeError(msgAddr1, msgAddr2, msgAddr3,
+    "Error: Game not found",
+    "Atelier_Ryza_3_DX.exe not loaded")
+  return
+end
+
+-- Cache frequently used values
+local containerBaseAddress = g_containerBaseAddress
+local basketBaseAddress = g_basketBaseAddress
+local MaxCount = MaxContainerCount
+local ItemSize = ItemRecordSize
+local dupCount = 3
+local MAX_QUALITY = 999
+local MAX_SERIAL = 32267  -- Hard cap at 32267 (in game logic is 31767)
+
+-- Key-specific constants
+local KEY_ID_MIN = 0x20E
+local KEY_ID_MAX = 0x241
+local KEY_QUALITY_VALUE = 0xFFFF
+local CONTAINER_KEY_COUNT = 0x3A94 -- 14996
+local BASKET_KEY_COUNT = 0x2BB -- 699
+
 -- Get message buffer addresses
 local msgAddr1 = getAddressSafe('str_msg1')
 local msgAddr2 = getAddressSafe('str_msg2')
@@ -1490,13 +1572,6 @@ if itemBaseAddr == 0 then
   return
 end
 
-if not getAddressSafe('Atelier_Ryza_3_DX.exe') then
-  writeError(msgAddr1, msgAddr2, msgAddr3,
-    "Error: Game not found",
-    "Atelier_Ryza_3_DX.exe not loaded")
-  return
-end
-
 -- **Check if source is in protected address ranges**
 local importantBaseAddr = g_importantBaseAddress
 local pristineKeyAddr = g_pristineKeyAddress
@@ -1506,7 +1581,7 @@ local PRISTINE_KEY_COUNT = 0x20  -- 32 keys
 -- Check important items range
 if importantBaseAddr then
   local importantRangeStart = importantBaseAddr
-  local importantRangeEnd = importantBaseAddr + (0x80 * IMPORTANT_COUNT)
+  local importantRangeEnd = importantBaseAddr + (ItemSize * IMPORTANT_COUNT)
 
   if itemBaseAddr &gt;= importantRangeStart and itemBaseAddr &lt; importantRangeEnd then
     print(string.format("Protected range: %08X - %08X", importantRangeStart, importantRangeEnd))
@@ -1517,7 +1592,8 @@ if importantBaseAddr then
   end
 end
 
--- Check pristine key range
+-- Check pristine key (equipped keys in keyring) range
+--[[
 if pristineKeyAddr then
   local pristineRangeStart = pristineKeyAddr
   local pristineRangeEnd = pristineKeyAddr + (0x80 * PRISTINE_KEY_COUNT)
@@ -1526,18 +1602,11 @@ if pristineKeyAddr then
     print(string.format("Protected range: %08X - %08X", pristineRangeStart, pristineRangeEnd))
     writeError(msgAddr1, msgAddr2, msgAddr3,
       "Error: Protected item",
-      "Cannot duplicate pristine keys")
+      "Cannot duplicate equpiied keys in keyring")
     return
   end
 end
-
--- Cache frequently used values
-local containerBaseAddress = g_containerBaseAddress
-local MaxCount = MaxContainerCount
-local ItemSize = ItemRecordSize
-local dupCount = 3
-local MAX_QUALITY = 999
-local MAX_SERIAL = 32267  -- Hard cap at 32267
+]]--
 
 print(string.format("Container addr: %08X", containerBaseAddress))
 
@@ -1547,16 +1616,53 @@ print(string.format("Current serial base: %d", currentSerialBase))
 
 -- Pre-read source item data
 local srcItemData = readBytes(itemBaseAddr, ItemSize, true)
+local srcItemID = readSmallInteger(itemBaseAddr + 0x04)  -- Item ID at offset +0x02
 local srcQuality = readSmallInteger(itemBaseAddr + 0x06)
+local srcQuality2 = readSmallInteger(itemBaseAddr + 0x08)
 
-print(string.format("Source quality: %d", srcQuality))
+print(string.format("Source Item ID: %03X", srcItemID))
+print(string.format("Source quality: %d (0x%04X)", srcQuality, srcQuality))
 
--- Check if source quality is invalid
-if srcQuality &gt; MAX_QUALITY then
-  writeError(msgAddr1, msgAddr2, msgAddr3,
-    string.format("Error: Invalid quality (%d)", srcQuality),
-    string.format("Maximum allowed is %d", MAX_QUALITY))
-  return
+-- **Determine if this is a replicable Key**
+local isKey = false
+local containerKeyRangeStart = containerBaseAddress
+local containerKeyRangeEnd = containerBaseAddress + (ItemSize * CONTAINER_KEY_COUNT)
+local basketKeyRangeStart = basketBaseAddress
+local basketKeyRangeEnd = basketBaseAddress + (ItemSize * BASKET_KEY_COUNT)
+
+if srcItemID &gt;= KEY_ID_MIN and srcItemID &lt;= KEY_ID_MAX then
+  -- Check if in valid key address ranges
+  if (itemBaseAddr &gt;= containerKeyRangeStart and itemBaseAddr &lt; containerKeyRangeEnd) or
+     (itemBaseAddr &gt;= basketKeyRangeStart and itemBaseAddr &lt; basketKeyRangeEnd) then
+    isKey = true
+    print(string.format("Detected as replicable Key (ID: 0x%03X)", srcItemID))
+  end
+end
+
+-- **Quality validation based on item type**
+if isKey then
+  -- Key must have quality 0xFFFF
+  if srcQuality ~= KEY_QUALITY_VALUE or srcQuality2 ~= KEY_QUALITY_VALUE then
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      string.format("Error: Invalid Key quality (0x%04X, 0x%04X)", srcQuality, srcQuality2),
+      "Key quality must be 0xFFFF")
+    return
+  end
+  print("Key quality validation passed (0xFFFF)")
+else
+  -- Normal item must have quality &lt;= 999
+  if srcQuality &gt; MAX_QUALITY then
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      string.format("Error: Invalid quality (%d)", srcQuality),
+      string.format("Maximum allowed is %d", MAX_QUALITY))
+    return
+  end
+  if srcQuality2 &gt; MAX_QUALITY then
+    writeError(msgAddr1, msgAddr2, msgAddr3,
+      string.format("Error: Invalid quality #2 (%d)", srcQuality2),
+      string.format("Maximum allowed is %d", MAX_QUALITY))
+    return
+  end
 end
 
 -- **Find empty slot**
@@ -1567,7 +1673,7 @@ for i = 1, MaxCount - 5 do
   local currentID = readSmallInteger(currentAddr)
   if currentID == 0xFFFF and i &gt; 1 then
     emptySlotAddr = currentAddr
-    print(string.format("Found empty slot #%d at %08X, src quality: %d", i, currentAddr, srcQuality))
+    print(string.format("Found empty slot #%d at %08X", i, currentAddr))
     break
   end
   currentAddr = currentAddr + ItemSize
@@ -1598,28 +1704,43 @@ for i = 0, dupCount - 1 do
   -- Write entire item data at once
   writeBytes(destAddr, srcItemData)
 
-  -- Calculate quality for this duplicate
+  -- Assign serial number
+  writeSmallInteger(destAddr, nextSerial)
+
+  -- Handle quality based on item type
   local newQuality
-  if currentQuality &gt;= MAX_QUALITY then
-    newQuality = MAX_QUALITY  -- Lock at 999
+  if isKey then
+    -- Key: always use 0xFFFF
+    writeSmallInteger(destAddr + 0x06, KEY_QUALITY_VALUE)
+    writeSmallInteger(destAddr + 0x08, KEY_QUALITY_VALUE)
+    newQuality = KEY_QUALITY_VALUE
+    print(string.format("Key #%d, addr: %08X, Serial: %d, Quality: 0x%04X",
+      i + 1, destAddr, nextSerial, newQuality))
   else
-    newQuality = currentQuality + i
-    if newQuality &gt; MAX_QUALITY then
-      newQuality = MAX_QUALITY  -- Cap at 999
+    -- Normal item: calculate quality with increment
+    if currentQuality &gt;= MAX_QUALITY then
+      newQuality = MAX_QUALITY  -- Lock at 999
+    else
+      newQuality = currentQuality + i
+      if newQuality &gt; MAX_QUALITY then
+        newQuality = MAX_QUALITY  -- Cap at 999
+      end
     end
+    writeSmallInteger(destAddr + 0x06, newQuality)
+    writeSmallInteger(destAddr + 0x08, newQuality)
+    print(string.format("Item #%d, addr: %08X, Serial: %d, Quality: %d",
+      i + 1, destAddr, nextSerial, newQuality))
   end
 
-  -- Assign serial number and quality
-  writeSmallInteger(destAddr, nextSerial)  -- Use managed serial
-  writeSmallInteger(destAddr + 0x06, newQuality)  -- Quality at 0x06
-  writeSmallInteger(destAddr + 0x08, newQuality)  -- Secondary quality field
-
-  -- Create message
-  local message = string.format("#%d, addr: %08X, Serial: %d, Quality: %d",
-    i + 1, destAddr, nextSerial, newQuality)
-
-  -- Print to console
-  print(message)
+  -- Create message for memory
+  local message
+  if isKey then
+    message = string.format("#%d, addr: %08X, Serial: %d, Quality: 0xFFFF",
+      i + 1, destAddr, nextSerial)
+  else
+    message = string.format("#%d, addr: %08X, Serial: %d, Quality: %d",
+      i + 1, destAddr, nextSerial, newQuality)
+  end
 
   -- Write to corresponding symbol address
   writeMessage(msgAddresses[i + 1], message)
@@ -1634,7 +1755,11 @@ end
 writeSmallInteger(serialBaseAddr, nextSerial)
 print(string.format("Updated serial base: %d", nextSerial))
 
-print("Done - Duplicated " .. dupCount .. " items")
+if isKey then
+  print("Done - Duplicated " .. dupCount .. " keys")
+else
+  print("Done - Duplicated " .. dupCount .. " items")
+end
 closeLuaEngine()
 {$asm}
 
@@ -1997,159 +2122,167 @@ closeLuaEngine()
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>53</ID>
-                  <Description>"特性1"</Description>
+                  <ID>464</ID>
+                  <Description>"特性"</Description>
                   <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Ja</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>14</Offset>
-                  </Offsets>
+                  <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>54</ID>
-                      <Description>"特性1 LV"</Description>
+                      <ID>53</ID>
+                      <Description>"特性1"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>0F</Offset>
+                        <Offset>14</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>54</ID>
+                          <Description>"特性1 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>0F</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>55</ID>
+                          <Description>"特性1ロック"</Description>
+                          <DropDownListLink>アイテムロック</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>3</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>55</ID>
-                      <Description>"特性1ロック"</Description>
-                      <DropDownListLink>アイテムロック</DropDownListLink>
+                      <ID>56</ID>
+                      <Description>"特性2"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>3</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>16</Offset>
                       </Offsets>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>56</ID>
-                  <Description>"特性2"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Ja</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>16</Offset>
-                  </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>57</ID>
-                      <Description>"特性2 LV"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>10</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>58</ID>
-                      <Description>"特性2ロック"</Description>
-                      <DropDownListLink>アイテムロック</DropDownListLink>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>4</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>3</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>59</ID>
-                  <Description>"特性3"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Ja</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>18</Offset>
-                  </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>60</ID>
-                      <Description>"特性3 LV"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>11</Offset>
-                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>57</ID>
+                          <Description>"特性2 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>10</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>58</ID>
+                          <Description>"特性2ロック"</Description>
+                          <DropDownListLink>アイテムロック</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>4</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>61</ID>
-                      <Description>"特性3ロック"</Description>
-                      <DropDownListLink>アイテムロック</DropDownListLink>
+                      <ID>59</ID>
+                      <Description>"特性3"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>5</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>18</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>60</ID>
+                          <Description>"特性3 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>11</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>61</ID>
+                          <Description>"特性3ロック"</Description>
+                          <DropDownListLink>アイテムロック</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>5</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>62</ID>
-                  <Description>"超特性"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Ja</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>1A</Offset>
-                  </Offsets>
-                  <CheatEntries>
                     <CheatEntry>
-                      <ID>63</ID>
-                      <Description>"超特性ロック"</Description>
-                      <DropDownListLink>アイテムロック</DropDownListLink>
+                      <ID>62</ID>
+                      <Description>"超特性"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Ja</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>6</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>1A</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>63</ID>
+                          <Description>"超特性ロック"</Description>
+                          <DropDownListLink>アイテムロック</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>6</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
@@ -2710,159 +2843,167 @@ closeLuaEngine()
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>109</ID>
-                  <Description>"Trait 1"</Description>
+                  <ID>465</ID>
+                  <Description>"Traits"</Description>
                   <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-En</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>14</Offset>
-                  </Offsets>
+                  <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>110</ID>
-                      <Description>"Trait 1 LV"</Description>
+                      <ID>109</ID>
+                      <Description>"Trait 1"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>0F</Offset>
+                        <Offset>14</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>110</ID>
+                          <Description>"Trait 1 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>0F</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>111</ID>
+                          <Description>"Trait 1 lock"</Description>
+                          <DropDownListLink>Item lock</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>3</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>111</ID>
-                      <Description>"Trait 1 lock"</Description>
-                      <DropDownListLink>Item lock</DropDownListLink>
+                      <ID>112</ID>
+                      <Description>"Trait 2"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>3</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>16</Offset>
                       </Offsets>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>112</ID>
-                  <Description>"Trait 2"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-En</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>16</Offset>
-                  </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>113</ID>
-                      <Description>"Trait 2 LV"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>10</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>114</ID>
-                      <Description>"Trait 2 lock"</Description>
-                      <DropDownListLink>Item lock</DropDownListLink>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>4</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>3</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>115</ID>
-                  <Description>"Trait 3"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-En</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>18</Offset>
-                  </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>116</ID>
-                      <Description>"Trait 3 LV"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>11</Offset>
-                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>113</ID>
+                          <Description>"Trait 2 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>10</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>114</ID>
+                          <Description>"Trait 2 lock"</Description>
+                          <DropDownListLink>Item lock</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>4</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>117</ID>
-                      <Description>"Trait 3 lock"</Description>
-                      <DropDownListLink>Item lock</DropDownListLink>
+                      <ID>115</ID>
+                      <Description>"Trait 3"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>5</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>18</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>116</ID>
+                          <Description>"Trait 3 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>11</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>117</ID>
+                          <Description>"Trait 3 lock"</Description>
+                          <DropDownListLink>Item lock</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>5</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>118</ID>
-                  <Description>"Super trait"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-En</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>1A</Offset>
-                  </Offsets>
-                  <CheatEntries>
                     <CheatEntry>
-                      <ID>119</ID>
-                      <Description>"Super trait lock"</Description>
-                      <DropDownListLink>Item lock</DropDownListLink>
+                      <ID>118</ID>
+                      <Description>"Super trait"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-En</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>6</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>1A</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>119</ID>
+                          <Description>"Super trait lock"</Description>
+                          <DropDownListLink>Item lock</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>6</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
@@ -3392,159 +3533,167 @@ closeLuaEngine()
                   </Offsets>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>160</ID>
-                  <Description>"特性1"</Description>
+                  <ID>463</ID>
+                  <Description>"特性"</Description>
                   <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Tc</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>14</Offset>
-                  </Offsets>
+                  <GroupHeader>1</GroupHeader>
                   <CheatEntries>
                     <CheatEntry>
-                      <ID>161</ID>
-                      <Description>"特性1 LV"</Description>
+                      <ID>160</ID>
+                      <Description>"特性1"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Tc</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>0F</Offset>
+                        <Offset>14</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>161</ID>
+                          <Description>"特性1 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>0F</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>162</ID>
+                          <Description>"特性1鎖定"</Description>
+                          <DropDownListLink>物品鎖定</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>3</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>162</ID>
-                      <Description>"特性1鎖定"</Description>
-                      <DropDownListLink>物品鎖定</DropDownListLink>
+                      <ID>163</ID>
+                      <Description>"特性2"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Tc</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>3</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>16</Offset>
                       </Offsets>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>163</ID>
-                  <Description>"特性2"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Tc</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>16</Offset>
-                  </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>164</ID>
-                      <Description>"特性2 LV"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>10</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                    <CheatEntry>
-                      <ID>165</ID>
-                      <Description>"特性2鎖定"</Description>
-                      <DropDownListLink>物品鎖定</DropDownListLink>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>4</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>3</Offset>
-                      </Offsets>
-                    </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>166</ID>
-                  <Description>"特性3"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Tc</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>18</Offset>
-                  </Offsets>
-                  <CheatEntries>
-                    <CheatEntry>
-                      <ID>167</ID>
-                      <Description>"特性3 LV"</Description>
-                      <ShowAsSigned>0</ShowAsSigned>
-                      <Color>FF8080</Color>
-                      <VariableType>Byte</VariableType>
-                      <Address>container_base_addr</Address>
-                      <Offsets>
-                        <Offset>11</Offset>
-                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>164</ID>
+                          <Description>"特性2 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>10</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>165</ID>
+                          <Description>"特性2鎖定"</Description>
+                          <DropDownListLink>物品鎖定</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>4</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                     <CheatEntry>
-                      <ID>168</ID>
-                      <Description>"特性3鎖定"</Description>
-                      <DropDownListLink>物品鎖定</DropDownListLink>
+                      <ID>166</ID>
+                      <Description>"特性3"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Tc</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>5</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>18</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>167</ID>
+                          <Description>"特性3 LV"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Byte</VariableType>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>11</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>168</ID>
+                          <Description>"特性3鎖定"</Description>
+                          <DropDownListLink>物品鎖定</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>5</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
-                  </CheatEntries>
-                </CheatEntry>
-                <CheatEntry>
-                  <ID>169</ID>
-                  <Description>"超特性"</Description>
-                  <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
-                  <DropDownListLink>-Traits-Tc</DropDownListLink>
-                  <ShowAsHex>1</ShowAsHex>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>FF8080</Color>
-                  <VariableType>2 Bytes</VariableType>
-                  <Address>container_base_addr</Address>
-                  <Offsets>
-                    <Offset>1A</Offset>
-                  </Offsets>
-                  <CheatEntries>
                     <CheatEntry>
-                      <ID>170</ID>
-                      <Description>"超特性鎖定"</Description>
-                      <DropDownListLink>物品鎖定</DropDownListLink>
+                      <ID>169</ID>
+                      <Description>"超特性"</Description>
+                      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+                      <DropDownListLink>-Traits-Tc</DropDownListLink>
+                      <ShowAsHex>1</ShowAsHex>
                       <ShowAsSigned>0</ShowAsSigned>
                       <Color>FF8080</Color>
-                      <VariableType>Binary</VariableType>
-                      <BitStart>6</BitStart>
-                      <BitLength>1</BitLength>
-                      <ShowAsBinary>0</ShowAsBinary>
+                      <VariableType>2 Bytes</VariableType>
                       <Address>container_base_addr</Address>
                       <Offsets>
-                        <Offset>3</Offset>
+                        <Offset>1A</Offset>
                       </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>170</ID>
+                          <Description>"超特性鎖定"</Description>
+                          <DropDownListLink>物品鎖定</DropDownListLink>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <Color>FF8080</Color>
+                          <VariableType>Binary</VariableType>
+                          <BitStart>6</BitStart>
+                          <BitLength>1</BitLength>
+                          <ShowAsBinary>0</ShowAsBinary>
+                          <Address>container_base_addr</Address>
+                          <Offsets>
+                            <Offset>3</Offset>
+                          </Offsets>
+                        </CheatEntry>
+                      </CheatEntries>
                     </CheatEntry>
                   </CheatEntries>
                 </CheatEntry>
@@ -5568,9 +5717,9 @@ align 10 cc
   hp_damage_type: // 0:off, 1:1pt, 2:No dmg, 3:by multiplier
   dd 3
   hp_fdamage_multi:
-  dd (float)0.8
+  dd (float)0.3330000043
   enemy_damage_multi:
-  dd (float)1
+  dd (float)2
   vf_1:
   dd (float)1
 
@@ -5992,7 +6141,7 @@ code:
   is_player_no_break:
   dd 1
   is_enemy_fast_break:
-  dd 0
+  dd 1
 
 INJECT_FAST_ENEMY_BREAK:
   jmp newmem
@@ -6237,19 +6386,6 @@ Atelier_Ryza_3_DX.exe+BECA9: 5B                    - pop rbx
 Atelier_Ryza_3_DX.exe+BECAA: C3                    - ret
 }
 </AssemblerScript>
-              <CheatEntries>
-                <CheatEntry>
-                  <ID>333</ID>
-                  <Description>"OD?"</Description>
-                  <ShowAsSigned>0</ShowAsSigned>
-                  <Color>808080</Color>
-                  <VariableType>4 Bytes</VariableType>
-                  <Address>i_od_addr1</Address>
-                  <Offsets>
-                    <Offset>18</Offset>
-                  </Offsets>
-                </CheatEntry>
-              </CheatEntries>
             </CheatEntry>
             <CheatEntry>
               <ID>334</ID>
@@ -6435,10 +6571,10 @@ alloc(newmem,$1000,INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER)
 label(code)
 label(return)
 label(i_min_quality_put_in_container is_assign_empty_trait1 is_modify_cc)
-label(i_last_store_item_in_container_addr)
+label(i_last_store_item_in_container_addr is_raise_key_trait)
 label(is_make_quality_difference is_open_all_slots is_reset_item_level)
 label(is_adjust_crit_p is_assign_quality_traits)
-label(is_fill_empty_effects)
+label(is_fill_empty_effects is_assign_super_trait)
 
 newmem:
   mov [i_last_store_item_in_container_addr], rbx
@@ -6449,6 +6585,7 @@ newmem:
   test rbx, rbx
   jz endp
 
+  // ******* quality set: jitter
   cmp word ptr [rbx+6], 0  // quality is 0
   je endp
 
@@ -6478,12 +6615,14 @@ next1:
   mov [rbx+6], ax
   mov [rbx+8], ax
 
+  // force trait slots enabled
 check_slots: // num of slots open
   cmp dword ptr [is_open_all_slots], 1
   jne @F
 
-  and byte ptr [rbx+3], C7
+  and byte ptr [rbx+3], 87 // 10000111b
 
+  // *********** reset item level
 check_level:
   cmp dword ptr [is_reset_item_level], 1
   jne @F
@@ -6498,14 +6637,14 @@ chk_reduce_cc:
 
   mov byte ptr [rbx+C], -A
 
-
+  // *********** not used
 chk_remove_enforced: // not confirmed
   cmp dword ptr [is_remove_enforced], 1
   jne @F
 
   //mov word ptr [rbx+2E], 0
 
-  // *************************
+  // *********** assign elements effects to empty slots
 chk_assign_effects:
   cmp dword ptr [is_fill_empty_effects], 1
   jne after_chk_assign_effects
@@ -6530,6 +6669,7 @@ chk_assign_effects:
 after_chk_assign_effects:
   // *************************
 
+  // *********** assign quality traits to empty slot #1 &amp; #2
 chk_assign_quality:
   cmp dword ptr [is_assign_quality_traits], 1
   jne after_quality
@@ -6545,6 +6685,102 @@ chk_assign_quality:
   mov word ptr [rbx+16], E
 
 after_quality:
+
+  // *********** assign super traits to equipments
+assign_super_trait:
+  cmp dword ptr [is_assign_super_trait], 1
+  jne after_assign_super_trait
+
+  cmp word ptr [rbx+1A], FFFF
+  jne after_assign_super_trait
+
+  and byte ptr [rbx+3], BF // make slot open
+
+  // items
+strait_chk_eqp_item:
+  cmp word ptr [rbx+4], 14A
+  jb after_assign_super_trait
+  cmp word ptr [rbx+4], 18A
+  ja strait_chk_weapon
+
+  mov al, [rbx] // serial: low byte
+  and al, 1
+  test al, al
+  jz set_eqp_item_0
+
+set_eqp_item_1:
+  mov word ptr [rbx+1A], 121 // 0121 : 過度強大的力量
+  jmp after_assign_super_trait
+
+set_eqp_item_0:
+  mov word ptr [rbx+1A], 130 // 0130 : 抑制反作用
+  jmp after_assign_super_trait
+
+  // weapon
+strait_chk_weapon:
+  cmp word ptr [rbx+4], 24E
+  jb after_assign_super_trait
+  cmp word ptr [rbx+4], 28F
+  ja strait_chk_armor
+
+  mov al, [rbx] // serial: low byte
+  and al, 1
+  test al, al
+  jz set_weapon_st_0
+
+set_weapon_st_1:
+  mov word ptr [rbx+1A], 10E // 010E : 鷹眼 / 鷹の目
+  jmp after_assign_super_trait
+
+set_weapon_st_0:
+  mov word ptr [rbx+1A], 110 // 0110 : 終極技能
+  jmp after_assign_super_trait
+
+  // armor
+strait_chk_armor:
+  cmp word ptr [rbx+4], 290
+  jb after_assign_super_trait
+  cmp word ptr [rbx+4], 29E
+  ja strait_chk_access
+
+  mov word ptr [rbx+1A], 11b // 011B : 死鬥的決心
+  jmp after_assign_super_trait
+
+  /*
+  mov al, [rbx] // serial: low byte
+  and al, 1
+  test al, al
+  jz set_weapon_st_0
+
+set_armor_st_1:
+  mov word ptr [rbx+1A], 118 // 0118 : 勇猛奮戰
+  jmp after_assign_super_trait
+
+set_armor_st_0:
+  mov word ptr [rbx+1A], 11b // 011B : 死鬥的決心
+  jmp after_assign_super_trait
+  */
+
+strait_chk_access:
+  cmp word ptr [rbx+4], 2A9
+  jb after_assign_super_trait
+  cmp word ptr [rbx+4], 2B8
+  ja after_assign_super_trait
+
+  mov al, [rbx] // serial: low byte
+  and al, 1
+  test al, al
+  jz set_access_st_0
+
+set_access_st_1:
+  mov word ptr [rbx+1A], 106 // 0106 : 開戰鼓舞
+  jmp after_assign_super_trait
+
+set_access_st_0:
+  mov word ptr [rbx+1A], 103 // 0103 : 先見之明
+  //jmp after_assign_super_trait
+
+after_assign_super_trait:
   //*****************************************************************************
   // 特性調整
 adjust_crit_percent:
@@ -6724,6 +6960,10 @@ align 10 cc
   dd 1
   is_fill_empty_effects:
   dd 1
+  is_assign_super_trait:
+  dd 1
+  is_raise_key_trait: // not used
+  dd 1
 
 INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER:
   jmp newmem
@@ -6731,10 +6971,10 @@ INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER:
 return:
 registersymbol(INJECT_SET_MIN_QUALITY_PUT_IN_CONTAINER)
 registersymbol(i_min_quality_put_in_container is_assign_empty_trait1 is_modify_cc)
-registersymbol(i_last_store_item_in_container_addr)
+registersymbol(i_last_store_item_in_container_addr is_raise_key_trait)
 registersymbol(is_make_quality_difference is_open_all_slots is_reset_item_level)
 registersymbol(is_adjust_crit_p is_assign_quality_traits)
-registersymbol(is_fill_empty_effects)
+registersymbol(is_fill_empty_effects is_assign_super_trait)
 
 [DISABLE]
 
@@ -6851,6 +7091,15 @@ Atelier_Ryza_3_DX.exe+652F29: 85 C0                 - test eax,eax
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
                   <Address>is_fill_empty_effects</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>466</ID>
+                  <Description>"Assign super trait to some items?"</Description>
+                  <DropDownListLink>YesNo</DropDownListLink>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>is_assign_super_trait</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -23948,7 +24197,7 @@ FFFF:N/A
             <CheatEntry>
               <ID>435</ID>
               <Description>"-Key Src-ID-Tc"</Description>
-              <DropDownList DisplayValueAsItem="1">0:符記
+              <DropDownList DisplayValueAsItem="1">0:象徵
 1:爆發
 2:合成
 3:冒險
