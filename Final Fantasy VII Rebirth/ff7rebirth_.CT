@@ -53,7 +53,7 @@ end
     </CheatEntry>
     <CheatEntry>
       <ID>1</ID>
-      <Description>"Toggle Scripts"</Description>
+      <Description>"Toggle Scripts (auto attach)"</Description>
       <Color>4080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
@@ -1958,7 +1958,7 @@ ff7rebirth_.exe+14055BE: 48 2B E0                 - sub rsp,rax
 
 [ENABLE]
 
-aobscanmodule(INJECT_SET_MATERIA_XP,$process,41 89 76 08 4C 89 7D D7) // should be unique
+aobscanmodule(INJECT_SET_MATERIA_XP,$process,41 8B 4E 08 8B D0) // should be unique
 alloc(newmem,$1000,INJECT_SET_MATERIA_XP)
 
 label(code)
@@ -1966,38 +1966,22 @@ label(return)
 label(vf_mxp_multi)
 
 newmem:
-  cmp [r14+08],esi
-  jae code
-
-  movaps [tmp13], xmm13
-  movaps [tmp14], xmm14
-  movaps [tmp15], xmm15
-  push r15
+  vmovups [tmp14], xmm14
+  vmovups [tmp15], xmm15
 
   vcvtsi2ss xmm15, xmm15, esi
-  mov r15d, [r14+08]
-  vcvtsi2ss xmm14, xmm14, r15d
-
-  vsubss xmm15, xmm15, xmm14
-  vxorps xmm13, xmm13, xmm13
-  vucomiss xmm15, xmm13
-  jbe code_pre
-
-  vmovss xmm13, [vf_mxp_multi]
-  vmulss xmm15, xmm15, xmm13
-  vaddss xmm14, xmm14, xmm15
-  vcvtss2si esi, xmm14
-
+  vmovss xmm14, [vf_mxp_multi]
+  vmulss xmm15, xmm14, xmm15
+  vcvtss2si esi, xmm15
 
 code_pre:
-  pop r15
-  movaps xmm13, [tmp13]
-  movaps xmm14, [tmp14]
-  movaps xmm15, [tmp15]
+  vmovups xmm14, [tmp14]
+  vmovups xmm15, [tmp15]
 
 code:
-  mov [r14+08],esi
-  mov [rbp-29],r15
+  mov ecx,[r14+08]
+  mov edx,eax
+  //add ecx,esi &lt;== esi here
   jmp return
 align 10 cc
   tmp13:
@@ -2011,44 +1995,44 @@ align 10 cc
 
 INJECT_SET_MATERIA_XP:
   jmp newmem
-  nop 3
+  nop
 return:
 registersymbol(INJECT_SET_MATERIA_XP)
 registersymbol(vf_mxp_multi)
 [DISABLE]
 
 INJECT_SET_MATERIA_XP:
-  db 41 89 76 08 4C 89 7D D7
+  db 41 8B 4E 08 8B D0
 
 unregistersymbol(*)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+E07B5C
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+1427AD7
 
-ff7rebirth_.exe+E07B33: 44 8A 4D 9F              - mov r9b,[rbp-61]
-ff7rebirth_.exe+E07B37: 4C 8D 15 D2 8F 8B 04     - lea r10,[ff7rebirth_.exe+56C0B10]
-ff7rebirth_.exe+E07B3E: 8B F0                    - mov esi,eax
-ff7rebirth_.exe+E07B40: 41 8B 4E 08              - mov ecx,[r14+08]
-ff7rebirth_.exe+E07B44: 41 03 CC                 - add ecx,r12d
-ff7rebirth_.exe+E07B47: 0F 89 ED 00 00 00        - jns ff7rebirth_.exe+E07C3A
-ff7rebirth_.exe+E07B4D: 33 F6                    - xor esi,esi
-ff7rebirth_.exe+E07B4F: 45 8A 66 10              - mov r12b,[r14+10]
-ff7rebirth_.exe+E07B53: 48 89 5D DF              - mov [rbp-21],rbx
-ff7rebirth_.exe+E07B57: BB 01 00 00 00           - mov ebx,00000001
+ff7rebirth_.exe+1427AA8: 41 0F B6 94 24 21 01 00 00  - movzx edx,byte ptr [r12+00000121]
+ff7rebirth_.exe+1427AB1: 48 8D 4D B7                 - lea rcx,[rbp-49]
+ff7rebirth_.exe+1427AB5: 8A 45 EF                    - mov al,[rbp-11]
+ff7rebirth_.exe+1427AB8: 48 8B 5D E7                 - mov rbx,[rbp-19]
+ff7rebirth_.exe+1427ABC: 88 45 CF                    - mov [rbp-31],al
+ff7rebirth_.exe+1427ABF: 48 8D 05 5A EA 88 04        - lea rax,[ff7rebirth_.exe+5CB6520]
+ff7rebirth_.exe+1427AC6: 48 89 45 B7                 - mov [rbp-49],rax
+ff7rebirth_.exe+1427ACA: 4C 89 65 BF                 - mov [rbp-41],r12
+ff7rebirth_.exe+1427ACE: 48 89 5D C7                 - mov [rbp-39],rbx
+ff7rebirth_.exe+1427AD2: E8 A1 06 00 00              - call ff7rebirth_.exe+1428178
 // ---------- INJECTING HERE ----------
-ff7rebirth_.exe+E07B5C: 41 89 76 08              - mov [r14+08],esi
+ff7rebirth_.exe+1427AD7: 41 8B 4E 08                 - mov ecx,[r14+08]
 // ---------- DONE INJECTING  ----------
-ff7rebirth_.exe+E07B60: 4C 89 7D D7              - mov [rbp-29],r15
-ff7rebirth_.exe+E07B64: 44 88 4D E7              - mov [rbp-19],r9b
-ff7rebirth_.exe+E07B68: 4C 89 55 CF              - mov [rbp-31],r10
-ff7rebirth_.exe+E07B6C: 41 80 BF 24 01 00 00 00  - cmp byte ptr [r15+00000124],00
-ff7rebirth_.exe+E07B74: 75 32                    - jne ff7rebirth_.exe+E07BA8
-ff7rebirth_.exe+E07B76: 45 33 FF                 - xor r15d,r15d
-ff7rebirth_.exe+E07B79: 41 8B D7                 - mov edx,r15d
-ff7rebirth_.exe+E07B7C: 48 8D 4D CF              - lea rcx,[rbp-31]
-ff7rebirth_.exe+E07B80: E8 B7 08 00 00           - call ff7rebirth_.exe+E0843C
-ff7rebirth_.exe+E07B85: 3B C6                    - cmp eax,esi
+ff7rebirth_.exe+1427ADB: 8B D0                       - mov edx,eax
+ff7rebirth_.exe+1427ADD: 03 CE                       - add ecx,esi
+ff7rebirth_.exe+1427ADF: 0F 89 B4 00 00 00           - jns ff7rebirth_.exe+1427B99
+ff7rebirth_.exe+1427AE5: 33 D2                       - xor edx,edx
+ff7rebirth_.exe+1427AE7: 8A 45 EF                    - mov al,[rbp-11]
+ff7rebirth_.exe+1427AEA: 48 8D 4D B7                 - lea rcx,[rbp-49]
+ff7rebirth_.exe+1427AEE: 41 8A 76 10                 - mov sil,[r14+10]
+ff7rebirth_.exe+1427AF2: 88 45 CF                    - mov [rbp-31],al
+ff7rebirth_.exe+1427AF5: 48 8D 05 24 EA 88 04        - lea rax,[ff7rebirth_.exe+5CB6520]
+ff7rebirth_.exe+1427AFC: 48 89 45 B7                 - mov [rbp-49],rax
 }
 </AssemblerScript>
       <CheatEntries>
@@ -4195,6 +4179,12 @@ ff7rebirth_.exe+D260E0: 41 3B 41 34           - cmp eax,[r9+34]
         <CheatEntry>
           <ID>96</ID>
           <Description>"Usage: Open item menu -&gt; trading currencies"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>188</ID>
+          <Description>"Enable before click on menu"</Description>
           <Color>8000FF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
