@@ -143,7 +143,11 @@ namespace AAToggleGenerator
                 treeView.Font = new System.Drawing.Font(treeView.Font.FontFamily, TreeViewFontSize);
 
                 treeView.AfterCheck += TreeView_AfterCheck;
-                treeView.NodeMouseDoubleClick += (sender, e) => e.Node.Checked = !e.Node.Checked;
+                treeView.NodeMouseDoubleClick += (sender, e) =>
+                {
+                    if (e.Node != null)
+                        e.Node.Checked = !e.Node.Checked;
+                };
 
 
                 // Build TreeView nodes
@@ -202,7 +206,7 @@ namespace AAToggleGenerator
 
                 treeView.NodeMouseDoubleClick += (sender, e) =>
                 {
-                    TreeNode node = e.Node;
+                    TreeNode? node = e.Node;
                     if (node == null) return;
 
                     CheatEntry? entry = node.Tag as CheatEntry;
@@ -282,7 +286,9 @@ namespace AAToggleGenerator
 
                     // Filter selected entries
                     var selectedEntries = GetCheckedNodes(treeView.Nodes)
-                        .Select(node => (CheatEntry)node.Tag)
+                        .Select(node => (CheatEntry?)node.Tag)
+                        .Where(entry => entry != null)
+                        .Cast<CheatEntry>()
                         .ToList();
 
                     // Generate script with selected entries

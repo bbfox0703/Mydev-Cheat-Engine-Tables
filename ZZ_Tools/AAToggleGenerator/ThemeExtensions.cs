@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Runtime.Versioning;
 using System.Windows.Forms;
 using ScintillaNET;
 
@@ -8,6 +9,7 @@ namespace AAToggleGenerator
     /// <summary>
     /// Extension methods for applying Windows theme to various controls
     /// </summary>
+    [SupportedOSPlatform("windows6.1")]
     public static class ThemeExtensions
     {
         /// <summary>

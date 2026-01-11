@@ -57,8 +57,8 @@ namespace AAToggleGenerator.Tests
             {
                 CTRenameEXE2Process.ReplaceProcessName(path, svc);
                 string content = File.ReadAllText(path);
-                Assert.IsFalse(content.Contains("GameA.exe"));
-                Assert.IsFalse(content.Contains("GameB.exe"));
+                Assert.DoesNotContain("GameA.exe", content);
+                Assert.DoesNotContain("GameB.exe", content);
                 StringAssert.Contains(content, "aobscanmodule(mod1,$process,AA BB CC)");
                 StringAssert.Contains(content, "aobscanregion(reg1,$process+1000,$process+2000,DD EE FF)");
                 StringAssert.Contains(content, "aobscanmodule(mod2,$process,11 22 33)");

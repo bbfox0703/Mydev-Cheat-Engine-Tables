@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Microsoft.Win32;
 
 namespace AAToggleGenerator
@@ -9,6 +10,7 @@ namespace AAToggleGenerator
     /// Helper class for Windows theme detection and management
     /// Supports Windows 10 version 1903+ (Build 18362+)
     /// </summary>
+    [SupportedOSPlatform("windows6.1")]
     public static class WindowsThemeHelper
     {
         private const int MinSupportedBuild = 18362; // Windows 10 1903
