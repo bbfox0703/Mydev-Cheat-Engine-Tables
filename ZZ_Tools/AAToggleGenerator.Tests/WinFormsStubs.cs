@@ -37,7 +37,9 @@ namespace System.Windows.Forms
     {
         public bool IsHandleCreated { get; set; }
         public IntPtr Handle { get; set; }
+#pragma warning disable CS0067 // Event is never used - this is a test stub
         public event EventHandler? HandleCreated;
+#pragma warning restore CS0067
     }
 
     public class Button : Control

@@ -1,9 +1,11 @@
 using System.Drawing;
+using System.Runtime.Versioning;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace AAToggleGenerator.Tests
 {
     [TestClass]
+    [SupportedOSPlatform("windows6.1")]
     public class ThemeExtensionsTests
     {
         [TestInitialize]

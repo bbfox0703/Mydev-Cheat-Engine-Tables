@@ -1,5 +1,7 @@
 ### English
 
+![License: GPLv3](https://img.shields.io/badge/License-GNU%20GPLv3-yellow.svg)
+
 ---
 
 ### **Repository for Self-Developed Cheat Engine Tables**  
