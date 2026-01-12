@@ -1,6 +1,6 @@
 ### English
 
-![License: GPLv3](https://img.shields.io/badge/License-GNU%20GPLv3-yellow.svg)
+![License: GPLv3](https://img.shields.io/badge/License-GNU%20GPLv3-yellow.svg)![Cheat Engine](https://img.shields.io/badge/Cheat%20Engine-blue.svg)![CE Tables](https://img.shields.io/badge/CE%20table-gold.svg)
 
 ---
 
