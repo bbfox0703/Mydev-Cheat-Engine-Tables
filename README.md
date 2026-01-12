@@ -1,4 +1,4 @@
-![License: GPLv3](https://img.shields.io/badge/License-GNU%20GPLv3-yellow.svg) ![Cheat Engine](https://img.shields.io/badge/Cheat_Engine-7.5+-blue) ![CE Tables](https://img.shields.io/badge/CE-Tables-magenta) ![CE Tools](https://img.shields.io/badge/CE-Tools-green) 
+![License: GPLv3](https://img.shields.io/badge/License-GNU%20GPLv3-yellow.svg) ![Cheat Engine](https://img.shields.io/badge/Cheat_Engine-7.5+-blue) ![CE Tables](https://img.shields.io/badge/CE-Tables-magenta) ![CE Tools](https://img.shields.io/badge/CE-Tools-green) ![.NET 10.0](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet) 
 
 ### English
 
