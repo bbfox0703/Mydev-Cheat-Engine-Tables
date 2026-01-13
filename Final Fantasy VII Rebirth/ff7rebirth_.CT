@@ -775,6 +775,12 @@ ff7rebirth_.exe+C43224: 4C 89 74 24 50              - mov [rsp+50],r14
         <CheatEntry>
           <ID>10</ID>
           <Description>"multiplier"</Description>
+          <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0.1:1/10
+0.3333:1/3
+0.5:Half
+1:Normal
+200:Very fast
+</DropDownList>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>Float</VariableType>
@@ -1483,22 +1489,24 @@ alloc(newmem,$1000,INJECT_ENEMY_HP)
 label(code)
 label(return)
 label(i_enemy_hp_options)
+label(is_chk_ch10_mech)
 
 newmem:
-  cmp [rcx+8], 0
-  je code
-  cmp [rcx+8], 3E7
+  cmp dword ptr [rcx+8], 0
+  je check_mech
+  cmp dword ptr [rcx+8], 3E7
   jg code
-  cmp [rcx+14], 0
+  cmp dword ptr [rcx+14], 0
   je code
-  cmp [rcx+18], 0
+  cmp dword ptr [rcx+18], 0
   je code
-  cmp [rcx+10], 1 // max hp
+  cmp dword ptr [rcx+10], 1 // max hp
   jle code
-  cmp [rcx+14], 3E7
+  cmp dword ptr [rcx+14], 3E7
   jg code
-  cmp [rcx+18], 3E7
+  cmp dword ptr [rcx+18], 3E7
   jg code
+
   cmp dword ptr [i_enemy_hp_options], 0
   je no_act
   cmp dword ptr [i_enemy_hp_options], 1  // 1HP
@@ -1510,12 +1518,21 @@ no_act:
   mov [rcx+0C],edx
   ret
 
+check_mech:
+  cmp dword ptr [is_chk_ch10_mech], 1
+  jne code
+  cmp dword ptr [rcx+2C], 4
+  je ch10_mech_player_unit
+to_ch10_mech_enemy:
+  //mov edx, 1
+
 set_1hp:
   cmp edx, 1
   jbe code
   mov edx, 1
   jmp code
 
+ch10_mech_player_unit:
 set_1m:
   cmp edx, #1000000
   jae code
@@ -1529,12 +1546,14 @@ code:
 align 10 cc
   i_enemy_hp_options:
   dd 0
+  is_chk_ch10_mech:
+  dd 0
 
 INJECT_ENEMY_HP+01:
   jmp newmem
 return:
 registersymbol(INJECT_ENEMY_HP)
-registersymbol(i_enemy_hp_options)
+registersymbol(i_enemy_hp_options is_chk_ch10_mech)
 [DISABLE]
 
 INJECT_ENEMY_HP+01:
@@ -1583,6 +1602,17 @@ ff7rebirth_.exe+1996BDC: CC        - int 3
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_enemy_hp_options</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>200</ID>
+          <Description>"Chk ch. 10 mech mini game?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_chk_ch10_mech</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -4021,7 +4051,7 @@ ff7rebirth_.exe+239628D: 74 1F                 - je ff7rebirth_.exe+23962AE
         </CheatEntry>
         <CheatEntry>
           <ID>195</ID>
-          <Description>"inf ATB (ch10. mech game)"</Description>
+          <Description>"inf ATB (ch.10 mech game)"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
@@ -4088,6 +4118,129 @@ ff7rebirth_.exe+3BF9E7C: 48 8B CF                 - mov rcx,rdi
 ff7rebirth_.exe+3BF9E7F: E8 14 BB D0 FD           - call ff7rebirth_.exe+1905998
 ff7rebirth_.exe+3BF9E84: C5 CA 5E 0D D4 84 4E 03  - vdivss xmm1,xmm6,[ff7rebirth_.exe+70E2360]
 ff7rebirth_.exe+3BF9E8C: 48 8B C8                 - mov rcx,rax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>197</ID>
+          <Description>"Max base HP (ch. 10 mech game)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2026-01-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MAX_CH10_MECH_HP,$process,89 81 14 28 00 00 85) // should be unique
+alloc(newmem,$1000,INJECT_MAX_CH10_MECH_HP)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, #2000
+
+code:
+  mov [rcx+00002814],eax
+  jmp return
+
+INJECT_MAX_CH10_MECH_HP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_MAX_CH10_MECH_HP)
+
+[DISABLE]
+
+INJECT_MAX_CH10_MECH_HP:
+  db 89 81 14 28 00 00
+
+unregistersymbol(INJECT_MAX_CH10_MECH_HP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3BE5B4E
+
+ff7rebirth_.exe+3BE5B29: E8 02 94 4C FE        - call ff7rebirth_.exe+20AEF30
+ff7rebirth_.exe+3BE5B2E: 48 2B E0              - sub rsp,rax
+ff7rebirth_.exe+3BE5B31: 44 8B 89 14 28 00 00  - mov r9d,[rcx+00002814]
+ff7rebirth_.exe+3BE5B38: 44 03 CA              - add r9d,edx
+ff7rebirth_.exe+3BE5B3B: 79 04                 - jns ff7rebirth_.exe+3BE5B41
+ff7rebirth_.exe+3BE5B3D: 33 C0                 - xor eax,eax
+ff7rebirth_.exe+3BE5B3F: EB 0D                 - jmp ff7rebirth_.exe+3BE5B4E
+ff7rebirth_.exe+3BE5B41: 8B 81 18 28 00 00     - mov eax,[rcx+00002818]
+ff7rebirth_.exe+3BE5B47: 44 3B C8              - cmp r9d,eax
+ff7rebirth_.exe+3BE5B4A: 41 0F 4C C1           - cmovl eax,r9d
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3BE5B4E: 89 81 14 28 00 00     - mov [rcx+00002814],eax
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3BE5B54: 85 D2                 - test edx,edx
+ff7rebirth_.exe+3BE5B56: 79 1B                 - jns ff7rebirth_.exe+3BE5B73
+ff7rebirth_.exe+3BE5B58: 8B 81 48 28 00 00     - mov eax,[rcx+00002848]
+ff7rebirth_.exe+3BE5B5E: 49 8B D0              - mov rdx,r8
+ff7rebirth_.exe+3BE5B61: 89 81 44 28 00 00     - mov [rcx+00002844],eax
+ff7rebirth_.exe+3BE5B67: 48 81 C1 C0 24 00 00  - add rcx,000024C0
+ff7rebirth_.exe+3BE5B6E: E8 41 FD D1 FD        - call ff7rebirth_.exe+19058B4
+ff7rebirth_.exe+3BE5B73: 83 3D 86 96 51 05 00  - cmp dword ptr [ff7rebirth_.exe+90FF200],00
+ff7rebirth_.exe+3BE5B7A: 75 11                 - jne ff7rebirth_.exe+3BE5B8D
+ff7rebirth_.exe+3BE5B7C: 48 8B 0D AD 24 5F 05  - mov rcx,[ff7rebirth_.exe+91D8030]
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>202</ID>
+          <Description>"inf. catch chocobo throw item (ch11)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2026-01-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_CH12_CATCH_CHOC_VAG_NO_DEC,$process,FF 8F 78 02 00 00) // should be unique
+
+INJECT_CH12_CATCH_CHOC_VAG_NO_DEC:
+  nop 6
+
+registersymbol(INJECT_CH12_CATCH_CHOC_VAG_NO_DEC)
+
+[DISABLE]
+
+INJECT_CH12_CATCH_CHOC_VAG_NO_DEC:
+  db FF 8F 78 02 00 00
+
+unregistersymbol(INJECT_CH12_CATCH_CHOC_VAG_NO_DEC)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3569FC6
+
+ff7rebirth_.exe+3569F99: 49 8B CE                    - mov rcx,r14
+ff7rebirth_.exe+3569F9C: C5 FB 10 87 3C 02 00 00     - vmovsd xmm0,[rdi+0000023C]
+ff7rebirth_.exe+3569FA4: 8B 87 44 02 00 00           - mov eax,[rdi+00000244]
+ff7rebirth_.exe+3569FAA: C5 FB 11 45 D7              - vmovsd [rbp-29],xmm0
+ff7rebirth_.exe+3569FAF: 89 45 DF                    - mov [rbp-21],eax
+ff7rebirth_.exe+3569FB2: 75 12                       - jne ff7rebirth_.exe+3569FC6
+ff7rebirth_.exe+3569FB4: FF 8F 74 02 00 00           - dec [rdi+00000274]
+ff7rebirth_.exe+3569FBA: 8B 9F 74 02 00 00           - mov ebx,[rdi+00000274]
+ff7rebirth_.exe+3569FC0: C6 45 17 00                 - mov byte ptr [rbp+17],00
+ff7rebirth_.exe+3569FC4: EB 10                       - jmp ff7rebirth_.exe+3569FD6
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3569FC6: FF 8F 78 02 00 00           - dec [rdi+00000278]
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3569FCC: 8B 9F 78 02 00 00           - mov ebx,[rdi+00000278]
+ff7rebirth_.exe+3569FD2: C6 45 17 01                 - mov byte ptr [rbp+17],01
+ff7rebirth_.exe+3569FD6: E8 BD B9 39 FE              - call ff7rebirth_.exe+1905998
+ff7rebirth_.exe+3569FDB: C5 F8 2F 35 99 89 B3 02     - vcomiss xmm6,[ff7rebirth_.exe+60A297C]
+ff7rebirth_.exe+3569FE3: B9 68 02 00 00              - mov ecx,00000268
+ff7rebirth_.exe+3569FE8: C6 45 F3 00                 - mov byte ptr [rbp-0D],00
+ff7rebirth_.exe+3569FEC: 88 98 C8 03 00 00           - mov [rax+000003C8],bl
+ff7rebirth_.exe+3569FF2: 65 48 8B 04 25 58 00 00 00  - mov rax,gs:[00000058]
+ff7rebirth_.exe+3569FFB: 48 8B 00                    - mov rax,[rax]
+ff7rebirth_.exe+3569FFE: 8B 04 01                    - mov eax,[rcx+rax]
 }
 </AssemblerScript>
         </CheatEntry>
@@ -4456,7 +4609,7 @@ ff7rebirth_.exe+D260E0: 41 3B 41 34           - cmp eax,[r9+34]
     </CheatEntry>
     <CheatEntry>
       <ID>105</ID>
-      <Description>"When get new item.."</Description>
+      <Description>"When get new item..."</Description>
       <Options moHideChildren="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
@@ -4588,7 +4741,7 @@ ff7rebirth_.exe+3F1F625: 48 8D 54 24 30     - lea rdx,[rsp+30]
                 <CheatEntry>
                   <ID>111</ID>
                   <Description>"ID"</Description>
-                  <DropDownListLink>I.ID</DropDownListLink>
+                  <DropDownListLink>M.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -4641,7 +4794,7 @@ ff7rebirth_.exe+3F1F625: 48 8D 54 24 30     - lea rdx,[rsp+30]
                 <CheatEntry>
                   <ID>116</ID>
                   <Description>"ID"</Description>
-                  <DropDownListLink>I.ID</DropDownListLink>
+                  <DropDownListLink>M.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -4694,7 +4847,7 @@ ff7rebirth_.exe+3F1F625: 48 8D 54 24 30     - lea rdx,[rsp+30]
                 <CheatEntry>
                   <ID>121</ID>
                   <Description>"ID"</Description>
-                  <DropDownListLink>I.ID</DropDownListLink>
+                  <DropDownListLink>M.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -4747,7 +4900,7 @@ ff7rebirth_.exe+3F1F625: 48 8D 54 24 30     - lea rdx,[rsp+30]
                 <CheatEntry>
                   <ID>126</ID>
                   <Description>"ID"</Description>
-                  <DropDownListLink>I.ID</DropDownListLink>
+                  <DropDownListLink>M.ID</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -6371,6 +6524,7 @@ end)
 2107:Shinra Bangle Mk. II
 3022:Sylkis Greens (ch. 8 event item)
 3042:ch. 7 event item (max 8)
+3060:Chocobo weed (ch11)
 3072:ch. 9 ore (quest item)
 3074:ch. 9 mushroom (quest item)
 3075:ch. 9 salt (quest item)
