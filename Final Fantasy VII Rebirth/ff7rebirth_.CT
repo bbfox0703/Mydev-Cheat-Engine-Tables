@@ -1483,22 +1483,24 @@ alloc(newmem,$1000,INJECT_ENEMY_HP)
 label(code)
 label(return)
 label(i_enemy_hp_options)
+label(is_chk_ch10_mech)
 
 newmem:
-  cmp [rcx+8], 0
-  je code
-  cmp [rcx+8], 3E7
+  cmp dword ptr [rcx+8], 0
+  je check_mech
+  cmp dword ptr [rcx+8], 3E7
   jg code
-  cmp [rcx+14], 0
+  cmp dword ptr [rcx+14], 0
   je code
-  cmp [rcx+18], 0
+  cmp dword ptr [rcx+18], 0
   je code
-  cmp [rcx+10], 1 // max hp
+  cmp dword ptr [rcx+10], 1 // max hp
   jle code
-  cmp [rcx+14], 3E7
+  cmp dword ptr [rcx+14], 3E7
   jg code
-  cmp [rcx+18], 3E7
+  cmp dword ptr [rcx+18], 3E7
   jg code
+
   cmp dword ptr [i_enemy_hp_options], 0
   je no_act
   cmp dword ptr [i_enemy_hp_options], 1  // 1HP
@@ -1510,12 +1512,21 @@ no_act:
   mov [rcx+0C],edx
   ret
 
+check_mech:
+  cmp dword ptr [is_chk_ch10_mech], 1
+  jne code
+  cmp dword ptr [rcx+2C], 4
+  je ch10_mech_player_unit
+to_ch10_mech_enemy:
+  //mov edx, 1
+
 set_1hp:
   cmp edx, 1
   jbe code
   mov edx, 1
   jmp code
 
+ch10_mech_player_unit:
 set_1m:
   cmp edx, #1000000
   jae code
@@ -1529,12 +1540,14 @@ code:
 align 10 cc
   i_enemy_hp_options:
   dd 0
+  is_chk_ch10_mech:
+  dd 0
 
 INJECT_ENEMY_HP+01:
   jmp newmem
 return:
 registersymbol(INJECT_ENEMY_HP)
-registersymbol(i_enemy_hp_options)
+registersymbol(i_enemy_hp_options is_chk_ch10_mech)
 [DISABLE]
 
 INJECT_ENEMY_HP+01:
@@ -1583,6 +1596,17 @@ ff7rebirth_.exe+1996BDC: CC        - int 3
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_enemy_hp_options</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>200</ID>
+          <Description>"Chk ch. 10 mech mini game?"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_chk_ch10_mech</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -4021,7 +4045,7 @@ ff7rebirth_.exe+239628D: 74 1F                 - je ff7rebirth_.exe+23962AE
         </CheatEntry>
         <CheatEntry>
           <ID>195</ID>
-          <Description>"inf ATB (ch10. mech game)"</Description>
+          <Description>"inf ATB (ch.10 mech game)"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
@@ -4088,6 +4112,74 @@ ff7rebirth_.exe+3BF9E7C: 48 8B CF                 - mov rcx,rdi
 ff7rebirth_.exe+3BF9E7F: E8 14 BB D0 FD           - call ff7rebirth_.exe+1905998
 ff7rebirth_.exe+3BF9E84: C5 CA 5E 0D D4 84 4E 03  - vdivss xmm1,xmm6,[ff7rebirth_.exe+70E2360]
 ff7rebirth_.exe+3BF9E8C: 48 8B C8                 - mov rcx,rax
+}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>197</ID>
+          <Description>"Max base HP (ch. 10 mech game)"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : ff7rebirth_.exe
+  Version: 
+  Date   : 2026-01-13
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_MAX_CH10_MECH_HP,$process,89 81 14 28 00 00 85) // should be unique
+alloc(newmem,$1000,INJECT_MAX_CH10_MECH_HP)
+
+label(code)
+label(return)
+
+newmem:
+  mov eax, #2000
+
+code:
+  mov [rcx+00002814],eax
+  jmp return
+
+INJECT_MAX_CH10_MECH_HP:
+  jmp newmem
+  nop
+return:
+registersymbol(INJECT_MAX_CH10_MECH_HP)
+
+[DISABLE]
+
+INJECT_MAX_CH10_MECH_HP:
+  db 89 81 14 28 00 00
+
+unregistersymbol(INJECT_MAX_CH10_MECH_HP)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+3BE5B4E
+
+ff7rebirth_.exe+3BE5B29: E8 02 94 4C FE        - call ff7rebirth_.exe+20AEF30
+ff7rebirth_.exe+3BE5B2E: 48 2B E0              - sub rsp,rax
+ff7rebirth_.exe+3BE5B31: 44 8B 89 14 28 00 00  - mov r9d,[rcx+00002814]
+ff7rebirth_.exe+3BE5B38: 44 03 CA              - add r9d,edx
+ff7rebirth_.exe+3BE5B3B: 79 04                 - jns ff7rebirth_.exe+3BE5B41
+ff7rebirth_.exe+3BE5B3D: 33 C0                 - xor eax,eax
+ff7rebirth_.exe+3BE5B3F: EB 0D                 - jmp ff7rebirth_.exe+3BE5B4E
+ff7rebirth_.exe+3BE5B41: 8B 81 18 28 00 00     - mov eax,[rcx+00002818]
+ff7rebirth_.exe+3BE5B47: 44 3B C8              - cmp r9d,eax
+ff7rebirth_.exe+3BE5B4A: 41 0F 4C C1           - cmovl eax,r9d
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+3BE5B4E: 89 81 14 28 00 00     - mov [rcx+00002814],eax
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+3BE5B54: 85 D2                 - test edx,edx
+ff7rebirth_.exe+3BE5B56: 79 1B                 - jns ff7rebirth_.exe+3BE5B73
+ff7rebirth_.exe+3BE5B58: 8B 81 48 28 00 00     - mov eax,[rcx+00002848]
+ff7rebirth_.exe+3BE5B5E: 49 8B D0              - mov rdx,r8
+ff7rebirth_.exe+3BE5B61: 89 81 44 28 00 00     - mov [rcx+00002844],eax
+ff7rebirth_.exe+3BE5B67: 48 81 C1 C0 24 00 00  - add rcx,000024C0
+ff7rebirth_.exe+3BE5B6E: E8 41 FD D1 FD        - call ff7rebirth_.exe+19058B4
+ff7rebirth_.exe+3BE5B73: 83 3D 86 96 51 05 00  - cmp dword ptr [ff7rebirth_.exe+90FF200],00
+ff7rebirth_.exe+3BE5B7A: 75 11                 - jne ff7rebirth_.exe+3BE5B8D
+ff7rebirth_.exe+3BE5B7C: 48 8B 0D AD 24 5F 05  - mov rcx,[ff7rebirth_.exe+91D8030]
 }
 </AssemblerScript>
         </CheatEntry>
