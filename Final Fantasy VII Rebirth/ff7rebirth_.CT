@@ -5812,7 +5812,7 @@ ff7rebirth_.exe+143B015: 48 8B CE                 - mov rcx,rsi
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : ff7rebirth_.exe
   Version: 
-  Date   : 2025-05-03
+  Date   : 2026-01-18
   Author : bbfox@https://opencheattables.com
 }
 
@@ -5823,7 +5823,13 @@ alloc(newmem,$5000,INJECT_GET_ITEM_ADDR_LIST)
 
 label(code)
 label(return)
-label(i_base_items_addr_1 i_item_cnt_low_limit i_item_cnt_high_limit i_item_cnt i_item_id_filter)
+label(i_base_items_addr_1 i_item_cnt_low_limit i_item_cnt_high_limit i_item_cnt i_item_id_filter i_item_id_filter_high)
+
+aobscanmodule(INJECT_RECORD_WEAPON_LINK_DATA,$process,39 50 F8 74 11) // should be unique
+alloc(newmem_master,$1000,INJECT_RECORD_WEAPON_LINK_DATA)
+
+label(code_master)
+label(return_master i_base_weapon_master_addr_1)
 
 newmem:
   push r15
@@ -5861,15 +5867,17 @@ code:
   add rcx,000000B8
   jmp return
 align 10 cc
-  i_base_items_addr_1:
-  dq 0
   i_item_cnt_low_limit:
   dd 1
   i_item_cnt_high_limit:
   dd 63
   i_item_id_filter:
   dd 0
+  i_item_id_filter_high:
+  dd 0
   i_item_cnt:
+  dq 0
+  i_base_items_addr_1:
   dq 0
   align 10 0
   db 0
@@ -5937,7 +5945,7 @@ align 10 cc
   db 0
   align 100 0
   db 0
-  align 10 0
+  align 100 0
   db 0
   align 100 0
   db 0
@@ -6009,42 +6017,133 @@ INJECT_GET_ITEM_ADDR_LIST:
   nop 6
 return:
 registersymbol(INJECT_GET_ITEM_ADDR_LIST)
-registersymbol(i_base_items_addr_1 i_item_cnt_low_limit i_item_cnt_high_limit i_item_cnt i_item_id_filter)
+registersymbol(i_base_items_addr_1 i_item_cnt_low_limit i_item_cnt_high_limit i_item_cnt i_item_id_filter i_item_id_filter_high)
+
+newmem_master:
+  push r15
+  push r13
+  push rcx
+  xor r13, r13
+
+loop_master:
+  mov r15, i_base_weapon_master_addr_1
+  lea r15, [r15+r13*8]
+  cmp qword ptr [r15], rax
+  je endp_master
+
+  cmp qword ptr [r15], 0
+  je write_it_master
+
+  inc r13
+  cmp r13, #1000
+  ja endp_master
+  jmp loop_master
+
+write_it_master:
+  mov [r15], rax
+  jmp endp_master
+
+endp_master:
+  pop rcx
+  pop r13
+  pop r15
+
+code_master:
+  cmp [rax-08],edx
+  reassemble(INJECT_RECORD_WEAPON_LINK_DATA+3)
+  jmp return_master
+  align 10 cc
+  i_base_weapon_master_addr_1:
+  dq 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+  align 100 0
+  db 0
+
+INJECT_RECORD_WEAPON_LINK_DATA:
+  jmp newmem_master
+return_master:
+registersymbol(INJECT_RECORD_WEAPON_LINK_DATA i_base_weapon_master_addr_1)
 
 [DISABLE]
 
 INJECT_GET_ITEM_ADDR_LIST:
   db 41 8B 56 04 48 81 C1 B8 00 00 00
 
-unregistersymbol(*)
+INJECT_RECORD_WEAPON_LINK_DATA:
+  db 39 50 F8 74 11
+
+unregistersymbol(INJECT_GET_ITEM_ADDR_LIST)
+unregistersymbol(i_base_items_addr_1 i_item_cnt_low_limit i_item_cnt_high_limit i_item_cnt i_item_id_filter i_item_id_filter_high)
 dealloc(newmem)
 
-{
-// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+2428718
 
-ff7rebirth_.exe+24286F6: 48 83 C3 08           - add rbx,08
-ff7rebirth_.exe+24286FA: 83 FF 0F              - cmp edi,0F
-ff7rebirth_.exe+24286FD: 7C E1                 - jl ff7rebirth_.exe+24286E0
-ff7rebirth_.exe+24286FF: EB 10                 - jmp ff7rebirth_.exe+2428711
-ff7rebirth_.exe+2428701: 48 63 C7              - movsxd  rax,edi
-ff7rebirth_.exe+2428704: 48 8D 54 24 70        - lea rdx,[rsp+70]
-ff7rebirth_.exe+2428709: 48 8D 4C 24 20        - lea rcx,[rsp+20]
-ff7rebirth_.exe+242870E: FF 14 C6              - call qword ptr [rsi+rax*8]
-ff7rebirth_.exe+2428711: 49 8B 0F              - mov rcx,[r15]
-ff7rebirth_.exe+2428714: 4D 8D 46 04           - lea r8,[r14+04]
+unregistersymbol(INJECT_RECORD_WEAPON_LINK_DATA i_base_weapon_master_addr_1)
+dealloc(newmem_master)
+
+
+{
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+240C460
+
+ff7rebirth_.exe+240C43E: 83 FB 0F              - cmp ebx,0F
+ff7rebirth_.exe+240C441: 7C DE                 - jl ff7rebirth_.exe+240C421
+ff7rebirth_.exe+240C443: EB 14                 - jmp ff7rebirth_.exe+240C459
+ff7rebirth_.exe+240C445: 48 63 C3              - movsxd  rax,ebx
+ff7rebirth_.exe+240C448: 48 8D 54 24 60        - lea rdx,[rsp+60]
+ff7rebirth_.exe+240C44D: 48 8D 4C 24 20        - lea rcx,[rsp+20]
+ff7rebirth_.exe+240C452: 4C 8B 04 C6           - mov r8,[rsi+rax*8]
+ff7rebirth_.exe+240C456: 41 FF D0              - call r8
+ff7rebirth_.exe+240C459: 49 8B 0F              - mov rcx,[r15]
+ff7rebirth_.exe+240C45C: 4D 8D 46 04           - lea r8,[r14+04]
 // ---------- INJECTING HERE ----------
-ff7rebirth_.exe+2428718: 41 8B 56 04           - mov edx,[r14+04]
+ff7rebirth_.exe+240C460: 41 8B 56 04           - mov edx,[r14+04]
 // ---------- DONE INJECTING  ----------
-ff7rebirth_.exe+242871C: 48 81 C1 B8 00 00 00  - add rcx,000000B8
-ff7rebirth_.exe+2428723: 8B 9D 30 01 00 00     - mov ebx,[rbp+00000130]
-ff7rebirth_.exe+2428729: E8 1E A0 70 FE        - call ff7rebirth_.exe+B3274C
-ff7rebirth_.exe+242872E: 4D 8D 46 08           - lea r8,[r14+08]
-ff7rebirth_.exe+2428732: 89 18                 - mov [rax],ebx
-ff7rebirth_.exe+2428734: 49 8B 0F              - mov rcx,[r15]
-ff7rebirth_.exe+2428737: 41 8B 56 08           - mov edx,[r14+08]
-ff7rebirth_.exe+242873B: 48 81 C1 08 01 00 00  - add rcx,00000108
-ff7rebirth_.exe+2428742: 0F B6 9D 70 01 00 00  - movzx ebx,byte ptr [rbp+00000170]
-ff7rebirth_.exe+2428749: E8 FE 9F 70 FE        - call ff7rebirth_.exe+B3274C
+ff7rebirth_.exe+240C464: 48 81 C1 B8 00 00 00  - add rcx,000000B8
+ff7rebirth_.exe+240C46B: 8B 9D 30 01 00 00     - mov ebx,[rbp+00000130]
+ff7rebirth_.exe+240C471: E8 6E 8C 9F FE        - call ff7rebirth_.exe+E050E4
+ff7rebirth_.exe+240C476: 4D 8D 46 08           - lea r8,[r14+08]
+ff7rebirth_.exe+240C47A: 89 18                 - mov [rax],ebx
+ff7rebirth_.exe+240C47C: 49 8B 0F              - mov rcx,[r15]
+ff7rebirth_.exe+240C47F: 41 8B 56 08           - mov edx,[r14+08]
+ff7rebirth_.exe+240C483: 48 81 C1 08 01 00 00  - add rcx,00000108
+ff7rebirth_.exe+240C48A: 0F B6 9D 70 01 00 00  - movzx ebx,byte ptr [rbp+00000170]
+ff7rebirth_.exe+240C491: E8 4E 8C 9F FE        - call ff7rebirth_.exe+E050E4
+}
+
+
+{
+// Master
+// ORIGINAL CODE - INJECTION POINT: ff7rebirth_.exe+18F9ADC
+
+ff7rebirth_.exe+18F9AB9: 48 8D 0D 98 6E 98 05  - lea rcx,[ff7rebirth_.exe+7280958]
+ff7rebirth_.exe+18F9AC0: 48 C1 E0 05           - shl rax,05
+ff7rebirth_.exe+18F9AC4: 48 03 C1              - add rax,rcx
+ff7rebirth_.exe+18F9AC7: C3                    - ret
+ff7rebirth_.exe+18F9AC8: 83 FA FF              - cmp edx,-01
+ff7rebirth_.exe+18F9ACB: 74 22                 - je ff7rebirth_.exe+18F9AEF
+ff7rebirth_.exe+18F9ACD: 41 80 F8 04           - cmp r8b,04
+ff7rebirth_.exe+18F9AD1: 73 1C                 - jae ff7rebirth_.exe+18F9AEF
+ff7rebirth_.exe+18F9AD3: 33 C9                 - xor ecx,ecx
+ff7rebirth_.exe+18F9AD5: 48 8D 05 84 AE 97 05  - lea rax,[ff7rebirth_.exe+7274960]
+// ---------- INJECTING HERE ----------
+ff7rebirth_.exe+18F9ADC: 39 50 F8              - cmp [rax-08],edx
+// ---------- DONE INJECTING  ----------
+ff7rebirth_.exe+18F9ADF: 74 11                 - je ff7rebirth_.exe+18F9AF2
+ff7rebirth_.exe+18F9AE1: FF C1                 - inc ecx
+ff7rebirth_.exe+18F9AE3: 48 83 C0 60           - add rax,60
+ff7rebirth_.exe+18F9AE7: 81 F9 00 02 00 00     - cmp ecx,00000200
+ff7rebirth_.exe+18F9AED: 7C ED                 - jl ff7rebirth_.exe+18F9ADC
+ff7rebirth_.exe+18F9AEF: 33 C0                 - xor eax,eax
+ff7rebirth_.exe+18F9AF1: C3                    - ret
+ff7rebirth_.exe+18F9AF2: 83 78 F8 FF           - cmp dword ptr [rax-08],-01
+ff7rebirth_.exe+18F9AF6: 74 E9                 - je ff7rebirth_.exe+18F9AE1
+ff7rebirth_.exe+18F9AF8: 44 38 00              - cmp [rax],r8b
 }
 </AssemblerScript>
       <CheatEntries>
@@ -6101,6 +6200,25 @@ ff7rebirth_.exe+2428749: E8 FE 9F 70 FE        - call ff7rebirth_.exe+B3274C
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_item_id_filter</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>261</ID>
+              <Description>"item ID filter high"</Description>
+              <DropDownListLink>I.ID</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>i_item_id_filter_high</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>262</ID>
+                  <Description>"Only works when ID filter &gt;0"</Description>
+                  <Color>8000FF</Color>
+                  <GroupHeader>1</GroupHeader>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>178</ID>
@@ -6111,6 +6229,7 @@ ff7rebirth_.exe+2428749: E8 FE 9F 70 FE        - call ff7rebirth_.exe+B3274C
 if syntaxcheck then return end
 closeLuaEngine2()
 local baseSymbol = "i_base_items_addr_1"
+local weaponMasterSymbol = "i_base_weapon_master_addr_1"
 local parentName = "+Inventory (do not delete this)"
 local addressList = getAddressList()
 
@@ -6127,14 +6246,69 @@ if not listStartAddr then
   return
 end
 
+-- 檢查武器 master 資料表地址
+local weaponMasterAddr = getAddressSafe(weaponMasterSymbol)
+if not weaponMasterAddr then
+  print("Warning: cannot find symbol " .. weaponMasterSymbol .. ", weapon linked ID will not be available")
+end
+
 -- 讀取過濾參數
 local itemQtyFilterLow  = readInteger("i_item_cnt_low_limit")
-local itemQtyFilterHigh = readInteger("i_item_cnt_high_limit") -- 修正讀取 symbol
+local itemQtyFilterHigh = readInteger("i_item_cnt_high_limit")
 local itemIDFilter      = readInteger("i_item_id_filter")
+local itemIDFilterHigh  = readInteger("i_item_id_filter_high")
 
 -- 檢查參數是否讀取成功
-if not itemQtyFilterLow or not itemQtyFilterHigh or not itemIDFilter then
-  error("one of the symbols are invalid: i_item_cnt_low_limit, i_item_cnt_high_limit, i_item_id_filter")
+if not itemQtyFilterLow or not itemQtyFilterHigh or not itemIDFilter or not itemIDFilterHigh then
+  error("one of the symbols are invalid: i_item_cnt_low_limit, i_item_cnt_high_limit, i_item_id_filter, i_item_id_filter_high")
+end
+
+-- **處理 ID 過濾範圍邏輯**
+-- 規則 5: 如果 filter_high &gt; 0 但 filter = 0，則設定 filter_high = 0
+if itemIDFilterHigh &gt; 0 and itemIDFilter == 0 then
+  itemIDFilterHigh = 0
+  writeInteger("i_item_id_filter_high", 0)
+  print("Reset i_item_id_filter_high to 0 (filter low is 0)")
+end
+
+-- 規則 2: 如果 filter_high &lt; filter 且 filter != 0，則設定 filter_high = filter
+if itemIDFilter ~= 0 and itemIDFilterHigh &lt; itemIDFilter then
+  itemIDFilterHigh = itemIDFilter
+  writeInteger("i_item_id_filter_high", itemIDFilter)
+  print(string.format("Adjusted i_item_id_filter_high to %d (was lower than filter)", itemIDFilter))
+end
+
+-- 顯示當前過濾設定
+print(string.format("Filter settings - ID: %d~%d, Qty: %d~%d",
+  itemIDFilter, itemIDFilterHigh, itemQtyFilterLow, itemQtyFilterHigh))
+
+-- **Helper function: 查找武器 Linked ID**
+local function findWeaponLinkedID(serialUID)
+  if not weaponMasterAddr then
+    return nil, nil
+  end
+
+  local maxWeaponRecords = 80  -- 最多 80 個
+
+  for i = 0, maxWeaponRecords - 1 do
+    -- 讀取指標位址 [i_base_weapon_master_addr_1 + i*8]
+    local recordPtr = readQword(weaponMasterAddr + (i * 8))
+    if not recordPtr or recordPtr == 0 then
+      -- 指標為 0，到達資料尾端
+      return nil, nil
+    end
+
+    -- offset-8: Serial/uid (4 bytes)
+    local masterUID = readInteger(recordPtr - 8)
+    if masterUID == serialUID then
+      -- 找到匹配，讀取 offset-4 的 Linked ID (4 bytes)
+      local linkedID = readInteger(recordPtr - 4)
+      return linkedID, recordPtr - 4  -- 返回值和實際地址
+    end
+  end
+
+  -- 遍歷完成但未找到
+  return nil, nil
 end
 
 local maxItems = 1600 --max cap 2000
@@ -6155,64 +6329,109 @@ synchronize(function()
     local itemAddr = readQword(listStartAddr + index * 8)
     if not itemAddr or itemAddr == 0 then break end
 
-    -- 讀取當前物品的 ID 與 數量
+    -- 讀取當前物品的 ID 與 數量（加入 nil 檢查）
     local currentItemID = readInteger(itemAddr + 8)
     local currentItemQty = readInteger(itemAddr + 12)
 
-    -- 過濾邏輯核心
-    local shouldShow = false
+    -- **使用 if 包裹，只在讀取成功時處理**
+    if currentItemID and currentItemQty then
+      -- **過濾邏輯核心**
+      local shouldShow = false
 
-    if itemIDFilter ~= 0 then
-        -- 模式 A: 指定 ID 模式 (不看數量)
-        if currentItemID == itemIDFilter then
-            shouldShow = true
-        end
-    else
-        -- 模式 B: 數量範圍模式 (itemIDFilter 為 0 時觸發)
-        if currentItemQty and currentItemQty &gt;= itemQtyFilterLow and currentItemQty &lt;= itemQtyFilterHigh then
-            shouldShow = true
-        end
-    end
+      -- **永遠先檢查數量範圍**
+      local qtyInRange = (currentItemQty &gt;= itemQtyFilterLow and currentItemQty &lt;= itemQtyFilterHigh)
 
-    -- 如果符合條件，則建立 UI 節點
-    if shouldShow then
-      local mainChild = addressList.createMemoryRecord()
-      mainChild.Description = string.format("Item[%d]", index)
-      mainChild.Address = string.format("%X", itemAddr)
-      mainChild.Vartype = vtDword
-      mainChild.Parent = parentRecord
-      mainChild.Color = (color_index % 2 == 1) and evenColor or grayColor
+      if itemIDFilter ~= 0 then
+          -- 模式 A: ID 過濾模式（需同時滿足 ID 和數量條件）
+          local idMatches = false
 
-      -- 建立子項目 (簡化顯示)
-      local function addSubItem(desc, offset, vtype, isHex, color, dropdown)
-          local rec = addressList.createMemoryRecord()
-          rec.Description = desc
-          rec.Address = string.format("%X", itemAddr + offset)
-          rec.Vartype = vtype
-          rec.ShowAsHex = isHex
-          rec.Parent = mainChild
-          if color then rec.Color = color end
-          if dropdown then
-              rec.DropDownLinkedMemrec = dropdown
-              rec.DropDownLinked = true
+          if itemIDFilterHigh == 0 then
+              -- 單一 ID 過濾
+              idMatches = (currentItemID == itemIDFilter)
+          else
+              -- ID 範圍過濾
+              idMatches = (currentItemID &gt;= itemIDFilter and currentItemID &lt;= itemIDFilterHigh)
           end
-          return rec
+
+          -- 同時滿足 ID 和數量條件
+          shouldShow = (idMatches and qtyInRange)
+      else
+          -- 模式 B: 無 ID 過濾，只看數量
+          shouldShow = qtyInRange
       end
 
-      addSubItem("Unknown", 0, vtDword, true)
-      addSubItem("Serial/uid", 4, vtDword, false)
-      addSubItem("ID", 8, vtDword, false, id_color, "I.ID")
-      addSubItem("ID (hex)", 8, vtDword, true, id_color)
-      addSubItem("Quantity", 12, vtDword, false, quantity_color)
-      addSubItem("Category serial?", 16, vtDword, false)
+      -- 如果符合條件，則建立 UI 節點
+      if shouldShow then
+        local mainChild = addressList.createMemoryRecord()
+        mainChild.Description = string.format("Item[%d]", index)
+        mainChild.Address = string.format("%X", itemAddr)
+        mainChild.Vartype = vtDword
+        mainChild.Parent = parentRecord
+        mainChild.Color = (color_index % 2 == 1) and evenColor or grayColor
 
-      color_index = color_index + 1
+        -- 建立子項目 (簡化顯示)
+        local function addSubItem(desc, offset, vtype, isHex, color, dropdown)
+            local rec = addressList.createMemoryRecord()
+            rec.Description = desc
+            rec.Address = string.format("%X", itemAddr + offset)
+            rec.Vartype = vtype
+            rec.ShowAsHex = isHex
+            rec.Parent = mainChild
+            if color then rec.Color = color end
+            if dropdown then
+                rec.DropDownLinkedMemrec = dropdown
+                rec.DropDownLinked = true
+            end
+            return rec
+        end
+
+        addSubItem("Unknown", 0, vtDword, true)
+
+        -- Serial/uid
+        local serialUID = readInteger(itemAddr + 4)
+        addSubItem("Serial/uid", 4, vtDword, false)
+
+        -- ID
+        addSubItem("ID", 8, vtDword, false, id_color, "I.ID")
+
+        -- **檢查是否為武器 (ID 1000-1099)，如果是則查找 Linked ID**
+        local isWeapon = (currentItemID &gt;= 1000 and currentItemID &lt;= 1099)
+        if isWeapon then
+          local linkedID, linkedIDAddr = findWeaponLinkedID(serialUID)
+          local linkedIDRecord = addressList.createMemoryRecord()
+
+          if linkedID and linkedIDAddr then
+            -- 找到 Linked ID
+            linkedIDRecord.Description = "Linked ID (the same)"
+            linkedIDRecord.Address = string.format("%X", linkedIDAddr)
+            linkedIDRecord.Vartype = vtDword
+            linkedIDRecord.Color = id_color
+            linkedIDRecord.ShowAsHex = false
+            linkedIDRecord.Parent = mainChild
+          else
+            -- 未找到：提示用戶瀏覽武器資料
+            linkedIDRecord.Description = "Please browse weapon data"
+            linkedIDRecord.Address = "0"
+            linkedIDRecord.Vartype = vtString
+            linkedIDRecord.Color = 0x0000FF  -- 紅色警告
+            linkedIDRecord.Parent = mainChild
+          end
+        end
+
+        -- 繼續其他子項目
+        addSubItem("ID (hex)", 8, vtDword, true, id_color)
+        addSubItem("Quantity", 12, vtDword, false, quantity_color)
+        addSubItem("Category serial?", 16, vtDword, false)
+
+        color_index = color_index + 1
+      end
     end
+
     index = index + 1
   end
 end)
 
-print("Process finished. Scanned " .. index .. " items.")
+print(string.format("Process finished. Scanned %d items, displayed %d matching items.", index, color_index))
 closeLuaEngine()
 
 [DISABLE]
@@ -6237,6 +6456,14 @@ synchronize(function()
   end
 end)
 </AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>280</ID>
+              <Description>"Browse Items-&gt;weapons to record weapon link ID"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>179</ID>
@@ -6938,7 +7165,8 @@ ff7rebirth_.exe+AF4C44: 4D 8B 04 C0           - mov r8,[r8+rax*8]
             <CheatEntry>
               <ID>187</ID>
               <Description>"I.ID"</Description>
-              <DropDownList DisplayValueAsItem="1">2:Moogle Medals
+              <DropDownList DisplayValueAsItem="1">0:None
+2:Moogle Medals
 3:Golden Plum
 11:Golden Point
 100:Potion
