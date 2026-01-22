@@ -54,19 +54,40 @@ end
     </CheatEntry>
     <CheatEntry>
       <ID>1</ID>
-      <Description>"Toggle Scripts"</Description>
+      <Description>"Toggle Scripts (auto attach process)"</Description>
       <Color>0080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
 if (syntaxcheck) then return end
-synchronize(function() getLuaEngine().menuItem5.doClick() end)
-synchronize(function() getLuaEngine().Close() end)
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+
+-- attach process
+local processName = "DWORIGINS.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+
 
 local enableBattleScripts = {
   0, -- "Compact Mode"
   2, -- "Battle: When hit, try to maintain HP or min. musou / skill pt"
-  31, -- "Battle: inf. meat buns / 肉まん"
+  31, -- "(?) Battle: inf. meat buns / 肉まん"
   32, -- "Battle: skill pt (戰功) multiplier"
   34, -- "Battle: skill XP multiplier"
   36, -- "Battle: weapon EXP multiplier"
@@ -75,24 +96,26 @@ local enableBattleScripts = {
   42, -- "Battle: Horse EXP multiplier"
   44, -- "Battle: infinite item usage except for meat buns"
   45, -- "Battle: Trainings count multiplier"
-  47, -- "Battle: Get gained skill exp"
-  54, -- "Battle: Guard skill timer multiplier"
-  56, -- "Level of Peace (太平値) multiplier"
-  59, -- "Get last value of Level of Peace"
+  47, -- "(?) Battle: Get gained skill exp"
+  54, -- "(?) Battle: Guard skill timer multiplier"
+  56, -- "(?) Level of Peace (太平値) multiplier"
+  59, -- "(?) Get last value of Level of Peace"
   61, -- "Get all level of peace value"
   75, -- "Set the stock of consumable items"
+  82, -- "Get weapon data"
   99, -- "Get money"
+  3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
   26, -- "Musou gauge multiplier"
   28, -- "Skill gauge multiplier"
-  3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
   6, -- "Guards / 護衛兵 (affects nearby units only)"
 }
 local addressList = getAddressList()
 synchronize(function()
   for _, id in ipairs(enableBattleScripts) do
     local memRec = addressList.getMemoryRecordByID(id)
-    if memRec then
+    if memRec and not memRec.Active then
       memRec.Active = true
+      sleep(30)
     end
     addressList.refresh()
   end
@@ -101,24 +124,31 @@ synchronize(function() getLuaEngine().Close() end)
 [DISABLE]
 {$lua}
 if (syntaxcheck) then return end
-synchronize(function() getLuaEngine().menuItem5.doClick() end)
-synchronize(function() getLuaEngine().Close() end)
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
 
 local disableBattleScripts = {
+  9, -- "Number of  guards (護衛兵):"
+  7, -- "Try to fill guards (護衛兵) HP?"
   6, -- "Guards / 護衛兵 (affects nearby units only)"
-  3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
   28, -- "Skill gauge multiplier"
   26, -- "Musou gauge multiplier"
+  17, -- "Max (nearby?) enemy non-trash mob HP ratio"
+  11, -- "min. HP Ratio"
+  3, -- "Retrieve the player's base HP if not already obtained / Additional HP options"
+  105, -- "DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS 1.0.0.9  /  https://opencheattables.com"
   99, -- "Get money"
   82, -- "Get weapon data"
   79, -- "Get bonds level in Shui Jing Retreat (水鏡庵)"
   75, -- "Set the stock of consumable items"
   72, -- "Get horse EXP"
   61, -- "Get all level of peace value"
-  59, -- "Get last value of Level of Peace"
-  56, -- "Level of Peace (太平値) multiplier"
-  54, -- "Battle: Guard skill timer multiplier"
-  47, -- "Battle: Get gained skill exp"
+  59, -- "(?) Get last value of Level of Peace"
+  56, -- "(?) Level of Peace (太平値) multiplier"
+  54, -- "(?) Battle: Guard skill timer multiplier"
+  47, -- "(?) Battle: Get gained skill exp"
   45, -- "Battle: Trainings count multiplier"
   44, -- "Battle: infinite item usage except for meat buns"
   42, -- "Battle: Horse EXP multiplier"
@@ -127,23 +157,53 @@ local disableBattleScripts = {
   36, -- "Battle: weapon EXP multiplier"
   34, -- "Battle: skill XP multiplier"
   32, -- "Battle: skill pt (戰功) multiplier"
-  31, -- "Battle: inf. meat buns / 肉まん"
+  31, -- "(?) Battle: inf. meat buns / 肉まん"
   2, -- "Battle: When hit, try to maintain HP or min. musou / skill pt"
-  105, -- "DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS 1.0.0.5  /  https://opencheattables.com"
-  1, -- "Toggle Scripts"
   0, -- "Compact Mode"
 }
 local addressList = getAddressList()
 synchronize(function()
   for _, id in ipairs(disableBattleScripts) do
     local memRec = addressList.getMemoryRecordByID(id)
-    if memRec then
+    if memRec and memRec.Active then
       memRec.Active = false
+      sleep(30)
     end
     addressList.refresh()
   end
 end)
 synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 0, Description: "Compact Mode", Depth: 0
+-- ID: 2, Description: "Battle: When hit, try to maintain HP or min. musou / skill pt", Depth: 0
+--   ID: 3, Description: "Retrieve the player's base HP if not already obtained / Additional HP options", Depth: 1
+--     ID: 6, Description: "Guards / 護衛兵 (affects nearby units only)", Depth: 2
+--       ID: 7, Description: "Try to fill guards (護衛兵) HP?", Depth: 3
+--       ID: 9, Description: "Number of  guards (護衛兵):", Depth: 3
+--   ID: 11, Description: "min. HP Ratio", Depth: 1
+--   ID: 17, Description: "Max (nearby?) enemy non-trash mob HP ratio", Depth: 1
+--   ID: 26, Description: "Musou gauge multiplier", Depth: 1
+--   ID: 28, Description: "Skill gauge multiplier", Depth: 1
+-- ID: 31, Description: "(?) Battle: inf. meat buns / 肉まん", Depth: 0
+-- ID: 32, Description: "Battle: skill pt (戰功) multiplier", Depth: 0
+-- ID: 34, Description: "Battle: skill XP multiplier", Depth: 0
+-- ID: 36, Description: "Battle: weapon EXP multiplier", Depth: 0
+-- ID: 39, Description: "Battle: K.O. count multiplier", Depth: 0
+-- ID: 41, Description: "Battle: inf. horse charge", Depth: 0
+-- ID: 42, Description: "Battle: Horse EXP multiplier", Depth: 0
+-- ID: 44, Description: "Battle: infinite item usage except for meat buns", Depth: 0
+-- ID: 45, Description: "Battle: Trainings count multiplier", Depth: 0
+-- ID: 47, Description: "(?) Battle: Get gained skill exp", Depth: 0
+-- ID: 54, Description: "(?) Battle: Guard skill timer multiplier", Depth: 0
+-- ID: 56, Description: "(?) Level of Peace (太平値) multiplier", Depth: 0
+-- ID: 59, Description: "(?) Get last value of Level of Peace", Depth: 0
+-- ID: 61, Description: "Get all level of peace value", Depth: 0
+-- ID: 72, Description: "Get horse EXP", Depth: 0
+-- ID: 75, Description: "Set the stock of consumable items", Depth: 0
+-- ID: 79, Description: "Get bonds level in Shui Jing Retreat (水鏡庵)", Depth: 0
+-- ID: 82, Description: "Get weapon data", Depth: 0
+-- ID: 99, Description: "Get money", Depth: 0
+-- ID: 105, Description: "DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS 1.0.0.9  /  https://opencheattables.com", Depth: 0
 
 </AssemblerScript>
     </CheatEntry>
@@ -1017,29 +1077,30 @@ DWORIGINS.exe+10C0CA: CC                    - int 3
     </CheatEntry>
     <CheatEntry>
       <ID>31</ID>
-      <Description>"Battle: inf. meat buns / 肉まん"</Description>
+      <Description>"(?) Battle: inf. meat buns / 肉まん"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
   Version: 
-  Date   : 2025-01-16
+  Date   : 2026-01-22
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_INF_DUMPLING,$process,66 83 BF 98 09 00 00 00) // should be unique
+aobscanmodule(INJECT_INF_DUMPLING,$process,66 83 BE A0 09 00 00 00) // should be unique
 alloc(newmem,$1000,INJECT_INF_DUMPLING)
 
 label(code)
 label(return)
 
 newmem:
-  cmp word ptr [rdi+00000998],3
+  cmp word ptr [rdi+000009A0],3
   jae code
-  mov word ptr [rdi+00000998],3
+  mov word ptr [rdi+000009A0],3
+
 
 code:
-  cmp word ptr [rdi+00000998],00
+  cmp word ptr [rsi+000009A0],00
   jmp return
 
 INJECT_INF_DUMPLING:
@@ -1051,37 +1112,37 @@ registersymbol(INJECT_INF_DUMPLING)
 [DISABLE]
 
 INJECT_INF_DUMPLING:
-  db 66 83 BF 98 09 00 00 00
+  db 66 83 BE A0 09 00 00 00
 
 unregistersymbol(INJECT_INF_DUMPLING)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+182BC9
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+19371B
 
-DWORIGINS.exe+182BA3: 48 8B 81 B8 45 00 00     - mov rax,[rcx+000045B8]
-DWORIGINS.exe+182BAA: 48 85 C0                 - test rax,rax
-DWORIGINS.exe+182BAD: 74 59                    - je DWORIGINS.exe+182C08
-DWORIGINS.exe+182BAF: F6 80 00 02 00 00 04     - test byte ptr [rax+00000200],04
-DWORIGINS.exe+182BB6: 75 07                    - jne DWORIGINS.exe+182BBF
-DWORIGINS.exe+182BB8: 48 8B 81 C8 45 00 00     - mov rax,[rcx+000045C8]
-DWORIGINS.exe+182BBF: 48 85 C0                 - test rax,rax
-DWORIGINS.exe+182BC2: 74 44                    - je DWORIGINS.exe+182C08
-DWORIGINS.exe+182BC4: 48 85 FF                 - test rdi,rdi
-DWORIGINS.exe+182BC7: 74 3F                    - je DWORIGINS.exe+182C08
+DWORIGINS.exe+1936F5: 48 8B 81 B8 45 00 00     - mov rax,[rcx+000045B8]
+DWORIGINS.exe+1936FC: 48 85 C0                 - test rax,rax
+DWORIGINS.exe+1936FF: 74 68                    - je DWORIGINS.exe+193769
+DWORIGINS.exe+193701: F6 80 10 02 00 00 04     - test byte ptr [rax+00000210],04
+DWORIGINS.exe+193708: 75 07                    - jne DWORIGINS.exe+193711
+DWORIGINS.exe+19370A: 48 8B 81 C8 45 00 00     - mov rax,[rcx+000045C8]
+DWORIGINS.exe+193711: 48 85 C0                 - test rax,rax
+DWORIGINS.exe+193714: 74 53                    - je DWORIGINS.exe+193769
+DWORIGINS.exe+193716: 48 85 F6                 - test rsi,rsi
+DWORIGINS.exe+193719: 74 4E                    - je DWORIGINS.exe+193769
 // ---------- INJECTING HERE ----------
-DWORIGINS.exe+182BC9: 66 83 BF 98 09 00 00 00  - cmp word ptr [rdi+00000998],00
+DWORIGINS.exe+19371B: 66 83 BE A0 09 00 00 00  - cmp word ptr [rsi+000009A0],00
 // ---------- DONE INJECTING  ----------
-DWORIGINS.exe+182BD1: 74 2B                    - je DWORIGINS.exe+182BFE
-DWORIGINS.exe+182BD3: 48 8B 88 00 03 00 00     - mov rcx,[rax+00000300]
-DWORIGINS.exe+182BDA: 48 85 C9                 - test rcx,rcx
-DWORIGINS.exe+182BDD: 74 0C                    - je DWORIGINS.exe+182BEB
-DWORIGINS.exe+182BDF: F3 0F 10 41 34           - movss xmm0,[rcx+34]
-DWORIGINS.exe+182BE4: F3 0F 10 49 38           - movss xmm1,[rcx+38]
-DWORIGINS.exe+182BE9: EB 06                    - jmp DWORIGINS.exe+182BF1
-DWORIGINS.exe+182BEB: 0F 57 C0                 - xorps xmm0,xmm0
-DWORIGINS.exe+182BEE: 0F 57 C9                 - xorps xmm1,xmm1
-DWORIGINS.exe+182BF1: F3 0F 5C 05 1F 9C 22 03  - subss xmm0,[DWORIGINS.exe+33AC818]
+DWORIGINS.exe+193723: 74 2B                    - je DWORIGINS.exe+193750
+DWORIGINS.exe+193725: 48 8B 88 10 03 00 00     - mov rcx,[rax+00000310]
+DWORIGINS.exe+19372C: 48 85 C9                 - test rcx,rcx
+DWORIGINS.exe+19372F: 74 0C                    - je DWORIGINS.exe+19373D
+DWORIGINS.exe+193731: F3 0F 10 41 34           - movss xmm0,[rcx+34]
+DWORIGINS.exe+193736: F3 0F 10 49 38           - movss xmm1,[rcx+38]
+DWORIGINS.exe+19373B: EB 06                    - jmp DWORIGINS.exe+193743
+DWORIGINS.exe+19373D: 0F 57 C0                 - xorps xmm0,xmm0
+DWORIGINS.exe+193740: 0F 57 C9                 - xorps xmm1,xmm1
+DWORIGINS.exe+193743: F3 0F 5C 05 2D 0E 42 03  - subss xmm0,[DWORIGINS.exe+35B4578]
 }
 </AssemblerScript>
     </CheatEntry>
@@ -1782,28 +1843,35 @@ DWORIGINS.exe+385665: E8 66 19 00 00  - call DWORIGINS.exe+386FD0
     </CheatEntry>
     <CheatEntry>
       <ID>47</ID>
-      <Description>"Battle: Get gained skill exp"</Description>
+      <Description>"(?) Battle: Get gained skill exp"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
   Version: 
-  Date   : 2025-01-17
+  Date   : 2026-01-22
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_SKILL_XP_INC,$process,03 8C 82 00 0A 00 00 48 8B 05 * * * * 48 8B 90 70 01 00 00 4C) // should be unique
+aobscanmodule(INJECT_GET_SKILL_XP_INC,$process,03 ?? ?? ?? 0A 00 00 48 8B 05 ?? ?? ?? ?? 48 8B 88 ?? 01 00 00 4C ?? ?? 30 4D 85 C0 74 ?? 3B ?? ?? 73 1?) // should be unique
 alloc(newmem,$1000,INJECT_GET_SKILL_XP_INC)
 
+alloc(INJECT_GET_SKILL_XP_INCo, 8)
+
 label(code)
-label(return i_base_skill_xp_addr1)
+label(return)
+
+INJECT_GET_SKILL_XP_INCo:
+  readmem(INJECT_GET_SKILL_XP_INC, 7)
 
 newmem:
   push r15
   push r14
   push r13
-  lea r15, [rdx+rax*4+00000A00]
+  //lea r15, [rcx+rax*4+00000A18]
+  db 4c 8d bc 81
+  readmem(INJECT_GET_SKILL_XP_INC+3, 4)
   xor r13, r13
 
 loop_1:
@@ -1846,8 +1914,11 @@ endp:
   pop r14
   pop r15
 
+
 code:
-  add ecx,[rdx+rax*4+00000A00]
+  // add edx,[rcx+rax*4+00000A18] //     03 94 81 18 0a 00 00
+  // lea r15, [rcx+rax*4+00000A18] // 4c 8d bc 81 18 0a 00 00
+  reassemble(INJECT_GET_SKILL_XP_INC)
   jmp return
 align 10 cc
   i_base_skill_xp_addr1:
@@ -1863,42 +1934,61 @@ INJECT_GET_SKILL_XP_INC:
   jmp newmem
   nop 2
 return:
-registersymbol(INJECT_GET_SKILL_XP_INC i_base_skill_xp_addr1)
-
+registersymbol(INJECT_GET_SKILL_XP_INC)
+registersymbol(INJECT_GET_SKILL_XP_INCo)
 [DISABLE]
 
 INJECT_GET_SKILL_XP_INC:
-  db 03 8C 82 00 0A 00 00
+  //db 03 94 81 18 0A 00 00
+  readmem(INJECT_GET_SKILL_XP_INCo, 7)
 
-unregistersymbol(INJECT_GET_SKILL_XP_INC i_base_skill_xp_addr1)
+unregistersymbol(INJECT_GET_SKILL_XP_INC)
 dealloc(newmem)
+unregistersymbol(INJECT_GET_SKILL_XP_INCo)
+dealloc(INJECT_GET_SKILL_XP_INCo)
+{
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+112CF45
+
+DWORIGINS.exe+112CF25: 66 85 C0              - test ax,ax
+DWORIGINS.exe+112CF28: 75 09                 - jne DWORIGINS.exe+112CF33
+DWORIGINS.exe+112CF2A: 41 8B C4              - mov eax,r12d
+DWORIGINS.exe+112CF2D: EB 04                 - jmp DWORIGINS.exe+112CF33
+DWORIGINS.exe+112CF2F: 41 0F B7 C4           - movzx eax,r12w
+DWORIGINS.exe+112CF33: 0F B7 D0              - movzx edx,ax
+DWORIGINS.exe+112CF36: 48 8B 0D 6B C3 AE 02  - mov rcx,[DWORIGINS.exe+3C192A8]
+DWORIGINS.exe+112CF3D: 48 85 C9              - test rcx,rcx
+DWORIGINS.exe+112CF40: 74 0A                 - je DWORIGINS.exe+112CF4C
+DWORIGINS.exe+112CF42: 48 63 C6              - movsxd  rax,esi
+// ---------- INJECTING HERE ----------
+DWORIGINS.exe+112CF45: 03 94 81 18 0A 00 00  - add edx,[rcx+rax*4+00000A18]
+// ---------- DONE INJECTING  ----------
+DWORIGINS.exe+112CF4C: 48 8B 05 4D C4 AE 02  - mov rax,[DWORIGINS.exe+3C193A0]
+DWORIGINS.exe+112CF53: 48 8B 88 78 01 00 00  - mov rcx,[rax+00000178]
+DWORIGINS.exe+112CF5A: 4C 8B 41 30           - mov r8,[rcx+30]
+DWORIGINS.exe+112CF5E: 4D 85 C0              - test r8,r8
+DWORIGINS.exe+112CF61: 74 18                 - je DWORIGINS.exe+112CF7B
+DWORIGINS.exe+112CF63: 3B 71 38              - cmp esi,[rcx+38]
+DWORIGINS.exe+112CF66: 73 13                 - jae DWORIGINS.exe+112CF7B
+DWORIGINS.exe+112CF68: 48 8D 0C B6           - lea rcx,[rsi+rsi*4]
+DWORIGINS.exe+112CF6C: 49 8D 04 88           - lea rax,[r8+rcx*4]
+DWORIGINS.exe+112CF70: 0F BF 40 10           - movsx eax,word ptr [rax+10]
+DWORIGINS.exe+112CF74 - 3B D0                 - cmp edx,eax
+DWORIGINS.exe+112CF76 - 0F93 C3               - setae bl
+DWORIGINS.exe+112CF79 - EB 10                 - jmp DWORIGINS.exe+112CF8B
+DWORIGINS.exe+112CF7B - 49 8B C7              - mov rax,r15
+DWORIGINS.exe+112CF7E - 0FBF 40 10            - movsx eax,word ptr [rax+10]
+DWORIGINS.exe+112CF82 - 3B D0                 - cmp edx,eax
+DWORIGINS.exe+112CF84 - 0F93 C3               - setae bl
+DWORIGINS.exe+112CF87 - EB 02                 - jmp DWORIGINS.exe+112CF8B
+DWORIGINS.exe+112CF89 - 32 DB                 - xor bl,bl
+DWORIGINS.exe+112CF8B - 48 8B 4F 60           - mov rcx,[rdi+60]
+DWORIGINS.exe+112CF8F - 48 85 C9              - test rcx,rcx
+
+}
 
 {
-// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+1033B1F
-
-DWORIGINS.exe+1033AFF: 66 85 C0              - test ax,ax
-DWORIGINS.exe+1033B02: 75 09                 - jne DWORIGINS.exe+1033B0D
-DWORIGINS.exe+1033B04: 41 8B C4              - mov eax,r12d
-DWORIGINS.exe+1033B07: EB 04                 - jmp DWORIGINS.exe+1033B0D
-DWORIGINS.exe+1033B09: 41 0F B7 C4           - movzx eax,r12w
-DWORIGINS.exe+1033B0D: 0F B7 C8              - movzx ecx,ax
-DWORIGINS.exe+1033B10: 48 8B 15 71 DD 98 02  - mov rdx,[DWORIGINS.exe+39C1888]
-DWORIGINS.exe+1033B17: 48 85 D2              - test rdx,rdx
-DWORIGINS.exe+1033B1A: 74 0A                 - je DWORIGINS.exe+1033B26
-DWORIGINS.exe+1033B1C: 48 63 C6              - movsxd  rax,esi
-// ---------- INJECTING HERE ----------
-DWORIGINS.exe+1033B1F: 03 8C 82 00 0A 00 00  - add ecx,[rdx+rax*4+00000A00]
-// ---------- DONE INJECTING  ----------
-DWORIGINS.exe+1033B26: 48 8B 05 53 DE 98 02  - mov rax,[DWORIGINS.exe+39C1980]
-DWORIGINS.exe+1033B2D: 48 8B 90 70 01 00 00  - mov rdx,[rax+00000170]
-DWORIGINS.exe+1033B34: 4C 8B 42 30           - mov r8,[rdx+30]
-DWORIGINS.exe+1033B38: 4D 85 C0              - test r8,r8
-DWORIGINS.exe+1033B3B: 74 1B                 - je DWORIGINS.exe+1033B58
-DWORIGINS.exe+1033B3D: 3B 72 38              - cmp esi,[rdx+38]
-DWORIGINS.exe+1033B40: 73 16                 - jae DWORIGINS.exe+1033B58
-DWORIGINS.exe+1033B42: 48 8B C6              - mov rax,rsi
-DWORIGINS.exe+1033B45: 48 C1 E0 04           - shl rax,04
-DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
+DWORIGINS.exe+112CF45
+DWORIGINS.exe+112D03B
 }
 </AssemblerScript>
       <CheatEntries>
@@ -1962,75 +2052,75 @@ DWORIGINS.exe+1033B49: 49 03 C0              - add rax,r8
     </CheatEntry>
     <CheatEntry>
       <ID>54</ID>
-      <Description>"Battle: Guard skill timer multiplier"</Description>
+      <Description>"(?) Battle: Guard skill timer multiplier"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
   Version: 
-  Date   : 2025-01-27
+  Date   : 2026-01-22
   Author : bbfox@https://openchetatables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GUARD_SKILL_TIMER_MULTI,$process,F3 0F 5C C1 0F 2F C6 F3 41 0F 11 44) // should be unique
-alloc(newmem,$1000,INJECT_GUARD_SKILL_TIMER_MULTI)
+aobscanmodule(INJECT_GUARD_SKILL_TIMER_MULTI,$process,F3 0F 5C C7 41 0F 2F C0 F3 41) // should be unique
+alloc(newmem,$100,INJECT_GUARD_SKILL_TIMER_MULTI)
 
 label(code)
 label(return vf_guard_skill_t_multi)
 
 newmem:
   vmovss xmm14, [vf_guard_skill_t_multi]
-  vmulss xmm1, xmm14, xmm1
+  vmulss xmm7, xmm14, xmm7
 
 code:
-  subss xmm0,xmm1
-  comiss xmm0,xmm6
+  subss xmm0,xmm7
+  comiss xmm0,xmm8
   jmp return
-align 10 cc
+  align 10 cc
   vf_guard_skill_t_multi:
   dd (float)6.666666666
 
 INJECT_GUARD_SKILL_TIMER_MULTI:
   jmp newmem
-  nop 2
+  nop 3
 return:
 registersymbol(INJECT_GUARD_SKILL_TIMER_MULTI vf_guard_skill_t_multi)
 
 [DISABLE]
 
 INJECT_GUARD_SKILL_TIMER_MULTI:
-  db F3 0F 5C C1 0F 2F C6
+  db F3 0F 5C C7 41 0F 2F C0
 
 unregistersymbol(INJECT_GUARD_SKILL_TIMER_MULTI vf_guard_skill_t_multi)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+194B85
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+1A5E66
 
-DWORIGINS.exe+194B5B: 0F 2F C7                             - comiss xmm0,xmm7
-DWORIGINS.exe+194B5E: 76 04                                - jna DWORIGINS.exe+194B64
-DWORIGINS.exe+194B60: F3 0F 59 C8                          - mulss xmm1,xmm0
-DWORIGINS.exe+194B64: E8 37 14 8D 00                       - call DWORIGINS.exe+A65FA0
-DWORIGINS.exe+194B69: 3D F4 01 00 00                       - cmp eax,000001F4
-DWORIGINS.exe+194B6E: 75 0E                                - jne DWORIGINS.exe+194B7E
-DWORIGINS.exe+194B70: B9 7D 02 00 00                       - mov ecx,0000027D
-DWORIGINS.exe+194B75: E8 36 BF F1 FF                       - call DWORIGINS.exe+B0AB0
-DWORIGINS.exe+194B7A: F3 0F 59 C8                          - mulss xmm1,xmm0
-DWORIGINS.exe+194B7E: F3 41 0F 10 44 DE 24                 - movss xmm0,[r14+rbx*8+24]
+DWORIGINS.exe+1A5E3B: 41 0F 2F F1                          - comiss xmm6,xmm9
+DWORIGINS.exe+1A5E3F: 76 04                                - jna DWORIGINS.exe+1A5E45
+DWORIGINS.exe+1A5E41: F3 0F 59 FE                          - mulss xmm7,xmm6
+DWORIGINS.exe+1A5E45: E8 36 F8 8E 00                       - call DWORIGINS.exe+A95680
+DWORIGINS.exe+1A5E4A: 3D F4 01 00 00                       - cmp eax,000001F4
+DWORIGINS.exe+1A5E4F: 75 0E                                - jne DWORIGINS.exe+1A5E5F
+DWORIGINS.exe+1A5E51: B9 87 02 00 00                       - mov ecx,00000287
+DWORIGINS.exe+1A5E56: E8 65 64 F1 FF                       - call DWORIGINS.exe+BC2C0
+DWORIGINS.exe+1A5E5B: F3 0F 59 F8                          - mulss xmm7,xmm0
+DWORIGINS.exe+1A5E5F: F3 41 0F 10 44 DE 24                 - movss xmm0,[r14+rbx*8+24]
 // ---------- INJECTING HERE ----------
-DWORIGINS.exe+194B85: F3 0F 5C C1                          - subss xmm0,xmm1
+DWORIGINS.exe+1A5E66: F3 0F 5C C7                          - subss xmm0,xmm7
 // ---------- DONE INJECTING  ----------
-DWORIGINS.exe+194B89: 0F 2F C6                             - comiss xmm0,xmm6
-DWORIGINS.exe+194B8C: F3 41 0F 11 44 DE 24                 - movss [r14+rbx*8+24],xmm0
-DWORIGINS.exe+194B93: 73 22                                - jae DWORIGINS.exe+194BB7
-DWORIGINS.exe+194B95: 4D 89 64 DE 20                       - mov [r14+rbx*8+20],r12
-DWORIGINS.exe+194B9A: 4D 85 ED                             - test r13,r13
-DWORIGINS.exe+194B9D: 74 18                                - je DWORIGINS.exe+194BB7
-DWORIGINS.exe+194B9F: B8 02 00 00 00                       - mov eax,00000002
-DWORIGINS.exe+194BA4: 48 3B F8                             - cmp rdi,rax
-DWORIGINS.exe+194BA7: 48 0F 46 C7                          - cmovbe rax,rdi
-DWORIGINS.exe+194BAB: 41 C7 84 85 40 01 00 00 00 00 80 BF  - mov [r13+rax*4+00000140],BF800000
+DWORIGINS.exe+1A5E6A: 41 0F 2F C0                          - comiss xmm0,xmm8
+DWORIGINS.exe+1A5E6E: F3 41 0F 11 44 DE 24                 - movss [r14+rbx*8+24],xmm0
+DWORIGINS.exe+1A5E75: 73 22                                - jae DWORIGINS.exe+1A5E99
+DWORIGINS.exe+1A5E77: 4D 89 64 DE 20                       - mov [r14+rbx*8+20],r12
+DWORIGINS.exe+1A5E7C: 4D 85 ED                             - test r13,r13
+DWORIGINS.exe+1A5E7F: 74 18                                - je DWORIGINS.exe+1A5E99
+DWORIGINS.exe+1A5E81: B8 02 00 00 00                       - mov eax,00000002
+DWORIGINS.exe+1A5E86: 48 3B F8                             - cmp rdi,rax
+DWORIGINS.exe+1A5E89: 48 0F 46 C7                          - cmovbe rax,rdi
+DWORIGINS.exe+1A5E8D: 41 C7 84 85 40 01 00 00 00 00 80 BF  - mov [r13+rax*4+00000140],BF800000
 }
 </AssemblerScript>
       <CheatEntries>
@@ -2046,18 +2136,18 @@ DWORIGINS.exe+194BAB: 41 C7 84 85 40 01 00 00 00 00 80 BF  - mov [r13+rax*4+0000
     </CheatEntry>
     <CheatEntry>
       <ID>56</ID>
-      <Description>"Level of Peace (太平値) multiplier"</Description>
+      <Description>"(?) Level of Peace (太平値) multiplier"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
   Version: 
-  Date   : 2025-01-17
+  Date   : 2026-01-22
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_PEACE_LV_MULTI,$process,0F B7 D0 41 03 D1) // should be unique
+aobscanmodule(INJECT_PEACE_LV_MULTI,$process,0F B7 C0 03 D0) // should be unique
 alloc(newmem,$1000,INJECT_PEACE_LV_MULTI)
 
 label(code)
@@ -2065,78 +2155,78 @@ label(return vf_peace_lv_multi)
 
 newmem:
   pushfq
-
+  //movzx eax,ax
   vmovss xmm14, [vf_peace_lv_multi]
-  vcvtsi2ss xmm15, xmm15, r9d
+  vcvtsi2ss xmm15, xmm15, eax
   vmulss xmm15, xmm14, xmm15
-  vcvtss2si r9d, xmm15
-
+  vcvtss2si eax, xmm15
   popfq
 
 code:
-  movzx edx,ax
-  add edx,r9d
+  movzx eax,ax
+  add edx,eax
   jmp return
-align 10 cc
+  align 10 cc
   vf_peace_lv_multi:
-  dd (float)2
+  dd (float)2.1
 
 INJECT_PEACE_LV_MULTI:
   jmp newmem
-  nop
 return:
 registersymbol(INJECT_PEACE_LV_MULTI vf_peace_lv_multi)
 
 [DISABLE]
 
 INJECT_PEACE_LV_MULTI:
-  db 0F B7 D0 41 03 D1
+  db 0F B7 C0 03 D0
 
 unregistersymbol(INJECT_PEACE_LV_MULTI vf_peace_lv_multi)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+389A61
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+A9F232
 
-DWORIGINS.exe+389A0D - 49 8B 82 B8000000     - mov rax,[r10+000000B8]
-DWORIGINS.exe+389A14 - B9 10270000           - mov ecx,00002710
-DWORIGINS.exe+389A19 - 4C 8B 40 08           - mov r8,[rax+08]
-DWORIGINS.exe+389A1D - 4D 85 C0              - test r8,r8
-DWORIGINS.exe+389A20 - 74 3B                 - je DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A22 - 4D 39 78 08           - cmp [r8+08],r15
-DWORIGINS.exe+389A26 - 76 35                 - jna DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A28 - 49 8B 00              - mov rax,[r8]
-DWORIGINS.exe+389A2B - 48 8B 10              - mov rdx,[rax]
-DWORIGINS.exe+389A2E - 48 85 D2              - test rdx,rdx
-DWORIGINS.exe+389A31 - 74 2A                 - je DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A33 - 41 83 FC 0D           - cmp r12d,0D
-DWORIGINS.exe+389A37 - 73 24                 - jae DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A39 - 41 8B C4              - mov eax,r12d
-DWORIGINS.exe+389A3C - 0FB7 94 42 76090000   - movzx edx,word ptr [rdx+rax*2+00000976]
-DWORIGINS.exe+389A44 - 66 3B D1              - cmp dx,cx
-DWORIGINS.exe+389A47: 72 05           - jb DWORIGINS.exe+389A4E
-DWORIGINS.exe+389A49: 0F B7 C1        - movzx eax,cx
-DWORIGINS.exe+389A4C: EB 13           - jmp DWORIGINS.exe+389A61
-DWORIGINS.exe+389A4E: 66 85 D2        - test dx,dx
-DWORIGINS.exe+389A51: 75 05           - jne DWORIGINS.exe+389A58
-DWORIGINS.exe+389A53: 41 8B C7        - mov eax,r15d
-DWORIGINS.exe+389A56: EB 09           - jmp DWORIGINS.exe+389A61
-DWORIGINS.exe+389A58: 0F B7 C2        - movzx eax,dx
-DWORIGINS.exe+389A5B: EB 04           - jmp DWORIGINS.exe+389A61
-DWORIGINS.exe+389A5D: 41 0F B7 C7     - movzx eax,r15w
+DWORIGINS.exe+A9F1CF - CC                    - int 3
+DWORIGINS.exe+A9F1D0 - 48 8B 05 D9A11703     - mov rax,[DWORIGINS.exe+3C193B0]
+DWORIGINS.exe+A9F1D7 - 45 33 D2              - xor r10d,r10d
+DWORIGINS.exe+A9F1DA - 44 8B D9              - mov r11d,ecx
+DWORIGINS.exe+A9F1DD - 4C 8B 80 B8000000     - mov r8,[rax+000000B8]
+DWORIGINS.exe+A9F1E4 - 4D 8B 48 08           - mov r9,[r8+08]
+DWORIGINS.exe+A9F1E8 - 41 B8 10270000        - mov r8d,00002710
+DWORIGINS.exe+A9F1EE - 4D 85 C9              - test r9,r9
+DWORIGINS.exe+A9F1F1 - 74 3B                 - je DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F1F3 - 4D 39 51 08           - cmp [r9+08],r10
+DWORIGINS.exe+A9F1F7 - 76 35                 - jna DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F1F9 - 49 8B 01              - mov rax,[r9]
+DWORIGINS.exe+A9F1FC - 48 8B 08              - mov rcx,[rax]
+DWORIGINS.exe+A9F1FF - 48 85 C9              - test rcx,rcx
+DWORIGINS.exe+A9F202 - 74 2A                 - je DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F204 - 41 83 FB 0D           - cmp r11d,0D
+DWORIGINS.exe+A9F208 - 73 24                 - jae DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F20A - 42 0FB7 8C 59 76090000  - movzx ecx,word ptr [rcx+r11*2+00000976]
+DWORIGINS.exe+A9F213: 41 8B C3     - mov eax,r11d
+DWORIGINS.exe+A9F216: 66 41 3B C8  - cmp cx,r8w
+DWORIGINS.exe+A9F21A: 72 06        - jb DWORIGINS.exe+A9F222
+DWORIGINS.exe+A9F21C: 41 0F B7 C0  - movzx eax,r8w
+DWORIGINS.exe+A9F220: EB 10        - jmp DWORIGINS.exe+A9F232
+DWORIGINS.exe+A9F222: 66 85 C9     - test cx,cx
+DWORIGINS.exe+A9F225: 41 8B C2     - mov eax,r10d
+DWORIGINS.exe+A9F228: 66 0F 45 C1  - cmovne ax,cx
+DWORIGINS.exe+A9F22C: EB 04        - jmp DWORIGINS.exe+A9F232
+DWORIGINS.exe+A9F22E: 41 0F B7 C2  - movzx eax,r10w
 // ---------- INJECTING HERE ----------
-DWORIGINS.exe+389A61: 0F B7 D0        - movzx edx,ax
+DWORIGINS.exe+A9F232: 0F B7 C0     - movzx eax,ax
 // ---------- DONE INJECTING  ----------
-DWORIGINS.exe+389A64: 41 03 D1        - add edx,r9d
-DWORIGINS.exe+389A67: 3B D1           - cmp edx,ecx
-DWORIGINS.exe+389A69: 72 05           - jb DWORIGINS.exe+389A70
-DWORIGINS.exe+389A6B: 0F B7 D1        - movzx edx,cx
-DWORIGINS.exe+389A6E: EB 07           - jmp DWORIGINS.exe+389A77
-DWORIGINS.exe+389A70: 85 D2           - test edx,edx
-DWORIGINS.exe+389A72: 66 41 0F 44 D7  - cmove dx,r15w
-DWORIGINS.exe+389A77: 4D 85 C0        - test r8,r8
-DWORIGINS.exe+389A7A: 74 35           - je DWORIGINS.exe+389AB1
-DWORIGINS.exe+389A7C: 4D 39 78 08     - cmp [r8+08],r15
+DWORIGINS.exe+A9F235: 03 D0        - add edx,eax
+DWORIGINS.exe+A9F237: 41 3B D0     - cmp edx,r8d
+DWORIGINS.exe+A9F23A: 72 06        - jb DWORIGINS.exe+A9F242
+DWORIGINS.exe+A9F23C: 41 0F B7 C8  - movzx ecx,r8w
+DWORIGINS.exe+A9F240: EB 09        - jmp DWORIGINS.exe+A9F24B
+DWORIGINS.exe+A9F242: 85 D2        - test edx,edx
+DWORIGINS.exe+A9F244: 41 8B CA     - mov ecx,r10d
+DWORIGINS.exe+A9F247: 66 0F 45 CA  - cmovne cx,dx
+DWORIGINS.exe+A9F24B: 4D 85 C9     - test r9,r9
+DWORIGINS.exe+A9F24E: 74 32        - je DWORIGINS.exe+A9F282
 }
 </AssemblerScript>
       <CheatEntries>
@@ -2158,18 +2248,18 @@ DWORIGINS.exe+389A7C: 4D 39 78 08     - cmp [r8+08],r15
     </CheatEntry>
     <CheatEntry>
       <ID>59</ID>
-      <Description>"Get last value of Level of Peace"</Description>
+      <Description>"(?) Get last value of Level of Peace"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
   Version: 
-  Date   : 2025-01-17
+  Date   : 2026-01-22
   Author : bbfox@https://opencheattables.com
 }
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_LAST_PEACE_VAL,$process,0F B7 94 42 76 09 00 00) // should be unique
+aobscanmodule(INJECT_GET_LAST_PEACE_VAL,$process,42 0F B7 8C 59 76 09 00 00) // should be unique
 alloc(newmem,$1000,INJECT_GET_LAST_PEACE_VAL)
 
 label(code)
@@ -2177,12 +2267,12 @@ label(return i_base_last_peace_val_addr)
 
 newmem:
   push r15
-  lea r15, [rdx+rax*2]
+  lea r15, [rcx+r11*2]
   mov [i_base_last_peace_val_addr], r15
   pop r15
 
 code:
-  movzx edx,word ptr [rdx+rax*2+00000976]
+  movzx ecx,word ptr [rcx+r11*2+00000976]
   jmp return
 align 10 cc
   i_base_last_peace_val_addr:
@@ -2190,44 +2280,44 @@ align 10 cc
 
 INJECT_GET_LAST_PEACE_VAL:
   jmp newmem
-  nop 3
+  nop 4
 return:
 registersymbol(INJECT_GET_LAST_PEACE_VAL i_base_last_peace_val_addr)
 
 [DISABLE]
 
 INJECT_GET_LAST_PEACE_VAL:
-  db 0F B7 94 42 76 09 00 00
+  db 42 0F B7 8C 59 76 09 00 00
 
 unregistersymbol(INJECT_GET_LAST_PEACE_VAL i_base_last_peace_val_addr)
 dealloc(newmem)
 
 {
-// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+389A3C
+// ORIGINAL CODE - INJECTION POINT: DWORIGINS.exe+A9F20A
 
-DWORIGINS.exe+389A20: 74 3B                    - je DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A22: 4D 39 78 08              - cmp [r8+08],r15
-DWORIGINS.exe+389A26: 76 35                    - jna DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A28: 49 8B 00                 - mov rax,[r8]
-DWORIGINS.exe+389A2B: 48 8B 10                 - mov rdx,[rax]
-DWORIGINS.exe+389A2E: 48 85 D2                 - test rdx,rdx
-DWORIGINS.exe+389A31: 74 2A                    - je DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A33: 41 83 FC 0D              - cmp r12d,0D
-DWORIGINS.exe+389A37: 73 24                    - jae DWORIGINS.exe+389A5D
-DWORIGINS.exe+389A39: 41 8B C4                 - mov eax,r12d
+DWORIGINS.exe+A9F1EE: 4D 85 C9                    - test r9,r9
+DWORIGINS.exe+A9F1F1: 74 3B                       - je DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F1F3: 4D 39 51 08                 - cmp [r9+08],r10
+DWORIGINS.exe+A9F1F7: 76 35                       - jna DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F1F9: 49 8B 01                    - mov rax,[r9]
+DWORIGINS.exe+A9F1FC: 48 8B 08                    - mov rcx,[rax]
+DWORIGINS.exe+A9F1FF: 48 85 C9                    - test rcx,rcx
+DWORIGINS.exe+A9F202: 74 2A                       - je DWORIGINS.exe+A9F22E
+DWORIGINS.exe+A9F204: 41 83 FB 0D                 - cmp r11d,0D
+DWORIGINS.exe+A9F208: 73 24                       - jae DWORIGINS.exe+A9F22E
 // ---------- INJECTING HERE ----------
-DWORIGINS.exe+389A3C: 0F B7 94 42 76 09 00 00  - movzx edx,word ptr [rdx+rax*2+00000976]
+DWORIGINS.exe+A9F20A: 42 0F B7 8C 59 76 09 00 00  - movzx ecx,word ptr [rcx+r11*2+00000976]
 // ---------- DONE INJECTING  ----------
-DWORIGINS.exe+389A44: 66 3B D1                 - cmp dx,cx
-DWORIGINS.exe+389A47: 72 05                    - jb DWORIGINS.exe+389A4E
-DWORIGINS.exe+389A49: 0F B7 C1                 - movzx eax,cx
-DWORIGINS.exe+389A4C: EB 13                    - jmp INJECT_PEACE_LV_MULTI
-DWORIGINS.exe+389A4E: 66 85 D2                 - test dx,dx
-DWORIGINS.exe+389A51: 75 05                    - jne DWORIGINS.exe+389A58
-DWORIGINS.exe+389A53: 41 8B C7                 - mov eax,r15d
-DWORIGINS.exe+389A56: EB 09                    - jmp INJECT_PEACE_LV_MULTI
-DWORIGINS.exe+389A58: 0F B7 C2                 - movzx eax,dx
-DWORIGINS.exe+389A5B: EB 04                    - jmp INJECT_PEACE_LV_MULTI
+DWORIGINS.exe+A9F213: 41 8B C3                    - mov eax,r11d
+DWORIGINS.exe+A9F216: 66 41 3B C8                 - cmp cx,r8w
+DWORIGINS.exe+A9F21A: 72 06                       - jb DWORIGINS.exe+A9F222
+DWORIGINS.exe+A9F21C: 41 0F B7 C0                 - movzx eax,r8w
+DWORIGINS.exe+A9F220: EB 10                       - jmp DWORIGINS.exe+A9F232
+DWORIGINS.exe+A9F222: 66 85 C9                    - test cx,cx
+DWORIGINS.exe+A9F225: 41 8B C2                    - mov eax,r10d
+DWORIGINS.exe+A9F228: 66 0F 45 C1                 - cmovne ax,cx
+DWORIGINS.exe+A9F22C: EB 04                       - jmp DWORIGINS.exe+A9F232
+DWORIGINS.exe+A9F22E: 41 0F B7 C2                 - movzx eax,r10w
 }
 </AssemblerScript>
       <CheatEntries>
@@ -3122,7 +3212,7 @@ DWORIGINS.exe+13D662E: 4C 8D 25 4B 94 E5 01  - lea r12,[DWORIGINS.exe+322FA80]
     </CheatEntry>
     <CheatEntry>
       <ID>105</ID>
-      <Description>"DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS 1.0.0.5  /  https://opencheattables.com"</Description>
+      <Description>"DYNASTY WARRIORS: ORIGINS; 真・三國無双 ORIGINS 1.0.0.9  /  https://opencheattables.com"</Description>
       <Options moHideChildren="1"/>
       <Color>00A800</Color>
       <GroupHeader>1</GroupHeader>
@@ -3184,7 +3274,7 @@ Guards skill counter
 DWORIGINS.exe,F3 0F 11 40 34 8B 40 30 83 E0 CF 83 C8 08 89 41 30 E9 31
 DWORIGINS.exe+FC2CA9
 </Comments>
-  <LuaScript>IDs = {103,     }
+  <LuaScript>IDs = {105,     }
 
 function contains(table, val)
    local i = 0
