@@ -228,8 +228,8 @@ label(code)
 label(return)
 label(vf_hp_ratio)
 label(i_base_hp_addr)
-label(vf_min_musou_ratio)
-label(vf_frndly_hp_ratio)
+label(vf_min_musou_ratio vf_enemy_named_hp_max)
+label(vf_frndly_hp_ratio is_force_named_hp)
 label(vf_trash_mob_hp_threshold vf_min_skill_ratio vf_max_enemy_hp_ratio)
 
 newmem:
@@ -253,7 +253,7 @@ newmem:
 
   cmp dword ptr [rax+2C], 0
   jne to_non_player
-  cmp dword ptr [rcx+44], BF800000 // -1
+  cmp dword ptr [rcx+44], BF800000 // float -1
   je to_non_player
 
 to_player:
@@ -278,10 +278,10 @@ to_player:
   vmovss xmm15, [rcx+6C]
   vmulss xmm15, xmm14, xmm15
   vucomiss xmm15, [rcx+70]
-  jbe endp
+  jbe endp_p2 // no more checks for player data
   movss [rcx+70], xmm15
 
-  jmp endp
+  jmp endp_p2 // no more checks for player data
 
 to_non_player:
   //cmp dword ptr [rax+38], 0
@@ -304,7 +304,8 @@ to_non_player:
   vmulss xmm15, xmm14, xmm15
   vucomiss xmm15, [rcx+38]
   jbe @F
-  movss [rcx+38], xmm15
+  vmovss [rcx+38], xmm15
+  vmovss [rcx+3C], xmm15
 
 @@:
 
@@ -336,6 +337,28 @@ to_enemy:
   db 2E 34 2B
 
 endp:
+
+set_hp_filter:
+  cmp dword ptr [rcx+168], -1 // filter trash mob and player
+  je endp_p2
+  //vmovss xmm2,[rcx+38] // can be used for debug
+  //jmp endp_p2
+
+set_named_hp_to:
+  cmp dword ptr [is_force_named_hp], 1 // set named max hp
+  jne endp_p2
+  cmp dword ptr [rax+40], 0 // friendly?
+  je endp_p2
+  //cmp dword ptr [rax+1F4], 0 // option 2: friendly?
+  //je endp_p2
+  vmovss xmm15, [vf_enemy_named_hp_max]
+  vmovss xmm14, [rcx+38]
+  vucomiss xmm14, xmm15
+  jbe endp_p2
+  vmovss [rcx+38], xmm15
+
+
+endp_p2:
   movaps xmm14, [bak14]
   movaps xmm15, [bak15]
   pop rax
@@ -344,7 +367,7 @@ code_pre:
   popfq
 
 code:
-  movss xmm2,[rcx+38]
+  vmovss xmm2,[rcx+38]
   jmp return
 align 10 cc
   bak14:
@@ -369,6 +392,14 @@ align 10 cc
   dd (float)0.8
   vf_max_enemy_hp_ratio:
   dd (float)0.95
+  vf_10000:
+  dd (float)10000
+  is_force_named_hp:
+  dd 0
+  vf_1:
+  dd (float)1
+  vf_enemy_named_hp_max:
+  dd (float)6000
 
 
 INJECT_INF_HP:
@@ -377,8 +408,8 @@ return:
 registersymbol(INJECT_INF_HP)
 registersymbol(vf_hp_ratio)
 registersymbol(i_base_hp_addr)
-registersymbol(vf_min_musou_ratio)
-registersymbol(vf_frndly_hp_ratio)
+registersymbol(vf_min_musou_ratio vf_enemy_named_hp_max)
+registersymbol(vf_frndly_hp_ratio is_force_named_hp)
 registersymbol(vf_trash_mob_hp_threshold vf_min_skill_ratio vf_max_enemy_hp_ratio)
 
 [DISABLE]
@@ -389,8 +420,8 @@ INJECT_INF_HP:
 unregistersymbol(INJECT_INF_HP)
 unregistersymbol(vf_hp_ratio)
 unregistersymbol(i_base_hp_addr)
-unregistersymbol(vf_min_musou_ratio)
-unregistersymbol(vf_frndly_hp_ratio)
+unregistersymbol(vf_min_musou_ratio vf_enemy_named_hp_max)
+unregistersymbol(vf_frndly_hp_ratio is_force_named_to_1hp)
 unregistersymbol(vf_trash_mob_hp_threshold vf_min_skill_ratio vf_max_enemy_hp_ratio)
 dealloc(newmem)
 
@@ -619,9 +650,7 @@ DWORIGINS.exe+11C464: CC                       - int 3
             <CheatEntry>
               <ID>4</ID>
               <Description>"Also try to keep HP here?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>YesNo</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
@@ -630,9 +659,7 @@ DWORIGINS.exe+11C464: CC                       - int 3
             <CheatEntry>
               <ID>5</ID>
               <Description>"Also check min. skill pt?"</Description>
-              <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+              <DropDownListLink>YesNo</DropDownListLink>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>4 Bytes</VariableType>
@@ -647,9 +674,7 @@ DWORIGINS.exe+11C464: CC                       - int 3
                 <CheatEntry>
                   <ID>7</ID>
                   <Description>"Try to fill guards (護衛兵) HP?"</Description>
-                  <DropDownList DisplayValueAsItem="1">0:No
-1:Yes
-</DropDownList>
+                  <DropDownListLink>YesNo</DropDownListLink>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>C08000</Color>
                   <VariableType>4 Bytes</VariableType>
@@ -760,6 +785,31 @@ DWORIGINS.exe+11C464: CC                       - int 3
               <Description>"Use with caution!"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>113</ID>
+          <Description>"Force all named char max HP?"</Description>
+          <DropDownListLink>YesNo</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_force_named_hp</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>115</ID>
+              <Description>"May affect to player side"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>116</ID>
+              <Description>"Target max HP:"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>Float</VariableType>
+              <Address>vf_enemy_named_hp_max</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -3209,7 +3259,7 @@ DWORIGINS.exe+14ED1B2: 4C 8D 35 C7 44 F2 01  - lea r14,[DWORIGINS.exe+3411680]
     </CheatEntry>
     <CheatEntry>
       <ID>108</ID>
-      <Description>"[DLC} get Visionary skill pt (幻武功/夢幻戰功)"</Description>
+      <Description>"[DLC] get Visionary skill pt (幻武功/夢幻戰功)"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
@@ -3344,6 +3394,14 @@ DWORIGINS.exe+125F513: 48 85 D2              - test rdx,rdx
           <ShowAsSigned>0</ShowAsSigned>
           <VariableType>4 Bytes</VariableType>
           <Address/>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>114</ID>
+          <Description>"YesNo"</Description>
+          <DropDownList DisplayValueAsItem="1">0:No
+1:Yes
+</DropDownList>
+          <GroupHeader>1</GroupHeader>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
