@@ -215,7 +215,7 @@ synchronize(function() getLuaEngine().Close() end)
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{ Game   : DWORIGINS.exe
   Version: 
-  Date   : 2026-01-22
+  Date   : 2026-01-23
   Author : bbfox@https://opencheattables.com
 }
 
@@ -226,8 +226,8 @@ alloc(newmem,$1000,INJECT_INF_HP)
 
 label(code)
 label(return)
-label(vf_hp_ratio)
-label(i_base_hp_addr)
+label(vf_hp_ratio is_check_named_criteria_1)
+label(i_base_hp_addr is_check_named_criteria_2)
 label(vf_min_musou_ratio vf_enemy_named_hp_max)
 label(vf_frndly_hp_ratio is_force_named_hp)
 label(vf_trash_mob_hp_threshold vf_min_skill_ratio vf_max_enemy_hp_ratio)
@@ -347,10 +347,19 @@ set_hp_filter:
 set_named_hp_to:
   cmp dword ptr [is_force_named_hp], 1 // set named max hp
   jne endp_p2
+
+  cmp dword ptr [is_check_named_criteria_1], 1
+  jne @F
   cmp dword ptr [rax+40], 0 // friendly?
   je endp_p2
-  //cmp dword ptr [rax+1F4], 0 // option 2: friendly?
-  //je endp_p2
+
+@@:
+  cmp dword ptr [is_check_named_criteria_2], 1
+  jne @F
+  cmp dword ptr [rax+1F4], 0 // friendly?
+  je endp_p2
+
+@@:
   vmovss xmm15, [vf_enemy_named_hp_max]
   vmovss xmm14, [rcx+38]
   vucomiss xmm14, xmm15
@@ -399,15 +408,18 @@ align 10 cc
   vf_1:
   dd (float)1
   vf_enemy_named_hp_max:
-  dd (float)6000
-
+  dd (float)8800
+  is_check_named_criteria_1:
+  dd 1
+  is_check_named_criteria_2:
+  dd 0
 
 INJECT_INF_HP:
   jmp newmem
 return:
 registersymbol(INJECT_INF_HP)
-registersymbol(vf_hp_ratio)
-registersymbol(i_base_hp_addr)
+registersymbol(vf_hp_ratio is_check_named_criteria_1)
+registersymbol(i_base_hp_addr is_check_named_criteria_2)
 registersymbol(vf_min_musou_ratio vf_enemy_named_hp_max)
 registersymbol(vf_frndly_hp_ratio is_force_named_hp)
 registersymbol(vf_trash_mob_hp_threshold vf_min_skill_ratio vf_max_enemy_hp_ratio)
@@ -418,8 +430,8 @@ INJECT_INF_HP:
   db F3 0F 10 51 38
 
 unregistersymbol(INJECT_INF_HP)
-unregistersymbol(vf_hp_ratio)
-unregistersymbol(i_base_hp_addr)
+unregistersymbol(vf_hp_ratio is_check_named_criteria_1)
+unregistersymbol(i_base_hp_addr is_check_named_criteria_2)
 unregistersymbol(vf_min_musou_ratio vf_enemy_named_hp_max)
 unregistersymbol(vf_frndly_hp_ratio is_force_named_to_1hp)
 unregistersymbol(vf_trash_mob_hp_threshold vf_min_skill_ratio vf_max_enemy_hp_ratio)
@@ -790,7 +802,7 @@ DWORIGINS.exe+11C464: CC                       - int 3
         </CheatEntry>
         <CheatEntry>
           <ID>113</ID>
-          <Description>"Force all named char max HP?"</Description>
+          <Description>"Force set named char max HP?"</Description>
           <DropDownListLink>YesNo</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -802,6 +814,24 @@ DWORIGINS.exe+11C464: CC                       - int 3
               <Description>"May affect to player side"</Description>
               <Color>8000FF</Color>
               <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>117</ID>
+              <Description>"Check criteria #1?"</Description>
+              <DropDownListLink>YesNo</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_check_named_criteria_1</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>118</ID>
+              <Description>"Check criteria #2?"</Description>
+              <DropDownListLink>YesNo</DropDownListLink>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>C08000</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>is_check_named_criteria_2</Address>
             </CheatEntry>
             <CheatEntry>
               <ID>116</ID>
@@ -1833,7 +1863,7 @@ code:
   jmp return
 align 10 cc
   vf_trail_cnt_multi:
-  dd (float)5
+  dd (float)10
 
 INJECT_TRAILS_CNT_MULTIPLIER:
   jmp newmem
