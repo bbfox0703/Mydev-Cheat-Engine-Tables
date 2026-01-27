@@ -267,10 +267,11 @@ namespace AAToggleGenerator
                     treePanel.Controls.Add(treeView);
 
                     // Add controls in correct order for proper docking
-                    treeForm.Controls.Add(confirmButton);    // Bottom control first
-                    treeForm.Controls.Add(depthSelector);    // Top controls
-                    treeForm.Controls.Add(depthLabel);       // Top controls
-                    treeForm.Controls.Add(treePanel);        // Fill remaining space with panel
+                    // WinForms Dock order: Bottom first, then Top (in visual order top-to-bottom), Fill last
+                    treeForm.Controls.Add(confirmButton);    // Bottom
+                    treeForm.Controls.Add(treePanel);        // Fill (must be added before Top controls)
+                    treeForm.Controls.Add(depthSelector);    // Top (below depthLabel)
+                    treeForm.Controls.Add(depthLabel);       // Top (topmost)
 
                     // Apply theme after adding controls
                     ApplyThemeToDialog(treeForm, treeView, depthLabel, depthSelector, confirmButton);
