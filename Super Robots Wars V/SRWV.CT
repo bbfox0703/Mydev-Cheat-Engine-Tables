@@ -95,7 +95,8 @@ local enableBattleScripts = {
   90, -- "Keep min skill stock before use in skill program"
   91, -- "All robots, ships have 4 slots"
   54, -- "Enable in upgrade menu"
-  80, -- "Battle: full HP before enter battle"
+  80, -- "Battle / defend: full HP before enter battle (animation)"
+  255, -- "Battle / attack: full HP before enter battle (animation)"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -118,6 +119,7 @@ synchronize(function()
 end)
 
 local disableBattleScripts = {
+  255, -- "Battle / attack: full HP before enter battle (animation)"
   243, -- "Trait 30"
   238, -- "Trait 29"
   233, -- "Trait 28"
@@ -157,7 +159,7 @@ local disableBattleScripts = {
   197, -- "21-30"
   146, -- "11-20"
   95, -- "01-10"
-  80, -- "Battle: full HP before enter battle"
+  80, -- "Battle / defend: full HP before enter battle (animation)"
   78, -- "Enable criteria #3?"
   76, -- "Enable criteria #2?"
   74, -- "Enable criteria #1?"
@@ -210,7 +212,8 @@ synchronize(function() getLuaEngine().Close() end)
 --   ID: 74, Description: "Enable criteria #1?", Depth: 1
 --   ID: 76, Description: "Enable criteria #2?", Depth: 1
 --   ID: 78, Description: "Enable criteria #3?", Depth: 1
---   ID: 80, Description: "Battle: full HP before enter battle", Depth: 1
+--   ID: 80, Description: "Battle / defend: full HP before enter battle (animation)", Depth: 1
+--     ID: 255, Description: "Battle / attack: full HP before enter battle (animation)", Depth: 2
 -- ID: 84, Description: "Battle: inf. SP after use", Depth: 0
 -- ID: 85, Description: "Map: add move range", Depth: 0
 -- ID: 87, Description: "Map: add weapon range", Depth: 0
@@ -621,9 +624,9 @@ SRWV.EXE+3DD922: 48 81 EC 80 00 00 00  - sub rsp,00000080
         </CheatEntry>
         <CheatEntry>
           <ID>26</ID>
-          <Description>"?? (1B)"</Description>
+          <Description>"Criteria 1 (0x1B)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
+          <Color>808080</Color>
           <VariableType>Byte</VariableType>
           <Address>i_batt_base_char_stat_addr</Address>
           <Offsets>
@@ -632,9 +635,9 @@ SRWV.EXE+3DD922: 48 81 EC 80 00 00 00  - sub rsp,00000080
         </CheatEntry>
         <CheatEntry>
           <ID>27</ID>
-          <Description>"?? (8E)"</Description>
+          <Description>"Criteria 2 (0x8E)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
-          <Color>FF8080</Color>
+          <Color>808080</Color>
           <VariableType>2 Bytes</VariableType>
           <Address>i_batt_base_char_stat_addr</Address>
           <Offsets>
@@ -914,10 +917,30 @@ aobscanmodule(INJECT_BATT_GET_ROBOT_STATS,$process,0F BF 41 4E C3) // should be 
 alloc(newmem,$1000,INJECT_BATT_GET_ROBOT_STATS)
 
 label(code)
-label(return i_batt_base_robot_stats_addr)
+label(return i_batt_base_robot_stats_addr is_auto_refill)
 
 newmem:
   mov [i_batt_base_robot_stats_addr], rcx
+  test rcx, rcx
+  jz code
+
+  cmp dword ptr [is_auto_refill], 1
+  jne code
+
+  cmp byte ptr [rcx+24], 1
+  je code
+  cmp dword ptr [rcx+3C], 0
+  je to_refill
+  cmp byte ptr [rcx+80], 1
+  je to_refill
+  jmp code
+
+to_refill:
+  mov eax, [rcx+44]
+  mov [rcx+48], eax
+  movzx eax, word ptr [rcx+4C]
+  mov [rcx+4E], ax
+
 
 code:
   movsx eax,word ptr [rcx+4E]
@@ -926,18 +949,20 @@ code:
   align 10 cc
   i_batt_base_robot_stats_addr:
   dq 0
+  is_auto_refill:
+  dd 0
 
 INJECT_BATT_GET_ROBOT_STATS:
   jmp newmem
 return:
-registersymbol(INJECT_BATT_GET_ROBOT_STATS i_batt_base_robot_stats_addr)
+registersymbol(INJECT_BATT_GET_ROBOT_STATS i_batt_base_robot_stats_addr is_auto_refill)
 
 [DISABLE]
 
 INJECT_BATT_GET_ROBOT_STATS:
   db 0F BF 41 4E C3
 
-unregistersymbol(INJECT_BATT_GET_ROBOT_STATS i_batt_base_robot_stats_addr)
+unregistersymbol(INJECT_BATT_GET_ROBOT_STATS i_batt_base_robot_stats_addr is_auto_refill)
 dealloc(newmem)
 
 {
@@ -1037,6 +1062,15 @@ SRWV.EXE+3E152D: CC              - int 3
 SRWV.EXE+3E152E: CC              - int 3 
 }
 </AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>256</ID>
+          <Description>"Auto fill HP/EN?"</Description>
+          <DropDownListLink>YesNo</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_auto_refill</Address>
         </CheatEntry>
         <CheatEntry>
           <ID>55</ID>
@@ -1345,21 +1379,21 @@ newmem:
 
   cmp dword ptr [is_usp_crit_1], 1
   jne @F
-  mov dl, [i_crit1_value]
+  mov dl, byte ptr [i_crit1_value]
   cmp byte ptr [r8+24], dl
   je code
 
 @@:
   cmp dword ptr [is_usp_crit_2], 1
   jne @F
-  mov edx, [i_crit2_value]
+  mov edx, dword ptr [i_crit2_value]
   cmp dword ptr [r8+3C], edx //-1 = enemy?
   je set_sp
 
 @@:
   cmp dword ptr [is_usp_crit_3], 1
   jne code
-  mov dl, [i_crit3_value]
+  mov dl, byte ptr [i_crit3_value]
   cmp byte ptr [r8+80], dl
   je set_sp
   jmp code
@@ -1503,7 +1537,7 @@ SRWV.EXE+3E0489: C3              - ret
         </CheatEntry>
         <CheatEntry>
           <ID>80</ID>
-          <Description>"Battle: full HP before enter battle"</Description>
+          <Description>"Battle / defend: full HP before enter battle (animation)"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : SRWV.EXE
@@ -1524,7 +1558,7 @@ label(is_uhp_crit_1 is_uhp_crit_2 is_uhp_crit_3)
 newmem:
   cmp dword ptr [is_uhp_crit_1], 1
   jne @F
-  mov al, [i_crit1_value]
+  mov al, byte ptr [i_crit1_value]
   cmp byte ptr [rcx+24], al
   je code
 
@@ -1538,7 +1572,7 @@ newmem:
 @@:
   cmp dword ptr [is_uhp_crit_3], 1
   jne code
-  mov al, [i_crit3_value]
+  mov al, byte ptr [i_crit3_value]
   cmp byte ptr [rcx+80], al
   je set_hp
   jmp code
@@ -1603,6 +1637,98 @@ SRWV.EXE+3C3B8B: E8 A0 12 03 00           - call SRWV.EXE+3F4E30
 }
 </AssemblerScript>
           <CheatEntries>
+            <CheatEntry>
+              <ID>255</ID>
+              <Description>"Battle / attack: full HP before enter battle (animation)"</Description>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{ Game   : SRWV.EXE
+  Version: 
+  Date   : 2026-01-28
+  Author : bbfox@https://opencheattables.com
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BATT_HP_FULL_ATK,$process,8B 41 48 89 83 24 03 00 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? 0F B7 41 4C) // should be unique
+alloc(newmem,$1000,INJECT_BATT_HP_FULL_ATK)
+
+label(code)
+label(return)
+
+newmem:
+  cmp dword ptr [is_uhp_crit_1], 1
+  jne @F
+  mov al, byte ptr [i_crit1_value]
+  cmp byte ptr [rcx+24], al
+  je code
+
+@@:
+  cmp dword ptr [is_uhp_crit_2], 1
+  jne @F
+  mov eax, [i_crit2_value]
+  cmp dword ptr [rcx+3C], eax //-1 = enemy?
+  je set_hp
+
+@@:
+  cmp dword ptr [is_uhp_crit_3], 1
+  jne code
+  mov al, byte ptr [i_crit3_value]
+  cmp byte ptr [rcx+80], al
+  je set_hp
+  jmp code
+
+set_hp:
+  mov eax, [rcx+44]
+  mov [rcx+48], eax
+
+code:
+  mov eax,[rcx+48]
+  mov [rbx+00000324],eax
+  jmp return
+
+INJECT_BATT_HP_FULL_ATK:
+  jmp newmem
+  nop 4
+return:
+registersymbol(INJECT_BATT_HP_FULL_ATK)
+
+[DISABLE]
+
+INJECT_BATT_HP_FULL_ATK:
+  db 8B 41 48 89 83 24 03 00 00
+
+unregistersymbol(INJECT_BATT_HP_FULL_ATK)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: SRWV.EXE+3C39E6
+
+SRWV.EXE+3C39B1: 85 C0                    - test eax,eax
+SRWV.EXE+3C39B3: 0F 89 F7 00 00 00        - jns SRWV.EXE+3C3AB0
+SRWV.EXE+3C39B9: 48 69 DA 40 03 00 00     - imul rbx,rdx,00000340
+SRWV.EXE+3C39C0: 49 03 9E 50 01 00 00     - add rbx,[r14+00000150]
+SRWV.EXE+3C39C7: 4D 89 84 D6 F0 05 00 00  - mov [r14+rdx*8+000005F0],r8
+SRWV.EXE+3C39CF: 41 FF 86 E8 05 00 00     - inc [r14+000005E8]
+SRWV.EXE+3C39D6: 49 8B 48 08              - mov rcx,[r8+08]
+SRWV.EXE+3C39DA: 49 8B 10                 - mov rdx,[r8]
+SRWV.EXE+3C39DD: 8B 41 44                 - mov eax,[rcx+44]
+SRWV.EXE+3C39E0: 89 83 20 03 00 00        - mov [rbx+00000320],eax
+// ---------- INJECTING HERE ----------
+SRWV.EXE+3C39E6: 8B 41 48                 - mov eax,[rcx+48]
+// ---------- DONE INJECTING  ----------
+SRWV.EXE+3C39E9: 89 83 24 03 00 00        - mov [rbx+00000324],eax
+SRWV.EXE+3C39EF: 0F B7 41 4C              - movzx eax,word ptr [rcx+4C]
+SRWV.EXE+3C39F3: 66 89 83 28 03 00 00     - mov [rbx+00000328],ax
+SRWV.EXE+3C39FA: 0F B7 41 4E              - movzx eax,word ptr [rcx+4E]
+SRWV.EXE+3C39FE: 66 89 83 2A 03 00 00     - mov [rbx+0000032A],ax
+SRWV.EXE+3C3A05: 0F B7 42 4A              - movzx eax,word ptr [rdx+4A]
+SRWV.EXE+3C3A09: 66 89 83 2C 03 00 00     - mov [rbx+0000032C],ax
+SRWV.EXE+3C3A10: 66 89 B3 2E 03 00 00     - mov [rbx+0000032E],si
+SRWV.EXE+3C3A17: 48 8B 4F 10              - mov rcx,[rdi+10]
+SRWV.EXE+3C3A1B: E8 10 14 03 00           - call SRWV.EXE+3F4E30
+}
+</AssemblerScript>
+            </CheatEntry>
             <CheatEntry>
               <ID>254</ID>
               <Description>"Criteria values: same as above"</Description>
