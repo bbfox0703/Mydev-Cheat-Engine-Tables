@@ -391,6 +391,11 @@ zh-TW: 劍星
 ## Stronghold Crusader Definitive Edition  
 [Stronghold Crusader: Definitive Edition (Steam)](https://store.steampowered.com/app/3024040/Stronghold_Crusader_Definitive_Edition/)  
 
+## Super Robots Wars V  
+[Super Robots Wars V (Steam)](https://store.steampowered.com/app/1031500/V/)  
+ja-JP: スーパーロボット大戦V  
+zh-TW: 超級機器人大戰V  
+
 ## Sword Art Online Alicization Lycoris  
 [Cheat Table for Sword Art Online: Alicization Lycoris (Steam)](https://store.steampowered.com/app/1009290/_/)  
 ja-JP: ソードアート・オンライン アリシゼーション リコリス  
