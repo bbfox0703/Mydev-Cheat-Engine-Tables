@@ -323,8 +323,6 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("  getLuaEngine().menuItem5.doClick()");
             scriptBuilder.AppendLine("  getLuaEngine().Close()");
             scriptBuilder.AppendLine("end)");
-            scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
-
             scriptBuilder.AppendLine("\n--[[");
             scriptBuilder.AppendLine("-- attach process");
             scriptBuilder.AppendLine("local processName = \"game_exe.exe\"");
@@ -343,6 +341,7 @@ namespace AAToggleGenerator
             scriptBuilder.AppendLine("  getLuaEngine().Close()");
             scriptBuilder.AppendLine("end)");
             scriptBuilder.AppendLine("--]]\n");
+            scriptBuilder.AppendLine("\nlocal enableBattleScripts = {");
 
             foreach (var entry in enableOrder)
             {
