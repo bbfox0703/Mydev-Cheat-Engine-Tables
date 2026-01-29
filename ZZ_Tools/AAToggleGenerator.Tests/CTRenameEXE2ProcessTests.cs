@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using AAToggleGenerator;
 using System.Windows.Forms;
 
@@ -20,7 +20,6 @@ namespace AAToggleGenerator.Tests
         }
     }
 
-    [TestClass]
     public class CTRenameEXE2ProcessTests
     {
         private static string CopyTestFile(string fileName)
@@ -31,7 +30,7 @@ namespace AAToggleGenerator.Tests
             return dest;
         }
 
-        [TestMethod]
+        [Fact]
         public void ReplaceProcessName_SingleDirective_ReplacesModuleName()
         {
             var svc = new TestMessageService();
@@ -40,7 +39,7 @@ namespace AAToggleGenerator.Tests
             {
                 CTRenameEXE2Process.ReplaceProcessName(path, svc);
                 string content = File.ReadAllText(path);
-                StringAssert.Contains(content, "aobscanmodule(testLabel,$process,11 22 33 44)");
+                Assert.Contains("aobscanmodule(testLabel,$process,11 22 33 44)", content);
             }
             finally
             {
@@ -48,7 +47,7 @@ namespace AAToggleGenerator.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void ReplaceProcessName_MultipleDirectives_ReplacesAll()
         {
             var svc = new TestMessageService();
@@ -59,9 +58,9 @@ namespace AAToggleGenerator.Tests
                 string content = File.ReadAllText(path);
                 Assert.DoesNotContain("GameA.exe", content);
                 Assert.DoesNotContain("GameB.exe", content);
-                StringAssert.Contains(content, "aobscanmodule(mod1,$process,AA BB CC)");
-                StringAssert.Contains(content, "aobscanregion(reg1,$process+1000,$process+2000,DD EE FF)");
-                StringAssert.Contains(content, "aobscanmodule(mod2,$process,11 22 33)");
+                Assert.Contains("aobscanmodule(mod1,$process,AA BB CC)", content);
+                Assert.Contains("aobscanregion(reg1,$process+1000,$process+2000,DD EE FF)", content);
+                Assert.Contains("aobscanmodule(mod2,$process,11 22 33)", content);
             }
             finally
             {
@@ -69,7 +68,7 @@ namespace AAToggleGenerator.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void ReplaceProcessName_NoPatterns_ShowsNoChangesMessage()
         {
             var svc = new TestMessageService();
@@ -77,7 +76,7 @@ namespace AAToggleGenerator.Tests
             try
             {
                 CTRenameEXE2Process.ReplaceProcessName(path, svc);
-                Assert.AreEqual("No aobscanmodule or aobscanregion patterns found to replace.", svc.LastMessage);
+                Assert.Equal("No aobscanmodule or aobscanregion patterns found to replace.", svc.LastMessage);
             }
             finally
             {
@@ -85,16 +84,16 @@ namespace AAToggleGenerator.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void ReplaceProcessName_InvalidPath_ShowsWarning()
         {
             var svc = new TestMessageService();
             string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "missing.CT");
             CTRenameEXE2Process.ReplaceProcessName(path, svc);
-            Assert.AreEqual($"File not found: {path}", svc.LastMessage);
+            Assert.Equal($"File not found: {path}", svc.LastMessage);
         }
 
-        [TestMethod]
+        [Fact]
         public void ReplaceProcessName_InvalidExtension_ShowsWarning()
         {
             var svc = new TestMessageService();
@@ -102,7 +101,7 @@ namespace AAToggleGenerator.Tests
             try
             {
                 CTRenameEXE2Process.ReplaceProcessName(tempFile, svc);
-                Assert.AreEqual("Selected file must be a .CT file.", svc.LastMessage);
+                Assert.Equal("Selected file must be a .CT file.", svc.LastMessage);
             }
             finally
             {

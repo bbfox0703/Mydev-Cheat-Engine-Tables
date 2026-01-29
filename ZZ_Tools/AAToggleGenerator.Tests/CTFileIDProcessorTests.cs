@@ -3,20 +3,16 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AAToggleGenerator;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace AAToggleGenerator.Tests
 {
-    [TestClass]
     public class CTFileIDProcessorTests
     {
-        [TestMethod]
+        [Fact]
         public void RenumberIDs_RewritesSequentiallyAndCreatesBackup()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
             Directory.CreateDirectory(tempDir);
@@ -38,12 +34,12 @@ namespace AAToggleGenerator.Tests
                 var ids = Regex.Matches(updated, @"<ID>(\d+)</ID>")
                                .Select(m => m.Groups[1].Value)
                                .ToArray();
-                CollectionAssert.AreEqual(new[] { "0", "1", "2" }, ids);
+                Assert.Equal(new[] { "0", "1", "2" }, ids);
 
                 string[] backups = Directory.GetFiles(tempDir, "test.CT.bak.*");
-                Assert.AreEqual(1, backups.Length);
-                Assert.IsTrue(File.Exists(backups[0]));
-                Assert.IsTrue(CTFileIDProcessor.LastMessages.Any(m => m.StartsWith("Backup created:")));
+                Assert.Equal(1, backups.Length);
+                Assert.True(File.Exists(backups[0]));
+                Assert.True(CTFileIDProcessor.LastMessages.Any(m => m.StartsWith("Backup created:")));
             }
             finally
             {
@@ -51,28 +47,22 @@ namespace AAToggleGenerator.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void RenumberIDs_InvalidPath_ShowsAlert()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             CTFileIDProcessor.TestMode = true;
             CTFileIDProcessor.LastMessages.Clear();
             string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".CT");
             CTFileIDProcessor.RenumberIDs(path);
-            Assert.AreEqual($"File not found: {path}", CTFileIDProcessor.LastMessages.Single());
+            Assert.Equal($"File not found: {path}", CTFileIDProcessor.LastMessages.Single());
         }
 
-        [TestMethod]
+        [Fact]
         public void RenumberIDs_InvalidExtension_ShowsAlert()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             string tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".txt");
             File.WriteAllText(tempFile, "dummy");
@@ -81,7 +71,7 @@ namespace AAToggleGenerator.Tests
                 CTFileIDProcessor.TestMode = true;
                 CTFileIDProcessor.LastMessages.Clear();
                 CTFileIDProcessor.RenumberIDs(tempFile);
-                Assert.AreEqual("Selected file must be a .CT file.", CTFileIDProcessor.LastMessages.Single());
+                Assert.Equal("Selected file must be a .CT file.", CTFileIDProcessor.LastMessages.Single());
             }
             finally
             {
@@ -90,4 +80,3 @@ namespace AAToggleGenerator.Tests
         }
     }
 }
-

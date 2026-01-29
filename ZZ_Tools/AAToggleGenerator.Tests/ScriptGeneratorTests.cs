@@ -5,21 +5,17 @@ using System.Linq;
 using System.Reflection;
 using System.Xml.Linq;
 using AAToggleGenerator;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using System.Windows.Forms;
 
 namespace AAToggleGenerator.Tests
 {
-    [TestClass]
     public class ScriptGeneratorTests
     {
-        [TestMethod]
+        [Fact]
         public void SampleSimpleTable_GeneratesExpectedScripts()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "AAToggleGenerator", "TestData", "sample_simple.CT"));
@@ -33,18 +29,18 @@ namespace AAToggleGenerator.Tests
             var entries = ScriptGenerator.LastProcessedEntries!;
 
             // Verify auto assembler nodes are preselected and group nodes unselectable
-            Assert.IsTrue(entries.Any(e => e.IsGroup), "Expected at least one group node");
+            Assert.True(entries.Any(e => e.IsGroup), "Expected at least one group node");
             foreach (var entry in entries)
             {
                 if (entry.IsAutoAssembler)
                 {
-                    Assert.IsTrue(entry.IsAutoAssembler, $"{entry.Description} should be preselected");
+                    Assert.True(entry.IsAutoAssembler, $"{entry.Description} should be preselected");
                 }
                 if (entry.IsGroup)
                 {
                     bool isChecked = true;
                     if (entry.IsGroup) isChecked = false; // simulate TreeView restriction
-                    Assert.IsFalse(isChecked, $"Group node {entry.Description} should remain unchecked");
+                    Assert.False(isChecked, $"Group node {entry.Description} should remain unchecked");
                 }
             }
 
@@ -55,14 +51,14 @@ namespace AAToggleGenerator.Tests
             var enableLines = enableOrder.Select(e => $"{e.Id} -- {e.Description}").ToList();
             var disableLines = disableOrder.Select(e => $"{e.Id} -- {e.Description}").ToList();
 
-            CollectionAssert.AreEqual(new[]
+            Assert.Equal(new[]
             {
                 "0 -- Simple AA Script",
                 "2 -- Child AA Script",
                 "4 -- Nested AA Script"
             }, enableLines);
 
-            CollectionAssert.AreEqual(new[]
+            Assert.Equal(new[]
             {
                 "4 -- Nested AA Script",
                 "2 -- Child AA Script",
@@ -72,13 +68,10 @@ namespace AAToggleGenerator.Tests
             }, disableLines);
         }
 
-        [TestMethod]
+        [Fact]
         public void SampleSimpleTable_BuildScriptCreatesOrderedSectionsAndComments()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "AAToggleGenerator", "TestData", "sample_simple.CT"));
@@ -94,7 +87,7 @@ namespace AAToggleGenerator.Tests
             string script = (string)buildMethod!.Invoke(null, new object[] { entries.Where(e => e.IsAutoAssembler).ToList(), entries })!;
 
             List<string> enableLines = ExtractIdLines(script, "local enableBattleScripts");
-            CollectionAssert.AreEqual(new[]
+            Assert.Equal(new[]
             {
                 "0, -- Simple AA Script",
                 "2, -- Child AA Script",
@@ -102,7 +95,7 @@ namespace AAToggleGenerator.Tests
             }, enableLines);
 
             List<string> disableLines = ExtractIdLines(script, "local disableBattleScripts");
-            CollectionAssert.AreEqual(new[]
+            Assert.Equal(new[]
             {
                 "4, -- Nested AA Script",
                 "2, -- Child AA Script",
@@ -111,11 +104,11 @@ namespace AAToggleGenerator.Tests
                 "0, -- Simple AA Script"
             }, disableLines);
 
-            StringAssert.Contains(script, "-- ID: 0, Description: Simple AA Script, Depth: 0");
-            StringAssert.Contains(script, "-- ID: 1, Description: Regular Entry, Depth: 0");
-            StringAssert.Contains(script, "--   ID: 2, Description: Child AA Script, Depth: 1");
-            StringAssert.Contains(script, "-- ID: 3, Description: Group Header, Depth: 0");
-            StringAssert.Contains(script, "--   ID: 4, Description: Nested AA Script, Depth: 1");
+            Assert.Contains("-- ID: 0, Description: Simple AA Script, Depth: 0", script);
+            Assert.Contains("-- ID: 1, Description: Regular Entry, Depth: 0", script);
+            Assert.Contains("--   ID: 2, Description: Child AA Script, Depth: 1", script);
+            Assert.Contains("-- ID: 3, Description: Group Header, Depth: 0", script);
+            Assert.Contains("--   ID: 4, Description: Nested AA Script, Depth: 1", script);
         }
 
         private static List<string> ExtractIdLines(string script, string marker)
@@ -129,13 +122,10 @@ namespace AAToggleGenerator.Tests
                         .ToList();
         }
 
-        [TestMethod]
+        [Fact]
         public void SampleComplexTable_FiltersExcludedDescriptions()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "AAToggleGenerator", "TestData", "sample_complex.CT"));
@@ -152,8 +142,8 @@ namespace AAToggleGenerator.Tests
             string[] keywords = { "一鍵開啟", "Toggle Scripts" };
             foreach (var keyword in keywords)
             {
-                Assert.IsTrue((bool)isExcluded!.Invoke(null, new object[] { keyword })!, $"{keyword} should be excluded");
-                Assert.IsFalse(entries.Any(e => e.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
+                Assert.True((bool)isExcluded!.Invoke(null, new object[] { keyword })!, $"{keyword} should be excluded");
+                Assert.False(entries.Any(e => e.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
                     $"Entry '{keyword}' should not appear");
             }
 
@@ -166,18 +156,15 @@ namespace AAToggleGenerator.Tests
                                          .ToList();
             foreach (var keyword in keywords)
             {
-                Assert.IsFalse(scriptLines.Any(l => l.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
+                Assert.False(scriptLines.Any(l => l.Contains(keyword, StringComparison.OrdinalIgnoreCase)),
                     $"Generated script should not contain '{keyword}'");
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void TreeView_ChecksPropagateAndGroupsRemainUnchecked()
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Assert.Inconclusive("Windows-only test");
-            }
+            Skip.If(!OperatingSystem.IsWindows(), "Windows-only test");
 
             string ctPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
                 "..", "..", "..", "AAToggleGenerator", "TestData", "sample_simple.CT"));
@@ -198,16 +185,16 @@ namespace AAToggleGenerator.Tests
 
             // Checking parent should check child
             parent.Checked = true;
-            Assert.IsTrue(child.Checked, "Child node should mirror parent checked state");
+            Assert.True(child.Checked, "Child node should mirror parent checked state");
 
             // Unchecking parent should uncheck child
             parent.Checked = false;
-            Assert.IsFalse(child.Checked, "Child node should mirror parent unchecked state");
+            Assert.False(child.Checked, "Child node should mirror parent unchecked state");
 
             // Attempt to check a group node
             TreeNode groupNode = tree.Nodes.Cast<TreeNode>().First(n => ((CheatEntry)n.Tag!).Description == "Group Header");
             groupNode.Checked = true;
-            Assert.IsFalse(groupNode.Checked, "Group nodes should remain unchecked");
+            Assert.False(groupNode.Checked, "Group nodes should remain unchecked");
         }
 
         private static TreeView BuildTreeView(List<CheatEntry> entries)
