@@ -1,22 +1,21 @@
 using System.Drawing;
 using System.Runtime.Versioning;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace AAToggleGenerator.Tests
 {
-    [TestClass]
+    [Collection("ThemeTests")]
     [SupportedOSPlatform("windows6.1")]
     public class ThemeExtensionsTests
     {
-        [TestInitialize]
-        public void Setup()
+        public ThemeExtensionsTests()
         {
             WindowsThemeHelper.RegistryGetValueFunc = Microsoft.Win32.Registry.GetValue;
             WindowsThemeHelper.BuildNumberProvider = null;
             WindowsThemeHelper.DwmSetWindowAttributeOverride = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void ApplyTheme_SetsColorsForFormAndChildren()
         {
             WindowsThemeHelper.BuildNumberProvider = () => 19045;
@@ -35,15 +34,15 @@ namespace AAToggleGenerator.Tests
             var fg = WindowsThemeHelper.GetForegroundColor();
             var btnBg = WindowsThemeHelper.GetButtonBackgroundColor();
 
-            Assert.AreEqual(bg, form.BackColor);
-            Assert.AreEqual(fg, form.ForeColor);
-            Assert.AreEqual(btnBg, button.BackColor);
-            Assert.AreEqual(fg, button.ForeColor);
-            Assert.AreEqual(bg, treeView.BackColor);
-            Assert.AreEqual(fg, treeView.ForeColor);
+            Assert.Equal(bg, form.BackColor);
+            Assert.Equal(fg, form.ForeColor);
+            Assert.Equal(btnBg, button.BackColor);
+            Assert.Equal(fg, button.ForeColor);
+            Assert.Equal(bg, treeView.BackColor);
+            Assert.Equal(fg, treeView.ForeColor);
         }
 
-        [TestMethod]
+        [Fact]
         public void UpdateNodeTheme_GroupNode_ChangesWithTheme()
         {
             WindowsThemeHelper.BuildNumberProvider = () => 19045;
@@ -51,12 +50,11 @@ namespace AAToggleGenerator.Tests
 
             WindowsThemeHelper.RegistryGetValueFunc = (k, v, d) => 0; // Dark
             node.UpdateNodeTheme(isGroup: true);
-            Assert.AreEqual(Color.FromArgb(128, 128, 128), node.ForeColor);
+            Assert.Equal(Color.FromArgb(128, 128, 128), node.ForeColor);
 
             WindowsThemeHelper.RegistryGetValueFunc = (k, v, d) => 1; // Light
             node.UpdateNodeTheme(isGroup: true);
-            Assert.AreEqual(Color.Gray, node.ForeColor);
+            Assert.Equal(Color.Gray, node.ForeColor);
         }
     }
 }
-
