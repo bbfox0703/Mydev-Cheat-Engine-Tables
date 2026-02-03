@@ -332,6 +332,11 @@ zh-TW: 奇々怪界 黒マントの謎
 ## Rise of Industry  
 [Rise of Industry (Steam)](https://store.steampowered.com/app/671440/Rise_of_Industry/)  
 
+## ROMANCE OF THE THREE KINGDOMS 8 REMAKE Destiny and Strategy Expansion Pack  
+[ROMANCE OF THE THREE KINGDOMS 8 REMAKE: Destiny and Strategy Expansion Pack (Steam)](https://store.steampowered.com/app/3652820/8_REMAKE/)  
+ja-JP: 三國志8 REMAKE パワーアップキット  
+zh-TW: 三國志8 REMAKE 威力加強版  
+
 ## Romancing SaGa 2 RotS 
 [Romancing SaGa 2: Revenge of the Seven (Steam)](https://store.steampowered.com/app/2455640/2/)  
 ja-JP: ロマンシング サガ2 リベンジオブザセブン  
