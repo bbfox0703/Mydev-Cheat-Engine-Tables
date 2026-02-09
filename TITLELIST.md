@@ -288,6 +288,11 @@ ja-JP:モンスターハンターライズ
 [Nayuta no Kiseki: KAI (Steam)](https://store.steampowered.com/app/1732390/_/)  
 zh-TW: 那由多之軌跡：改  
 
+## Nioh 3  
+[Nioh 3 (Steam)](https://store.steampowered.com/app/3681010/Nioh_3/)  
+ja-JP: 仁王３  
+zh-TW: 仁王３  
+
 ## Octopath Traveler  
 [OCTOPATH TRAVELER™(Steam)](https://store.steampowered.com/app/921570/_/)  
 zh-TW: 歧路旅人  
