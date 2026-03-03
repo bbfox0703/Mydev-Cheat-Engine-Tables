@@ -499,6 +499,9 @@ ja-JP: 添丁の伝説
 ## The Planet Crafter  
 [(The Planet Crafter (Steam)](https://store.steampowered.com/app/1284190/The_Planet_Crafter/)  
 
+## Titan Quest II  
+[(Titan Quest II (Steam)](https://store.steampowered.com/app/1154030/Titan_Quest_II/)  
+
 ## Tower of Mask  
 [Tower of Mask (Steam)](https://store.steampowered.com/app/2918410/Tower_of_Mask/)  
 
