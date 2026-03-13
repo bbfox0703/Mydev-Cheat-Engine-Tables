@@ -242,6 +242,9 @@ ja-JP: ホグワーツ・レガシー
 ## Hollow Knight Silksong  
 [Hollow Knight: Silksong (Steam)](https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/)  
 
+## Homura Hime  
+[Homura Hime (Steam)](https://store.steampowered.com/app/1820000/Homura_Hime/)  
+
 ## Kemono Friends Cellien May Cry  
 [Kemono Friends Cellien May Cry (Steam)](https://store.steampowered.com/app/1962920/_Cellien_May_Cry/)  
 zh-TW: 動物朋友 Cellien May Cry  
