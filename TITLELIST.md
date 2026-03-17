@@ -305,6 +305,9 @@ ja-JP: オクトパストラベラー
 [Old World (Steam)](https://store.steampowered.com/app/597180/_Old_World/)  
 zh-TW: 舊世界 Old World  
 
+## One Potion Please  
+[Old World (Steam)](https://store.steampowered.com/app/3932130/One_Potion_Please/)  
+
 ## Orbital Bullet  
 [Orbital Bullet – The 360° Rogue-lite (Steam)](https://store.steampowered.com/app/1167680/Orbital_Bullet__The_360_Roguelite/)  
 
