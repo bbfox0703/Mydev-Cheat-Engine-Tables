@@ -1,0 +1,1747 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="51">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>21</ID>
+      <Description>"Toggle scripts"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+--[[
+-- attach process
+local processName = "game_exe.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+--]]
+
+
+local enableBattleScripts = {
+  0, -- "ZoltDump: Get iron"
+  2, -- "ZoltDump: Get water"
+  4, -- "ZoltDump: Get sand (cobalt)"
+  14, -- "Toggle Compact View"
+  19, -- "ZoltDump: Get laser dps modifier"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  19, -- "ZoltDump: Get laser dps modifier"
+  17, -- "ZoltDump: Get monster damage taken modifiers"
+  15, -- "ZoltDump: Get shield strength"
+  14, -- "Toggle Compact View"
+  12, -- "ZoltDump: Get relic"
+  10, -- "ZoltDump: Get monster wave cooldown"
+  8, -- "ZoltDump: Get monster wave interval"
+  6, -- "ZoltDump: Get power core"
+  4, -- "ZoltDump: Get sand (cobalt)"
+  2, -- "ZoltDump: Get water"
+  0, -- "ZoltDump: Get iron"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 14, Description: "Toggle Compact View", Depth: 0
+-- ID: 0, Description: "ZoltDump: Get iron", Depth: 0
+-- ID: 2, Description: "ZoltDump: Get water", Depth: 0
+-- ID: 4, Description: "ZoltDump: Get sand (cobalt)", Depth: 0
+-- ID: 19, Description: "ZoltDump: Get laser dps modifier", Depth: 0
+-- ID: 6, Description: "ZoltDump: Get power core", Depth: 0
+-- ID: 12, Description: "ZoltDump: Get relic", Depth: 0
+-- ID: 15, Description: "ZoltDump: Get shield strength", Depth: 0
+-- ID: 8, Description: "ZoltDump: Get monster wave interval", Depth: 0
+-- ID: 10, Description: "ZoltDump: Get monster wave cooldown", Depth: 0
+-- ID: 17, Description: "ZoltDump: Get monster damage taken modifiers", Depth: 0
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"ZoltDump: Get iron"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[inventory.iron]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'inventory.iron'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'inventory.iron' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_inventory_iron')
+  registerSymbol('Data_inventory_iron', addr)
+  print(string.format('[ZoltDump] Data_inventory_iron = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[inventory.iron] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_inventory_iron')
+print('[ZoltDump] Data_inventory_iron symbol removed')
+closeLuaEngine()
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1</ID>
+          <Description>"Data.values[inventory.iron]"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>Data_inventory_iron</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"ZoltDump: Get water"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[inventory.water]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'inventory.water'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'inventory.water' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_inventory_water')
+  registerSymbol('Data_inventory_water', addr)
+  print(string.format('[ZoltDump] Data_inventory_water = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[inventory.water] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_inventory_water')
+print('[ZoltDump] Data_inventory_water symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3</ID>
+          <Description>"Data.values[inventory.water]"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>Data_inventory_water</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"ZoltDump: Get sand (cobalt)"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[inventory.sand]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'inventory.sand'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'inventory.sand' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_inventory_sand')
+  registerSymbol('Data_inventory_sand', addr)
+  print(string.format('[ZoltDump] Data_inventory_sand = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[inventory.sand] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_inventory_sand')
+print('[ZoltDump] Data_inventory_sand symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Data.values[inventory.sand]"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>Data_inventory_sand</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>19</ID>
+      <Description>"ZoltDump: Get laser dps modifier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[laser.dpsmod]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+    registerLuaFunctionHighlight('closeLuaEngine')
+end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'laser.dpsmod'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'laser.dpsmod' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_laser_dpsmod')
+  registerSymbol('Data_laser_dpsmod', addr)
+  print(string.format('[ZoltDump] Data_laser_dpsmod = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[laser.dpsmod] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_laser_dpsmod')
+print('[ZoltDump] Data_laser_dpsmod symbol removed')
+closeLuaEngine()
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>20</ID>
+          <Description>"Data.values[laser.dpsmod]"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>Data_laser_dpsmod</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"ZoltDump: Get power core"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[inventory.powercore]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'inventory.powercore'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'inventory.powercore' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_inventory_powercore')
+  registerSymbol('Data_inventory_powercore', addr)
+  print(string.format('[ZoltDump] Data_inventory_powercore = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[inventory.powercore] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_inventory_powercore')
+print('[ZoltDump] Data_inventory_powercore symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>7</ID>
+          <Description>"Data.values[inventory.powercore]"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>Data_inventory_powercore</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"ZoltDump: Get relic"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[inventory.relic]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'inventory.relic'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'inventory.relic' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_inventory_relic')
+  registerSymbol('Data_inventory_relic', addr)
+  print(string.format('[ZoltDump] Data_inventory_relic = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[inventory.relic] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_inventory_relic')
+print('[ZoltDump] Data_inventory_relic symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"Data.values[inventory.relic]"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>Data_inventory_relic</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>15</ID>
+      <Description>"ZoltDump: Get shield strength"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[shield.strength]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+    registerLuaFunctionHighlight('closeLuaEngine')
+end
+
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'shield.strength'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'shield.strength' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_shield_strength')
+  registerSymbol('Data_shield_strength', addr)
+  print(string.format('[ZoltDump] Data_shield_strength = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[shield.strength] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_shield_strength')
+print('[ZoltDump] Data_shield_strength symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"Data.values[shield.strength]"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>Data_shield_strength</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"ZoltDump: Get monster wave interval"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[monsters.timebetweenwaves]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'monsters.timebetweenwaves'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'monsters.timebetweenwaves' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_monsters_timebetweenwaves')
+  registerSymbol('Data_monsters_timebetweenwaves', addr)
+  print(string.format('[ZoltDump] Data_monsters_timebetweenwaves = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[monsters.timebetweenwaves] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_monsters_timebetweenwaves')
+print('[ZoltDump] Data_monsters_timebetweenwaves symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>9</ID>
+          <Description>"Data.values[monsters.timebetweenwaves]"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>Data_monsters_timebetweenwaves</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"ZoltDump: Get monster wave cooldown"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[monsters.wavecooldown]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'monsters.wavecooldown'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'monsters.wavecooldown' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_monsters_wavecooldown')
+  registerSymbol('Data_monsters_wavecooldown', addr)
+  print(string.format('[ZoltDump] Data_monsters_wavecooldown = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[monsters.wavecooldown] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_monsters_wavecooldown')
+print('[ZoltDump] Data_monsters_wavecooldown symbol removed')
+closeLuaEngine()
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"Data.values[monsters.wavecooldown]"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>Data_monsters_wavecooldown</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17</ID>
+      <Description>"ZoltDump: Get monster damage taken modifiers"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+-- ZoltDump: Resolve 'Data.values[monstermodifiers.damagetaken]' via proxy DLL mailbox
+-- Three-step: FIND_NODE → GET_MEMBER_ADDR + dict/array key (survives game restarts)
+-- Generated by ZoltDumpUI
+
+if syntaxcheck then return end
+
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+    registerLuaFunctionHighlight('closeLuaEngine')
+end
+
+-- ═══ Container key (edit this to target a different dict key / array index) ═══
+local container_key = 'monstermodifiers.damagetaken'
+
+local mb = getAddress('g_zoltMailbox')
+if mb == 0 or mb == nil then
+  print('[ZoltDump] ERROR: g_zoltMailbox not found — proxy DLL not loaded')
+  error('ZoltDumper proxy DLL not loaded')
+end
+
+-- Wait for DLL init (STATUS_INIT = 0xFF)
+for i = 1, 300 do  -- 30 second timeout
+  if readInteger(mb + 0x4) ~= 0xFF then break end
+  sleep(100)
+end
+if readInteger(mb + 0x4) == 0xFF then
+  error('ZoltDumper DLL init timeout')
+end
+
+-- ═══ Step 1: Find node by name ═══
+writeString(mb + 0x228, 'Data')
+writeByte(mb + 0x228 + 4, 0)
+writeQword(mb + 0x10, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 3)  -- trigger FIND_NODE
+
+-- Poll for FIND_NODE completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] FIND_NODE timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local objAddr = readQword(mb + 0x10)
+if objAddr == 0 then
+  error('[ZoltDump] Node \'Data\' not found in scene tree')
+end
+print(string.format('[ZoltDump] Found node \'Data\' @ %X', objAddr))
+
+-- ═══ Step 2: Resolve member 'values' then lookup key 'monstermodifiers.damagetaken' ═══
+-- objectAddr is already set from Step 1 (DLL keeps it)
+writeString(mb + 0x128, 'values')
+writeByte(mb + 0x128 + 6, 0)
+writeString(mb + 0x448, container_key)
+writeByte(mb + 0x448 + #container_key, 0)
+writeQword(mb + 0x18, 0)  -- clear previous
+-- Reset status before triggering (avoid stale DONE from previous command)
+writeInteger(mb + 0x4, 0)
+writeInteger(mb + 0x8, 0)  -- clear previous error
+writeInteger(mb + 0x0, 2)  -- trigger GET_MEMBER_ADDR
+
+-- Poll for GET_MEMBER_ADDR completion (5 second timeout)
+for i = 1, 500 do
+  if readInteger(mb + 0x4) == 1 then break end
+  sleep(10)
+end
+
+if readInteger(mb + 0x4) ~= 1 then
+  error('[ZoltDump] GET_MEMBER_ADDR timeout')
+end
+
+if readInteger(mb + 0x8) ~= 0 then
+  local errMsg = readString(mb + 0x328, 256)
+  print('[ZoltDump] ERROR: ' .. errMsg)
+  error(errMsg)
+end
+
+local addr = readQword(mb + 0x18)
+if addr ~= 0 then
+  unregisterSymbol('Data_monstermodifiers_damagetaken')
+  registerSymbol('Data_monstermodifiers_damagetaken', addr)
+  print(string.format('[ZoltDump] Data_monstermodifiers_damagetaken = %X', addr))
+  closeLuaEngine()
+else
+  print('[ZoltDump] WARNING: values[monstermodifiers.damagetaken] address is 0')
+end
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Data_monstermodifiers_damagetaken')
+print('[ZoltDump] Data_monstermodifiers_damagetaken symbol removed')
+closeLuaEngine()
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"Data.values[monstermodifiers.damagetaken]"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>Double</VariableType>
+          <Address>Data_monstermodifiers_damagetaken</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>22</ID>
+      <Description>"Dome Keeper v4.2.2  /  https://opencheattables.com  /  CE 7.6+"</Description>
+      <Color>009900</Color>
+      <GroupHeader>1</GroupHeader>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- AOBScanModuleN関数
+if not AOBScanModuleN then
+    function AOBScanModuleN(moduleName, signature, maxResults, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addrs = {}
+        synchronize(function()
+            local count = results.getCount()
+            for i = 0, math.min(maxResults - 1, count - 1) do
+                table.insert(addrs, results[i])
+                if debugMode then
+                    print(string.format("🔦 AOB[%d] found at: 0x%s", i + 1, results[i]))
+                end
+            end
+        end)
+
+        if #addrs == 0 and debugMode then
+            print("💔 AOB not found in " .. moduleName)
+        end
+
+        results.destroy()
+        ms.destroy()
+
+        return addrs
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModuleN')
+
+
+-- 搜尋並取出最多5筆結果
+--[[
+local list = AOBScanModuleN("GameModule.exe", "12 34 56 ?? 78", 5)
+
+if list then
+    for i, addr in ipairs(list) do
+        print(string.format("地址 %d: 0x%s", i, addr))
+    end
+end
+]]--
+
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+</LuaScript>
+</CheatTable>

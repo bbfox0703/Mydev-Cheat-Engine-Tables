@@ -136,10 +136,6 @@ zh-TW: 超時空之鑰
 ## CRISIS CORE –FINAL FANTASY VII– REUNION  
 [CRISIS CORE –FINAL FANTASY VII– REUNION (Steam)](https://store.steampowered.com/app/1608070/CRISIS_CORE_FINAL_FANTASY_VII_REUNION/)  
 
-## Dorfromantik   
-[Dorfromantik (Steam)](https://store.steampowered.com/app/1455840/Dorfromantik/)  
-  
-  
 ## DRAGON QUEST I & II HD-2D Remake  
 [DRAGON QUEST I & II HD-2D Remake (Steam)](https://store.steampowered.com/app/2893570/I__II_HD2D_Remake/)  
 ja-JP: ドラゴンクエストI＆II
@@ -152,6 +148,14 @@ ja-JP: ドラゴンクエストIII　そして伝説へ…
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (Steam)](https://store.steampowered.com/app/1295510/XI_S___Definitive_Edition/)
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (XBox Games)](https://www.xbox.com/en-US/games/dragon-quest-xi-s-echoes-of-an-elusive-age)
 
+## Dome Keeper  
+[Dome Keeper (Steam)](https://store.steampowered.com/app/1637320/Dome_Keeper/)  
+ja-JP: Dome Keeper ドームキーパー
+zh-TW: Dome Keeper 穹頂守護者  
+  
+## Dorfromantik   
+[Dorfromantik (Steam)](https://store.steampowered.com/app/1455840/Dorfromantik/)  
+  
 ## DYNASTY WARRIORS ORIGINS  
 [DYNASTY WARRIORS: ORIGINS (Steam)](https://store.steampowered.com/app/2384580/_/)  
 ja-JP: 真・三國無双 ORIGINS
