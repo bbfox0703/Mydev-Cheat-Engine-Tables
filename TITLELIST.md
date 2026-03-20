@@ -136,6 +136,11 @@ zh-TW: 超時空之鑰
 ## CRISIS CORE –FINAL FANTASY VII– REUNION  
 [CRISIS CORE –FINAL FANTASY VII– REUNION (Steam)](https://store.steampowered.com/app/1608070/CRISIS_CORE_FINAL_FANTASY_VII_REUNION/)  
 
+## Crimson Desert  
+[Crimson Deser (Steam)](https://store.steampowered.com/app/3321460/_/)  
+ja-JP: 紅の砂漠  
+zh-TW: 赤血沙漠  
+
 ## DRAGON QUEST I & II HD-2D Remake  
 [DRAGON QUEST I & II HD-2D Remake (Steam)](https://store.steampowered.com/app/2893570/I__II_HD2D_Remake/)  
 ja-JP: ドラゴンクエストI＆II
