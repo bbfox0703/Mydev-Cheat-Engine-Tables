@@ -393,6 +393,9 @@ zh-TW: 文明帝國V
 ## Sid Meier's Pirates!  
 [Sid Meier's Pirates! (Steam)](https://store.steampowered.com/app/3920/Sid_Meiers_Pirates/)  
 
+## Slay the Spire 2  
+[Slay the Spire 2 (Steam)](https://store.steampowered.com/app/2868840/Slay_the_Spire_2/)  
+
 ## Songs of Silence  
 [Songs of Silence (Steam)](https://store.steampowered.com/app/2195410/Songs_of_Silence/)
 
