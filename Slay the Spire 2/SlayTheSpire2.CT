@@ -2,11 +2,11 @@
 <CheatTable CheatEngineTableVersion="51">
   <CheatEntries>
     <CheatEntry>
-      <ID>0</ID>
+      <ID>23</ID>
       <Description>"Get player creatures HP: first one"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 -- ZoltDump: Find ALL 'Control' .NET managed objects with field +0x84
 -- CMD_FIND_MANAGED_INSTANCES (DLL-side bulk scan, ~500ms)
@@ -25,15 +25,22 @@ end
 
 -- ═══ Configuration (edit these for your game) ═══
 local godot_class     = 'Control'   -- Godot base class to search
-local target_offset   = 0x84         -- managed field offset for target
+local target_offset   = 0x84         -- managed field offset for target (fallback)
 local node_name       = 'Creature'    -- Godot node name filter (substring match)
 -- MethodTable: filters to exact .NET type. Changes every game restart.
 -- Clear to auto-discover from first match, or set manually if wrong type.
 local method_table    = ''  -- auto-discover from first match
-local filter_offset   = 0x8C         -- managed field offset for filter
+local filter_offset   = 0x8C         -- managed field offset for filter (fallback)
 local filter_op       = 4              -- EQ (==)
 local filter_value    = 1           -- comparison value
 local filter_size     = 4            -- read size in bytes (4=int32, 8=int64)
+local l2_child_ref    = 0             -- 0 = auto-scan wrapper refs (no specific hint)
+
+-- .NET reflection: resolve field offsets by name at runtime.
+-- Survives game updates that change field layouts but keep the same names.
+local dotnet_type      = 'MegaCrit.Sts2.Core.Entities.Creatures.Creature'
+local target_field     = '_currentHp'
+local filter_field     = '&lt;Side&gt;k__BackingField'
 
 local mb = getAddress('g_zoltMailbox')
 if mb == 0 or mb == nil then
@@ -54,6 +61,55 @@ local resBuf = getAddress('g_zoltManagedResults')
 if resBuf == 0 or resBuf == nil then
   error('[ZoltDump] g_zoltManagedResults not found — DLL too old')
 end
+
+-- ═══ Resolve .NET field offsets by name (survives game updates) ═══
+local function resolveField(typeName, fieldName)
+  -- Wait for mailbox idle
+  for i = 1, 100 do
+    if readInteger(mb + 0x4) == 0 then break end
+    sleep(10)
+  end
+
+  -- Write type name and field name
+  writeString(mb + 0x28, typeName)
+  writeByte(mb + 0x28 + #typeName, 0)
+  writeString(mb + 0x128, fieldName)
+  writeByte(mb + 0x128 + #fieldName, 0)
+
+  writeInteger(mb + 0x4, 0)
+  writeInteger(mb + 0x8, 0)
+  writeInteger(mb + 0x0, 7)
+
+  for i = 1, 200 do
+    if readInteger(mb + 0x4) == 1 then break end
+    sleep(10)
+  end
+
+  if readInteger(mb + 0x4) ~= 1 then return nil end
+  local off = readInteger(mb + 0x8)
+  if off &lt; 0 then return nil end
+  return off
+end
+
+if #dotnet_type &gt; 0 and #target_field &gt; 0 then
+  local resolved = resolveField(dotnet_type, target_field)
+  if resolved then
+    print(string.format('[ZoltDump] [%s] Resolved %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), target_field, resolved, target_offset))
+    target_offset = resolved
+  else
+    print(string.format('[ZoltDump] [%s] WARN: %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), target_field, target_offset))
+  end
+  if #filter_field &gt; 0 and filter_offset &gt;= 0 then
+    resolved = resolveField(dotnet_type, filter_field)
+    if resolved then
+      print(string.format('[ZoltDump] [%s] Resolved filter %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), filter_field, resolved, filter_offset))
+      filter_offset = resolved
+    else
+      print(string.format('[ZoltDump] [%s] WARN: filter %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), filter_field, filter_offset))
+    end
+  end
+end
+
 
 -- ═══ Send bulk scan command ═══
 writeString(mb + 0x28, godot_class)
@@ -88,20 +144,26 @@ else
   writeQword(mb + 0x440, 4)
 end
 
+-- L2 child ref: tells DLL which wrapper offset to follow for nested child
+writeInteger(mb + 0xC, l2_child_ref)
+
 -- Reset status before triggering (avoid stale DONE from previous command)
 writeInteger(mb + 0x4, 0)
 writeInteger(mb + 0x8, 0)  -- clear previous error
 writeInteger(mb + 0x0, 6)  -- trigger FIND_MANAGED_INSTANCES
 
--- Poll for FIND_MANAGED_INSTANCES completion (5 second timeout)
-for i = 1, 500 do
+-- Poll for FIND_MANAGED_INSTANCES completion (15 second timeout)
+local _pollStart = os.clock()
+for i = 1, 1500 do
   if readInteger(mb + 0x4) == 1 then break end
   sleep(10)
 end
+local _elapsed = os.clock() - _pollStart
 
 if readInteger(mb + 0x4) ~= 1 then
-  error('[ZoltDump] FIND_MANAGED_INSTANCES timeout')
+  error(string.format('[ZoltDump] FIND_MANAGED_INSTANCES timeout after %.1fs', _elapsed))
 end
+print(string.format('[ZoltDump] [%s] FIND_MANAGED_INSTANCES completed in %.2fs', os.date('%H:%M:%S'), _elapsed))
 
 if readInteger(mb + 0x8) &lt; 0 then
   local errMsg = readString(mb + 0x328, 256)
@@ -114,7 +176,7 @@ if count == 0 then
   print('[ZoltDump] No matching .NET managed objects found')
   error('No matching .NET managed objects found')
 end
-print(string.format('[ZoltDump] Found %d matching .NET managed objects', count))
+print(string.format('[ZoltDump] [%s] Found %d matching .NET managed objects', os.date('%H:%M:%S'), count))
 
 -- ═══ Create memory records for all matches ═══
 local parentName = '+Control .NET managed +0x84 [+0x8C==1] (do not delete this)'
@@ -152,7 +214,7 @@ synchronize(function()
       rec.Parent = parentRecord
       rec.Color = (i % 2 == 0) and 0xFF8000 or 0x7F7F7F
 
-      print(string.format('[ZoltDump] %s = %X (value=%d, managed=%X)', sym, addr, val, managedAddr))
+      print(string.format('[ZoltDump] [%s] %s = %X (value=%d, managed=%X)', os.date('%H:%M:%S'), sym, addr, val, managedAddr))
     end
   end
 end)
@@ -206,11 +268,11 @@ closeLuaEngine()
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>6</ID>
+      <ID>33</ID>
       <Description>"Get player block value: first one"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 -- ZoltDump: Find ALL 'Control' .NET managed objects with field +0x80
 -- CMD_FIND_MANAGED_INSTANCES (DLL-side bulk scan, ~500ms)
@@ -229,15 +291,22 @@ end
 
 -- ═══ Configuration (edit these for your game) ═══
 local godot_class     = 'Control'   -- Godot base class to search
-local target_offset   = 0x80         -- managed field offset for target
+local target_offset   = 0x80         -- managed field offset for target (fallback)
 local node_name       = 'Creature'    -- Godot node name filter (substring match)
 -- MethodTable: filters to exact .NET type. Changes every game restart.
 -- Clear to auto-discover from first match, or set manually if wrong type.
 local method_table    = ''  -- auto-discover from first match
-local filter_offset   = 0x8C         -- managed field offset for filter
+local filter_offset   = 0x8C         -- managed field offset for filter (fallback)
 local filter_op       = 4              -- EQ (==)
 local filter_value    = 1           -- comparison value
 local filter_size     = 4            -- read size in bytes (4=int32, 8=int64)
+local l2_child_ref    = 0x70       -- wrapper field offset to child managed object
+
+-- .NET reflection: resolve field offsets by name at runtime.
+-- Survives game updates that change field layouts but keep the same names.
+local dotnet_type      = 'MegaCrit.Sts2.Core.Entities.Creatures.Creature'
+local target_field     = '_block'
+local filter_field     = '&lt;Side&gt;k__BackingField'
 
 local mb = getAddress('g_zoltMailbox')
 if mb == 0 or mb == nil then
@@ -258,6 +327,58 @@ local resBuf = getAddress('g_zoltManagedResults')
 if resBuf == 0 or resBuf == nil then
   error('[ZoltDump] g_zoltManagedResults not found — DLL too old')
 end
+
+-- ═══ Resolve .NET field offsets by name (survives game updates) ═══
+local function resolveField(typeName, fieldName)
+  -- Wait for mailbox idle
+  for i = 1, 100 do
+    if readInteger(mb + 0x4) == 0 then break end
+    sleep(10)
+  end
+
+  -- Write type name and field name
+  writeString(mb + 0x28, typeName)
+  writeByte(mb + 0x28 + #typeName, 0)
+  writeString(mb + 0x128, fieldName)
+  writeByte(mb + 0x128 + #fieldName, 0)
+
+  writeInteger(mb + 0x4, 0)
+  writeInteger(mb + 0x8, 0)
+  writeInteger(mb + 0x0, 7)
+
+  for i = 1, 500 do  -- 5s timeout (first call may init Denken ~2s)
+    if readInteger(mb + 0x4) == 1 then break end
+    sleep(10)
+  end
+
+  if readInteger(mb + 0x4) ~= 1 then return nil end
+  local off = readInteger(mb + 0x8)
+  if off &lt; 0 then return nil end
+  return off
+end
+
+if #dotnet_type &gt; 0 and #target_field &gt; 0 then
+  local _resolveStart = os.clock()
+  print(string.format('[ZoltDump] [%s] Resolving .NET field offsets for %s...', os.date('%H:%M:%S'), dotnet_type))
+  local resolved = resolveField(dotnet_type, target_field)
+  if resolved then
+    print(string.format('[ZoltDump] [%s] Resolved %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), target_field, resolved, target_offset))
+    target_offset = resolved
+  else
+    print(string.format('[ZoltDump] [%s] WARN: %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), target_field, target_offset))
+  end
+  if #filter_field &gt; 0 and filter_op &gt; 0 and filter_offset &gt;= 0 then
+    resolved = resolveField(dotnet_type, filter_field)
+    if resolved then
+      print(string.format('[ZoltDump] [%s] Resolved filter %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), filter_field, resolved, filter_offset))
+      filter_offset = resolved
+    else
+      print(string.format('[ZoltDump] [%s] WARN: filter %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), filter_field, filter_offset))
+    end
+  end
+  print(string.format('[ZoltDump] [%s] Field resolution completed in %.2fs', os.date('%H:%M:%S'), os.clock() - _resolveStart))
+end
+
 
 -- ═══ Send bulk scan command ═══
 writeString(mb + 0x28, godot_class)
@@ -292,20 +413,26 @@ else
   writeQword(mb + 0x440, 4)
 end
 
+-- L2 child ref: tells DLL which wrapper offset to follow for nested child
+writeInteger(mb + 0xC, l2_child_ref)
+
 -- Reset status before triggering (avoid stale DONE from previous command)
 writeInteger(mb + 0x4, 0)
 writeInteger(mb + 0x8, 0)  -- clear previous error
 writeInteger(mb + 0x0, 6)  -- trigger FIND_MANAGED_INSTANCES
 
--- Poll for FIND_MANAGED_INSTANCES completion (5 second timeout)
-for i = 1, 500 do
+-- Poll for FIND_MANAGED_INSTANCES completion (15 second timeout)
+local _pollStart = os.clock()
+for i = 1, 1500 do
   if readInteger(mb + 0x4) == 1 then break end
   sleep(10)
 end
+local _elapsed = os.clock() - _pollStart
 
 if readInteger(mb + 0x4) ~= 1 then
-  error('[ZoltDump] FIND_MANAGED_INSTANCES timeout')
+  error(string.format('[ZoltDump] FIND_MANAGED_INSTANCES timeout after %.1fs', _elapsed))
 end
+print(string.format('[ZoltDump] [%s] FIND_MANAGED_INSTANCES completed in %.2fs', os.date('%H:%M:%S'), _elapsed))
 
 if readInteger(mb + 0x8) &lt; 0 then
   local errMsg = readString(mb + 0x328, 256)
@@ -318,7 +445,7 @@ if count == 0 then
   print('[ZoltDump] No matching .NET managed objects found')
   error('No matching .NET managed objects found')
 end
-print(string.format('[ZoltDump] Found %d matching .NET managed objects', count))
+print(string.format('[ZoltDump] [%s] Found %d matching .NET managed objects', os.date('%H:%M:%S'), count))
 
 -- ═══ Create memory records for all matches ═══
 local parentName = '+Control .NET managed +0x80 [+0x8C==1] (do not delete this)'
@@ -356,7 +483,7 @@ synchronize(function()
       rec.Parent = parentRecord
       rec.Color = (i % 2 == 0) and 0xFF8000 or 0x7F7F7F
 
-      print(string.format('[ZoltDump] %s = %X (value=%d, managed=%X)', sym, addr, val, managedAddr))
+      print(string.format('[ZoltDump] [%s] %s = %X (value=%d, managed=%X)', os.date('%H:%M:%S'), sym, addr, val, managedAddr))
     end
   end
 end)
@@ -410,11 +537,11 @@ closeLuaEngine()
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>14</ID>
+      <ID>39</ID>
       <Description>"(not tested) Get player creatures HP: 2nd or more"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 -- ZoltDump: Find ALL 'Control' .NET managed objects with field +0x84
 -- CMD_FIND_MANAGED_INSTANCES (DLL-side bulk scan, ~500ms)
@@ -433,15 +560,22 @@ end
 
 -- ═══ Configuration (edit these for your game) ═══
 local godot_class     = 'Control'   -- Godot base class to search
-local target_offset   = 0x84         -- managed field offset for target
+local target_offset   = 0x84         -- managed field offset for target (fallback)
 local node_name       = '@Control@'    -- Godot node name filter (substring match)
 -- MethodTable: filters to exact .NET type. Changes every game restart.
 -- Clear to auto-discover from first match, or set manually if wrong type.
 local method_table    = ''  -- auto-discover from first match
-local filter_offset   = 0x8C         -- managed field offset for filter
+local filter_offset   = 0x8C         -- managed field offset for filter (fallback)
 local filter_op       = 4              -- EQ (==)
-local filter_value    = 1           -- comparison value
+local filter_value    = 2           -- comparison value
 local filter_size     = 4            -- read size in bytes (4=int32, 8=int64)
+local l2_child_ref    = 0x70       -- wrapper field offset to child managed object
+
+-- .NET reflection: resolve field offsets by name at runtime.
+-- Survives game updates that change field layouts but keep the same names.
+local dotnet_type      = 'MegaCrit.Sts2.Core.Entities.Creatures.Creature'
+local target_field     = '_currentHp'
+local filter_field     = '&lt;Side&gt;k__BackingField'
 
 local mb = getAddress('g_zoltMailbox')
 if mb == 0 or mb == nil then
@@ -462,6 +596,58 @@ local resBuf = getAddress('g_zoltManagedResults')
 if resBuf == 0 or resBuf == nil then
   error('[ZoltDump] g_zoltManagedResults not found — DLL too old')
 end
+
+-- ═══ Resolve .NET field offsets by name (survives game updates) ═══
+local function resolveField(typeName, fieldName)
+  -- Wait for mailbox idle
+  for i = 1, 100 do
+    if readInteger(mb + 0x4) == 0 then break end
+    sleep(10)
+  end
+
+  -- Write type name and field name
+  writeString(mb + 0x28, typeName)
+  writeByte(mb + 0x28 + #typeName, 0)
+  writeString(mb + 0x128, fieldName)
+  writeByte(mb + 0x128 + #fieldName, 0)
+
+  writeInteger(mb + 0x4, 0)
+  writeInteger(mb + 0x8, 0)
+  writeInteger(mb + 0x0, 7)
+
+  for i = 1, 500 do  -- 5s timeout (first call may init Denken ~2s)
+    if readInteger(mb + 0x4) == 1 then break end
+    sleep(10)
+  end
+
+  if readInteger(mb + 0x4) ~= 1 then return nil end
+  local off = readInteger(mb + 0x8)
+  if off &lt; 0 then return nil end
+  return off
+end
+
+if #dotnet_type &gt; 0 and #target_field &gt; 0 then
+  local _resolveStart = os.clock()
+  print(string.format('[ZoltDump] [%s] Resolving .NET field offsets for %s...', os.date('%H:%M:%S'), dotnet_type))
+  local resolved = resolveField(dotnet_type, target_field)
+  if resolved then
+    print(string.format('[ZoltDump] [%s] Resolved %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), target_field, resolved, target_offset))
+    target_offset = resolved
+  else
+    print(string.format('[ZoltDump] [%s] WARN: %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), target_field, target_offset))
+  end
+  if #filter_field &gt; 0 and filter_op &gt; 0 and filter_offset &gt;= 0 then
+    resolved = resolveField(dotnet_type, filter_field)
+    if resolved then
+      print(string.format('[ZoltDump] [%s] Resolved filter %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), filter_field, resolved, filter_offset))
+      filter_offset = resolved
+    else
+      print(string.format('[ZoltDump] [%s] WARN: filter %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), filter_field, filter_offset))
+    end
+  end
+  print(string.format('[ZoltDump] [%s] Field resolution completed in %.2fs', os.date('%H:%M:%S'), os.clock() - _resolveStart))
+end
+
 
 -- ═══ Send bulk scan command ═══
 writeString(mb + 0x28, godot_class)
@@ -496,20 +682,26 @@ else
   writeQword(mb + 0x440, 4)
 end
 
+-- L2 child ref: tells DLL which wrapper offset to follow for nested child
+writeInteger(mb + 0xC, l2_child_ref)
+
 -- Reset status before triggering (avoid stale DONE from previous command)
 writeInteger(mb + 0x4, 0)
 writeInteger(mb + 0x8, 0)  -- clear previous error
 writeInteger(mb + 0x0, 6)  -- trigger FIND_MANAGED_INSTANCES
 
--- Poll for FIND_MANAGED_INSTANCES completion (5 second timeout)
-for i = 1, 500 do
+-- Poll for FIND_MANAGED_INSTANCES completion (15 second timeout)
+local _pollStart = os.clock()
+for i = 1, 1500 do
   if readInteger(mb + 0x4) == 1 then break end
   sleep(10)
 end
+local _elapsed = os.clock() - _pollStart
 
 if readInteger(mb + 0x4) ~= 1 then
-  error('[ZoltDump] FIND_MANAGED_INSTANCES timeout')
+  error(string.format('[ZoltDump] FIND_MANAGED_INSTANCES timeout after %.1fs', _elapsed))
 end
+print(string.format('[ZoltDump] [%s] FIND_MANAGED_INSTANCES completed in %.2fs', os.date('%H:%M:%S'), _elapsed))
 
 if readInteger(mb + 0x8) &lt; 0 then
   local errMsg = readString(mb + 0x328, 256)
@@ -522,7 +714,7 @@ if count == 0 then
   print('[ZoltDump] No matching .NET managed objects found')
   error('No matching .NET managed objects found')
 end
-print(string.format('[ZoltDump] Found %d matching .NET managed objects', count))
+print(string.format('[ZoltDump] [%s] Found %d matching .NET managed objects', os.date('%H:%M:%S'), count))
 
 -- ═══ Create memory records for all matches ═══
 local parentName = '+Control .NET managed +0x84 [+0x8C==1_2] (do not delete this)'
@@ -560,7 +752,7 @@ synchronize(function()
       rec.Parent = parentRecord
       rec.Color = (i % 2 == 0) and 0xFF8000 or 0x7F7F7F
 
-      print(string.format('[ZoltDump] %s = %X (value=%d, managed=%X)', sym, addr, val, managedAddr))
+      print(string.format('[ZoltDump] [%s] %s = %X (value=%d, managed=%X)', os.date('%H:%M:%S'), sym, addr, val, managedAddr))
     end
   end
 end)
@@ -604,13 +796,21 @@ print('[ZoltDump] All Control_managed_0x84_* records removed')
 closeLuaEngine()
 
 </AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>40</ID>
+          <Description>"+Control .NET managed +0x84 [+0x8C==1_2] (do not delete this)"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>2</ID>
+      <ID>25</ID>
       <Description>"Get enemy creatures HP: first one"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 -- ZoltDump: Find ALL 'Control' .NET managed objects with field +0x84
 -- CMD_FIND_MANAGED_INSTANCES (DLL-side bulk scan, ~500ms)
@@ -629,15 +829,22 @@ end
 
 -- ═══ Configuration (edit these for your game) ═══
 local godot_class     = 'Control'   -- Godot base class to search
-local target_offset   = 0x84         -- managed field offset for target
+local target_offset   = 0x84         -- managed field offset for target (fallback)
 local node_name       = 'Creature'    -- Godot node name filter (substring match)
 -- MethodTable: filters to exact .NET type. Changes every game restart.
 -- Clear to auto-discover from first match, or set manually if wrong type.
 local method_table    = ''  -- auto-discover from first match
-local filter_offset   = 0x8C         -- managed field offset for filter
+local filter_offset   = 0x8C         -- managed field offset for filter (fallback)
 local filter_op       = 4              -- EQ (==)
 local filter_value    = 2           -- comparison value
 local filter_size     = 4            -- read size in bytes (4=int32, 8=int64)
+local l2_child_ref    = 0             -- 0 = auto-scan wrapper refs (no specific hint)
+
+-- .NET reflection: resolve field offsets by name at runtime.
+-- Survives game updates that change field layouts but keep the same names.
+local dotnet_type      = 'MegaCrit.Sts2.Core.Entities.Creatures.Creature'
+local target_field     = '_currentHp'
+local filter_field     = '&lt;Side&gt;k__BackingField'
 
 local mb = getAddress('g_zoltMailbox')
 if mb == 0 or mb == nil then
@@ -658,6 +865,58 @@ local resBuf = getAddress('g_zoltManagedResults')
 if resBuf == 0 or resBuf == nil then
   error('[ZoltDump] g_zoltManagedResults not found — DLL too old')
 end
+
+-- ═══ Resolve .NET field offsets by name (survives game updates) ═══
+local function resolveField(typeName, fieldName)
+  -- Wait for mailbox idle
+  for i = 1, 100 do
+    if readInteger(mb + 0x4) == 0 then break end
+    sleep(10)
+  end
+
+  -- Write type name and field name
+  writeString(mb + 0x28, typeName)
+  writeByte(mb + 0x28 + #typeName, 0)
+  writeString(mb + 0x128, fieldName)
+  writeByte(mb + 0x128 + #fieldName, 0)
+
+  writeInteger(mb + 0x4, 0)
+  writeInteger(mb + 0x8, 0)
+  writeInteger(mb + 0x0, 7)
+
+  for i = 1, 500 do  -- 5s timeout (first call may init Denken ~2s)
+    if readInteger(mb + 0x4) == 1 then break end
+    sleep(10)
+  end
+
+  if readInteger(mb + 0x4) ~= 1 then return nil end
+  local off = readInteger(mb + 0x8)
+  if off &lt; 0 then return nil end
+  return off
+end
+
+if #dotnet_type &gt; 0 and #target_field &gt; 0 then
+  local _resolveStart = os.clock()
+  print(string.format('[ZoltDump] [%s] Resolving .NET field offsets for %s...', os.date('%H:%M:%S'), dotnet_type))
+  local resolved = resolveField(dotnet_type, target_field)
+  if resolved then
+    print(string.format('[ZoltDump] [%s] Resolved %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), target_field, resolved, target_offset))
+    target_offset = resolved
+  else
+    print(string.format('[ZoltDump] [%s] WARN: %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), target_field, target_offset))
+  end
+  if #filter_field &gt; 0 and filter_offset &gt;= 0 then
+    resolved = resolveField(dotnet_type, filter_field)
+    if resolved then
+      print(string.format('[ZoltDump] [%s] Resolved filter %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), filter_field, resolved, filter_offset))
+      filter_offset = resolved
+    else
+      print(string.format('[ZoltDump] [%s] WARN: filter %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), filter_field, filter_offset))
+    end
+  end
+  print(string.format('[ZoltDump] [%s] Field resolution completed in %.2fs', os.date('%H:%M:%S'), os.clock() - _resolveStart))
+end
+
 
 -- ═══ Send bulk scan command ═══
 writeString(mb + 0x28, godot_class)
@@ -692,20 +951,26 @@ else
   writeQword(mb + 0x440, 4)
 end
 
+-- L2 child ref: tells DLL which wrapper offset to follow for nested child
+writeInteger(mb + 0xC, l2_child_ref)
+
 -- Reset status before triggering (avoid stale DONE from previous command)
 writeInteger(mb + 0x4, 0)
 writeInteger(mb + 0x8, 0)  -- clear previous error
 writeInteger(mb + 0x0, 6)  -- trigger FIND_MANAGED_INSTANCES
 
--- Poll for FIND_MANAGED_INSTANCES completion (5 second timeout)
-for i = 1, 500 do
+-- Poll for FIND_MANAGED_INSTANCES completion (15 second timeout)
+local _pollStart = os.clock()
+for i = 1, 1500 do
   if readInteger(mb + 0x4) == 1 then break end
   sleep(10)
 end
+local _elapsed = os.clock() - _pollStart
 
 if readInteger(mb + 0x4) ~= 1 then
-  error('[ZoltDump] FIND_MANAGED_INSTANCES timeout')
+  error(string.format('[ZoltDump] FIND_MANAGED_INSTANCES timeout after %.1fs', _elapsed))
 end
+print(string.format('[ZoltDump] [%s] FIND_MANAGED_INSTANCES completed in %.2fs', os.date('%H:%M:%S'), _elapsed))
 
 if readInteger(mb + 0x8) &lt; 0 then
   local errMsg = readString(mb + 0x328, 256)
@@ -718,7 +983,7 @@ if count == 0 then
   print('[ZoltDump] No matching .NET managed objects found')
   error('No matching .NET managed objects found')
 end
-print(string.format('[ZoltDump] Found %d matching .NET managed objects', count))
+print(string.format('[ZoltDump] [%s] Found %d matching .NET managed objects', os.date('%H:%M:%S'), count))
 
 -- ═══ Create memory records for all matches ═══
 local parentName = '+Control .NET managed +0x84 [+0x8C==2] (do not delete this)'
@@ -756,7 +1021,7 @@ synchronize(function()
       rec.Parent = parentRecord
       rec.Color = (i % 2 == 0) and 0xFF8000 or 0x7F7F7F
 
-      print(string.format('[ZoltDump] %s = %X (value=%d, managed=%X)', sym, addr, val, managedAddr))
+      print(string.format('[ZoltDump] [%s] %s = %X (value=%d, managed=%X)', os.date('%H:%M:%S'), sym, addr, val, managedAddr))
     end
   end
 end)
@@ -804,17 +1069,18 @@ closeLuaEngine()
         <CheatEntry>
           <ID>3</ID>
           <Description>"+Control .NET managed +0x84 [+0x8C==2] (do not delete this)"</Description>
-          <Options moHideChildren="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <Color>FFFFFF</Color>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>11</ID>
+      <ID>37</ID>
       <Description>"Get enemy creatures HP: 2nd or more"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 -- ZoltDump: Find ALL 'Control' .NET managed objects with field +0x84
 -- CMD_FIND_MANAGED_INSTANCES (DLL-side bulk scan, ~500ms)
@@ -833,15 +1099,22 @@ end
 
 -- ═══ Configuration (edit these for your game) ═══
 local godot_class     = 'Control'   -- Godot base class to search
-local target_offset   = 0x84         -- managed field offset for target
+local target_offset   = 0x84         -- managed field offset for target (fallback)
 local node_name       = '@Control@'    -- Godot node name filter (substring match)
 -- MethodTable: filters to exact .NET type. Changes every game restart.
 -- Clear to auto-discover from first match, or set manually if wrong type.
 local method_table    = ''  -- auto-discover from first match
-local filter_offset   = 0x8C         -- managed field offset for filter
+local filter_offset   = 0x8C         -- managed field offset for filter (fallback)
 local filter_op       = 4              -- EQ (==)
 local filter_value    = 2           -- comparison value
 local filter_size     = 4            -- read size in bytes (4=int32, 8=int64)
+local l2_child_ref    = 0x70       -- wrapper field offset to child managed object
+
+-- .NET reflection: resolve field offsets by name at runtime.
+-- Survives game updates that change field layouts but keep the same names.
+local dotnet_type      = 'MegaCrit.Sts2.Core.Entities.Creatures.Creature'
+local target_field     = '_currentHp'
+local filter_field     = '&lt;Side&gt;k__BackingField'
 
 local mb = getAddress('g_zoltMailbox')
 if mb == 0 or mb == nil then
@@ -862,6 +1135,58 @@ local resBuf = getAddress('g_zoltManagedResults')
 if resBuf == 0 or resBuf == nil then
   error('[ZoltDump] g_zoltManagedResults not found — DLL too old')
 end
+
+-- ═══ Resolve .NET field offsets by name (survives game updates) ═══
+local function resolveField(typeName, fieldName)
+  -- Wait for mailbox idle
+  for i = 1, 100 do
+    if readInteger(mb + 0x4) == 0 then break end
+    sleep(10)
+  end
+
+  -- Write type name and field name
+  writeString(mb + 0x28, typeName)
+  writeByte(mb + 0x28 + #typeName, 0)
+  writeString(mb + 0x128, fieldName)
+  writeByte(mb + 0x128 + #fieldName, 0)
+
+  writeInteger(mb + 0x4, 0)
+  writeInteger(mb + 0x8, 0)
+  writeInteger(mb + 0x0, 7)
+
+  for i = 1, 500 do  -- 5s timeout (first call may init Denken ~2s)
+    if readInteger(mb + 0x4) == 1 then break end
+    sleep(10)
+  end
+
+  if readInteger(mb + 0x4) ~= 1 then return nil end
+  local off = readInteger(mb + 0x8)
+  if off &lt; 0 then return nil end
+  return off
+end
+
+if #dotnet_type &gt; 0 and #target_field &gt; 0 then
+  local _resolveStart = os.clock()
+  print(string.format('[ZoltDump] [%s] Resolving .NET field offsets for %s...', os.date('%H:%M:%S'), dotnet_type))
+  local resolved = resolveField(dotnet_type, target_field)
+  if resolved then
+    print(string.format('[ZoltDump] [%s] Resolved %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), target_field, resolved, target_offset))
+    target_offset = resolved
+  else
+    print(string.format('[ZoltDump] [%s] WARN: %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), target_field, target_offset))
+  end
+  if #filter_field &gt; 0 and filter_op &gt; 0 and filter_offset &gt;= 0 then
+    resolved = resolveField(dotnet_type, filter_field)
+    if resolved then
+      print(string.format('[ZoltDump] [%s] Resolved filter %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), filter_field, resolved, filter_offset))
+      filter_offset = resolved
+    else
+      print(string.format('[ZoltDump] [%s] WARN: filter %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), filter_field, filter_offset))
+    end
+  end
+  print(string.format('[ZoltDump] [%s] Field resolution completed in %.2fs', os.date('%H:%M:%S'), os.clock() - _resolveStart))
+end
+
 
 -- ═══ Send bulk scan command ═══
 writeString(mb + 0x28, godot_class)
@@ -896,20 +1221,26 @@ else
   writeQword(mb + 0x440, 4)
 end
 
+-- L2 child ref: tells DLL which wrapper offset to follow for nested child
+writeInteger(mb + 0xC, l2_child_ref)
+
 -- Reset status before triggering (avoid stale DONE from previous command)
 writeInteger(mb + 0x4, 0)
 writeInteger(mb + 0x8, 0)  -- clear previous error
 writeInteger(mb + 0x0, 6)  -- trigger FIND_MANAGED_INSTANCES
 
--- Poll for FIND_MANAGED_INSTANCES completion (5 second timeout)
-for i = 1, 500 do
+-- Poll for FIND_MANAGED_INSTANCES completion (15 second timeout)
+local _pollStart = os.clock()
+for i = 1, 1500 do
   if readInteger(mb + 0x4) == 1 then break end
   sleep(10)
 end
+local _elapsed = os.clock() - _pollStart
 
 if readInteger(mb + 0x4) ~= 1 then
-  error('[ZoltDump] FIND_MANAGED_INSTANCES timeout')
+  error(string.format('[ZoltDump] FIND_MANAGED_INSTANCES timeout after %.1fs', _elapsed))
 end
+print(string.format('[ZoltDump] [%s] FIND_MANAGED_INSTANCES completed in %.2fs', os.date('%H:%M:%S'), _elapsed))
 
 if readInteger(mb + 0x8) &lt; 0 then
   local errMsg = readString(mb + 0x328, 256)
@@ -922,7 +1253,7 @@ if count == 0 then
   print('[ZoltDump] No matching .NET managed objects found')
   error('No matching .NET managed objects found')
 end
-print(string.format('[ZoltDump] Found %d matching .NET managed objects', count))
+print(string.format('[ZoltDump] [%s] Found %d matching .NET managed objects', os.date('%H:%M:%S'), count))
 
 -- ═══ Create memory records for all matches ═══
 local parentName = '+Control .NET managed +0x84 [+0x8C==2_2] (do not delete this)'
@@ -960,7 +1291,7 @@ synchronize(function()
       rec.Parent = parentRecord
       rec.Color = (i % 2 == 0) and 0xFF8000 or 0x7F7F7F
 
-      print(string.format('[ZoltDump] %s = %X (value=%d, managed=%X)', sym, addr, val, managedAddr))
+      print(string.format('[ZoltDump] [%s] %s = %X (value=%d, managed=%X)', os.date('%H:%M:%S'), sym, addr, val, managedAddr))
     end
   end
 end)
@@ -1006,7 +1337,7 @@ closeLuaEngine()
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>13</ID>
+          <ID>41</ID>
           <Description>"+Control .NET managed +0x84 [+0x8C==2_2] (do not delete this)"</Description>
           <Options moHideChildren="1"/>
           <GroupHeader>1</GroupHeader>
@@ -1014,11 +1345,11 @@ closeLuaEngine()
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>19</ID>
+      <ID>28</ID>
       <Description>"Get gold"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
+      <AssemblerScript Async="1">[ENABLE]
 {$lua}
 -- ZoltDump: Find 'HBoxContainer' .NET managed object, field +0xE0
 -- CMD_FIND_MANAGED_INSTANCES (DLL-side bulk scan, ~500ms)
@@ -1037,16 +1368,22 @@ end
 
 -- ═══ Configuration (edit these for your game) ═══
 local godot_class     = 'HBoxContainer'   -- Godot base class to search
-local target_offset   = 0xE0         -- managed field offset for target
+local target_offset   = 0xE0         -- managed field offset for target (fallback)
 local node_name       = 'TopBarHp'    -- Godot node name filter (substring match)
 -- MethodTable: filters to exact .NET type. Changes every game restart.
 -- Clear to auto-discover from first match, or set manually if wrong type.
 local method_table    = ''  -- auto-discover from first match
-local filter_offset   = 0x48         -- managed field offset for filter
+local filter_offset   = 0x48         -- managed field offset for filter (fallback)
 local filter_op       = 0              -- NONE
 local filter_value    = 0           -- comparison value
 local filter_size     = 4            -- read size in bytes (4=int32, 8=int64)
 local l2_child_ref    = 0x58       -- wrapper field offset to child managed object
+
+-- .NET reflection: resolve field offsets by name at runtime.
+-- Survives game updates that change field layouts but keep the same names.
+local dotnet_type      = 'MegaCrit.Sts2.Core.Entities.Players.Player'
+local target_field     = '_gold'
+local filter_field     = ''  -- no reflection for filter
 
 local mb = getAddress('g_zoltMailbox')
 if mb == 0 or mb == nil then
@@ -1067,6 +1404,49 @@ local resBuf = getAddress('g_zoltManagedResults')
 if resBuf == 0 or resBuf == nil then
   error('[ZoltDump] g_zoltManagedResults not found — DLL too old')
 end
+
+-- ═══ Resolve .NET field offsets by name (survives game updates) ═══
+local function resolveField(typeName, fieldName)
+  -- Wait for mailbox idle
+  for i = 1, 100 do
+    if readInteger(mb + 0x4) == 0 then break end
+    sleep(10)
+  end
+
+  -- Write type name and field name
+  writeString(mb + 0x28, typeName)
+  writeByte(mb + 0x28 + #typeName, 0)
+  writeString(mb + 0x128, fieldName)
+  writeByte(mb + 0x128 + #fieldName, 0)
+
+  writeInteger(mb + 0x4, 0)
+  writeInteger(mb + 0x8, 0)
+  writeInteger(mb + 0x0, 7)
+
+  for i = 1, 500 do  -- 5s timeout (first call may init Denken ~2s)
+    if readInteger(mb + 0x4) == 1 then break end
+    sleep(10)
+  end
+
+  if readInteger(mb + 0x4) ~= 1 then return nil end
+  local off = readInteger(mb + 0x8)
+  if off &lt; 0 then return nil end
+  return off
+end
+
+if #dotnet_type &gt; 0 and #target_field &gt; 0 then
+  local _resolveStart = os.clock()
+  print(string.format('[ZoltDump] [%s] Resolving .NET field offsets for %s...', os.date('%H:%M:%S'), dotnet_type))
+  local resolved = resolveField(dotnet_type, target_field)
+  if resolved then
+    print(string.format('[ZoltDump] [%s] Resolved %s → 0x%X (was 0x%X)', os.date('%H:%M:%S'), target_field, resolved, target_offset))
+    target_offset = resolved
+  else
+    print(string.format('[ZoltDump] [%s] WARN: %s not resolved, using fallback 0x%X', os.date('%H:%M:%S'), target_field, target_offset))
+  end
+  print(string.format('[ZoltDump] [%s] Field resolution completed in %.2fs', os.date('%H:%M:%S'), os.clock() - _resolveStart))
+end
+
 
 -- ═══ Send bulk scan command ═══
 writeString(mb + 0x28, godot_class)
@@ -1109,15 +1489,18 @@ writeInteger(mb + 0x4, 0)
 writeInteger(mb + 0x8, 0)  -- clear previous error
 writeInteger(mb + 0x0, 6)  -- trigger FIND_MANAGED_INSTANCES
 
--- Poll for FIND_MANAGED_INSTANCES completion (5 second timeout)
-for i = 1, 500 do
+-- Poll for FIND_MANAGED_INSTANCES completion (15 second timeout)
+local _pollStart = os.clock()
+for i = 1, 1500 do
   if readInteger(mb + 0x4) == 1 then break end
   sleep(10)
 end
+local _elapsed = os.clock() - _pollStart
 
 if readInteger(mb + 0x4) ~= 1 then
-  error('[ZoltDump] FIND_MANAGED_INSTANCES timeout')
+  error(string.format('[ZoltDump] FIND_MANAGED_INSTANCES timeout after %.1fs', _elapsed))
 end
+print(string.format('[ZoltDump] [%s] FIND_MANAGED_INSTANCES completed in %.2fs', os.date('%H:%M:%S'), _elapsed))
 
 if readInteger(mb + 0x8) &lt; 0 then
   local errMsg = readString(mb + 0x328, 256)
@@ -1130,7 +1513,7 @@ if count == 0 then
   print('[ZoltDump] No matching .NET managed objects found')
   error('No matching .NET managed objects found')
 end
-print(string.format('[ZoltDump] Found %d matching .NET managed objects', count))
+print(string.format('[ZoltDump] [%s] Found %d matching .NET managed objects', os.date('%H:%M:%S'), count))
 
 -- ═══ Register symbol for first match ═══
 local entryBase = resBuf + 0x8
@@ -1138,7 +1521,7 @@ local managedAddr = readQword(entryBase + 8)
 local addr = managedAddr + target_offset
 unregisterSymbol('HBoxContainer_managed_0xE0')
 registerSymbol('HBoxContainer_managed_0xE0', addr)
-print(string.format('[ZoltDump] HBoxContainer_managed_0xE0 = %X (managed @ %X)', addr, managedAddr))
+print(string.format('[ZoltDump] [%s] HBoxContainer_managed_0xE0 = %X (managed @ %X)', os.date('%H:%M:%S'), addr, managedAddr))
 closeLuaEngine()
 
 [DISABLE]
@@ -1152,11 +1535,19 @@ closeLuaEngine()
       <CheatEntries>
         <CheatEntry>
           <ID>20</ID>
-          <Description>"HBoxContainer .NET managed +0xE0"</Description>
+          <Description>"Gold"</Description>
           <ShowAsSigned>1</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>HBoxContainer_managed_0xE0</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>29</ID>
+          <Description>"Max energy"</Description>
+          <ShowAsSigned>1</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>HBoxContainer_managed_0xE0+8</Address>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
