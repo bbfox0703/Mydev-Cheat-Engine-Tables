@@ -148,7 +148,7 @@ CrimsonDesert.exe+14DC8DB: 8B D0                              - mov edx,eax
     </CheatEntry>
     <CheatEntry>
       <ID>43</ID>
-      <Description>"inf. arrows/bullets (#30) / keys (18) / Cube (9)"</Description>
+      <Description>"inf: arrows, bullets (#36+) / keys (18) / Cube (9) / silver (980)... etc"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -169,30 +169,53 @@ label(code)
 label(return)
 label(is_chk_silver)
 
+
 INJECT_INF_ARROW_N_OTHERSo:
   readmem(INJECT_INF_ARROW_N_OTHERS, 5)
 
 newmem:
   cmp qword ptr [rbx], #10 // arrow
   je set_amount
-  cmp qword ptr [rbx], #23 // bullet
-  je set_amount
   cmp qword ptr [rbx], #16 // small cannonball
   je set_amount
-  cmp qword ptr [rbx], #125 // keys
-  je set_amount18
-  cmp qword ptr [rbx], #175 // abyss cube
+  cmp qword ptr [rbx], #21 // Hide #2 - fix number
+  je set_amount42
+  cmp qword ptr [rbx], #23 // bullet
+  je set_amount
+  cmp qword ptr [rbx], #26 // wool - fix number
+  je set_amount96
+  cmp qword ptr [rbx], #104 // Pill - fix number
   je set_amount9
+  cmp qword ptr [rbx], #119 // small bones - fix number
+  je set_amount42
+  cmp qword ptr [rbx], #125 // keys - fix number
+  je set_amount18
+  cmp qword ptr [rbx], #126 // Wood - fix number
+  je set_amount42
+  cmp qword ptr [rbx], #127 // Wood #2 - fix number
+  je set_amount42
+  cmp qword ptr [rbx], #171 // poison arrow
+  je set_amount
+  cmp qword ptr [rbx], #175 // abyss cube - fix number
+  je set_amount9
+  cmp qword ptr [rbx], #244 // fish meat - fix number
+  je set_amount42
 
-  cmp qword ptr [rbx], #27 // silver
+  cmp qword ptr [rbx], #27 // silver - fix number
   je set_silver_amount
 
   jmp code
 
 set_amount:
-  cmp qword ptr [rbx+10], 1E
-  jae short code
-  mov qword ptr [rbx+10], 1E
+  cmp qword ptr [rbx+10], 24
+  jae code
+  mov qword ptr [rbx+10], 24
+  jmp code
+
+set_amount9:
+  //cmp qword ptr [rbx+10], 9
+  //jae short code
+  mov qword ptr [rbx+10], 9
   jmp short code
 
 set_amount18:
@@ -201,10 +224,12 @@ set_amount18:
   mov qword ptr [rbx+10], 12
   jmp short code
 
-set_amount9:
-  //cmp qword ptr [rbx+10], 9
-  //jae short code
-  mov qword ptr [rbx+10], 9
+set_amount42:
+  mov qword ptr [rbx+10], #42
+  jmp short code
+
+set_amount96:
+  mov qword ptr [rbx+10], 60
   jmp short code
 
 set_silver_amount:
@@ -218,13 +243,14 @@ code:
   jmp return
   align 10 cc
   is_chk_silver:
-  dd 0
+  dd 0 0
 
 INJECT_INF_ARROW_N_OTHERS:
   jmp newmem
 return:
 registersymbol(INJECT_INF_ARROW_N_OTHERS INJECT_INF_ARROW_N_OTHERSo)
 registersymbol(is_chk_silver)
+
 [DISABLE]
 
 INJECT_INF_ARROW_N_OTHERS:
@@ -232,6 +258,7 @@ INJECT_INF_ARROW_N_OTHERS:
 
 unregistersymbol(INJECT_INF_ARROW_N_OTHERS INJECT_INF_ARROW_N_OTHERSo)
 unregistersymbol(is_chk_silver)
+
 dealloc(newmem)
 dealloc(INJECT_INF_ARROW_N_OTHERSo)
 
@@ -312,12 +339,40 @@ label(code)
 label(return)
 label(i_item_threshold i_item_set_to)
 label(i_item_threshold2 i_item_set_to2 i_item_threshold3 i_item_set_to3 i_item_threshold4 i_item_set_to4 i_item_add_options vf_item_add_multi)
+label(i_last_idata_addr1 i_last_idata_addr2)
 
 INJECT_SET_ITEM_CNTo:
   readmem(INJECT_SET_ITEM_CNT, 5)
 
 newmem:
-  cmp qword ptr [r8+rdi], #125 // keys
+  test rcx, rcx
+  jz code
+
+  push r15
+  push r14
+  mov r15, i_last_idata_addr1
+  mov r14, [i_idx]
+  lea r15, [r15+r14*8]
+  lea r14, [r8+rdi]
+  mov [r15], r14
+
+  inc qword ptr [i_idx]
+  cmp qword ptr [i_idx], 2
+  jb short endp_pre
+  mov qword ptr [i_idx], 0
+
+endp_pre:
+  pop r14
+  pop r15
+
+
+  cmp qword ptr [r8+rdi], #125 // normal key
+  je code
+  cmp qword ptr [r8+rdi], #175 // cube
+  je code
+  cmp qword ptr [r8+rdi], #26 // wool
+  je code
+  cmp qword ptr [r8+rdi], #27 // silver (currency)
   je code
   cmp dword ptr [i_item_add_options], 0
   jne chk_next1
@@ -397,12 +452,19 @@ code:
   dd 0
   vf_item_add_multi:
   dd (float)3
+  i_idx:
+  dq 0
+  i_last_idata_addr1:
+  dq 0
+  i_last_idata_addr2:
+  dq 0
 
 INJECT_SET_ITEM_CNT:
   jmp newmem
 return:
 registersymbol(INJECT_SET_ITEM_CNT INJECT_SET_ITEM_CNTo)
 registersymbol(i_item_threshold i_item_set_to)
+registersymbol(i_last_idata_addr1 i_last_idata_addr2)
 registersymbol(i_item_threshold2 i_item_set_to2 i_item_threshold3 i_item_set_to3 i_item_threshold4 i_item_set_to4 i_item_add_options vf_item_add_multi)
 [DISABLE]
 
@@ -411,6 +473,7 @@ INJECT_SET_ITEM_CNT:
 
 unregistersymbol(INJECT_SET_ITEM_CNT INJECT_SET_ITEM_CNTo)
 unregistersymbol(i_item_threshold i_item_set_to)
+unregistersymbol(i_last_idata_addr1 i_last_idata_addr2)
 unregistersymbol(i_item_threshold2 i_item_set_to2 i_item_threshold3 i_item_set_to3 i_item_threshold4 i_item_set_to4 i_item_add_options vf_item_add_multi)
 dealloc(newmem)
 dealloc(INJECT_SET_ITEM_CNTo)
@@ -459,6 +522,12 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>1337211263</ID>
+          <Description>"ignores known keys and cubes, others in "inf: arrows, bullets...." script"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+        <CheatEntry>
           <ID>52</ID>
           <Description>"mode"</Description>
           <DropDownList DisplayValueAsItem="1">0:value clamp
@@ -468,6 +537,62 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
           <Color>C08000</Color>
           <VariableType>4 Bytes</VariableType>
           <Address>i_item_add_options</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>69</ID>
+          <Description>"_debug"</Description>
+          <Options moHideChildren="1"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>65</ID>
+              <Description>"ID #1"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_last_idata_addr1</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>66</ID>
+                  <Description>"amount #1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_last_idata_addr2</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>67</ID>
+              <Description>"ID #2"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>i_last_idata_addr2</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>68</ID>
+                  <Description>"amount #2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_last_idata_addr2</Address>
+                  <Offsets>
+                    <Offset>10</Offset>
+                  </Offsets>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
         </CheatEntry>
         <CheatEntry>
           <ID>54</ID>
@@ -523,9 +648,143 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>32</ID>
-      <Description>"Get HP address: Setp 1 &amp; 2"</Description>
+      <ID>1337211275</ID>
+      <Description>"Bag bonus slot multiplier"</Description>
       <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/03/22
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_BAG_BONUS_MULTI,$process,66 01 ?? 16 ?? 8B)
+// raw AOB: E8 ?? ?? ?? ?? 44 0F B7 4B 14 45 33 F6 66 44 39 48 14 7D ?? 41 0F B7 FE EB ?? 48 8D 4B 10 E8 ?? ?? ?? ?? 44 0F B7 4B 14 0F B7 48 14 66 41 2B C9 66 3B CF 66 0F 4C F9 48 8B 6C 24 38 66 44 03 CF 66 01 7B 16 48 8B C6 48 8B 7C 24 48 66 44 89 4B 14 48 8B 5C 24 30 44 89 36 48 8B 74 24 40 48 83 C4 20 41 5E C3 CC CC CC 48 89 5C 24 08 4C 8B 05 ?? ?? ?? ?? 66 39 51 0C 7E ?? 0F BF C2
+// injection point AOB: 66 01 ?? 16 ?? 8B ?? ?? 8B ?? 24 ?? 66 ?? 89 ?? 14 ?? 8B ?? 24 ?? ?? 89 ?? ?? 8B ?? 24 ?? 48 83 C4 20 ?? ?? C3 CC CC CC ?? 89 ?? 24 ?? ?? 8B ?? ?? ?? ?? ?? 66 39 ?? 0C 7E ?? 0F BF
+alloc(newmem,$1000,INJECT_BAG_BONUS_MULTI)
+
+alloc(INJECT_BAG_BONUS_MULTIo, $7)
+
+label(code)
+label(return)
+label(vf_mult_348928 iw_min_bonus)
+
+INJECT_BAG_BONUS_MULTIo:
+  readmem(INJECT_BAG_BONUS_MULTI, 7)
+
+newmem:
+  // **** Begin Auto script: Multiplier
+  // value=3, rule=R1_MemReg, template=P1_IntToFloat, NegDeltaCheck, PreserveXmm
+  sub rsp, 20
+  movaps [rsp], xmm15
+  movaps [rsp+10], xmm14
+  and edi, 0000FFFF
+  test edi, edi
+  // Multiplier: delta in di
+  vmovss xmm15, [vf_mult_348928]
+  vcvtsi2ss xmm14, xmm14, edi
+  vmulss xmm14, xmm14, xmm15
+  vcvtss2si edi, xmm14
+skip_mult_348928:
+  movaps xmm15, [rsp]
+  movaps xmm14, [rsp+10]
+  add rsp, 20
+  // **** End Auto script: Multiplier
+
+
+code:
+  // add [rbx+16],di
+  reassemble(INJECT_BAG_BONUS_MULTI)
+  // mov rax,rsi
+  reassemble(INJECT_BAG_BONUS_MULTI+4)
+  jmp return
+  align 10 cc
+  vf_mult_348928:
+  dd (float)3
+  iw_min_bonus:
+  dw 40
+
+INJECT_BAG_BONUS_MULTI:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_BAG_BONUS_MULTI INJECT_BAG_BONUS_MULTIo vf_mult_348928 iw_min_bonus)
+
+[DISABLE]
+
+INJECT_BAG_BONUS_MULTI:
+  readmem(INJECT_BAG_BONUS_MULTIo, 7)
+
+unregistersymbol(INJECT_BAG_BONUS_MULTI INJECT_BAG_BONUS_MULTIo vf_mult_348928 iw_min_bonus)
+dealloc(newmem)
+dealloc(INJECT_BAG_BONUS_MULTIo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrimsonDesert.exe+1D1A6E8
+
+CrimsonDesert.exe+1D1A6A8: E8 A3 DA 79 FE                     - call CrimsonDesert.exe+4B8150
+CrimsonDesert.exe+1D1A6AD: 44 0F B7 4B 14                     - movzx r9d,word ptr [rbx+14]
+CrimsonDesert.exe+1D1A6B2: 45 33 F6                           - xor r14d,r14d
+CrimsonDesert.exe+1D1A6B5: 66 44 39 48 14                     - cmp [rax+14],r9w
+CrimsonDesert.exe+1D1A6BA: 7D 06                              - jnl CrimsonDesert.exe+1D1A6C2
+CrimsonDesert.exe+1D1A6BC: 41 0F B7 FE                        - movzx edi,r14w
+CrimsonDesert.exe+1D1A6C0: EB 1D                              - jmp CrimsonDesert.exe+1D1A6DF
+CrimsonDesert.exe+1D1A6C2: 48 8D 4B 10                        - lea rcx,[rbx+10]
+CrimsonDesert.exe+1D1A6C6: E8 85 DA 79 FE                     - call CrimsonDesert.exe+4B8150
+CrimsonDesert.exe+1D1A6CB: 44 0F B7 4B 14                     - movzx r9d,word ptr [rbx+14]
+CrimsonDesert.exe+1D1A6D0: 0F B7 48 14                        - movzx ecx,word ptr [rax+14]
+CrimsonDesert.exe+1D1A6D4: 66 41 2B C9                        - sub cx,r9w
+CrimsonDesert.exe+1D1A6D8: 66 3B CF                           - cmp cx,di
+CrimsonDesert.exe+1D1A6DB: 66 0F 4C F9                        - cmovl di,cx
+CrimsonDesert.exe+1D1A6DF: 48 8B 6C 24 38                     - mov rbp,[rsp+38]
+CrimsonDesert.exe+1D1A6E4: 66 44 03 CF                        - add r9w,di
+// ---------- INJECTING HERE ----------
+CrimsonDesert.exe+1D1A6E8: 66 01 7B 16                        - add [rbx+16],di
+// ---------- DONE INJECTING  ----------
+CrimsonDesert.exe+1D1A6EC: 48 8B C6                           - mov rax,rsi
+CrimsonDesert.exe+1D1A6EF: 48 8B 7C 24 48                     - mov rdi,[rsp+48]
+CrimsonDesert.exe+1D1A6F4: 66 44 89 4B 14                     - mov [rbx+14],r9w
+CrimsonDesert.exe+1D1A6F9: 48 8B 5C 24 30                     - mov rbx,[rsp+30]
+CrimsonDesert.exe+1D1A6FE: 44 89 36                           - mov [rsi],r14d
+CrimsonDesert.exe+1D1A701: 48 8B 74 24 40                     - mov rsi,[rsp+40]
+CrimsonDesert.exe+1D1A706: 48 83 C4 20                        - add rsp,20
+CrimsonDesert.exe+1D1A70A: 41 5E                              - pop r14
+CrimsonDesert.exe+1D1A70C: C3                                 - ret
+CrimsonDesert.exe+1D1A70D: CC                                 - int 3
+CrimsonDesert.exe+1D1A70E: CC                                 - int 3
+CrimsonDesert.exe+1D1A70F: CC                                 - int 3
+CrimsonDesert.exe+1D1A710: 48 89 5C 24 08                     - mov [rsp+08],rbx
+CrimsonDesert.exe+1D1A715: 4C 8B 05 AC C8 F0 03               - mov r8,[CrimsonDesert.exe+5C26FC8]
+CrimsonDesert.exe+1D1A71C: 66 39 51 0C                        - cmp [rcx+0C],dx
+CrimsonDesert.exe+1D1A720: 7E 69                              - jle CrimsonDesert.exe+1D1A78B
+}
+
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337211282</ID>
+          <Description>"base min bonus"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>2 Bytes</VariableType>
+          <Address>iw_min_bonus</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337211276</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_mult_348928</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>32</ID>
+      <Description>"Get HP address: Step 1 &amp; 2 - AOB mode"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
@@ -975,6 +1234,496 @@ CrimsonDesert.exe+C79152F: 41 54                              - push r12
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>1337211286</ID>
+      <Description>"Set min reputation when gain"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/03/22
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_SET_MIN_REP_WHEN_GAIN,$process,?? 89 ?? 10 89 ?? 0C ?? 8B ?? 24 ?? 00)
+// raw AOB: 48 8D 69 18 41 8B F1 48 8D 8C 24 98 00 00 00 41 8B F8 0F B7 DA E8 ?? ?? ?? ?? 48 8B D0 48 8B CD E8 ?? ?? ?? ?? 48 85 C0 74 ?? 89 78 08 39 78 04 7D ?? 89 78 04 48 8B 8C 24 B0 00 00 00 48 89 48 10 89 70 0C 48 8B 9C 24 A0 00 00 00 48 83 C4 70 5F 5E 5D C3 48 8B 84 24 B0 00 00 00 48 8D 8C 24 90 00 00 00 48 89 44 24 50 66 89 5C 24 40 89 7C 24 44 89 7C 24 48 89 74 24 4C 66 89 9C 24 90 00 00 00 E8 ?? ?? ?? ?? 4C 8D 4C 24 40
+// injection point AOB: ?? 89 ?? 10 89 ?? 0C ?? 8B ?? 24 ?? 00 00 00 48 83 C4 70 ?? ?? 5D C3 ?? 8B ?? 24 ?? 00 00 00 ?? 8D ?? 24 ?? 00 00 00 ?? 89 ?? 24 ?? 66 89 ?? 24 ?? 89 ?? 24 ?? 89 ?? 24 ?? 89 ?? 24 ?? 66 89 ?? 24 ?? 00 00 00 E8 ?? ?? ?? ?? ?? 8D ?? 24
+alloc(newmem,$1000,INJECT_SET_MIN_REP_WHEN_GAIN)
+
+alloc(INJECT_SET_MIN_REP_WHEN_GAINo, $7)
+
+label(code)
+label(return)
+label(i_min_rep_dot_value i_min_rep_value)
+
+INJECT_SET_MIN_REP_WHEN_GAINo:
+  readmem(INJECT_SET_MIN_REP_WHEN_GAIN, 7)
+
+newmem:
+  mov rbx, [i_min_rep_dot_value]
+  cmp rcx, rbx
+  jae short @F
+  mov rcx, rbx
+@@:
+  mov rbx, [i_min_rep_value]
+  cmp [rax+8], rbx
+  jae short @F
+  mov [rax+8], rbx
+
+code:
+  // mov [rax+10],rcx
+  reassemble(INJECT_SET_MIN_REP_WHEN_GAIN)
+  // mov [rax+0C],esi
+  reassemble(INJECT_SET_MIN_REP_WHEN_GAIN+4)
+  jmp return
+  align 10 cc
+  i_min_rep_dot_value:
+  dq #87
+  i_min_rep_value:
+  dq 14
+
+INJECT_SET_MIN_REP_WHEN_GAIN:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_SET_MIN_REP_WHEN_GAIN INJECT_SET_MIN_REP_WHEN_GAINo)
+registersymbol(i_min_rep_dot_value i_min_rep_value)
+[DISABLE]
+
+INJECT_SET_MIN_REP_WHEN_GAIN:
+  readmem(INJECT_SET_MIN_REP_WHEN_GAINo, 7)
+
+unregistersymbol(INJECT_SET_MIN_REP_WHEN_GAIN INJECT_SET_MIN_REP_WHEN_GAINo)
+unregistersymbol(i_min_rep_dot_value i_min_rep_value)
+dealloc(newmem)
+dealloc(INJECT_SET_MIN_REP_WHEN_GAINo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrimsonDesert.exe+1B3057E
+
+CrimsonDesert.exe+1B30541: 48 8D 69 18                        - lea rbp,[rcx+18]
+CrimsonDesert.exe+1B30545: 41 8B F1                           - mov esi,r9d
+CrimsonDesert.exe+1B30548: 48 8D 8C 24 98 00 00 00            - lea rcx,[rsp+00000098]
+CrimsonDesert.exe+1B30550: 41 8B F8                           - mov edi,r8d
+CrimsonDesert.exe+1B30553: 0F B7 DA                           - movzx ebx,dx
+CrimsonDesert.exe+1B30556: E8 25 92 7C FE                     - call CrimsonDesert.exe+2F9780
+CrimsonDesert.exe+1B3055B: 48 8B D0                           - mov rdx,rax
+CrimsonDesert.exe+1B3055E: 48 8B CD                           - mov rcx,rbp
+CrimsonDesert.exe+1B30561: E8 2A 82 7A FE                     - call CrimsonDesert.exe+2D8790
+CrimsonDesert.exe+1B30566: 48 85 C0                           - test rax,rax
+CrimsonDesert.exe+1B30569: 74 2A                              - je CrimsonDesert.exe+1B30595
+CrimsonDesert.exe+1B3056B: 89 78 08                           - mov [rax+08],edi
+CrimsonDesert.exe+1B3056E: 39 78 04                           - cmp [rax+04],edi
+CrimsonDesert.exe+1B30571: 7D 03                              - jnl CrimsonDesert.exe+1B30576
+CrimsonDesert.exe+1B30573: 89 78 04                           - mov [rax+04],edi
+CrimsonDesert.exe+1B30576: 48 8B 8C 24 B0 00 00 00            - mov rcx,[rsp+000000B0]
+// ---------- INJECTING HERE ----------
+CrimsonDesert.exe+1B3057E: 48 89 48 10                        - mov [rax+10],rcx
+// ---------- DONE INJECTING  ----------
+CrimsonDesert.exe+1B30582: 89 70 0C                           - mov [rax+0C],esi
+CrimsonDesert.exe+1B30585: 48 8B 9C 24 A0 00 00 00            - mov rbx,[rsp+000000A0]
+CrimsonDesert.exe+1B3058D: 48 83 C4 70                        - add rsp,70
+CrimsonDesert.exe+1B30591: 5F                                 - pop rdi
+CrimsonDesert.exe+1B30592: 5E                                 - pop rsi
+CrimsonDesert.exe+1B30593: 5D                                 - pop rbp
+CrimsonDesert.exe+1B30594: C3                                 - ret
+CrimsonDesert.exe+1B30595: 48 8B 84 24 B0 00 00 00            - mov rax,[rsp+000000B0]
+CrimsonDesert.exe+1B3059D: 48 8D 8C 24 90 00 00 00            - lea rcx,[rsp+00000090]
+CrimsonDesert.exe+1B305A5: 48 89 44 24 50                     - mov [rsp+50],rax
+CrimsonDesert.exe+1B305AA: 66 89 5C 24 40                     - mov [rsp+40],bx
+CrimsonDesert.exe+1B305AF: 89 7C 24 44                        - mov [rsp+44],edi
+CrimsonDesert.exe+1B305B3: 89 7C 24 48                        - mov [rsp+48],edi
+CrimsonDesert.exe+1B305B7: 89 74 24 4C                        - mov [rsp+4C],esi
+CrimsonDesert.exe+1B305BB: 66 89 9C 24 90 00 00 00            - mov [rsp+00000090],bx
+CrimsonDesert.exe+1B305C3: E8 B8 91 7C FE                     - call CrimsonDesert.exe+2F9780
+}
+
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337211287</ID>
+          <Description>"min. rep. value"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>i_min_rep_value</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337211261</ID>
+      <Description>"Get HP - Pointer map mode"</Description>
+      <Options moHideChildren="1"/>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1337211240</ID>
+          <Description>"Get HP #1 - Pointer map"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not AOBScanModule then
+  function AOBScanModule(moduleName, signature)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList
+    synchronize(function()
+      modList = enumModules()
+    end)
+    for _, mod in ipairs(modList) do
+      if string.lower(mod.Name) == string.lower(moduleName) then
+        baseAddr = mod.Address
+        maxAddr = baseAddr + mod.Size
+        break
+      end
+    end
+    if not baseAddr then return nil end
+    local ms = createMemScan()
+    synchronize(function()
+      ms.firstScan(soExactValue, vtByteArray, nil, signature,
+        nil, baseAddr, maxAddr, '+X-C-W', fsmNotAligned, '1', true, true, false, false)
+    end)
+    ms.waitTillDone()
+    local results = createFoundList(ms)
+    results.initialize()
+    local addr
+    synchronize(function()
+      if results.getCount() &gt; 0 then
+        addr = results[0]
+      end
+    end)
+    results.destroy()
+    ms.destroy()
+    return addr
+  end
+end
+
+local AOBs = {
+  {name='Player_Base', aob='?? 89 ?? ?? ?? ?? ?? ?? 8D ?? 00 01 00 00 ?? 89 ?? ?? ?? ?? ?? ?? 8D ?? A0 01 00 00', pos=3, aoblen=7, symbol='Player_Base_addr'},
+}
+
+local module_name = process
+
+for _, entry in ipairs(AOBs) do
+  local aob_addr_str = AOBScanModule(module_name, entry.aob)
+  if aob_addr_str then
+    local aob_addr_val = tonumber(aob_addr_str, 16)
+    local offset_addr = aob_addr_val + entry.pos
+    local relative_offset = readInteger(offset_addr, true)
+    local final_addr = relative_offset + aob_addr_val + entry.aoblen
+    synchronize(function()
+      unregisterSymbol(entry.symbol)
+      registerSymbol(entry.symbol, final_addr)
+    end)
+    print(string.format('[SymbolScanner] %s registered at: %X', entry.name, final_addr))
+  else
+    print(string.format('[SymbolScanner] WARNING: AOB scan failed for %s', entry.name))
+  end
+end
+
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Player_Base_addr')
+{$asm}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337211248</ID>
+              <Description>"HP #1 (ptr map)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>Player_Base_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+                <Offset>58</Offset>
+                <Offset>18</Offset>
+                <Offset>20</Offset>
+                <Offset>78</Offset>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211259</ID>
+              <Description>"Sta #1 (ptr map)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>Player_Base_addr</Address>
+              <Offsets>
+                <Offset>488</Offset>
+                <Offset>58</Offset>
+                <Offset>18</Offset>
+                <Offset>20</Offset>
+                <Offset>78</Offset>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211265</ID>
+              <Description>"Spr #1 (ptr map)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>Player_Base_addr</Address>
+              <Offsets>
+                <Offset>518</Offset>
+                <Offset>58</Offset>
+                <Offset>18</Offset>
+                <Offset>20</Offset>
+                <Offset>78</Offset>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211238</ID>
+              <Description>"Used slots (read only)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>Player_Base_addr</Address>
+              <Offsets>
+                <Offset>12</Offset>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+                <Offset>B8</Offset>
+                <Offset>68</Offset>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211264</ID>
+              <Description>"Bag slots (read only)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>Player_Base_addr</Address>
+              <Offsets>
+                <Offset>14</Offset>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+                <Offset>B8</Offset>
+                <Offset>68</Offset>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211262</ID>
+              <Description>"Bonus Slots"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>Player_Base_addr</Address>
+              <Offsets>
+                <Offset>16</Offset>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+                <Offset>B8</Offset>
+                <Offset>68</Offset>
+                <Offset>20</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337211258</ID>
+          <Description>"Get HP #2 - Pointer map"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not AOBScanModule then
+  function AOBScanModule(moduleName, signature)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList
+    synchronize(function()
+      modList = enumModules()
+    end)
+    for _, mod in ipairs(modList) do
+      if string.lower(mod.Name) == string.lower(moduleName) then
+        baseAddr = mod.Address
+        maxAddr = baseAddr + mod.Size
+        break
+      end
+    end
+    if not baseAddr then return nil end
+    local ms = createMemScan()
+    synchronize(function()
+      ms.firstScan(soExactValue, vtByteArray, nil, signature,
+        nil, baseAddr, maxAddr, '+X-C-W', fsmNotAligned, '1', true, true, false, false)
+    end)
+    ms.waitTillDone()
+    local results = createFoundList(ms)
+    results.initialize()
+    local addr
+    synchronize(function()
+      if results.getCount() &gt; 0 then
+        addr = results[0]
+      end
+    end)
+    results.destroy()
+    ms.destroy()
+    return addr
+  end
+end
+
+local AOBs = {
+  {name='Play_Base2', aob='?? 8B ?? ?? ?? ?? ?? ?? 89 ?? 24 ?? ?? 0F B6 ?? ?? E8 ?? ?? ?? ?? ?? 8B ?? F8 00 00 00 ?? 8B ?? 00 01 00 00', pos=3, aoblen=7, symbol='Play_Base2_addr'},
+}
+
+local module_name = process
+
+for _, entry in ipairs(AOBs) do
+  local aob_addr_str = AOBScanModule(module_name, entry.aob)
+  if aob_addr_str then
+    local aob_addr_val = tonumber(aob_addr_str, 16)
+    local offset_addr = aob_addr_val + entry.pos
+    local relative_offset = readInteger(offset_addr, true)
+    local final_addr = relative_offset + aob_addr_val + entry.aoblen
+    synchronize(function()
+      unregisterSymbol(entry.symbol)
+      registerSymbol(entry.symbol, final_addr)
+    end)
+    print(string.format('[SymbolScanner] %s registered at: %X', entry.name, final_addr))
+  else
+    print(string.format('[SymbolScanner] WARNING: AOB scan failed for %s', entry.name))
+  end
+end
+
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Play_Base2_addr')
+{$asm}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1337211253</ID>
+              <Description>"HP #2 (ptr map)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>Play_Base2_addr</Address>
+              <Offsets>
+                <Offset>8</Offset>
+                <Offset>58</Offset>
+                <Offset>18</Offset>
+                <Offset>20</Offset>
+                <Offset>68</Offset>
+                <Offset>D0</Offset>
+                <Offset>A0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211267</ID>
+              <Description>"Sta #2 (ptr map)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>Play_Base2_addr</Address>
+              <Offsets>
+                <Offset>488</Offset>
+                <Offset>58</Offset>
+                <Offset>18</Offset>
+                <Offset>20</Offset>
+                <Offset>68</Offset>
+                <Offset>D0</Offset>
+                <Offset>A0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211268</ID>
+              <Description>"Spr #2 (ptr map)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>Play_Base2_addr</Address>
+              <Offsets>
+                <Offset>518</Offset>
+                <Offset>58</Offset>
+                <Offset>18</Offset>
+                <Offset>20</Offset>
+                <Offset>68</Offset>
+                <Offset>D0</Offset>
+                <Offset>A0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211278</ID>
+              <Description>"Used slots (read only)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>Play_Base2_addr</Address>
+              <Offsets>
+                <Offset>12</Offset>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+                <Offset>B8</Offset>
+                <Offset>68</Offset>
+                <Offset>D0</Offset>
+                <Offset>A0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211280</ID>
+              <Description>"Bag slots (read only)"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>Play_Base2_addr</Address>
+              <Offsets>
+                <Offset>14</Offset>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+                <Offset>B8</Offset>
+                <Offset>68</Offset>
+                <Offset>D0</Offset>
+                <Offset>A0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1337211279</ID>
+              <Description>"Bag bonus"</Description>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>2 Bytes</VariableType>
+              <Address>Play_Base2_addr</Address>
+              <Offsets>
+                <Offset>16</Offset>
+                <Offset>8</Offset>
+                <Offset>18</Offset>
+                <Offset>B8</Offset>
+                <Offset>68</Offset>
+                <Offset>D0</Offset>
+                <Offset>A0</Offset>
+                <Offset>18</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>47</ID>
       <Description>"Crimson Desert  /  https://opencheattables.com  /  CE 7.6+"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -989,10 +1738,349 @@ CrimsonDesert.exe+C79152F: 41 54                              - push r12
 </DropDownList>
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
+        <CheatEntry>
+          <ID>1337211241</ID>
+          <Description>"Player_Base_alt1"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not AOBScanModule then
+  function AOBScanModule(moduleName, signature)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList
+    synchronize(function()
+      modList = enumModules()
+    end)
+    for _, mod in ipairs(modList) do
+      if string.lower(mod.Name) == string.lower(moduleName) then
+        baseAddr = mod.Address
+        maxAddr = baseAddr + mod.Size
+        break
+      end
+    end
+    if not baseAddr then return nil end
+    local ms = createMemScan()
+    synchronize(function()
+      ms.firstScan(soExactValue, vtByteArray, nil, signature,
+        nil, baseAddr, maxAddr, '+X-C-W', fsmNotAligned, '1', true, true, false, false)
+    end)
+    ms.waitTillDone()
+    local results = createFoundList(ms)
+    results.initialize()
+    local addr
+    synchronize(function()
+      if results.getCount() &gt; 0 then
+        addr = results[0]
+      end
+    end)
+    results.destroy()
+    ms.destroy()
+    return addr
+  end
+end
+
+local AOBs = {
+  {name='Player_Base_alt1', aob='?? 8D ?? ?? ?? ?? ?? ?? 8D ?? ?? ?? 00 00 E8 ?? ?? ?? ?? 90 C6 ?? ?? 00 0F 57 ?? 33 ?? 0F 11', pos=3, aoblen=7, symbol='Player_Base_alt1_addr'},
+}
+
+local module_name = process
+
+for _, entry in ipairs(AOBs) do
+  local aob_addr_str = AOBScanModule(module_name, entry.aob)
+  if aob_addr_str then
+    local aob_addr_val = tonumber(aob_addr_str, 16)
+    local offset_addr = aob_addr_val + entry.pos
+    local relative_offset = readInteger(offset_addr, true)
+    local final_addr = relative_offset + aob_addr_val + entry.aoblen
+    synchronize(function()
+      unregisterSymbol(entry.symbol)
+      registerSymbol(entry.symbol, final_addr)
+    end)
+    print(string.format('[SymbolScanner] %s registered at: %X', entry.name, final_addr))
+  else
+    print(string.format('[SymbolScanner] WARNING: AOB scan failed for %s', entry.name))
+  end
+end
+
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('Player_Base_alt1_addr')
+{$asm}
+
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1337211281</ID>
+          <Description>"INJECT_GET_BAG_BONUS_SLOTS_2_AOB"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{ Game   : CrimsonDesert.exe
+  Version: 
+  Date   : 2026-03-22
+  Author : Andyc
+  Description : 
+
+  &lt;Optional info&gt;
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_GET_BAG_BONUS_SLOTS_2_AOB,CrimsonDesert.exe,0F B7 46 16 66 89 45 9A) // should be unique
+alloc(newmem,$1000,INJECT_GET_BAG_BONUS_SLOTS_2_AOB)
+
+label(code)
+label(return)
+
+newmem:
+
+code:
+  movzx eax,word ptr [rsi+16]
+  mov [rbp-66],ax
+  jmp return
+
+INJECT_GET_BAG_BONUS_SLOTS_2_AOB:
+  jmp newmem
+  nop 3
+return:
+registersymbol(INJECT_GET_BAG_BONUS_SLOTS_2_AOB)
+
+[DISABLE]
+
+INJECT_GET_BAG_BONUS_SLOTS_2_AOB:
+  db 0F B7 46 16 66 89 45 9A
+
+unregistersymbol(INJECT_GET_BAG_BONUS_SLOTS_2_AOB)
+dealloc(newmem)
+
+{
+// ORIGINAL CODE - INJECTION POINT: CrimsonDesert.exe+1A9F798
+
+CrimsonDesert.exe+1A9F76A: 48 8D 15 57 BE EA 02  - lea rdx,[CrimsonDesert.exe+494B5C8]
+CrimsonDesert.exe+1A9F771: 48 8D 4D B8           - lea rcx,[rbp-48]
+CrimsonDesert.exe+1A9F775: E8 D6 8E 41 FF        - call CrimsonDesert.exe+EB8650
+CrimsonDesert.exe+1A9F77A: 44 89 65 BC           - mov [rbp-44],r12d
+CrimsonDesert.exe+1A9F77E: 0F B7 46 10           - movzx eax,word ptr [rsi+10]
+CrimsonDesert.exe+1A9F782: 66 89 44 24 30        - mov [rsp+30],ax
+CrimsonDesert.exe+1A9F787: 48 8D 4C 24 30        - lea rcx,[rsp+30]
+CrimsonDesert.exe+1A9F78C: E8 BF 89 A1 FE        - call CrimsonDesert.exe+4B8150
+CrimsonDesert.exe+1A9F791: 0F B7 08              - movzx ecx,word ptr [rax]
+CrimsonDesert.exe+1A9F794: 66 89 4D 98           - mov [rbp-68],cx
+// ---------- INJECTING HERE ----------
+CrimsonDesert.exe+1A9F798: 0F B7 46 16           - movzx eax,word ptr [rsi+16]
+// ---------- DONE INJECTING  ----------
+CrimsonDesert.exe+1A9F79C: 66 89 45 9A           - mov [rbp-66],ax
+CrimsonDesert.exe+1A9F7A0: 0F B7 FB              - movzx edi,bx
+CrimsonDesert.exe+1A9F7A3: 0F B7 46 0C           - movzx eax,word ptr [rsi+0C]
+CrimsonDesert.exe+1A9F7A7: 66 3B D8              - cmp bx,ax
+CrimsonDesert.exe+1A9F7AA: 0F 8D 4D 01 00 00     - jnl CrimsonDesert.exe+1A9F8FD
+CrimsonDesert.exe+1A9F7B0: 4C 8D 2D 81 AF C9 02  - lea r13,[CrimsonDesert.exe+473A738]
+CrimsonDesert.exe+1A9F7B7: 4C 8D 3D EA 99 E1 02  - lea r15,[CrimsonDesert.exe+48B91A8]
+CrimsonDesert.exe+1A9F7BE: 4C 8D 25 43 97 E1 02  - lea r12,[CrimsonDesert.exe+48B8F08]
+CrimsonDesert.exe+1A9F7C5: 4C 8D 35 34 01 F5 02  - lea r14,[CrimsonDesert.exe+49EF900]
+CrimsonDesert.exe+1A9F7CC: 66 3B C3              - cmp ax,bx
+}
+</AssemblerScript>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
   </CheatEntries>
+  <CheatCodes>
+    <CodeEntry>
+      <Description>Code :add [rbx+16],di</Description>
+      <AddressString>CrimsonDesert.exe+1D1A6E8</AddressString>
+      <Before>
+        <Byte>38</Byte>
+        <Byte>66</Byte>
+        <Byte>44</Byte>
+        <Byte>03</Byte>
+        <Byte>CF</Byte>
+      </Before>
+      <Actual>
+        <Byte>66</Byte>
+        <Byte>01</Byte>
+        <Byte>7B</Byte>
+        <Byte>16</Byte>
+      </Actual>
+      <After>
+        <Byte>48</Byte>
+        <Byte>8B</Byte>
+        <Byte>C6</Byte>
+        <Byte>48</Byte>
+        <Byte>8B</Byte>
+      </After>
+    </CodeEntry>
+    <CodeEntry>
+      <Description>Code :movzx eax,word ptr [rsi+16]</Description>
+      <AddressString>CrimsonDesert.exe+1A9F798</AddressString>
+      <Before>
+        <Byte>08</Byte>
+        <Byte>66</Byte>
+        <Byte>89</Byte>
+        <Byte>4D</Byte>
+        <Byte>98</Byte>
+      </Before>
+      <Actual>
+        <Byte>0F</Byte>
+        <Byte>B7</Byte>
+        <Byte>46</Byte>
+        <Byte>16</Byte>
+      </Actual>
+      <After>
+        <Byte>66</Byte>
+        <Byte>89</Byte>
+        <Byte>45</Byte>
+        <Byte>9A</Byte>
+        <Byte>0F</Byte>
+      </After>
+    </CodeEntry>
+  </CheatCodes>
   <UserdefinedSymbols/>
-  <Comments>Info about this table:
+  <Comments>For HP #1
+`pa::ClientActorManager`  -&gt; 0x20 `Pointer to instance of pa::ClientChildOnlyInGameActor` -&gt; 0x68 -&gt; 0xB8 `Pointer to instance of pa::ClientInventoryActorComponent` -&gt; 0x18 -&gt; 0x8 -&gt; 0x16, word = Bag Bonus
+Also see:
+0x14, word = Bag total
+0x12, word = Bag used
+
+`pa::ClientActorManager`  -&gt; 0x20 `Pointer to instance of pa::ClientChildOnlyInGameActor` -&gt; 0x78 -&gt; 0x20 `Pointer to instance of pa::ClientStatusActorComponent` -&gt; 0x18 -&gt; 0x58 -&gt; 8 (HP #1)
+
+For HP #2
+[Player_Base2_Addr] -&gt; 0x18 `Pointer to instance of pa::NwVirtualAsyncSession` -&gt; 0xA0 `Pointer to instance of pa::ServerUserActor` -&gt; 0xD0 `Pointer to instance of pa::ServerChildOnlyInGameActor` -&gt; 0x68 -&gt; 0x20 `Pointer to instance of pa::ServerStatusActorComponent` -&gt; 0x18 -&gt; 0x58 -&gt; 8 (HP #2)
+
+
+
+
+`pa::ClientActorManager` = Player_Base_addr
+//
+CrimsonDesert.exe+6B52E2 - 8F                    - db 8f
+CrimsonDesert.exe+6B52E3 - 64 05 E8024760        - add eax,604702E8
+CrimsonDesert.exe+6B52E9 - 03 EB                 - add ebp,ebx
+CrimsonDesert.exe+6B52EB - 03 45 33              - add eax,[rbp+33]
+CrimsonDesert.exe+6B52EE - ED                    - in eax,dx
+// ---------- INJECTING HERE ----------
+CrimsonDesert.exe+6B52EF - 48 89 35 3A8F6405     - mov [Player_Base_addr],rsi
+// ---------- DONE INJECTING  ----------
+CrimsonDesert.exe+6B52F6 - 48 8D 86 00010000     - lea rax,[rsi+00000100]
+CrimsonDesert.exe+6B52FD - 48 89 05 348F6405     - mov [CrimsonDesert.exe+5CFE238],rax
+CrimsonDesert.exe+6B5304 - 48 8D 86 A0010000     - lea rax,[rsi+000001A0]
+CrimsonDesert.exe+6B530B - 48 89 05 2E8F6405     - mov [CrimsonDesert.exe+5CFE240],rax
+CrimsonDesert.exe+6B5312 - 44 0FB6 A5 C8020000   - movzx r12d,byte ptr [rbp+000002C8]
+CrimsonDesert.exe+6B531A - 44 88 25 278F6405     - mov [CrimsonDesert.exe+5CFE248],r12b
+CrimsonDesert.exe+6B5321 - 8B 3D A1564F05        - mov edi,[CrimsonDesert.exe+5BAA9C8]
+CrimsonDesert.exe+6B5327 - 39 3D 2B8F6405        - cmp [CrimsonDesert.exe+5CFE258],edi
+CrimsonDesert.exe+6B532D - 74 0E                 - je CrimsonDesert.exe+6B533D
+CrimsonDesert.exe+6B532F - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B5331 - 48 8D 0D 188F6405     - lea rcx,[CrimsonDesert.exe+5CFE250]
+CrimsonDesert.exe+6B5338 - E8 D3800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B533D - 39 3D 258F6405        - cmp [CrimsonDesert.exe+5CFE268],edi
+CrimsonDesert.exe+6B5343 - 74 0E                 - je CrimsonDesert.exe+6B5353
+CrimsonDesert.exe+6B5345 - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B5347 - 48 8D 0D 128F6405     - lea rcx,[CrimsonDesert.exe+5CFE260]
+CrimsonDesert.exe+6B534E - E8 BD800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B5353 - 39 3D 1F8F6405        - cmp [CrimsonDesert.exe+5CFE278],edi
+CrimsonDesert.exe+6B5359 - 74 0E                 - je CrimsonDesert.exe+6B5369
+CrimsonDesert.exe+6B535B - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B535D - 48 8D 0D 0C8F6405     - lea rcx,[CrimsonDesert.exe+5CFE270]
+CrimsonDesert.exe+6B5364 - E8 A7800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B5369 - 39 3D 198F6405        - cmp [CrimsonDesert.exe+5CFE288],edi
+CrimsonDesert.exe+6B536F - 74 0E                 - je CrimsonDesert.exe+6B537F
+CrimsonDesert.exe+6B5371 - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B5373 - 48 8D 0D 068F6405     - lea rcx,[CrimsonDesert.exe+5CFE280]
+CrimsonDesert.exe+6B537A - E8 B1890000           - call CrimsonDesert.exe+6BDD30
+CrimsonDesert.exe+6B537F - 39 3D 138F6405        - cmp [CrimsonDesert.exe+5CFE298],edi
+CrimsonDesert.exe+6B5385 - 74 0E                 - je CrimsonDesert.exe+6B5395
+CrimsonDesert.exe+6B5387 - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B5389 - 48 8D 0D 008F6405     - lea rcx,[CrimsonDesert.exe+5CFE290]
+CrimsonDesert.exe+6B5390 - E8 7B800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B5395 - 39 3D 0D8F6405        - cmp [CrimsonDesert.exe+5CFE2A8],edi
+CrimsonDesert.exe+6B539B - 74 0E                 - je CrimsonDesert.exe+6B53AB
+CrimsonDesert.exe+6B539D - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B539F - 48 8D 0D FA8E6405     - lea rcx,[CrimsonDesert.exe+5CFE2A0]
+CrimsonDesert.exe+6B53A6 - E8 65800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B53AB - 39 3D 078F6405        - cmp [CrimsonDesert.exe+5CFE2B8],edi
+CrimsonDesert.exe+6B53B1 - 74 0E                 - je CrimsonDesert.exe+6B53C1
+CrimsonDesert.exe+6B53B3 - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B53B5 - 48 8D 0D F48E6405     - lea rcx,[CrimsonDesert.exe+5CFE2B0]
+CrimsonDesert.exe+6B53BC - E8 4F800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B53C1 - 39 3D 018F6405        - cmp [CrimsonDesert.exe+5CFE2C8],edi
+CrimsonDesert.exe+6B53C7 - 74 0E                 - je CrimsonDesert.exe+6B53D7
+CrimsonDesert.exe+6B53C9 - 8B D7                 - mov edx,edi
+CrimsonDesert.exe+6B53CB - 48 8D 0D EE8E6405     - lea rcx,[CrimsonDesert.exe+5CFE2C0]
+CrimsonDesert.exe+6B53D2 - E8 39800000           - call CrimsonDesert.exe+6BD410
+CrimsonDesert.exe+6B53D7 - 85 FF                 - test edi,edi
+CrimsonDesert.exe+6B53D9 - 74 77                 - je CrimsonDesert.exe+6B5452
+CrimsonDesert.exe+6B53DB - 49 8B DD              - mov rbx,r13
+CrimsonDesert.exe+6B53DE - 4D 8B F5              - mov r14,r13
+CrimsonDesert.exe+6B53E1 - 48 8B 05 688E6405     - mov rax,[CrimsonDesert.exe+5CFE250]
+CrimsonDesert.exe+6B53E8 - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B53ED - 48 8B 05 6C8E6405     - mov rax,[CrimsonDesert.exe+5CFE260]
+CrimsonDesert.exe+6B53F4 - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B53F9 - 48 8B 05 708E6405     - mov rax,[CrimsonDesert.exe+5CFE270]
+CrimsonDesert.exe+6B5400 - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B5405 - 48 8B 0D 748E6405     - mov rcx,[CrimsonDesert.exe+5CFE280]
+CrimsonDesert.exe+6B540C - 49 03 CE              - add rcx,r14
+CrimsonDesert.exe+6B540F - E8 0C29C6FF           - call CrimsonDesert.exe+317D20
+CrimsonDesert.exe+6B5414 - 48 8B 05 758E6405     - mov rax,[CrimsonDesert.exe+5CFE290]
+CrimsonDesert.exe+6B541B - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B5420 - 48 8B 05 798E6405     - mov rax,[CrimsonDesert.exe+5CFE2A0]
+CrimsonDesert.exe+6B5427 - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B542C - 48 8B 05 7D8E6405     - mov rax,[CrimsonDesert.exe+5CFE2B0]
+CrimsonDesert.exe+6B5433 - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B5438 - 48 8B 05 818E6405     - mov rax,[CrimsonDesert.exe+5CFE2C0]
+CrimsonDesert.exe+6B543F - 44 89 6C 18 08        - mov [rax+rbx+08],r13d
+CrimsonDesert.exe+6B5444 - 49 83 C6 10           - add r14,10
+CrimsonDesert.exe+6B5448 - 48 8D 5B 10           - lea rbx,[rbx+10]
+CrimsonDesert.exe+6B544C - 48 83 EF 01           - sub rdi,01
+CrimsonDesert.exe+6B5450 - 75 8F                 - jne CrimsonDesert.exe+6B53E1
+CrimsonDesert.exe+6B5452 - 48 8D 15 D78D6405     - lea rdx,[Player_Base_addr]
+CrimsonDesert.exe+6B5459 - 48 8D 8D 40010000     - lea rcx,[rbp+00000140]
+CrimsonDesert.exe+6B5460 - E8 7B8A0000           - call CrimsonDesert.exe+6BDEE0
+CrimsonDesert.exe+6B5465 - 90                    - nop 
+CrimsonDesert.exe+6B5466 - C6 45 C0 00           - mov byte ptr [rbp-40],00
+CrimsonDesert.exe+6B546A - 0F57 C0               - xorps xmm0,xmm0
+CrimsonDesert.exe+6B546D - 33 C0                 - xor eax,eax
+
+
+`Player_Base2_addr`:
+CrimsonDesert.exe+233B38F - C7 03 00 00 00 00 - mov [rbx],00000000
+CrimsonDesert.exe+233B395 - 48 8B 5C 24 30 - mov rbx,[rsp+30]
+CrimsonDesert.exe+233B39A - 48 83 C4 20 - add rsp,20
+CrimsonDesert.exe+233B39E - 5F - pop rdi
+CrimsonDesert.exe+233B39F - C3 - ret 
+CrimsonDesert.exe+233B3A0 - 40 53 - push rbx
+CrimsonDesert.exe+233B3A2 - 55 - push rbp
+CrimsonDesert.exe+233B3A3 - 56 - push rsi
+CrimsonDesert.exe+233B3A4 - 48 83 EC 20 - sub rsp,20
+CrimsonDesert.exe+233B3A8 - 49 8B 30 - mov rsi,[r8]
+CrimsonDesert.exe+233B3AB - 48 8B DA - mov rbx,rdx
+CrimsonDesert.exe+233B3AE - 49 8B 68 18 - mov rbp,[r8+18]
+CrimsonDesert.exe+233B3B2 - 48 85 F6 - test rsi,rsi
+CrimsonDesert.exe+233B3B5 - 0F 84 E6 00 00 00 - je CrimsonDesert.exe+233B4A1
+CrimsonDesert.exe+233B3BB - 48 89 7C 24 40 - mov [rsp+40],rdi
+CrimsonDesert.exe+233B3C0 - 48 8D 4C 24 50 - lea rcx,[rsp+50]
+// INJECTING HERE
+CrimsonDesert.exe+233B3C5 - 48 8B 3D 64 15 95 03 - mov rdi,[145C8C930]
+// DONE INJECTING
+CrimsonDesert.exe+233B3CC - 4C 89 74 24 48 - mov [rsp+48],r14
+CrimsonDesert.exe+233B3D1 - 44 0F B6 75 03 - movzx r14d,byte ptr [rbp+03]
+CrimsonDesert.exe+233B3D6 - E8 05 0A F7 FD - call CrimsonDesert.AK::MemoryMgr::StartProfileThreadUsage+20
+CrimsonDesert.exe+233B3DB - 48 8B 8F F8 00 00 00 - mov rcx,[rdi+000000F8]
+CrimsonDesert.exe+233B3E2 - 44 8B 87 00 01 00 00 - mov r8d,[rdi+00000100]
+CrimsonDesert.exe+233B3E9 - 49 C1 E0 04 - shl r8,04
+CrimsonDesert.exe+233B3ED - 4C 03 C1 - add r8,rcx
+CrimsonDesert.exe+233B3F0 - 49 3B C8 - cmp rcx,r8
+CrimsonDesert.exe+233B3F3 - 74 23 - je CrimsonDesert.exe+233B418
+CrimsonDesert.exe+233B3F5 - 8B 44 24 50 - mov eax,[rsp+50]
+CrimsonDesert.exe+233B3F9 - 0F 1F 80 00 00 00 00 - nop dword ptr [rax+00000000]
+CrimsonDesert.exe+233B400 - 48 8B 51 08 - mov rdx,[rcx+08]
+CrimsonDesert.exe+233B404 - C6 02 01 - mov byte ptr [rdx],01
+CrimsonDesert.exe+233B407 - 39 01 - cmp [rcx],eax
+CrimsonDesert.exe+233B409 - 75 04 - jne CrimsonDesert.exe+233B40F
+CrimsonDesert.exe+233B40B - C6 42 01 01 - mov byte ptr [rdx+01],01
+
 </Comments>
 </CheatTable>
