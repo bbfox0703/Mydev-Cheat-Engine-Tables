@@ -34,10 +34,10 @@ end)
 local enableBattleScripts = {
   0, -- "Toggle Compact View"
   1, -- "Fast friendship"
-  2, -- "inf: arrows, bullets (#36+) / keys (18) / Cube (9) / silver (980)... etc"
   4, -- "Menu: when add item amount: set item amount"
   21, -- "Set min reputation when gain"
   40, -- "Get HP - Pointer map mode"
+  152, -- "inf: arrows / known items / keys (18) / Cube (9) / silver (980)... etc"
   41, -- "Get HP #1 - Pointer map"
   61, -- "Get HP #2 - Pointer map"
   42, -- "Char #1 - Kliff"
@@ -47,6 +47,7 @@ local enableBattleScripts = {
   72, -- "Char #2 - Damine"
   82, -- "Char #3 - Oongka?"
   92, -- "Horse (may not work)"
+  97, -- "Get Horse HP - another ptr map mode"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -90,8 +91,8 @@ local disableBattleScripts = {
   25, -- "Enable step 1"
   15, -- "#2: cur. amount must &gt;="
   13, -- "cur. amount must &gt;="
-  10, -- "ID #2"
-  8, -- "ID #1"
+  10, -- "Seq ID #2"
+  8, -- "Seq ID #1"
   142, -- "Enable value list #2"
   138, -- "Enable value list #1"
   116, -- "Kilff HP/Sta backup (old)"
@@ -103,6 +104,7 @@ local disableBattleScripts = {
   24, -- "+Step 1 Usage: open item menu"
   12, -- "value clamp"
   7, -- "_debug"
+  152, -- "inf: arrows / known items / keys (18) / Cube (9) / silver (980)... etc"
   137, -- "Get base attr. skill values"
   129, -- "When add base skill attr: get current values"
   112, -- "Crimson Desert  /  https://opencheattables.com  /  CE 7.6+"
@@ -114,7 +116,6 @@ local disableBattleScripts = {
   21, -- "Set min reputation when gain"
   18, -- "Bag bonus slot multiplier"
   4, -- "Menu: when add item amount: set item amount"
-  2, -- "inf: arrows, bullets (#36+) / keys (18) / Cube (9) / silver (980)... etc"
   1, -- "Fast friendship"
   0, -- "Toggle Compact View"
 }
@@ -133,11 +134,11 @@ synchronize(function() getLuaEngine().Close() end)
 -- Comments:
 -- ID: 0, Description: "Toggle Compact View", Depth: 0
 -- ID: 1, Description: "Fast friendship", Depth: 0
--- ID: 2, Description: "inf: arrows, bullets (#36+) / keys (18) / Cube (9) / silver (980)... etc", Depth: 0
+-- ID: 152, Description: "inf: arrows / known items / keys (18) / Cube (9) / silver (980)... etc", Depth: 0
 -- ID: 4, Description: "Menu: when add item amount: set item amount", Depth: 0
 --   ID: 7, Description: "_debug", Depth: 1
---     ID: 8, Description: "ID #1", Depth: 2
---     ID: 10, Description: "ID #2", Depth: 2
+--     ID: 8, Description: "Seq ID #1", Depth: 2
+--     ID: 10, Description: "Seq ID #2", Depth: 2
 --   ID: 12, Description: "value clamp", Depth: 1
 --     ID: 13, Description: "cur. amount must &gt;=", Depth: 2
 --     ID: 15, Description: "#2: cur. amount must &gt;=", Depth: 2
@@ -336,8 +337,8 @@ CrimsonDesert.exe+14DC8DB: 8B D0                              - mov edx,eax
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>2</ID>
-      <Description>"inf: arrows, bullets (#36+) / keys (18) / Cube (9) / silver (980)... etc"</Description>
+      <ID>152</ID>
+      <Description>"inf: arrows / known items / keys (18) / Cube (9) / silver (980)... etc"</Description>
       <Options moHideChildren="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -384,11 +385,11 @@ INJECT_INF_ARROW_N_OTHERSo:
 
 newmem:
   // --- 前置: 快速範圍檢查 (ID &lt; 10) ---
-  cmp qword ptr [rbx], #10
-  jb code
+  //cmp qword ptr [rbx+8], #10
+  //jb code
 
-  // --- 銀幣特殊處理 (ID=27, 需要 flag 控制) ---
-  cmp qword ptr [rbx], #27
+  // --- 銀幣特殊處理 (ID=1568, 需要 flag 控制) ---
+  cmp qword ptr [rbx+8], #1568
   je check_silver
 
   // --- 保存暫存器 (不用 push/pop，避免堆疊對齊問題) ---
@@ -402,7 +403,7 @@ search_loop:
   mov rax, [rcx]         // rax = table entry item_id
   cmp rax, -1            // 結尾標記?
   je table_end_not_found
-  cmp [rbx], rax         // 比對道具 ID
+  cmp [rbx+8], eax         // 比對道具 ID
   je found_match
   add rcx, 10            // 下一筆 entry (0x10 = 16 bytes)
   jmp search_loop
@@ -412,12 +413,12 @@ found_match:
   mov [rbx+10], rax      // 設定數量
   mov rax, [save_rax]
   mov rcx, [save_rcx]
-  jmp code
+  jmp short code
 
 table_end_not_found:
   mov rax, [save_rax]
   mov rcx, [save_rcx]
-  jmp code
+  jmp short code
 
 check_silver:
   cmp dword ptr [is_chk_silver], 1
@@ -446,68 +447,89 @@ save_rcx:
 // ============================================================
 align 10 cc
 item_table:
-dq #10,  #96    // arrow 箭矢 [彈藥]
-dq #16,  #96    // small cannonball 小砲彈 [彈藥]
-dq #18,  #48    // oats 燕麥 [素材]
-dq #21,  #48    // Thick Hide 厚獸皮 [素材]
-dq #23,  #96    // bullet 子彈 [彈藥]
-dq #26,  #96    // wool 羊毛 [彈藥]
-dq #36,  #48    // water 水 [素材]
-dq #38,  #48    // sugar 糖 [素材]
-dq #39,  #48    // salt 鹽 [素材]
-dq #40,  #48    // barley 大麥 [素材]
-dq #41,  #48    // cooking oil 食用油 [素材]
-dq #48,  #48    // apple 蘋果 [素材]
-dq #43,  #48    // egg 蛋 [素材]
-dq #51,  #96    // bullet #2 子彈#2 [彈藥]
-dq #52,  #48    // small cannonball #2 小砲彈#2 [素材]
-dq #64,  #48    // (未命名 #64) [素材]
-dq #74,  #48    // 聖水
-dq #94,  #48    // cloth piece 布片 [素材]
-dq #104, #9     // Pill 藥丸
-dq #108, #48    // beans 豆子 [素材]
-dq #114, #18    // wine 酒 [料理]
-dq #119, #48    // small bones 小骨頭 [素材]
-dq #125, #18    // keys 鑰匙 [料理]
-dq #126, #48    // Wood 木材 [素材]
-dq #127, #48    // Wood #2 木材#2 [素材]
-dq #167, #48    // bird meat
-dq #171, #96    // poison arrow 毒箭 [彈藥]
-dq #174, #48    // iron ore 鐵礦 [素材]
-dq #175, #9     // abyss cube 深淵方塊
-dq #188, #18    // horse grain 馬糧 [料理]
-dq #242, #48    // a.stone 某種石頭 [素材]
-dq #244, #48    // fish meat 魚肉 [素材]
-dq #245, #48    // 小麥
-dq #255, #18    // food 烤穀物 [料理]
-dq #269, #48    // gunpowder 火藥 [素材]
-dq #270, #48    // thin hide 薄獸皮 [素材]
-dq #309, #48    // Copper ore 銅礦 [素材]
-dq #326, #9     // wine bottle 酒瓶
-dq #330, #48    // feather 羽毛 [素材]
-dq #331, #9     // ??? deco 某種裝飾
-dq #332, #18    // Grilled egg 烤蛋 [料理]
-dq #333, #18    // food 食物 [料理]
-dq #334, #18    // honey tea
-dq #335, #48    // fresh meat 新鮮肉 [素材]
-dq #336, #48    // ?? meat 某種肉 [素材]
-dq #342, #48    // ?? meat 某種肉#2 [素材]
-dq #345, #18    // Grilled meat 烤肉 [料理]
-dq #346, #18    // Grilled fruit 烤水果 [料理]
-dq #357, #18    // food 食物#2 [料理]
-dq #363, #18    // meat 肉 [料理]
-dq #368, #18    // fried egg fish 煎蛋魚 [料理]
-dq #485, #48    // ??? stone 某種石頭 [素材]
-dq #486, #48    // ??? stone 某種石頭#2 [素材]
-dq #431, #18    // ??? soup 某種湯 [料理]
-dq #454, #48    // ??? meat 某種肉#3 [素材]
-dq #455, #48    // ??? hide 某種獸皮 [素材]
-dq #456, #48    // ??? ore 某種礦石 [素材]
-dq #460, #48    // ??? vegs 某種蔬菜 [素材]
-dq #461, #96    // pouches of money 錢袋 [彈藥]
-dq #466, #18    // Grilled bird meal 烤鳥肉餐 [料理]
-dq #473, #48    // blood stone 血石 [素材]
-dq #497, #48    // 堅靭皮革
+dq #1,    #96    // arrow 箭矢 [彈藥]
+dq #3,    #96    // poison arrow 毒箭 [彈藥]
+dq #16,   #48    // small cannonball 小砲彈 [彈藥]
+dq #23,   #96    // bullet 子彈 [彈藥]
+dq #800,  #48    // 薫衣草
+dq #809,  #48    // 牡丹
+dq #817,  #48    // 短角
+dq #831,  #48    // 聖水
+dq #835,  #48    // 石材
+dq #836,  #48    // 高級石材
+dq #837,  #48    // 頂級石材 [素材]
+dq #839,  #48    // iron ore 鐵礦 [素材]
+dq #840,  #48    // Copper ore 銅礦 [素材]
+dq #842,  #48    // blood stone 血石 [素材]
+dq #851,  #48    // 藍銅礦
+dq #854,  #48    // 木材 [素材]
+dq #855,  #48    // 高級木材
+dq #857,  #48    // thin hide 薄獸皮 [素材]
+dq #858,  #48    // 厚重皮革
+dq #859,  #48    // 堅韌皮革
+dq #861,  #48    // 短毛皮革
+dq #862,  #48    // 碎布片 [素材]
+dq #863,  #48    // feather 羽毛 [素材]
+dq #864,  #96    // wool 羊毛
+dq #867,  #48    // 小型骨頭 [素材]
+dq #871,  #48    // gunpowder 火藥 [素材]
+dq #872,  #48    // empty bottle
+dq #874,  #48    // 鮮肉 [素材]
+dq #875,  #48    // 大塊肉
+dq #876,  #48    // 軟嫩肉
+dq #877,  #48    // 肥肉
+dq #878,  #48    // 鮮美鳥肉
+dq #880,  #48    // 紅扁豆
+dq #883,  #48    // barley 大麥
+dq #884,  #48    // 小麥
+dq #887,  #48    // oats 燕麥 [素材]
+dq #888,  #48    // 覆盆子
+dq #896,  #48    // apple 蘋果 [素材]
+dq #907,  #48    // 蕪菁
+dq #911,  #48    // 地瓜
+dq #915,  #48    // carrot
+dq #928,  #48    // 百年草
+dq #937,  #48    // egg 蛋 [素材]
+dq #938,  #48    // milk
+dq #939,  #48    // Cheese
+dq #941,  #48    // salt 鹽 [素材]
+dq #942,  #48    // sugar 糖 [素材]
+dq #943,  #48    // water 水 [素材]
+dq #944,  #48    // 料理用油 [素材]
+dq #991,  #48    // 魚肉 [素材]
+dq #1003, #18    // 風乾肉塊
+dq #1005, #18    // bread
+dq #1006, #18    // beer
+dq #1070, #18    // 滿滿的年糕
+dq #1094, #18    // 豐盛的燉排骨
+dq #1174, #18    // 蒸蛋
+dq #1194, #18    // 滿滿的烤肉
+dq #1204, #18    // 滿滿的烤鳥肉
+dq #1211, #18    // 清湯料理
+dq #1326, #18    // 水果茶
+dq #1328, #18    // 果汁
+dq #1234, #18    // 烤大魚
+dq #1255, #18    // 蛋煎蔬菜
+dq #1256, #18    // fried egg fish 蛋煎魚 [料理]
+dq #1257, #18    // Grilled meat 烤肉 [料理]
+dq #1259, #18    // 醬燒魚
+dq #1260, #18    // food 烤穀物 [料理]
+dq #1261, #18    // 烤蛋
+dq #1272, #18    // 醃漬蔬菜
+dq #1278, #18    // 水果蜜餞 [料理]
+dq #1279, #18    // 烤蔬菜
+dq #1299, #18    // 乾草
+dq #1304, #9     // 阿布羅妮亞的初階藥劑
+dq #1306, #9     // 梅莉亞拉的初階藥劑
+dq #1322, #18    // honey tea
+dq #1327, #18    // 水果酒 [料理]
+dq #1542, #18    // keys 鑰匙 [料理]
+dq #1570, #48    // 輕巧的錢幣袋
+dq #2395, #48    // 帶有可疑紋樣的紙條
+dq #2240, #9     // abyss cube 阿比斯神器
+dq #2241, #9     // 褪色的阿比斯神器
+dq #2774, #9     // apple seed
+dq #2801, #9     // 止靜丹
 
 // --- 商落未 (母湯苔鯛!) ---
 dq -1, 0
@@ -574,7 +596,7 @@ CrimsonDesert.exe+1D1AA1E: 4C 8B 56 18                        - mov r10,[rsi+18]
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>3</ID>
+          <ID>153</ID>
           <Description>"Force set silver amount?"</Description>
           <DropDownListLink>YesNo</DropDownListLink>
           <ShowAsSigned>0</ShowAsSigned>
@@ -814,9 +836,9 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
           <CheatEntries>
             <CheatEntry>
               <ID>8</ID>
-              <Description>"ID #1"</Description>
+              <Description>"Seq ID #1"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
+              <Color>808080</Color>
               <VariableType>8 Bytes</VariableType>
               <Address>i_last_idata_addr1</Address>
               <Offsets>
@@ -825,6 +847,17 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
               <CheatEntries>
                 <CheatEntry>
                   <ID>9</ID>
+                  <Description>"ID alt #1"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_last_idata_addr2</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>150</ID>
                   <Description>"amount #1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -838,9 +871,9 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
             </CheatEntry>
             <CheatEntry>
               <ID>10</ID>
-              <Description>"ID #2"</Description>
+              <Description>"Seq ID #2"</Description>
               <ShowAsSigned>0</ShowAsSigned>
-              <Color>FF8080</Color>
+              <Color>808080</Color>
               <VariableType>8 Bytes</VariableType>
               <Address>i_last_idata_addr2</Address>
               <Offsets>
@@ -849,6 +882,17 @@ CrimsonDesert.exe+FC9490C: 49 89 D1                           - mov r9,rdx
               <CheatEntries>
                 <CheatEntry>
                   <ID>11</ID>
+                  <Description>"ID alt #2"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>FF8080</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>i_last_idata_addr2</Address>
+                  <Offsets>
+                    <Offset>8</Offset>
+                  </Offsets>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>151</ID>
                   <Description>"amount #2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -1070,12 +1114,13 @@ alloc(INJECT_SET_MIN_REP_WHEN_GAINo, $7)
 
 label(code)
 label(return)
-label(i_min_rep_dot_value i_min_rep_value)
+label(i_min_rep_dot_value i_min_rep_value i_last_rep_addr)
 
 INJECT_SET_MIN_REP_WHEN_GAINo:
   readmem(INJECT_SET_MIN_REP_WHEN_GAIN, 7)
 
 newmem:
+  mov [i_last_rep_addr], rax
   mov rbx, [i_min_rep_dot_value]
   cmp rcx, rbx
   jae short @F
@@ -1097,20 +1142,22 @@ code:
   dq #98
   i_min_rep_value:
   dq 14
+  i_last_rep_addr:
+  dq 0
 
 INJECT_SET_MIN_REP_WHEN_GAIN:
   jmp newmem
   nop 2
 return:
 registersymbol(INJECT_SET_MIN_REP_WHEN_GAIN INJECT_SET_MIN_REP_WHEN_GAINo)
-registersymbol(i_min_rep_dot_value i_min_rep_value)
+registersymbol(i_min_rep_dot_value i_min_rep_value i_last_rep_addr)
 [DISABLE]
 
 INJECT_SET_MIN_REP_WHEN_GAIN:
   readmem(INJECT_SET_MIN_REP_WHEN_GAINo, 7)
 
 unregistersymbol(INJECT_SET_MIN_REP_WHEN_GAIN INJECT_SET_MIN_REP_WHEN_GAINo)
-unregistersymbol(i_min_rep_dot_value i_min_rep_value)
+unregistersymbol(i_min_rep_dot_value i_min_rep_value i_last_rep_addr)
 dealloc(newmem)
 dealloc(INJECT_SET_MIN_REP_WHEN_GAINo)
 
@@ -1164,6 +1211,17 @@ CrimsonDesert.exe+1B305C3: E8 B8 91 7C FE                     - call CrimsonDese
           <Color>C08000</Color>
           <VariableType>8 Bytes</VariableType>
           <Address>i_min_rep_value</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>154</ID>
+          <Description>"Last rep."</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_last_rep_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
         </CheatEntry>
       </CheatEntries>
     </CheatEntry>
@@ -3296,19 +3354,20 @@ newmem:
   pop r15
   jae short @F
 
+  cmp dword ptr [r12+A0], 64
+  je short chk_next
+  cmp dword ptr [r12+10], 64
+  je short chk_next
+  cmp dword ptr [r12+10], #100000
+  je short chk_next
+
   push r15
   mov r15, [i_fek_min_hp_threshold1]
   cmp dword ptr [r12+18], r15
   pop r15
   jbe short @F
 
-  cmp dword ptr [r12+A0], 64
-  je chk_next
-  cmp dword ptr [r12+10], 64
-  je short chk_next
   cmp dword ptr [r12+10], #1000
-  je short chk_next
-  cmp dword ptr [r12+10], #100000
   je short chk_next
   //cmp dword ptr [r12+A0], #100
   //jae short chk_next
@@ -3338,7 +3397,7 @@ code:
   vf_100:
   dd (float)100
   i_fek_max_hp_threshold1:
-  dq #2500000
+  dq #2250000
   i_fek_min_hp_threshold1:
   dq #299000
 
@@ -3460,19 +3519,20 @@ newmem:
   pop r15
   jae short @F
 
+  cmp dword ptr [rdi+A0], 64
+  je short chk_next
+  cmp dword ptr [rdi+10], 64 // Spirit delta
+  je short chk_next
+  cmp dword ptr [rdi+10], #100000  // Sta delta
+  je short chk_next
+
   push r15
   mov r15, [i_fek_min_hp_threshold2]
   cmp dword ptr [rdi+18], r15
   pop r15
   jbe short @F
 
-  cmp dword ptr [rdi+A0], 64
-  je short chk_next
-  cmp dword ptr [rdi+10], 64 // Spirit delta
-  je short chk_next
   cmp dword ptr [rdi+10], #1000  // HP delta
-  je short chk_next
-  cmp dword ptr [rdi+10], #100000  // Sta delta
   je short chk_next
   //cmp dword ptr [rdi+A4], #100
   //jae short chk_next
@@ -3496,7 +3556,7 @@ code:
   jmp return
   align 10 cc
   i_fek_max_hp_threshold2:
-  dq #2500000
+  dq #2250000
   i_fek_min_hp_threshold2:
   dq #299000
 
