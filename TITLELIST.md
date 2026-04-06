@@ -141,21 +141,26 @@ zh-TW: 超時空之鑰
 ja-JP: 紅の砂漠  
 zh-TW: 赤血沙漠  
 
+## DRAGON QUEST VII Reimagined  
+[DRAGON QUEST VII Reimagined (Steam)](https://store.steampowered.com/app/2499860/DRAGON_QUEST_VII_Reimagined/)  
+ja-JP: ドラゴンクエストVII Reimagined  
+zh-TW: 勇者鬥惡龍 VII Reimagined  
+  
 ## DRAGON QUEST I & II HD-2D Remake  
 [DRAGON QUEST I & II HD-2D Remake (Steam)](https://store.steampowered.com/app/2893570/I__II_HD2D_Remake/)  
-ja-JP: ドラゴンクエストI＆II
-
+ja-JP: ドラゴンクエストI＆II  
+  
 ## DRAGON QUEST III HD-2D Remake  
 [DRAGON QUEST III HD-2D Remake (Steam)](https://store.steampowered.com/app/2701660/DRAGON_QUEST_III_HD2D_Remake/)  
-ja-JP: ドラゴンクエストIII　そして伝説へ…
-    
+ja-JP: ドラゴンクエストIII　そして伝説へ…  
+  
 ## DRAGONQUEST QUEST XI S
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (Steam)](https://store.steampowered.com/app/1295510/XI_S___Definitive_Edition/)
 [DRAGON QUEST® XI S: Echoes of an Elusive Age™ - Definitive Edition (XBox Games)](https://www.xbox.com/en-US/games/dragon-quest-xi-s-echoes-of-an-elusive-age)
 
 ## Dome Keeper  
 [Dome Keeper (Steam)](https://store.steampowered.com/app/1637320/Dome_Keeper/)  
-ja-JP: Dome Keeper ドームキーパー
+ja-JP: Dome Keeper ドームキーパー  
 zh-TW: Dome Keeper 穹頂守護者  
   
 ## Dorfromantik   

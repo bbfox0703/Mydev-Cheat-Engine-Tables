@@ -762,6 +762,7 @@ alloc(INJECT_ITEM_REMOVE_NO_DECo, $10)
 label(code)
 label(return)
 label(i_min_dec_threshold i_max_dec_threshold)
+label(i_ignore_dec_threshold i_force_dec_threshold is_special_dec_limit)
 
 INJECT_ITEM_REMOVE_NO_DECo:
   readmem(INJECT_ITEM_REMOVE_NO_DEC, $10)
@@ -770,12 +771,32 @@ newmem:
   push r13
   mov r13, [i_min_dec_threshold]
   cmp qword ptr [r15+rax+10], r13
-  jb endp
+  jb next_chk
   mov r13, [i_max_dec_threshold]
   cmp qword ptr [r15+rax+10], r13
-  ja endp
+  ja next_chk
   xor rcx, rcx
   mov [rsp+000001A8], rcx
+  jmp short endp
+
+next_chk:
+  cmp qword ptr [is_special_dec_limit], 1
+  jne short endp
+
+  mov r13, [i_ignore_dec_threshold]
+  cmp qword ptr [r15+rax+10], r13
+  jae short endp
+
+  mov r13, [i_force_dec_threshold]
+  cmp qword ptr [r15+rax+10], r13
+  ja short endp
+  mov r13, [i_max_dec_threshold]
+  cmp qword ptr [r15+rax+10], r13
+  jb short endp
+  mov qword ptr [r15+rax+10], r13
+  xor rcx, rcx
+  mov [rsp+000001A8], rcx
+
 endp:
   pop r13
 
@@ -794,6 +815,12 @@ code:
   dq 3
   i_max_dec_threshold:
   dq #100
+  i_ignore_dec_threshold: // any number &gt;= this will be ignored
+  dq #201
+  i_force_dec_threshold: // force reduce to "i_max_dec_threshold" if &lt;= "i_force_dec_threshold" and &gt; "i_max_dec_threshold"
+  dq #200
+  is_special_dec_limit:  // special limiation for "i_ignore_dec_threshold" and "i_max_dec_threshold"
+  dq 0
 
 INJECT_ITEM_REMOVE_NO_DEC:
   jmp far newmem
@@ -801,6 +828,7 @@ INJECT_ITEM_REMOVE_NO_DEC:
 return:
 registersymbol(INJECT_ITEM_REMOVE_NO_DEC INJECT_ITEM_REMOVE_NO_DECo)
 registersymbol(i_min_dec_threshold i_max_dec_threshold)
+registersymbol(i_ignore_dec_threshold i_force_dec_threshold is_special_dec_limit)
 [DISABLE]
 
 INJECT_ITEM_REMOVE_NO_DEC:
@@ -808,6 +836,7 @@ INJECT_ITEM_REMOVE_NO_DEC:
 
 unregistersymbol(INJECT_ITEM_REMOVE_NO_DEC INJECT_ITEM_REMOVE_NO_DECo)
 unregistersymbol(i_min_dec_threshold i_max_dec_threshold)
+unregistersymbol(i_ignore_dec_threshold i_force_dec_threshold is_special_dec_limit)
 dealloc(newmem)
 dealloc(INJECT_ITEM_REMOVE_NO_DECo)
 
@@ -864,11 +893,45 @@ CrimsonDesert.exe+1ABCA6E: 48 8B C5                           - mov rax,rbp
           <CheatEntries>
             <CheatEntry>
               <ID>201</ID>
-              <Description>"and must &lt;="</Description>
+              <Description>"**and must &lt;="</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>C08000</Color>
               <VariableType>8 Bytes</VariableType>
               <Address>i_max_dec_threshold</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>219</ID>
+          <Description>"Enable extra rule?"</Description>
+          <DropDownListLink>YesNo</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>8 Bytes</VariableType>
+          <Address>is_special_dec_limit</Address>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>221</ID>
+              <Description>"Set to "**and must &lt;=" value if:"</Description>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>220</ID>
+                  <Description>"ignore this rule if amount &gt;= (for money)"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_ignore_dec_threshold</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>222</ID>
+                  <Description>"and amount &lt;="</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <Color>C08000</Color>
+                  <VariableType>8 Bytes</VariableType>
+                  <Address>i_force_dec_threshold</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -1000,7 +1063,7 @@ code:
   i_item_set_to:
   dq #19
   i_item_threshold2:
-  dq #101
+  dq #201
   i_item_set_to2:
   dq #900
   i_item_threshold3:
@@ -1937,7 +2000,7 @@ CrimsonDesert.exe+12D09F1: 49 8B CD                           - mov rcx,r13
             </CheatEntry>
             <CheatEntry>
               <ID>35</ID>
-              <Description>"Enable step 2 (horse tab)"</Description>
+              <Description>"Enable step 2 (horse tab) (conflict with "Fast enemy kill / char HP full" series)"</Description>
               <Options moHideChildren="1"/>
               <VariableType>Auto Assembler Script</VariableType>
               <AssemblerScript>{
@@ -5339,7 +5402,7 @@ CrimsonDesert.exe+12D1E45: 49 8B 06                           - mov rax,[r14]
         <CheatEntry>
           <ID>161</ID>
           <Description>"temp"</Description>
-          <Options moHideChildren="1" moActivateChildrenAsWell="1"/>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <GroupHeader>1</GroupHeader>
           <CheatEntries>
             <CheatEntry>
