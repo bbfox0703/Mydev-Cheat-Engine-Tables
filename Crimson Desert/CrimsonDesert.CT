@@ -533,16 +533,16 @@ alloc(INJECT_INF_ARROW_N_OTHERSo, $F)
 label(code)
 label(return)
 label(is_chk_silver)
-label(check_silver)
-label(exc_loop)
+//label(check_silver)
+//label(exc_loop)
 //label(exc_found)
-label(exc_next)
-label(exc_done)
-label(rng_loop)
+//label(exc_next)
+//label(exc_done)
+//label(rng_loop)
 //label(rng_found)
-label(rng_next)
-label(rng_done)
-label(exception_table)
+//label(rng_next)
+//label(rng_done)
+//label(exception_table)
 label(range_table is_set_min_mat)
 label(i_abyss_cell_amt i_abyss_artifact_amt i_fabyss_artifact_amt i_atag_amt i_mac_resource_amt)
 // ============================================================
@@ -571,12 +571,14 @@ newmem:
   // --- 銀幣特殊處理 (ID=#1580) ---
   cmp dword ptr [rbx+8], #1580
   je check_silver
-  push r15
-  push r14
-  push r13
+
 // ============================================================
 //  第一步: 查例外表 (每筆 0x10, index r14 × 10)
 // ============================================================
+  push r15
+  push r14
+  push r13
+
   xor r14, r14
   mov r15, exception_table
 exc_loop:
@@ -590,86 +592,117 @@ exc_loop:
   lea r13, [r15+r14*1]
   mov r13, [r13+8]             // r13 = amount
   mov [rbx+10], r13
-  jmp rng_done                 // 直接跳到結束
+  jmp short rng_done                 // 直接跳到結束
 exc_next:
   add r14, 10                  // 下一筆 (0x10 = 16 bytes)
   jmp short exc_loop
-exc_done:
-// ============================================================
-//  第二步: 查區間表 (每筆 0x20, index r14 × 20)
-// ============================================================
-  xor r14, r14
-  mov r15, range_table
-rng_loop:
-  lea r13, [r15+r14*1]         // r13 = range_table + r14
-  mov r13, [r13]               // r13 = range_start
-  cmp r13, -1
-  je short rng_done
-  cmp [rbx+8], r13d            // ID &lt; start?
-  jb short rng_next
-  lea r13, [r15+r14*1]
-  mov r13, [r13+8]             // r13 = range_end
-  cmp [rbx+8], r13d            // ID &gt; end?
-  ja short rng_next
-  // --- 命中區間 ---
-  lea r13, [r15+r14*1]
-  mov r13, [r13+10]            // r13 = amount
-  mov [rbx+10], r13
-  jmp short rng_done
-rng_next:
-  add r14, 20                  // 下一筆 (0x20 = 32 bytes)
-  jmp short rng_loop
+
 rng_done:
   pop r13
   pop r14
   pop r15
-  jmp short check_min_amount
+  jmp code
 
+exc_done:
+
+  pop r13
+  pop r14
+  pop r15
+  jmp range_check
+
+// ============================================================
+//  共用區間查找子程序
+//  輸入:
+//    r15 = 表格基址
+//    r8b = 模式 (0 = 直接覆寫, 1 = min clamp)
+//  讀取:
+//    [rbx+8]  = item ID
+//    [rbx+10] = 目前數量
+//  輸出:
+//    [rbx+10] 可能被修改
+// ============================================================
+range_lookup_sub:
+  push r14
+  push r13
+  xor r14, r14
+sub_loop:
+  lea r13, [r15+r14*1]
+  mov r13, [r13]               // r13 = range_start
+  cmp r13, -1
+  je sub_done
+  cmp [rbx+8], r13d
+  jb short sub_next
+  lea r13, [r15+r14*1]
+  mov r13, [r13+8]             // r13 = range_end
+  cmp [rbx+8], r13d
+  ja short sub_next
+  // --- 命中區間 ---
+  lea r13, [r15+r14*1]
+  mov r13, [r13+10]            // r13 = amount
+  test r8b, r8b
+  jnz short sub_clamp
+  mov [rbx+10], r13            // 模式 0: 直接覆寫
+  jmp short sub_done
+sub_clamp:
+  cmp [rbx+10], r13            // 模式 1: 只在不足時補到最小值
+  jae short sub_done
+  mov [rbx+10], r13
+  jmp short sub_done
+sub_next:
+  add r14, 20
+  jmp sub_loop
+sub_done:
+  pop r13
+  pop r14
+  ret
+
+
+// ============================================================
+//  第二步: 查區間表 (覆寫模式)
+// ============================================================
+range_check:
+
+  push r15
+  push r8
+
+  mov r15, range_table
+  xor r8, r8                   // r8b = 0 → 直接覆寫
+  call range_lookup_sub
+
+  pop r8
+  pop r15
+
+// ============================================================
+//  第三步: 查最小值區間表 (clamp 模式)
+// ============================================================
 check_min_amount:
   cmp dword ptr [is_set_min_mat], 1
   jne code
 
-// ============================================================
-//  第三步: 查區間表 (每筆 0x20, index r14 × 20)、設定最小值
-// 材料類
-// ============================================================
   push r15
-  push r14
-  push r13
-  xor r14, r14
-  mov r15, min_range_table
-mrng_loop:
-  lea r13, [r15+r14*1]         // r13 = range_table + r14
-  mov r13, [r13]               // r13 = range_start
-  cmp r13, -1
-  je short mrng_done
-  cmp [rbx+8], r13d            // ID &lt; start?
-  jb short mrng_next
-  lea r13, [r15+r14*1]
-  mov r13, [r13+8]             // r13 = range_end
-  cmp [rbx+8], r13d            // ID &gt; end?
-  ja mrng_next
-  // --- 命中區間 ---
-  lea r13, [r15+r14*1]
-  mov r13, [r13+10]            // r13 = amount
-  cmp [rbx+10], r13
-  jae short mrng_done
-  mov [rbx+10], r13
-  jmp short mrng_done
-mrng_next:
-  add r14, 20                  // 下一筆 (0x20 = 32 bytes)
-  jmp short mrng_loop
+  push r8
 
-mrng_done:
-  pop r13
-  pop r14
+  mov r15, min_range_table
+  mov r8b, 1                   // r8b = 1 → min clamp
+  call range_lookup_sub
+
+  pop r8
   pop r15
+  jmp short code
 
 check_silver:
   cmp dword ptr [is_chk_silver], 1
   jne short code
+  cmp qword ptr [rbx+10], #98000
+  ja short chk_silver_Lamt
+
   mov qword ptr [rbx+10], #98000
   jmp short code
+
+chk_silver_Lamt:
+  cmp qword ptr [rbx+10], #200000
+  jbe short code
+  mov qword ptr [rbx+10], #200000
 
 code:
   // cmp qword ptr [rbx+10],00
@@ -695,17 +728,20 @@ dq #17, #2 // 持續補給 cannon
 dq #23, #100 // 子彈
 dq #24, #2 // 持續補給子彈
 // --- 鑰匙/雜物 ---
-dq #1550, #20    // key
-dq #1551, #20    // key
-dq #1552, #20    // key
-dq #1553, #20    // key
-dq #1581, #100    // 破舊銅的幣袋
-dq #1582, #100    // 輕巧的錢幣袋
-dq #1583, #100    // 錢幣袋?
-dq #1584, #100    // 沈重的銅板袋
-dq #1585, #100    // 銀幣袋
-dq #1586, #100    // 銀幣袋
-dq #1587, #100    // 銀幣袋
+dq #997, #50 // 魚肉 Fish fillet
+dq #1006, #50 // Mysterious dish
+dq #1007, #50 // Mysterious liq
+//dq #1550, #20    // key
+//dq #1551, #20    // key
+//dq #1552, #20    // key
+//dq #1553, #20    // key
+//dq #1581, #100    // 破舊銅的幣袋
+//dq #1582, #100    // 輕巧的錢幣袋
+//dq #1583, #100    // 錢幣袋?
+//dq #1584, #100    // 沈重的銅板袋
+//dq #1585, #100    // 銀幣袋
+//dq #1586, #100    // 銀幣袋
+//dq #1587, #100    // 銀幣袋
 //dq #1594, #99999    // Cogwheel
 //dq #1595, #99999    // Small Battery
 //dq #1596, #99999    // Lubricant
@@ -728,7 +764,7 @@ i_fabyss_artifact_amt:
 dq #8
 
 //dq #2395, #48    // 帶有可疑紋樣的紙條
-dq #2824, #10     // 閃耀果實
+dq #2824, #10     // Shineberry 閃耀果實
 dq #2825, #50     // 野人蔘
 dq #2829, #10     // Refined Palmar Pill
 dq #2830, #10     // 復甦丹藥
@@ -746,8 +782,12 @@ dq #0,  #1,  #100, 0    // arrow
 dq #3,  #9,  #100, 0    // arrow
 dq #18,  #22,  #50, 0    // cannonball
 dq #25,  #26,  #100, 0    // bullet
-dq #1310,  #1324,  #10, 0    // Potions
-dq #1608,  #1614,  #10, 0    // refinement coins
+//dq #444,  #515,  #10, 0  // 傢俱
+dq #1008, #1307, #20, 0  // 食物，馬料  1008=Dried Fish, 1009=Jerky 肉乾, 1010=fine 1010,1305=Hay, 1306=Sugar Beet, 1307=Sugar Cubes
+dq #1310,  #1324,  #10, 0    // Potions 1310=Freya's Lesser Elixir, 1324=Astrid's Greater Elixir
+dq #1550,  #1553,  #20, 0  // key  1550=Key, 1553=Master Key
+//dq #1581,  #1587,  #100, 0 // 錢幣袋  1581=Paltry Copper Pouch, 1582=Light Copper Pouch, 1587=Overflowing Silver Pouch
+dq #1608,  #1614,  #10, 0    // refinement token (coin)
 
 // Dragon claw, A.T.A.Gs, Narima's Horn
 dq #1396,  #1399
@@ -762,7 +802,7 @@ i_mac_resource_amt:
 dq #99999
 dq 0
 // =============================
-dq #2804,  #2823,  #10, 0    // Seeds
+dq #2804,  #2823,  #10, 0    // Seeds    2804=Apple Seed, 2823=Chaya Seed
 // dq #xxxx, #yyyy, #zz, 0 // (未來新增區間)
 // --- 商落未 (母湯苔鯛!) ---
 dq -1, 0, 0, 0
@@ -932,40 +972,57 @@ label(code)
 label(return)
 label(i_min_dec_threshold i_max_dec_threshold)
 label(i_ignore_dec_threshold i_force_dec_threshold is_special_dec_limit)
+label(is_keep_1_goldbar is_guard_sell_all is_keep_aeserion_scale)
 
 INJECT_ITEM_REMOVE_NO_DECo:
   readmem(INJECT_ITEM_REMOVE_NO_DEC, $10)
 
 newmem:
   push r13
-  // special check for some items
-  // Cogwheel, Small Battery, Lubricant, Clockwork Insect
-  cmp qword ptr [r15+rax+8], #1594
-  jb short @F
-  cmp qword ptr [r15+rax+8], #1597
-  ja short @F
-  cmp qword ptr [r15+rax+8], #9999
-  jae short @F
-  mov qword ptr [r15+rax+8], #9999
-@@:
-  // special check for silvers
-  cmp qword ptr [r15+rax+8], #1580
+  // min amount gating for specific items
+
+  cmp qword ptr [r15+rax+8], #1580  // silver
   jne short @F
-  cmp qword ptr [r15+rax+8], #5000
+  cmp qword ptr [r15+rax+10], #98000
   jae short @F
-  mov qword ptr [r15+rax+8], #5000
+  mov qword ptr [r15+rax+10], #98000
 @@:
-  // special check for camp resources
-  cmp qword ptr [r15+rax+8], #1589
+  cmp qword ptr [r15+rax+8], #1589  // camp resources
   jb short @F
   cmp qword ptr [r15+rax+8], #1593
   ja short @F
-  cmp qword ptr [r15+rax+8], #4999
+  cmp qword ptr [r15+rax+10], #4999
   jae short @F
-  mov qword ptr [r15+rax+8], #4999
+  mov qword ptr [r15+rax+10], #4999
 @@:
+  cmp qword ptr [r15+rax+8], #1594 // Cogwheel, Small Battery, Lubricant, Clockwork Insect
+  jb short @F
+  cmp qword ptr [r15+rax+8], #1597
+  ja short @F
+  cmp qword ptr [r15+rax+10], #999
+  jae short @F
+  mov qword ptr [r15+rax+10], #999
+@@:
+  cmp dword ptr [is_keep_1_goldbar], 1 // gold bar
+  jne short @F
+  // gold bar
+  cmp qword ptr [r15+rax+8], #1588
+  jne short @F
+  cmp qword ptr [r15+rax+10], 1
+  ja short @F
+  xor rcx, rcx
+@@:
+  cmp dword ptr [is_keep_aeserion_scale], 1 //Aeserion's Scale
+  jne short @F
+  // gold bar
+  cmp qword ptr [r15+rax+8], #1510
+  jne short @F
+  cmp qword ptr [r15+rax+10], 1
+  ja short @F
+  xor rcx, rcx
+@@:
+
   pop r13
-  // ---------------------------------------------------
 
   push r13
   mov r13, [i_min_dec_threshold]
@@ -973,14 +1030,14 @@ newmem:
   jb next_chk
   mov r13, [i_max_dec_threshold]
   cmp qword ptr [r15+rax+10], r13
-  ja next_chk
+  ja short next_chk
   xor rcx, rcx
   mov [rsp+000001A8], rcx
-  jmp short endp
+  jmp endp
 
 next_chk:
   cmp qword ptr [is_special_dec_limit], 1
-  jne short endp
+  jne endp
 
   mov r13, [i_ignore_dec_threshold]
   cmp qword ptr [r15+rax+10], r13
@@ -999,6 +1056,22 @@ next_chk:
 endp:
   pop r13
 
+  cmp dword ptr [is_guard_sell_all], 1
+  jne code
+
+  push r13
+  //all sell guardian
+  mov r13, [i_max_dec_threshold]
+  cmp [r15+rax+10], r13
+  jbe short endp_g
+  cmp [r15+rax+10], rcx
+  ja short endp_g
+  sub rcx, r13
+
+endp_g:
+  pop r13
+
+
 code:
   // sub [r15+rax+10],rcx
   reassemble(INJECT_ITEM_REMOVE_NO_DEC)
@@ -1013,13 +1086,19 @@ code:
   i_min_dec_threshold:
   dq 3
   i_max_dec_threshold:
-  dq #100
+  dq #50
   i_ignore_dec_threshold: // any number &gt;= this will be ignored
   dq #201
   i_force_dec_threshold: // force reduce to "i_max_dec_threshold" if &lt;= "i_force_dec_threshold" and &gt; "i_max_dec_threshold"
   dq #200
   is_special_dec_limit:  // special limiation for "i_ignore_dec_threshold" and "i_max_dec_threshold"
   dq 0
+  is_keep_1_goldbar:
+  dd 0
+  is_guard_sell_all:
+  dd 1
+  is_keep_aeserion_scale:
+  dd 1
 
 INJECT_ITEM_REMOVE_NO_DEC:
   jmp far newmem
@@ -1028,6 +1107,7 @@ return:
 registersymbol(INJECT_ITEM_REMOVE_NO_DEC INJECT_ITEM_REMOVE_NO_DECo)
 registersymbol(i_min_dec_threshold i_max_dec_threshold)
 registersymbol(i_ignore_dec_threshold i_force_dec_threshold is_special_dec_limit)
+registersymbol(is_keep_1_goldbar is_guard_sell_all is_keep_aeserion_scale)
 [DISABLE]
 
 INJECT_ITEM_REMOVE_NO_DEC:
@@ -1036,6 +1116,7 @@ INJECT_ITEM_REMOVE_NO_DEC:
 unregistersymbol(INJECT_ITEM_REMOVE_NO_DEC INJECT_ITEM_REMOVE_NO_DECo)
 unregistersymbol(i_min_dec_threshold i_max_dec_threshold)
 unregistersymbol(i_ignore_dec_threshold i_force_dec_threshold is_special_dec_limit)
+unregistersymbol(is_keep_1_goldbar is_guard_sell_all is_keep_aeserion_scale)
 dealloc(newmem)
 dealloc(INJECT_ITEM_REMOVE_NO_DECo)
 
@@ -1083,8 +1164,35 @@ CrimsonDesert.exe+1ABCA6E: 48 8B C5                           - mov rax,rbp
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
+          <ID>188</ID>
+          <Description>"Keep gold bar?"</Description>
+          <DropDownListLink>YesNo</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_keep_1_goldbar</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>198</ID>
+          <Description>"Keep Aeserion's scale (艾瑟里昂鋼鱗)?"</Description>
+          <DropDownListLink>YesNo</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_keep_aeserion_scale</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>189</ID>
+          <Description>"Guard sell all when amount &gt; max threshold?"</Description>
+          <DropDownListLink>YesNo</DropDownListLink>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>is_guard_sell_all</Address>
+        </CheatEntry>
+        <CheatEntry>
           <ID>9</ID>
-          <Description>"cur. amount must &gt;="</Description>
+          <Description>"cur. amount must &gt;= (set 1 for dup.)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
           <VariableType>8 Bytes</VariableType>
@@ -1186,16 +1294,15 @@ endp_pre:
   pop r15
 
 
-  cmp qword ptr [r8+rdi], #125 // normal key
-  je code
-  cmp qword ptr [r8+rdi], #175 // cube
-  je code
-  cmp qword ptr [r8+rdi], #26 // wool
-  je code
-  cmp qword ptr [r8+rdi], #27 // silver (currency)
-  je code
+  //cmp qword ptr [r8+rdi+8], #1550 // normal key
+  //je code
+  //cmp qword ptr [r8+rdi+8], #2270 // Abyss Artifact
+  //je code
+  //cmp qword ptr [r8+rdi+8], #1580 // silver (currency)
+  //je code
   cmp dword ptr [i_item_add_options], 0
   jne chk_next1
+
   push r15
 {
   mov r15, [i_item_threshold4]
@@ -2485,7 +2592,7 @@ unregisterSymbol('Player_Base_addr')
             </CheatEntry>
             <CheatEntry>
               <ID>61</ID>
-              <Description>"Char #2 - Damine"</Description>
+              <Description>"Char #2 - Damine/Oongka"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
@@ -2544,7 +2651,7 @@ unregisterSymbol('Player_Base_addr')
             </CheatEntry>
             <CheatEntry>
               <ID>65</ID>
-              <Description>"Char #3 - Oongka?"</Description>
+              <Description>"Char #3 - ?"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
@@ -3107,7 +3214,7 @@ unregisterSymbol('char_sta_spi_1_2')
             </CheatEntry>
             <CheatEntry>
               <ID>88</ID>
-              <Description>"Char #2 - Damine"</Description>
+              <Description>"Char #2 - Damine/Oongka"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
@@ -3422,7 +3529,7 @@ unregisterSymbol('char_sta_spi_2_2')
             </CheatEntry>
             <CheatEntry>
               <ID>99</ID>
-              <Description>"Char #3 - Oongka?"</Description>
+              <Description>"Char #3 - ?"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <GroupHeader>1</GroupHeader>
               <CheatEntries>
@@ -4893,7 +5000,7 @@ newmem:
 to_enemy:
   cmp qword ptr [r12+08], #1000
   jbe short code
-  mov r9, 0
+  mov r9, #1000
   cmp r9, rcx
   mov [r12+08],r9
   jmp short code
@@ -5108,7 +5215,7 @@ newmem:
 to_enemy:
   cmp qword ptr [rdi+08], #1000
   jbe short code
-  mov rbx, 0
+  mov rbx, #1000
   mov [rdi+08],rbx
   jmp short code
 
@@ -5290,7 +5397,7 @@ code:
 to_enemy:
   cmp qword ptr [r12+08], #1000
   jbe short code_next
-  mov rax, 0
+  mov rax, #1000
   //mov [r12+08],rax
   jmp short code_next
 
