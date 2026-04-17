@@ -325,6 +325,9 @@ zh-TW: 舊世界 Old World
 ## Orbital Bullet  
 [Orbital Bullet – The 360° Rogue-lite (Steam)](https://store.steampowered.com/app/1167680/Orbital_Bullet__The_360_Roguelite/)  
 
+## PRAGMATA
+[PRAGMATA (Steam)](https://store.steampowered.com/app/3357650/PRAGMATA/) 
+
 ## Pathfinder Kingmaker
 [Pathfinder: Kingmaker - Enhanced Plus Edition (Steam)](https://store.steampowered.com/app/640820/Pathfinder_Kingmaker__Enhanced_Plus_Edition/)
 
