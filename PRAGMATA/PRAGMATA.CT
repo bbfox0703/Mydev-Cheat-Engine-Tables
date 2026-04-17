@@ -2,6 +2,148 @@
 <CheatTable CheatEngineTableVersion="51">
   <CheatEntries>
     <CheatEntry>
+      <ID>129</ID>
+      <Description>"Toggle scripts"</Description>
+      <Color>4080FF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+-- attach process
+local processName = "PRAGMATA.exe"
+local pid = getProcessIDFromProcessName(processName)
+if pid ~= nil and pid &gt; 0 then
+  local currentPid = getOpenedProcessID() or 0
+  if currentPid ~= pid then
+    openProcess(processName)
+    print("Attached to: " .. processName)
+    Sleep(333)
+  else
+    print("Already attached to: " .. processName)
+  end
+end
+synchronize(function()
+  getLuaEngine().Close()
+end)
+
+local enableBattleScripts = {
+  103, -- "Set min bullet num"
+  107, -- "Get gravity (readonly)"
+  112, -- "Get Lunafilament amt (menu)"
+  117, -- "Get char HP"
+  123, -- "Set gravity"
+  130, -- "Toggle Compact View"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(enableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and not memRec.Active then
+      memRec.Active = true
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+[DISABLE]
+{$lua}
+if (syntaxcheck) then return end
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+
+local disableBattleScripts = {
+  115, -- "Enable"
+  130, -- "Toggle Compact View"
+  123, -- "Set gravity"
+  121, -- "PRAGMATA  /  https://opencheattables.com  /  CE 7.6+"
+  117, -- "Get char HP"
+  112, -- "Get Lunafilament amt (menu)"
+  107, -- "Get gravity (readonly)"
+  103, -- "Set min bullet num"
+}
+local addressList = getAddressList()
+synchronize(function()
+  for _, id in ipairs(disableBattleScripts) do
+    local memRec = addressList.getMemoryRecordByID(id)
+    if memRec and memRec.Active then
+      memRec.Active = false
+      sleep(30)
+    end
+    addressList.refresh()
+  end
+end)
+synchronize(function() getLuaEngine().Close() end)
+-- Comments:
+-- ID: 130, Description: "Toggle Compact View", Depth: 0
+-- ID: 103, Description: "Set min bullet num", Depth: 0
+-- ID: 107, Description: "Get gravity (readonly)", Depth: 0
+-- ID: 123, Description: "Set gravity", Depth: 0
+-- ID: 112, Description: "Get Lunafilament amt (menu)", Depth: 0
+-- ID: 117, Description: "Get char HP", Depth: 0
+--   ID: 115, Description: "Enable", Depth: 1
+-- ID: 121, Description: "PRAGMATA  /  https://opencheattables.com  /  CE 7.6+", Depth: 0
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>130</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
       <ID>103</ID>
       <Description>"Set min bullet num"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -371,13 +513,14 @@ alloc(INJECT_GET_Lunafilamento, $6)
 
 label(code)
 label(return)
-label(i_base_Lunafilament_addr i_base_upgrades_addr)
+label(i_base_Lunafilament_addr i_base_upgrades_addr i_base_coin_addr)
 
 INJECT_GET_Lunafilamento:
   readmem(INJECT_GET_Lunafilament, $6)
 
-// app.InventoryManager &gt; ItemSlotTable [5], _ID = 2227368435 (0x10)
-// app.InventoryManager &gt; ItemSlotTable [11], _ID = 187746965 (0x10)
+// Lunafilament: app.InventoryManager &gt; ItemSlotTable [5], _ID = 2227368435 (0x10)
+// Upgrades: app.InventoryManager &gt; ItemSlotTable [11], _ID = 187746965 (0x10)
+// Coin: app.InventoryManager &gt; ItemSlotTable [12], _ID = 701076331 (0x10)
 
 newmem:
   cmp dword ptr [rax+10], #2227368435
@@ -388,6 +531,11 @@ newmem:
   cmp dword ptr [rax+10], #187746965
   jne short @F
   mov [i_base_upgrades_addr], rax
+
+@@:
+  cmp dword ptr [rax+10], #701076331
+  jne short @F
+  mov [i_base_coin_addr], rax
 
 
 code:
@@ -401,6 +549,8 @@ code:
   dq 0
   i_base_upgrades_addr:
   dq 0
+  i_base_coin_addr:
+  dq 0
 
 
 INJECT_GET_Lunafilament:
@@ -408,14 +558,14 @@ INJECT_GET_Lunafilament:
   nop 1
 return:
 registersymbol(INJECT_GET_Lunafilament INJECT_GET_Lunafilamento)
-registersymbol(i_base_Lunafilament_addr i_base_upgrades_addr)
+registersymbol(i_base_Lunafilament_addr i_base_upgrades_addr i_base_coin_addr)
 [DISABLE]
 
 INJECT_GET_Lunafilament:
   readmem(INJECT_GET_Lunafilamento, $6)
 
 unregistersymbol(INJECT_GET_Lunafilament INJECT_GET_Lunafilamento)
-unregistersymbol(i_base_Lunafilament_addr i_base_upgrades_addr)
+unregistersymbol(i_base_Lunafilament_addr i_base_upgrades_addr i_base_coin_addr)
 dealloc(newmem)
 dealloc(INJECT_GET_Lunafilamento)
 
@@ -484,11 +634,23 @@ PRAGMATA.exe+2993A0: 4C 89 F9                           - mov rcx,r15
             <Offset>14</Offset>
           </Offsets>
         </CheatEntry>
+        <CheatEntry>
+          <ID>128</ID>
+          <Description>"Coin"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>i_base_coin_addr</Address>
+          <Offsets>
+            <Offset>14</Offset>
+          </Offsets>
+        </CheatEntry>
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
       <ID>117</ID>
       <Description>"Get char HP"</Description>
+      <Options moHideChildren="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
