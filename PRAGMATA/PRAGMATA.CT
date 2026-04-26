@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="51">
+<CheatTable CheatEngineTableVersion="46">
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
@@ -34,16 +34,13 @@ end)
 local enableBattleScripts = {
   1, -- "Toggle Compact View"
   2, -- "Set min bullet num"
-  30, -- "Get app.EnhanceManager settings"
   11, -- "Get Lunafilament / others amount (menus)"
-  31, -- "base"
   18, -- "Get char HP"
   24, -- "inf hacking nodes (active peaks)"
   25, -- "Fast Diana's Overdrive / inf thruster"
   27, -- "Training: target time"
-  32, -- "_EquipmentPerkMainGame -&gt; _BootingPerks"
-  39, -- "Skip slot capacity writeback"
-  41, -- "Skip slot capacity writeback"
+  21, -- "Enable HP clamp"
+  604, -- "Enable Auto HP valid monitor"
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -201,6 +198,7 @@ local disableBattleScripts = {
   48, -- "_DefenceDownTimeForNum [System.Single x3]"
   41, -- "Skip slot capacity writeback"
   39, -- "Skip slot capacity writeback"
+  583, -- "_AutoHackTotalBaseTime [System.Single x4]"
   299, -- "System.Collections.Generic.List`1&lt;app.ItemInventoryInfo&gt;"
   282, -- "_PowerHacking"
   243, -- "_Weapon"
@@ -212,15 +210,19 @@ local disableBattleScripts = {
   47, -- "_Abnormal"
   40, -- "&lt;PassiveSkillCapacity&gt;k__BackingField"
   38, -- "&lt;ActiveSkillCapacity&gt;k__BackingField"
+  581, -- "_SnakePuzzleCommonUserData"
   298, -- "app.InventoryManager.ItemSlotTable"
   290, -- "_AttackPermitData"
   46, -- "app.EnemyBaseParamUserData"
   32, -- "_EquipmentPerkMainGame -&gt; _BootingPerks"
+  604, -- "Enable Auto HP valid monitor"
+  579, -- "base"
   573, -- "FAST_OVERDRIVE_PLUS_30"
   297, -- "base"
   45, -- "base"
   31, -- "base"
-  21, -- "Enable"
+  21, -- "Enable HP clamp"
+  578, -- "Get app.HackingManager"
   571, -- "PRAGMATA  /  https://opencheattables.com  /  CE 7.6+"
   296, -- "Get app.InventoryManager"
   44, -- "Get app.EnemyBattleSystem partial settings"
@@ -254,7 +256,8 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 8, Description: "Set gravity", Depth: 0
 -- ID: 11, Description: "Get Lunafilament / others amount (menus)", Depth: 0
 -- ID: 18, Description: "Get char HP", Depth: 0
---   ID: 21, Description: "Enable", Depth: 1
+--   ID: 604, Description: "Enable Auto HP valid monitor", Depth: 1
+--   ID: 21, Description: "Enable HP clamp", Depth: 1
 -- ID: 24, Description: "inf hacking nodes (active peaks)", Depth: 0
 -- ID: 25, Description: "Fast Diana's Overdrive / inf thruster", Depth: 0
 -- ID: 27, Description: "Training: target time", Depth: 0
@@ -414,6 +417,10 @@ synchronize(function() getLuaEngine().Close() end)
 --           ID: 562, Description: "[87] [app.ItemInventoryInfo]", Depth: 5
 --           ID: 565, Description: "[88] [app.ItemInventoryInfo]", Depth: 5
 --           ID: 568, Description: "[89] [app.ItemInventoryInfo]", Depth: 5
+-- ID: 578, Description: "Get app.HackingManager", Depth: 0
+--   ID: 579, Description: "base", Depth: 1
+--     ID: 581, Description: "_SnakePuzzleCommonUserData", Depth: 2
+--       ID: 583, Description: "_AutoHackTotalBaseTime [System.Single x4]", Depth: 3
 -- ID: 571, Description: "PRAGMATA  /  https://opencheattables.com  /  CE 7.6+", Depth: 0
 --   ID: 573, Description: "FAST_OVERDRIVE_PLUS_30", Depth: 1
 
@@ -1075,7 +1082,7 @@ PRAGMATA.exe+2993A0: 4C 89 F9                           - mov rcx,r15
     <CheatEntry>
       <ID>18</ID>
       <Description>"Get char HP"</Description>
-      <Options moHideChildren="1"/>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
@@ -1091,8 +1098,81 @@ PRAGMATA.exe+2993A0: 4C 89 F9                           - mov rcx,r15
           <GroupHeader>1</GroupHeader>
         </CheatEntry>
         <CheatEntry>
+          <ID>604</ID>
+          <Description>"Enable Auto HP valid monitor"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+local INTERVAL_MS = 500
+local TOGGLE_DELAY_MS = 200
+
+local function doCheck()
+  local al = getAddressList()
+  local mrHP = al.getMemoryRecordByDescription("HP:")
+  local mrClamp = al.getMemoryRecordByDescription("Enable HP clamp")
+
+  if mrHP == nil or mrClamp == nil then return end
+
+  local ok, val = pcall(function()
+    local addr = mrHP.CurrentAddress
+    if addr == nil or addr == "??" then return nil end
+    return readInteger(addr)
+  end)
+
+  if not ok or val == nil then return end
+
+  if val == 0 or val &gt; 2000 then
+    mrClamp.Active = false
+
+    local reactivateTimer = createTimer(nil, false)
+    reactivateTimer.Interval = TOGGLE_DELAY_MS
+    reactivateTimer.OnTimer = function(t)
+      t.Enabled = false
+      t.destroy()
+      local mr2 = al.getMemoryRecordByDescription("Enable HP clamp")
+      if mr2 ~= nil then
+        mr2.Active = true
+      end
+    end
+    reactivateTimer.Enabled = true
+  end
+end
+
+-- 清除舊的（防重複啟用）
+if hpMonitorTimer then
+  hpMonitorTimer.Enabled = false
+  hpMonitorTimer.destroy()
+end
+
+hpMonitorTimer = createTimer(nil, false)
+hpMonitorTimer.Interval = INTERVAL_MS
+hpMonitorTimer.OnTimer = function(t)
+  doCheck()
+end
+hpMonitorTimer.Enabled = true
+synchronize(function() getLuaEngine().Close() end)
+--print("[HP Monitor] Actived")
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+if hpMonitorTimer then
+  hpMonitorTimer.Enabled = false
+  hpMonitorTimer.destroy()
+  hpMonitorTimer = nil
+  synchronize(function() getLuaEngine().Close() end)
+  --print("[HP Monitor] Deactived")
+end
+{$asm}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
           <ID>21</ID>
-          <Description>"Enable"</Description>
+          <Description>"Enable HP clamp"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{
@@ -1225,7 +1305,7 @@ PRAGMATA.exe+15D712: 5B                                 - pop rbx
           <CheatEntries>
             <CheatEntry>
               <ID>22</ID>
-              <Description>"HP"</Description>
+              <Description>"HP:"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
               <VariableType>4 Bytes</VariableType>
@@ -6959,6 +7039,233 @@ unregisterSymbol('InventoryManager_addr')
                       </CheatEntries>
                     </CheatEntry>
                   </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>578</ID>
+      <Description>"Get app.HackingManager"</Description>
+      <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not AOBScanModule then
+  function AOBScanModule(moduleName, signature)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList
+    synchronize(function()
+      modList = enumModules()
+    end)
+    for _, mod in ipairs(modList) do
+      if string.lower(mod.Name) == string.lower(moduleName) then
+        baseAddr = mod.Address
+        maxAddr = baseAddr + mod.Size
+        break
+      end
+    end
+    if not baseAddr then return nil end
+    local ms = createMemScan()
+    synchronize(function()
+      ms.firstScan(soExactValue, vtByteArray, nil, signature,
+        nil, baseAddr, maxAddr, '+X-C-W', fsmNotAligned, '1', true, true, false, false)
+    end)
+    ms.waitTillDone()
+    local results = createFoundList(ms)
+    results.initialize()
+    local addr
+    synchronize(function()
+      if results.getCount() &gt; 0 then
+        addr = results[0]
+      end
+    end)
+    results.destroy()
+    ms.destroy()
+    return addr
+  end
+end
+
+local AOBs = {
+  {name='HackingManager', aob='?? 8B ?? ?? ?? ?? ?? ?? 85 ?? 74 ?? ?? 89 ?? ?? 89 ?? E8 ?? ?? ?? ?? ?? 8B ?? 50 ?? 83 ?? 18 00 75 ?? ?? 89 ?? ?? 89 ?? 48 83 C4 28 ?? ?? E9 ?? ?? ?? ?? 90 48 83 C4 28 ?? ?? C3 ?? 89 ?? ?? 38 00 00 00 ?? 31 ?? 48 83 C4 28 ?? ?? E9 ?? ?? ?? ?? CC CC ?? ?? ?? ?? ?? ?? ?? ?? ?? 48', pos=3, aoblen=7, symbol='HackingManager_addr'},
+}
+
+local module_name = process
+
+for _, entry in ipairs(AOBs) do
+  local aob_addr_str = AOBScanModule(module_name, entry.aob)
+  if aob_addr_str then
+    local aob_addr_val = tonumber(aob_addr_str, 16)
+    local offset_addr = aob_addr_val + entry.pos
+    local relative_offset = readInteger(offset_addr, true)
+    local final_addr = relative_offset + aob_addr_val + entry.aoblen
+    synchronize(function()
+      unregisterSymbol(entry.symbol)
+      registerSymbol(entry.symbol, final_addr)
+    end)
+    print(string.format('[SymbolScanner] %s registered at: %X', entry.name, final_addr))
+  else
+    print(string.format('[SymbolScanner] WARNING: AOB scan failed for %s', entry.name))
+  end
+end
+
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('HackingManager_addr')
+{$asm}
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>579</ID>
+          <Description>"base"</Description>
+          <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>HackingManager_addr</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>581</ID>
+              <Description>"_SnakePuzzleCommonUserData"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>+60</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>582</ID>
+                  <Description>"_MoveCoolTime"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+3C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>583</ID>
+                  <Description>"_AutoHackTotalBaseTime [System.Single x4]"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+20</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>584</ID>
+                      <Description>"[0]"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+20</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>585</ID>
+                      <Description>"[1]"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+24</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>586</ID>
+                      <Description>"[2]"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+28</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>587</ID>
+                      <Description>"[3]"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+2C</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>588</ID>
+                  <Description>"_AutoHackAdditionalRate"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+30</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>589</ID>
+                  <Description>"_BlockInputTimeWhenGridChanging"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+34</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>590</ID>
+                  <Description>"_GridResetTime"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+38</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>596</ID>
+                  <Description>"_DeadFilamentDefaultCount"</Description>
+                  <ShowAsSigned>1</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+40</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>597</ID>
+                  <Description>"_DeadFilamentMaxCount"</Description>
+                  <ShowAsSigned>1</ShowAsSigned>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+44</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>598</ID>
+                  <Description>"_DeadFilamentGenerateTime"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+48</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>600</ID>
+                  <Description>"_DeadFilamentMoveBlockTime"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+50</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>601</ID>
+                  <Description>"_MouseControlCameraMoveDisableTime"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+54</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>602</ID>
+                  <Description>"_MouseMaxSensitivity"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+58</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>603</ID>
+                  <Description>"_MouseMinSensitivity"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <VariableType>Float</VariableType>
+                  <Address>+5C</Address>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
