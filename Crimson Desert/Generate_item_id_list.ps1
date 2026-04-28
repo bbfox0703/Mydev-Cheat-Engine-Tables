@@ -71,8 +71,15 @@ try {
         $itemInfo = $line | ConvertFrom-Json
         $key = [string]$itemInfo.key
 
-        # 英文 — 沒翻譯就標 Unknown，全部寫入
-        $enName = if ($enMap.ContainsKey($key)) { $enMap[$key] } else { "Unknown" }
+        # 英文 — 缺英文名時 fallback 到 items.jsonl 的 string_key
+        # (item_names.json 為社群手工維護，新 patch 的 ID 常缺；string_key 永遠有)
+        $enName = if ($enMap.ContainsKey($key)) {
+            $enMap[$key]
+        } elseif (-not [string]::IsNullOrWhiteSpace($itemInfo.string_key)) {
+            $itemInfo.string_key
+        } else {
+            "Unknown"
+        }
         $enResults.Add("${itemId}:${enName}/${key}")
         $enCount++
 
