@@ -1,0 +1,118 @@
+{ Game     : CrimsonDesert.exe
+  Purpose  : Dump in-game item key array (RuntimeIdx -> itemKey) to keys.txt
+             for downstream PowerShell to generate output*.txt with paloc names.
+  How      : 1) Attach CE to CrimsonDesert.exe
+             2) Add this script to your table (Auto Assembler -> paste)
+             3) Tick the [ENABLE] checkbox -> reads array and writes keys.txt
+             4) Run Generate_item_id_list.ps1 (or its keys.txt-aware variant)
+             5) Untick to clean up
+
+  Notes    : - Game allocates this array on heap (writable pages), so we limit
+               AOBScan to "+W" for speed (~few seconds vs. all-memory scan).
+             - We deliberately read PAST the previous version's item count
+               (EXPECTED) and print the next TAIL_PEEK rows so you can eyeball
+               where the real end is. Trim keys.txt manually if needed.
+             - Denuvo here is anti-piracy, not anti-cheat. ReadProcessMemory
+               via CE is fine.
+}
+
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+-- ===================== Config =====================
+local AOB = "98 08 00 00 00 00 00 00 51 C3 00 00 ?? ?? 00 00 3D 4C 0F 00 ?? ?? 00 00 53 C3 00 00 ?? ?? 00 00 86 42 0F 00 ?? ?? 00 00 5B C3 00 00 ?? ?? 00 00 69 47 0F 00 ?? ?? 00 00 64 47 0F 00 ?? ?? 00 00 63 47 0F 00 ?? ?? 00 00 62 47 0F 00 ?? ?? 00 00 89 C3 00 00 ?? ?? 00 00 20 43 0F 00 ?? ?? 00 00 5A 42 0F 00 ?? ?? 00 00 85 50 0F 00 ?? ?? 00 00 7F 42 0F 00 ?? ?? 00 00 86 50 0F 00 ?? ?? 00 00 F4 44 0F 00 ?? ?? 00 00 E8 50 0F 00 ?? ?? 00 00 2D 49 0F 00 ?? ?? 00 00 9C 49 0F 00 ?? ?? 00 00 51 42 0F 00 ?? ?? 00 00 CF 49 0F 00 ?? ?? 00 00 52 42 0F 00 ?? ?? 00 00 B4 43 0F 00 ?? ?? 00 00 E9 50 0F 00 ?? ?? 00 00 68 47 0F 00 ?? ?? 00 00 8D 4A 0F 00 ?? ?? 00 00 4D 49 0F 00 ?? ?? 00 00 57 49 0F 00 ?? ?? 00 00 5B 49 0F 00 ?? ?? 00 00 71 49 0F 00 ?? ?? 00 00 72 49 0F 00 ?? ?? 00 00"
+
+local OUT_PATH    = [[D:\Github\Mydev-Cheat-Engine-Tables\Crimson Desert\keys.txt]]
+local EXPECTED    = 6339      -- 上一版的 item 數，超過此 idx 開始逐筆 dump 供檢查
+local TAIL_PEEK   = 60        -- EXPECTED 之後再讀多少筆印出
+local CONTEXT_PRE = 5         -- EXPECTED 前幾筆也印出做對比
+local MAX_TOTAL   = 50000     -- 安全上限，避免讀爆
+local KEY_MIN     = 1
+local KEY_MAX     = 0x7FFFFFFF
+
+-- ===================== Scan =====================
+print("=== dump_item_keys ===")
+print("[*] AOBScan (writable pages)...")
+local t0 = os.clock()
+local r = AOBScan(AOB, "+W")
+local scan_ms = (os.clock() - t0) * 1000
+
+if not r or r.Count == 0 then
+  print(string.format("[!] AOB not found (%.0f ms)", scan_ms))
+  return
+end
+
+print(string.format("[+] %d match(es) in %.0f ms", r.Count, scan_ms))
+for i = 0, math.min(r.Count - 1, 4) do
+  print(string.format("    match[%d] = 0x%s", i, r[i]))
+end
+if r.Count > 5 then print("    ...") end
+
+local base = tonumber(r[0], 16)
+r.destroy()
+print(string.format("[+] Using base: 0x%X", base))
+print("")
+
+-- ===================== Read & dump =====================
+local fh, err = io.open(OUT_PATH, "w")
+if not fh then
+  print("[!] cannot open output: " .. tostring(err))
+  return
+end
+
+local n = 0
+local stop_reason = string.format("MAX_TOTAL (%d) reached", MAX_TOTAL)
+local print_from  = math.max(0, EXPECTED - CONTEXT_PRE)
+local print_until = EXPECTED + TAIL_PEEK
+
+print(string.format("[*] Inspecting rows [%d .. %d] (前後對比，找真正結尾):", print_from, print_until - 1))
+print("    idx     address              key            unk(hex)    note")
+print("    ------  -------------------  -------------  ----------  ----")
+
+for i = 0, MAX_TOTAL - 1 do
+  local addr = base + i * 8
+  local key  = readInteger(addr)
+  local unk  = readInteger(addr + 4)
+
+  if key == nil then
+    stop_reason = string.format("page fault @ 0x%X (idx=%d)", addr, i)
+    break
+  end
+
+  -- 印出 EXPECTED 前後窗口，供你判斷結尾
+  if i >= print_from and i < print_until then
+    local note = ""
+    if i == EXPECTED then note = "<-- 上版結尾 (EXPECTED)" end
+    if key < KEY_MIN or key > KEY_MAX then
+      note = note .. " [INVALID key]"
+    elseif key == 0 then
+      note = note .. " [ZERO]"
+    end
+    print(string.format("    [%5d]  0x%016X  %-13d  0x%08X  %s",
+      i, addr, key, (unk or 0) & 0xFFFFFFFF, note))
+  end
+
+  fh:write(string.format("%d\n", key))
+  n = n + 1
+end
+
+fh:close()
+print("")
+print(string.format("[+] Wrote %d lines -> %s", n, OUT_PATH))
+print(string.format("[+] Stop reason : %s", stop_reason))
+print("")
+print("【下一步】")
+print("  1. 對照上方表格，判斷哪一筆之後變 garbage")
+print("  2. 若有 garbage，手動把 keys.txt 後段刪除（或調整 EXPECTED 重跑）")
+print("  3. 跑 PowerShell 產生 output*.txt")
+print("")
+print("把這個條目 [DISABLE] 即可，不會留下任何 hook")
+{$asm}
+
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+print("dump_item_keys: disabled (no hooks to clean)")
+{$asm}
