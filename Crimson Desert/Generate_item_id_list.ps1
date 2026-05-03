@@ -9,47 +9,44 @@
 # 資料來源優先序 (en)：
 #   1. paloc_eng.json          ← 從遊戲 paloc 解出 (官方原文，覆蓋率 100%)
 #   2. item_names.json         ← 社群維護的 mapping (備用)
-#   3. items.jsonl 的 string_key ← 內部代號 (例: "Paper_Doni_I_1")
-#   4. "Unknown"
+#   3. "Unknown"
 #
 # 資料來源優先序 (zh-tw / ja)：
 #   1. paloc_zho-tw.json / paloc_jpn.json (官方原文)
 #   2. 缺翻譯 → 跳過該行
 #
 # -----------------------------------------------------------------------------
-# 前置作業：要在 CrimsonGameMods/ 底下跑這兩支 Python 腳本，產生 paloc_*.json
+# 取得 Item ID 順序的方式 (NEW — 從遊戲記憶體直接 dump)
 # -----------------------------------------------------------------------------
+# 為什麼不用 items.jsonl?
+#   每次遊戲 patch 後 Rust parser 可能跟不上 (iteminfo.pabgb 結構變動會導致
+#   crimson_rs.parse_iteminfo_from_bytes 解不出來)。改用「直接從 process 記憶體
+#   讀取遊戲已載入的 itemKey 陣列」更穩、也保證 RuntimeIdx 跟遊戲現況 100% 一致。
 #
-# (1) list_paloc.py — 列出遊戲 PAZ 內所有 .paloc 檔，找出各語系正確的 group 編號
-#                     與檔名 (例如繁中為 localizationstring_zho-tw.paloc / group 0031)。
-#     用法:
-#         cd D:\Github\CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS\CrimsonGameMods
-#         python list_paloc.py
-#     遊戲 patch 後若解不到，重跑這支看 group 是否被挪動 (預設掃 0020-0035)。
+# 步驟：
+#   (1) 啟動遊戲 (CrimsonDesert.exe) 進到主畫面或讀檔即可
+#   (2) Cheat Engine attach 到 CrimsonDesert.exe
+#   (3) Load CE table 內的 [Dump Item Keys] 條目 (來源 dump_item_keys.CEA)
+#       勾選 [ENABLE] -> 自動 AOBScan + 寫出 keys.txt
+#       Lua console 會印出 EXPECTED 之後幾筆，讓你確認結尾位置
+#   (4) 若 keys.txt 尾段有 garbage (sentinel 0xFFFFFFFF / 0 / 異常大數)，本腳本
+#       會自動偵測並停止讀取，不必手動 trim
+#   (5) 跑本腳本 -> 三個 output*.txt 完成
 #
-# (2) extract_paloc.py — 從遊戲 .paz 解開語系字串檔，過濾出 item 名稱
-#                        ((id & 0xFF) == 0x70)，輸出成 paloc_<lang>.json。
-#     用法:
-#         cd D:\Github\CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS\CrimsonGameMods
-#         python extract_paloc.py
-#     會在 CrimsonGameMods/ 產生 paloc_eng.json / paloc_zho-tw.json / paloc_jpn.json。
-#     檔案不必複製到本 ps1 資料夾，本腳本會直接從 CrimsonGameMods/ 讀取。
-#
-# 兩支 Python 腳本內部呼叫 crimson_rs.pyd (repo 已內建編譯好的 Rust 解析器)，
-# 不需要安裝 Rust toolchain。每次遊戲版本更新後，依序重跑：
-#     python tools\dump_iteminfo.py    (重產 items.jsonl)
-#     python extract_paloc.py          (重產 paloc_*.json)
-#     pwsh   Generate_item_id_list.ps1 (重產 output*.txt)
+# 取得 paloc_*.json 的方式 (一次性，patch 後重跑)
+#   cd D:\Github\CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS\CrimsonGameMods
+#   python list_paloc.py        # 確認語系檔在哪個 group (patch 可能挪動)
+#   python extract_paloc.py     # 解出 paloc_eng.json / paloc_zho-tw.json / paloc_jpn.json
 # =============================================================================
 
-# 設定基礎路徑變數
+# ── 路徑設定 ─────────────────────────────────────────────────────────────────
 $basePath        = "D:\Github\CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS"
 $gameModsPath    = Join-Path $basePath "CrimsonGameMods"
 
-# 輸入：items.jsonl
-$itemsJsonlPath  = Join-Path $gameModsPath "data\iteminfo_dump\items.jsonl"
+# 輸入：CE Lua 從遊戲記憶體 dump 出來的 itemKey 陣列 (一行一個十進位 key)
+$keysPath        = Join-Path $PSScriptRoot "keys.txt"
 
-# 輸入：官方 paloc 解出的對照表 (主來源)
+# 輸入：paloc 解出的官方對照表 (主來源)
 $palocEnPath     = Join-Path $gameModsPath "paloc_eng.json"
 $palocZhTwPath   = Join-Path $gameModsPath "paloc_zho-tw.json"
 $palocJaPath     = Join-Path $gameModsPath "paloc_jpn.json"
@@ -81,18 +78,30 @@ function Load-PalocMap {
     foreach ($prop in $data.PSObject.Properties) {
         $map[[string]$prop.Name] = [string]$prop.Value
     }
-    Write-Host ("  [{0}] loaded {1,6} entries from {2}" -f $Label, $map.Count, (Split-Path $Path -Leaf))
+    Write-Host ("  [{0,-6}] {1,6} entries  <- {2}" -f $Label, $map.Count, (Split-Path $Path -Leaf))
     return $map
 }
 
-# ── 1. 載入官方 paloc 對照表 (en / zh-tw / ja) ─────────────────────────────────
+# ── garbage 偵測：陣列結尾的 sentinel ────────────────────────────────────────
+#   key == 0xFFFFFFFF (4294967295)   ← 實測 sentinel
+#   key == 0                          ← 保險：未初始化區域
+# 注意：itemKey 可達 9 位數 (例如 391518535)，所以不能用「上限」判斷。
+function Test-IsGarbage {
+    param([uint64]$Key)
+    if ($Key -eq 4294967295) { return $true }
+    if ($Key -eq 0)          { return $true }
+    return $false
+}
+
+# ── 1. 載入官方 paloc 對照表 ──────────────────────────────────────────────────
 Write-Host "Loading paloc maps..." -ForegroundColor Cyan
 $enPalocMap   = Load-PalocMap -Path $palocEnPath   -Label "en"
 $zhTwPalocMap = Load-PalocMap -Path $palocZhTwPath -Label "zh-tw"
 $jaPalocMap   = Load-PalocMap -Path $palocJaPath   -Label "ja"
 
-# ── 2. 載入英文備用 item_names.json (社群維護的 array 結構) ────────────────────
-Write-Host "Loading fallback item_names.json (community)..." -ForegroundColor Cyan
+# ── 2. 載入英文備用 item_names.json ──────────────────────────────────────────
+Write-Host ""
+Write-Host "Loading EN fallback (item_names.json)..." -ForegroundColor Cyan
 $enFallbackMap = @{}
 if (Test-Path -LiteralPath $itemNamesPath) {
     try {
@@ -102,7 +111,7 @@ if (Test-Path -LiteralPath $itemNamesPath) {
                 $enFallbackMap[[string]$item.itemKey] = $item.name
             }
         }
-        Write-Host ("  [en-fallback] loaded {0,6} entries from item_names.json" -f $enFallbackMap.Count)
+        Write-Host ("  [en-fb ] {0,6} entries  <- {1}" -f $enFallbackMap.Count, (Split-Path $itemNamesPath -Leaf))
     } catch {
         Write-Warning "Failed to parse item_names.json: $($_.Exception.Message)"
     }
@@ -110,57 +119,71 @@ if (Test-Path -LiteralPath $itemNamesPath) {
     Write-Warning "item_names.json not found at $itemNamesPath"
 }
 
-# ── 3. 處理 items.jsonl ───────────────────────────────────────────────────────
-Write-Host "Processing items.jsonl..." -ForegroundColor Cyan
+# ── 3. 讀 keys.txt 並組裝輸出 ─────────────────────────────────────────────────
+Write-Host ""
+Write-Host "Reading keys.txt and generating outputs..." -ForegroundColor Cyan
+if (-not (Test-Path -LiteralPath $keysPath)) {
+    Write-Error "keys.txt not found at $keysPath"
+    Write-Error "請先在 Cheat Engine 載入 dump_item_keys.CEA 並執行 [ENABLE]"
+    exit
+}
+
 $enResults   = [System.Collections.Generic.List[string]]::new()
 $zhTwResults = [System.Collections.Generic.List[string]]::new()
 $jaResults   = [System.Collections.Generic.List[string]]::new()
 
 $itemId = 0
-$enFromPaloc = 0; $enFromFallback = 0; $enFromStringKey = 0; $enUnknown = 0
+$enFromPaloc = 0; $enFromFallback = 0; $enUnknown = 0
 $zhTwCount = 0; $jaCount = 0
+$stopReason = "EOF"
+$rawLines = 0
 
-try {
-    $lines = Get-Content -Path $itemsJsonlPath -Encoding UTF8 -ErrorAction Stop
-    foreach ($line in $lines) {
-        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+foreach ($line in Get-Content -Path $keysPath -Encoding UTF8) {
+    $rawLines++
+    $trimmed = $line.Trim()
+    if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
 
-        $itemInfo = $line | ConvertFrom-Json
-        $key      = [string]$itemInfo.key
-
-        # ── EN：paloc → item_names.json → string_key → "Unknown" ────────────
-        if ($enPalocMap.ContainsKey($key)) {
-            $enName = $enPalocMap[$key]
-            $enFromPaloc++
-        } elseif ($enFallbackMap.ContainsKey($key)) {
-            $enName = $enFallbackMap[$key]
-            $enFromFallback++
-        } elseif (-not [string]::IsNullOrWhiteSpace($itemInfo.string_key)) {
-            $enName = $itemInfo.string_key
-            $enFromStringKey++
-        } else {
-            $enName = "Unknown"
-            $enUnknown++
-        }
-        $enResults.Add("${itemId}:${enName}/${key}")
-
-        # ── zh-tw：paloc only，缺則跳過 ─────────────────────────────────────
-        if ($zhTwPalocMap.ContainsKey($key)) {
-            $zhTwResults.Add("${itemId}:$($zhTwPalocMap[$key])/${key}")
-            $zhTwCount++
-        }
-
-        # ── ja：paloc only，缺則跳過 ────────────────────────────────────────
-        if ($jaPalocMap.ContainsKey($key)) {
-            $jaResults.Add("${itemId}:$($jaPalocMap[$key])/${key}")
-            $jaCount++
-        }
-
-        $itemId++
+    # 解析數字
+    $keyU64 = 0UL
+    if (-not [uint64]::TryParse($trimmed, [ref]$keyU64)) {
+        $stopReason = "non-numeric line at #${rawLines}: '${trimmed}'"
+        break
     }
-} catch {
-    Write-Error "Error processing items.jsonl: $($_.Exception.Message)"
-    exit
+
+    # 偵測 garbage 結尾
+    if (Test-IsGarbage -Key $keyU64) {
+        $stopReason = "garbage detected at #${rawLines} (key=${keyU64})"
+        break
+    }
+
+    $key = [string]$keyU64
+
+    # ── EN：paloc → item_names.json → "Unknown" ────────────────────────────
+    if ($enPalocMap.ContainsKey($key)) {
+        $enName = $enPalocMap[$key]
+        $enFromPaloc++
+    } elseif ($enFallbackMap.ContainsKey($key)) {
+        $enName = $enFallbackMap[$key]
+        $enFromFallback++
+    } else {
+        $enName = "Unknown"
+        $enUnknown++
+    }
+    $enResults.Add("${itemId}:${enName}/${key}")
+
+    # ── zh-tw：paloc only，缺則跳過 ────────────────────────────────────────
+    if ($zhTwPalocMap.ContainsKey($key)) {
+        $zhTwResults.Add("${itemId}:$($zhTwPalocMap[$key])/${key}")
+        $zhTwCount++
+    }
+
+    # ── ja：paloc only，缺則跳過 ───────────────────────────────────────────
+    if ($jaPalocMap.ContainsKey($key)) {
+        $jaResults.Add("${itemId}:$($jaPalocMap[$key])/${key}")
+        $jaCount++
+    }
+
+    $itemId++
 }
 
 # ── 4. 寫檔 (UTF-8) ───────────────────────────────────────────────────────────
@@ -175,11 +198,11 @@ try {
     Write-Host ("  {0,-22} {1,6} lines -> {2}" -f "Traditional (zh-tw):", $zhTwCount, $outputZhTwPath)
     Write-Host ("  {0,-22} {1,6} lines -> {2}" -f "Japanese (ja):",       $jaCount,   $outputJaPath)
     Write-Host ""
-    Write-Host ("Total items in source: {0}" -f $itemId) -ForegroundColor White
+    Write-Host ("Total valid items: {0}  (stopped: {1})" -f $itemId, $stopReason) -ForegroundColor White
+    Write-Host ""
     Write-Host "EN name source breakdown:" -ForegroundColor White
     Write-Host ("  paloc_eng.json   : {0,6}" -f $enFromPaloc)
     Write-Host ("  item_names.json  : {0,6}  (fallback)" -f $enFromFallback)
-    Write-Host ("  string_key       : {0,6}  (last resort)" -f $enFromStringKey)
     Write-Host ("  Unknown          : {0,6}" -f $enUnknown)
     if ($itemId -gt 0) {
         Write-Host ""
