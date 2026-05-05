@@ -6754,15 +6754,39 @@ CrimsonDesert.exe+12D1E45: 49 8B 06                           - mov rax,[r14]
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">{$lua}
 -- ============================================================
--- Item ID Finder GUI
--- 從 ItemID. / ItemID-zh_tw. / ItemID-ja. 三個 dropdown options
--- 提供 partial match、不分大小寫、跨語系搜尋
+-- Generic Dropdown ID Finder
+-- 從 N 個獨立的 dropdown MemoryRecord 提供 partial match 查詢
+-- 每個 list 獨立,切換 list 時只搜該 list
 -- ============================================================
 {$asm}
 
 [ENABLE]
 {$lua}
 if syntaxcheck then return end
+
+------------------------------------------------------------
+-- ★ CONFIG ★ 修改這一段就能套用到不同遊戲 / 不同 dropdown
+--
+-- sources: 1~3 個獨立來源,每個是一個 dropdown MemoryRecord
+--   label   : 在 RadioGroup 上顯示的標籤
+--             例如 EN/TW/JA,或 Item/Weapon/Material
+--   recName : MemoryRecord description (要完全相符)
+--
+-- formCaption : 視窗標題
+-- defaultIdx  : 預設選中的 source (0-based)
+-- groupCaption: RadioGroup 上方的標題文字
+-- ============================================================
+local CONFIG = {
+  formCaption  = 'Item ID Finder',
+  groupCaption = 'List',
+  defaultIdx   = 1,
+  sources = {
+    { label = 'EN', recName = 'ItemID.'       },
+    { label = 'TW', recName = 'ItemID-zh_tw.' },
+    { label = 'JA', recName = 'ItemID-ja.'    },
+  },
+}
+------------------------------------------------------------
 
 -- 避免重複開啟
 if itemFinderForm ~= nil and not itemFinderForm.Destroyed then
@@ -6771,11 +6795,19 @@ if itemFinderForm ~= nil and not itemFinderForm.Destroyed then
   return
 end
 
+local sources = CONFIG.sources
+local nSources = #sources
+if nSources &lt; 1 or nSources &gt; 3 then
+  error('CONFIG.sources must contain 1 to 3 entries')
+end
+if CONFIG.defaultIdx &lt; 0 or CONFIG.defaultIdx &gt;= nSources then
+  error('CONFIG.defaultIdx out of range')
+end
+
 ------------------------------------------------------------
--- 1. 讀取三個 MemoryRecord 的 dropdown options
---    AddressList / MemoryRecord 屬於 GUI thread,需要 synchronize
+-- 1. 讀取每個 source 的 dropdown options (GUI thread)
 ------------------------------------------------------------
-local linesEN, linesTW, linesJA
+local rawLines = {}   -- rawLines[i] = { "0:foo/123", ... }
 
 synchronize(function()
   local function loadDropdownLines(recName)
@@ -6786,20 +6818,21 @@ synchronize(function()
     local list = mr.DropDownList
     local lines = {}
     if list ~= nil then
-      for i = 0, list.Count - 1 do
-        lines[#lines + 1] = list[i]
+      for j = 0, list.Count - 1 do
+        lines[#lines + 1] = list[j]
       end
     end
     return lines
   end
 
-  linesEN = loadDropdownLines('ItemID.')
-  linesTW = loadDropdownLines('ItemID-zh_tw.')
-  linesJA = loadDropdownLines('ItemID-ja.')
+  for i = 1, nSources do
+    rawLines[i] = loadDropdownLines(sources[i].recName)
+  end
 end)
 
 ------------------------------------------------------------
--- 2. 純 Lua 解析,不碰 GUI,留在 worker thread
+-- 2. 純 Lua 解析,每個 source 各自一份 items 陣列
+--    items[srcIdx] = { {id, desc, searchKey}, ... }
 ------------------------------------------------------------
 local function splitIdDesc(line)
   local colonPos = string.find(line, ':', 1, true)
@@ -6808,117 +6841,110 @@ local function splitIdDesc(line)
          string.sub(line, colonPos + 1)
 end
 
-local function buildLookup(lines)
-  local map = {}
-  for i = 1, #lines do
-    local id, desc = splitIdDesc(lines[i])
-    map[id] = desc
+local items = {}     -- items[1..nSources] 各自的解析結果
+
+for s = 1, nSources do
+  local lines = rawLines[s]
+  local parsed = {}
+  for k = 1, #lines do
+    local id, desc = splitIdDesc(lines[k])
+    parsed[#parsed + 1] = {
+      id = id,
+      desc = desc,
+      searchKey = string.lower(id .. ' ' .. desc),
+    }
   end
-  return map
-end
-
-local lookupTW = buildLookup(linesTW)
-local lookupJA = buildLookup(linesJA)
-
-local items = {}
-local total = #linesEN
-
-for i = 1, total do
-  local id, descEN = splitIdDesc(linesEN[i])
-  local descTW = lookupTW[id] or ''
-  local descJA = lookupJA[id] or ''
-
-  local parts = { id, descEN }
-  if descTW ~= '' then parts[#parts + 1] = descTW end
-  if descJA ~= '' then parts[#parts + 1] = descJA end
-  local key = string.lower(table.concat(parts, ' '))
-
-  items[i] = {
-    id = id, en = descEN, tw = descTW, ja = descJA,
-    searchKey = key,
-  }
+  items[s] = parsed
 end
 
 ------------------------------------------------------------
--- 3. 顯示語系
-------------------------------------------------------------
-local currentLang = 'tw'
-
-local function descOf(item, lang)
-  local d
-  if lang == 'en' then d = item.en
-  elseif lang == 'ja' then d = item.ja
-  else d = item.tw end
-  if d == '' then return '(' .. item.en .. ')' end
-  return d
-end
-
-------------------------------------------------------------
--- 4~7. 建立 GUI / 綁事件 / 顯示
--- AA script 在 worker thread 跑,GUI 必須 synchronize 到 main thread
+-- 3~7. 建立 GUI / 綁事件 / 顯示
 ------------------------------------------------------------
 synchronize(function()
+  local currentIdx = CONFIG.defaultIdx + 1
+
   itemFinderForm = createForm(false)
-  itemFinderForm.Caption = 'Item ID Finder (' .. total .. ' items)'
-  itemFinderForm.Width = 720
+  itemFinderForm.Caption = CONFIG.formCaption
+  itemFinderForm.Width = 760
   itemFinderForm.Height = 540
   itemFinderForm.Position = 'poScreenCenter'
 
-  -- 上方 Filter panel (只放 filter + radio group)
+  -- ★ 重點:panel 必須依 alTop / alBottom / alClient 的順序
+  --   alTop 的 panel 依「建立順序」由上往下堆疊
+  --   所以建立順序: pnlTop -&gt; pnlStatus -&gt; pnlBottom -&gt; lv (alClient 最後)
+
+  ----------------------------------------------------------
+  -- 動態算 RadioGroup 寬度
+  ----------------------------------------------------------
+  local rgWidth = 0
+  if nSources &gt; 1 then
+    local maxLabelLen = 0
+    for i = 1, nSources do
+      if #sources[i].label &gt; maxLabelLen then
+        maxLabelLen = #sources[i].label
+      end
+    end
+    rgWidth = (maxLabelLen * 9 + 32) * nSources + 24
+    if rgWidth &lt; 180 then rgWidth = 180 end
+  end
+
+  ----------------------------------------------------------
+  -- pnlTop: Filter + RadioGroup
+  ----------------------------------------------------------
   local pnlTop = createPanel(itemFinderForm)
   pnlTop.Align = 'alTop'
-  pnlTop.Height = 60          -- 不再放 lblCount,可縮回 60
+  pnlTop.Height = 64
   pnlTop.BevelOuter = 'bvNone'
 
   local lblFilter = createLabel(pnlTop)
   lblFilter.Caption = 'Filter:'
   lblFilter.Left = 10
-  lblFilter.Top = 18
+  lblFilter.Top = 22
 
   local edtFilter = createEdit(pnlTop)
-  edtFilter.Left = 70
-  edtFilter.Top = 14
-  edtFilter.Width = 400
+  edtFilter.Left = 60
+  edtFilter.Top = 18
+  -- 用 form 的 ClientWidth 算,比 pnlTop.Width 可靠
+  if rgWidth &gt; 0 then
+    edtFilter.Width = itemFinderForm.ClientWidth - rgWidth - 80
+  else
+    edtFilter.Width = itemFinderForm.ClientWidth - 70
+  end
+  if edtFilter.Width &lt; 100 then edtFilter.Width = 100 end
 
-  local rgLang = createRadioGroup(pnlTop)
-  rgLang.Left = 480
-  rgLang.Top = 0
-  rgLang.Width = 220
-  rgLang.Height = 56
-  rgLang.Caption = 'Display Lang'
-  rgLang.Columns = 3
-  rgLang.Items.add('EN')
-  rgLang.Items.add('TW')
-  rgLang.Items.add('JA')
-  rgLang.ItemIndex = (currentLang == 'en' and 0) or
-                     (currentLang == 'tw' and 1) or 2
+  local rgList = nil
+  if nSources &gt; 1 then
+    rgList = createRadioGroup(pnlTop)
+    rgList.Top = 4
+    rgList.Width = rgWidth
+    rgList.Height = 56
+    rgList.Left = itemFinderForm.ClientWidth - rgWidth - 10
+    rgList.Caption = CONFIG.groupCaption
+    rgList.Columns = nSources
+    for i = 1, nSources do
+      rgList.Items.add(sources[i].label)
+    end
+    rgList.ItemIndex = CONFIG.defaultIdx
+  end
 
-  -- 中間 Status panel (獨立一條,放 lblCount)
+  ----------------------------------------------------------
+  -- pnlStatus: 訊息列
+  ----------------------------------------------------------
   local pnlStatus = createPanel(itemFinderForm)
-  pnlStatus.Align = 'alTop'   -- 也是 alTop,會疊在 pnlTop 下方
-  pnlStatus.Height = 26
+  pnlStatus.Align = 'alTop'
+  pnlStatus.Height = 24
   pnlStatus.BevelOuter = 'bvNone'
 
   local lblCount = createLabel(pnlStatus)
-  lblCount.Align = 'alClient'  -- 整個 panel 都給 label,自動填滿
-  lblCount.Caption = 'Type to filter (case-insensitive, all languages)'
+  lblCount.Align = 'alClient'
+  lblCount.Caption = 'Type to filter (case-insensitive)'
 
-  -- 下方 ListView
-  local lv = createListView(itemFinderForm)
-  lv.Align = 'alClient'
-  lv.ViewStyle = 'vsReport'
-  lv.RowSelect = true
-  lv.ReadOnly = true
-  lv.MultiSelect = true
-  lv.Columns.add().Caption = 'ID'
-  lv.Columns[0].Width = 100
-  lv.Columns.add().Caption = 'Description'
-  lv.Columns[1].Width = 600
-
-  -- 底部按鈕區
+  ----------------------------------------------------------
+  -- pnlBottom: 按鈕 (★ 一定要在 ListView 之前建!)
+  ----------------------------------------------------------
   local pnlBottom = createPanel(itemFinderForm)
   pnlBottom.Align = 'alBottom'
-  pnlBottom.Height = 52
+  pnlBottom.Height = 50
   pnlBottom.BevelOuter = 'bvNone'
 
   local btnCopy = createButton(pnlBottom)
@@ -6930,35 +6956,55 @@ synchronize(function()
 
   local btnClose = createButton(pnlBottom)
   btnClose.Caption = 'Close'
-  btnClose.Left = 600
   btnClose.Top = 8
   btnClose.Height = 32
   btnClose.Width = 90
+  btnClose.Left = itemFinderForm.ClientWidth - btnClose.Width - 10
+
+  ----------------------------------------------------------
+  -- ListView (★ alClient 必須最後建,才會自動填滿剩餘空間)
+  ----------------------------------------------------------
+  local lv = createListView(itemFinderForm)
+  lv.Align = 'alClient'
+  lv.ViewStyle = 'vsReport'
+  lv.RowSelect = true
+  lv.ReadOnly = true
+  lv.MultiSelect = true
+  lv.Columns.add().Caption = 'ID'
+  lv.Columns[0].Width = 100
+  lv.Columns.add().Caption = 'Description'
+  lv.Columns[1].Width = 600
+
+  -- ... rebuildList / copySelectedIds / 事件綁定 維持原樣 ...
 
   --------------------------------------------------------
-  -- Filter 邏輯 (closure 內,可存取 lv / edtFilter / rgLang / lblCount)
+  -- Filter 邏輯:只搜當前選中的 source
   --------------------------------------------------------
   local function rebuildList()
+    -- 從 RadioGroup 讀當前 source(若沒 RG 就固定第 1 個)
+    if rgList ~= nil then
+      currentIdx = rgList.ItemIndex + 1
+    end
+    local cur = items[currentIdx]
+    local total = #cur
+
     local q = string.lower(edtFilter.Text)
-    local lang = (rgLang.ItemIndex == 0 and 'en')
-              or (rgLang.ItemIndex == 1 and 'tw')
-              or 'ja'
+    local empty = (q == '')
 
     lv.Items.beginUpdate()
     lv.Items.clear()
 
     local matched = 0
-    local cap = 2000  -- 安全上限,避免空字串時建 6200 個 item 太慢
-    local empty = (q == '')
+    local cap = 2000
 
     for i = 1, total do
-      local it = items[i]
+      local it = cur[i]
       if empty or string.find(it.searchKey, q, 1, true) then
         matched = matched + 1
         if matched &lt;= cap then
           local row = lv.Items.add()
           row.Caption = it.id
-          row.SubItems.add(descOf(it, lang))
+          row.SubItems.add(it.desc)
         end
       end
     end
@@ -6967,10 +7013,12 @@ synchronize(function()
 
     if matched &gt; cap then
       lblCount.Caption = string.format(
-        'Matched %d (showing first %d) - type more to narrow',
-        matched, cap)
+        '[%s] Matched %d (showing first %d) - type more to narrow',
+        sources[currentIdx].label, matched, cap)
     else
-      lblCount.Caption = string.format('Matched %d / %d', matched, total)
+      lblCount.Caption = string.format(
+        '[%s] Matched %d / %d',
+        sources[currentIdx].label, matched, total)
     end
   end
 
@@ -6983,7 +7031,6 @@ synchronize(function()
       return
     end
     local ids = {}
-    -- 走訪所有 items,挑出 .Selected = true 的
     local count = lv.Items.Count
     for i = 0, count - 1 do
       local it = lv.Items[i]
@@ -6999,9 +7046,11 @@ synchronize(function()
   -- 事件綁定
   --------------------------------------------------------
   edtFilter.OnChange = rebuildList
-  rgLang.OnClick    = rebuildList
-  btnCopy.OnClick   = copySelectedIds
-  btnClose.OnClick  = function() itemFinderForm.close() end
+  if rgList ~= nil then
+    rgList.OnClick = rebuildList   -- 切 list 時重新搜尋
+  end
+  btnCopy.OnClick  = copySelectedIds
+  btnClose.OnClick = function() itemFinderForm.close() end
 
   -- 雙擊複製單一 ID
   lv.OnDblClick = function()
@@ -7013,8 +7062,7 @@ synchronize(function()
 
   -- Ctrl+C 複製
   lv.OnKeyDown = function(sender, key, shift)
-    -- key 67 = 'C',shift 是 table,可能含 'ssCtrl'
-    if key == 67 then
+    if key == 67 then   -- 'C'
       for _, v in ipairs(shift) do
         if v == 'ssCtrl' then
           copySelectedIds()
@@ -7024,18 +7072,15 @@ synchronize(function()
     end
   end
 
-  -- 表單關閉時清掉全域變數
   itemFinderForm.OnClose = function(sender)
     itemFinderForm = nil
     return caFree
   end
 
-  -- 初始顯示
   rebuildList()
   itemFinderForm.show()
-  itemFinderForm.ActiveControl = edtFilter   -- 取代 SetFocus
+  itemFinderForm.ActiveControl = edtFilter
 end)
-
 
 [DISABLE]
 {$lua}
@@ -7046,7 +7091,6 @@ synchronize(function()
   end
   itemFinderForm = nil
 end)
-
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
