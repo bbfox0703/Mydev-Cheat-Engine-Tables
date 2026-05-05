@@ -1,0 +1,204 @@
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if hpRefillTimerAob1 then
+  hpRefillTimerAob1.destroy()
+  hpRefillTimerAob1 = nil
+end
+
+-- ============================================================
+-- 設定欄位說明
+-- ============================================================
+--   desc      : memoryrecord description（必填，寫入目標）
+--   srcType   : 來源類型
+--                 0 = 從 target 位址 + offset 讀取
+--                 1 = 固定值
+--                 2 = 從另一個 memoryrecord 讀取
+--   offset    : srcType=0 時用，target.address + offset 為來源
+--               (offset=0 代表 target 自己本身)
+--   value     : srcType=1 時為固定數值
+--               srcType=2 時為 source memoryrecord 的 description
+--   mult      : srcType=0 時的乘數，預設 1
+--               (例：max HP * 10 寫回 current HP)
+--   srcType0Datatype : srcType=0 時 source 的資料型別 (vtByte/vtWord/
+--               vtDword/vtQword/vtSingle/vtDouble)，預設同 target
+--   writeMode : 寫入條件，預設 '<'
+--                 '<'  current <  source 時寫入（補滿用）
+--                 '<=' current <= source 時寫入
+--                 '>'  current >  source 時寫入（限制上限用）
+--                 '>=' current >= source 時寫入
+--                 '==' 或 '='        相等時寫入
+--                 '~=' 或 '!=' 或 '<>' 不相等時寫入（凍結值用）
+--                 '*'  無條件寫入（強制覆寫）
+-- ============================================================
+-- 設定範例集（複製到下方 recordConfigs 內使用）
+-- ============================================================
+--
+-- [補滿型] HP/MP/Sta 補滿（max 在 +0x10，乘 10 倍寫回 current）
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
+--
+-- [補滿型] 不乘倍數，直接 current = max
+--   { desc = 'HP', srcType = 0, offset = 0x10 },
+--
+-- [補滿型] target 自己 < 某值就拉到該值（保底血量 1000）
+--   { desc = 'HP', srcType = 1, value = 1000, writeMode = '<' },
+--
+-- [上限型] 等級超過 99 拉回 99
+--   { desc = 'Level', srcType = 1, value = 99, writeMode = '>' },
+--
+-- [上限型] 物品數量超過 99 拉回 99
+--   { desc = 'Potion', srcType = 1, value = 99, writeMode = '>' },
+--
+-- [凍結型] 金錢不等於 99999999 就寫回（防遊戲扣款也防你誤花）
+--   { desc = 'Gold', srcType = 1, value = 99999999, writeMode = '~=' },
+--
+-- [凍結型] 技能 CD 不等於 0 就清零
+--   { desc = 'SkillCD', srcType = 1, value = 0, writeMode = '~=' },
+--
+-- [強制型] 無條件每 tick 把無敵時間設成 9999
+--   { desc = 'InvincibleTimer', srcType = 1, value = 9999, writeMode = '*' },
+--
+-- [鏡像型] CurHP 和 MaxHP 不一致就同步（CurHP = MaxHP）
+--   { desc = 'CurHP', srcType = 2, value = 'MaxHP', writeMode = '~=' },
+--
+-- [鏡像型] 把另一個欄位的值乘 2 寫過來（透過 srcType=2，但無倍數）
+--   { desc = 'AttackDisplay', srcType = 2, value = 'AttackBase' },
+--   注意：srcType=2 沒有 mult 參數，需乘倍數請用 srcType=0
+--
+-- [指定型別] target 是 vtQword，但 max 在 +0x20 是 vtDword
+--   { desc = 'Mana', srcType = 0, offset = 0x20,
+--     srcType0Datatype = vtDword, mult = 10 },
+--
+-- [Float] 移動速度倍率：current < 5.0 時拉到 5.0
+--   { desc = 'MoveSpeed', srcType = 1, value = 5.0, writeMode = '<' },
+--
+-- [Byte] 1 byte 的 buff 旗標固定為 1
+--   { desc = 'BuffFlag', srcType = 1, value = 1, writeMode = '~=' },
+--
+-- ============================================================
+local recordConfigs = {
+  { desc = 'HP #1_C',  srcType = 0, offset = 0x10, mult = 10 },
+  { desc = 'Sta #1_C', srcType = 0, offset = 0x10, mult = 10 },
+  { desc = 'Spi #1_C', srcType = 0, offset = 0x10, mult = 10 },
+  { desc = 'HP #2_H',  srcType = 0, offset = 0x10, mult = 10 },
+  { desc = 'Sta #2_H', srcType = 0, offset = 0x10, mult = 10 },
+}
+
+-- ============================================================
+-- 依 vartype 取得 read/write 函式
+-- ============================================================
+local function readByteValue(addr)
+  local b = readBytes(addr, 1, false)
+  return b
+end
+local function writeByteValue(addr, v)
+  writeBytes(addr, v)
+end
+
+local function getRw(vt)
+  if vt == vtByte   then return readByteValue, writeByteValue end
+  if vt == vtWord   then return readSmallInteger, writeSmallInteger end
+  if vt == vtDword  then return readInteger, writeInteger end
+  if vt == vtQword  then return readQword, writeQword end
+  if vt == vtSingle then return readFloat, writeFloat end
+  if vt == vtDouble then return readDouble, writeDouble end
+  return nil, nil
+end
+
+-- ============================================================
+-- 依 writeMode 判斷是否該寫入
+-- ============================================================
+local function shouldWrite(curVal, srcVal, mode)
+  mode = mode or '<'
+  if mode == '*'  then return true end
+  if mode == '<'  then return curVal <  srcVal end
+  if mode == '<=' then return curVal <= srcVal end
+  if mode == '>'  then return curVal >  srcVal end
+  if mode == '>=' then return curVal >= srcVal end
+  if mode == '==' or mode == '='  then return curVal == srcVal end
+  if mode == '~=' or mode == '!=' or mode == '<>' then return curVal ~= srcVal end
+  return false
+end
+
+-- ============================================================
+-- 解析 memoryrecord
+-- ============================================================
+local function resolveRecord(al, desc)
+  local mr = al.getMemoryRecordByDescription(desc)
+  if mr == nil then return nil end
+  local addr = mr.CurrentAddress
+  if addr == nil then return nil end
+  local resolved = getAddress(addr)
+  if resolved == 0 then return nil end
+  local vt = mr.Type
+  local reader, writer = getRw(vt)
+  if reader == nil then return nil end
+  return { mr = mr, resolved = resolved, vt = vt, reader = reader, writer = writer }
+end
+
+-- ============================================================
+-- 取得 source value
+-- ============================================================
+local function getSourceValue(cfg, target, al)
+  local st = cfg.srcType
+
+  if st == 0 then
+    if cfg.offset == nil then return nil end
+    local srcAddr = target.resolved + cfg.offset
+    local srcVt = cfg.srcType0Datatype or target.vt
+    local srcReader = getRw(srcVt)
+    if srcReader == nil then return nil end
+    local srcVal = srcReader(srcAddr)
+    if srcVal == nil then return nil end
+    local mult = cfg.mult or 1
+    return srcVal * mult
+
+  elseif st == 1 then
+    if cfg.value == nil then return nil end
+    return cfg.value
+
+  elseif st == 2 then
+    if cfg.value == nil then return nil end
+    local srcRec = resolveRecord(al, cfg.value)
+    if srcRec == nil then return nil end
+    return srcRec.reader(srcRec.resolved)
+  end
+
+  return nil
+end
+
+-- ============================================================
+-- Timer
+-- ============================================================
+hpRefillTimerAob1 = createTimer(getMainForm(), false)
+hpRefillTimerAob1.Interval = 80
+hpRefillTimerAob1.OnTimer = function(t)
+  local al = getAddressList()
+  for _, cfg in ipairs(recordConfigs) do
+    pcall(function()
+      local target = resolveRecord(al, cfg.desc)
+      if target == nil then return end
+
+      local srcVal = getSourceValue(cfg, target, al)
+      if srcVal == nil then return end
+
+      local curVal = target.reader(target.resolved)
+      if curVal == nil then return end
+
+      if shouldWrite(curVal, srcVal, cfg.writeMode) then
+        target.writer(target.resolved, srcVal)
+      end
+    end)
+  end
+end
+hpRefillTimerAob1.Enabled = true
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if hpRefillTimerAob1 then
+  hpRefillTimerAob1.Enabled = false
+  hpRefillTimerAob1.destroy()
+  hpRefillTimerAob1 = nil
+end
+{$asm}
