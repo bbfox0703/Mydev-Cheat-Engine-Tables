@@ -16,6 +16,12 @@
 #   2. 缺翻譯 → 跳過該行
 #
 # -----------------------------------------------------------------------------
+# 資料檔位置 (本地搜尋)
+# -----------------------------------------------------------------------------
+# 所有資料檔 (paloc_*.json / item_names.json) 都從本腳本所在資料夾及其子資料夾
+# 遞迴搜尋 (例如放在 .\Data\ 子目錄)。找不到就直接列出缺哪幾個然後中止。
+#
+# -----------------------------------------------------------------------------
 # 取得 Item ID 順序的方式 (NEW — 從遊戲記憶體直接 dump)
 # -----------------------------------------------------------------------------
 # 為什麼不用 items.jsonl?
@@ -32,27 +38,50 @@
 #   (4) 若 keys.txt 尾段有 garbage (sentinel 0xFFFFFFFF / 0 / 異常大數)，本腳本
 #       會自動偵測並停止讀取，不必手動 trim
 #   (5) 跑本腳本 -> 三個 output*.txt 完成
-#
-# 取得 paloc_*.json 的方式 (一次性，patch 後重跑)
-#   cd D:\Github\CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS\CrimsonGameMods
-#   python list_paloc.py        # 確認語系檔在哪個 group (patch 可能挪動)
-#   python extract_paloc.py     # 解出 paloc_eng.json / paloc_zho-tw.json / paloc_jpn.json
 # =============================================================================
 
-# ── 路徑設定 ─────────────────────────────────────────────────────────────────
-$basePath        = "D:\Github\CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS"
-$gameModsPath    = Join-Path $basePath "CrimsonGameMods"
+# ── helper：在腳本目錄及其子目錄遞迴尋找指定檔名 ────────────────────────────
+function Find-LocalFile {
+    param([string]$FileName)
 
+    $hit = Get-ChildItem -Path $PSScriptRoot -Filter $FileName -Recurse -File -ErrorAction SilentlyContinue |
+           Select-Object -First 1
+    if ($hit) { return $hit.FullName }
+    return $null
+}
+
+# ── 路徑設定 ─────────────────────────────────────────────────────────────────
 # 輸入：CE Lua 從遊戲記憶體 dump 出來的 itemKey 陣列 (一行一個十進位 key)
 $keysPath        = Join-Path $PSScriptRoot "keys.txt"
 
-# 輸入：paloc 解出的官方對照表 (主來源)
-$palocEnPath     = Join-Path $gameModsPath "paloc_eng.json"
-$palocZhTwPath   = Join-Path $gameModsPath "paloc_zho-tw.json"
-$palocJaPath     = Join-Path $gameModsPath "paloc_jpn.json"
+# 輸入：paloc 解出的官方對照表 (主來源) + 英文備用 (社群維護)
+# 全部改用 Find-LocalFile 從腳本目錄及子目錄搜尋
+$dataFiles = [ordered]@{
+    "paloc_eng.json"    = $null
+    "paloc_zho-tw.json" = $null
+    "paloc_jpn.json"    = $null
+    "item_names.json"   = $null
+}
 
-# 輸入：英文備用 (社群維護)
-$itemNamesPath   = Join-Path $gameModsPath "data\item_names.json"
+$missing = [System.Collections.Generic.List[string]]::new()
+foreach ($name in @($dataFiles.Keys)) {
+    $found = Find-LocalFile -FileName $name
+    if ($found) {
+        $dataFiles[$name] = $found
+    } else {
+        $missing.Add($name)
+    }
+}
+
+if ($missing.Count -gt 0) {
+    Write-Error ("缺少下列資料檔 (請放到本腳本目錄或其子目錄)：`n  - " + ($missing -join "`n  - "))
+    exit 1
+}
+
+$palocEnPath     = $dataFiles["paloc_eng.json"]
+$palocZhTwPath   = $dataFiles["paloc_zho-tw.json"]
+$palocJaPath     = $dataFiles["paloc_jpn.json"]
+$itemNamesPath   = $dataFiles["item_names.json"]
 
 # 輸出
 $outputEnPath    = Join-Path $PSScriptRoot "output.txt"
