@@ -5,7 +5,7 @@ import crimson_rs
 
 GAME = r"D:\SteamLibrary\steamapps\common\Crimson Desert"
 
-for n in range(20, 36):
+for n in range(19, 36):
     g = f"{n:04d}"
     pamt_path = os.path.join(GAME, g, "0.pamt")
     if not os.path.isfile(pamt_path):
