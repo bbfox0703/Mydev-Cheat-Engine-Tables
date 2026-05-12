@@ -22,12 +22,20 @@ if syntaxcheck then return end
 
 -- ===================== Config =====================
 local AOB = "98 08 00 00 00 00 00 00 51 C3 00 00 ?? ?? 00 00 3D 4C 0F 00 ?? ?? 00 00 53 C3 00 00 ?? ?? 00 00 86 42 0F 00 ?? ?? 00 00 5B C3 00 00 ?? ?? 00 00 69 47 0F 00 ?? ?? 00 00 64 47 0F 00 ?? ?? 00 00 63 47 0F 00 ?? ?? 00 00 62 47 0F 00 ?? ?? 00 00 89 C3 00 00 ?? ?? 00 00 20 43 0F 00 ?? ?? 00 00 5A 42 0F 00 ?? ?? 00 00 85 50 0F 00 ?? ?? 00 00 7F 42 0F 00 ?? ?? 00 00 86 50 0F 00 ?? ?? 00 00 F4 44 0F 00 ?? ?? 00 00 E8 50 0F 00 ?? ?? 00 00 2D 49 0F 00 ?? ?? 00 00 9C 49 0F 00 ?? ?? 00 00 51 42 0F 00 ?? ?? 00 00 CF 49 0F 00 ?? ?? 00 00 52 42 0F 00 ?? ?? 00 00 B4 43 0F 00 ?? ?? 00 00 E9 50 0F 00 ?? ?? 00 00 68 47 0F 00 ?? ?? 00 00 8D 4A 0F 00 ?? ?? 00 00 4D 49 0F 00 ?? ?? 00 00 57 49 0F 00 ?? ?? 00 00 5B 49 0F 00 ?? ?? 00 00 71 49 0F 00 ?? ?? 00 00 72 49 0F 00 ?? ?? 00 00"
+--[[
+First 256 bytes AOB (no mask)
+98 08 00 00 00 00 00 00 51 C3 00 00 7A 02 00 00 3D 4C 0F 00 EE 04 00 00 53 C3 00 00 65 07 00 00 86 42 0F 00 E4 09 00 00 5B C3 00 00 6B 0C 00 00 69 47 0F 00 E5 0E 00 00 64 47 0F 00 61 11 00 00 63 47 0F 00 C9 13 00 00 62 47 0F 00 36 16 00 00 89 C3 00 00 9D 18 00 00 20 43 0F 00 E6 1A 00 00 5A 42 0F 00 3F 1D 00 00 85 50 0F 00 8B 1F 00 00 7F 42 0F 00 E5 21 00 00 86 50 0F 00 35 24 00 00 F4 44 0F 00 93 26 00 00 E8 50 0F 00 0E 29 00 00 2D 49 0F 00 9B 2B 00 00 9C 49 0F 00 34 2E 00 00 51 42 0F 00 AD 30 00 00 CF 49 0F 00 28 33 00 00 52 42 0F 00 9C 35 00 00 B4 43 0F 00 19 38 00 00 E9 50 0F 00 90 3A 00 00 68 47 0F 00 19 3D 00 00 8D 4A 0F 00 8B 3F 00 00 4D 49 0F 00 FC 41 00 00 57 49 0F 00 3F 44 00 00 5B 49 0F 00 AC 46 00 00 71 49 0F 00 09 49 00 00 72 49 0F 00 51 4B 00 00
+
+First 128 bytes AOB (no mask)
+98 08 00 00 00 00 00 00 51 C3 00 00 7A 02 00 00 3D 4C 0F 00 EE 04 00 00 53 C3 00 00 65 07 00 00 86 42 0F 00 E4 09 00 00 5B C3 00 00 6B 0C 00 00 69 47 0F 00 E5 0E 00 00 64 47 0F 00 61 11 00 00 63 47 0F 00 C9 13 00 00 62 47 0F 00 36 16 00 00 89 C3 00 00 9D 18 00 00 20 43 0F 00 E6 1A 00 00 5A 42 0F 00 3F 1D 00 00 85 50 0F 00 8B 1F 00 00 7F 42 0F 00 E5 21 00 00 86 50 0F 00 35 24 00 00
+]]--
+
 
 local OUT_PATH    = [[D:\Github\Mydev-Cheat-Engine-Tables\Crimson Desert\keys.txt]]
 local EXPECTED    = 6339      -- 上一版的 item 數，超過此 idx 開始逐筆 dump 供檢查
 local TAIL_PEEK   = 60        -- EXPECTED 之後再讀多少筆印出
 local CONTEXT_PRE = 5         -- EXPECTED 前幾筆也印出做對比
-local MAX_TOTAL   = 50000     -- 安全上限，避免讀爆
+local MAX_TOTAL   = 6500     -- 安全上限，避免讀爆
 local KEY_MIN     = 1
 local KEY_MAX     = 0x7FFFFFFF
 
@@ -56,56 +64,48 @@ print("")
 
 -- ===================== Read & dump =====================
 local fh, err = io.open(OUT_PATH, "w")
-if not fh then
-  print("[!] cannot open output: " .. tostring(err))
-  return
-end
+if not fh then print("[!] cannot open output: " .. tostring(err)); return end
 
+local SANE_LIMIT = 8000      -- 防呆上限，現實值預期 ~6,300
+local last_unk = -1
 local n = 0
-local stop_reason = string.format("MAX_TOTAL (%d) reached", MAX_TOTAL)
-local print_from  = math.max(0, EXPECTED - CONTEXT_PRE)
-local print_until = EXPECTED + TAIL_PEEK
+local stop_reason = string.format("SANE_LIMIT (%d) reached", SANE_LIMIT)
 
-print(string.format("[*] Inspecting rows [%d .. %d] (前後對比，找真正結尾):", print_from, print_until - 1))
-print("    idx     address              key            unk(hex)    note")
-print("    ------  -------------------  -------------  ----------  ----")
-
-for i = 0, MAX_TOTAL - 1 do
+for i = 0, SANE_LIMIT - 1 do
   local addr = base + i * 8
-  local key  = readInteger(addr)
-  local unk  = readInteger(addr + 4)
+  local key = readInteger(addr)
+  local unk = readInteger(addr + 4)
 
-  if key == nil then
+  if key == nil or unk == nil then
     stop_reason = string.format("page fault @ 0x%X (idx=%d)", addr, i)
     break
   end
 
-  -- 印出 EXPECTED 前後窗口，供你判斷結尾
-  if i >= print_from and i < print_until then
-    local note = ""
-    if i == EXPECTED then note = "<-- 上版結尾 (EXPECTED)" end
-    if key < KEY_MIN or key > KEY_MAX then
-      note = note .. " [INVALID key]"
-    elseif key == 0 then
-      note = note .. " [ZERO]"
-    end
-    print(string.format("    [%5d]  0x%016X  %-13d  0x%08X  %s",
-      i, addr, key, (unk or 0) & 0xFFFFFFFF, note))
+  -- key 越界 / sentinel: 陣列尾
+  if key == 0xFFFFFFFF or key == 0 then
+    stop_reason = string.format("key sentinel at idx=%d (key=0x%X)", i, key)
+    break
   end
+
+  -- unk 是 iteminfo.pabgb 內的累積 byte offset, 應單調遞增
+  -- 一旦 unk 倒退, 後面就是越界垃圾
+  if i > 0 and unk < last_unk then
+    stop_reason = string.format(
+      "unk non-monotonic at idx=%d (prev=0x%X now=0x%X) — array end", i, last_unk, unk)
+    break
+  end
+  last_unk = unk
 
   fh:write(string.format("%d\n", key))
   n = n + 1
 end
 
 fh:close()
-print("")
 print(string.format("[+] Wrote %d lines -> %s", n, OUT_PATH))
 print(string.format("[+] Stop reason : %s", stop_reason))
 print("")
 print("【下一步】")
-print("  1. 對照上方表格，判斷哪一筆之後變 garbage")
-print("  2. 若有 garbage，手動把 keys.txt 後段刪除（或調整 EXPECTED 重跑）")
-print("  3. 跑 PowerShell 產生 output*.txt")
+print("  1. 跑 PowerShell 產生 output*.txt")
 print("")
 print("把這個條目 [DISABLE] 即可，不會留下任何 hook")
 {$asm}
@@ -116,3 +116,4 @@ print("把這個條目 [DISABLE] 即可，不會留下任何 hook")
 if syntaxcheck then return end
 print("dump_item_keys: disabled (no hooks to clean)")
 {$asm}
+
