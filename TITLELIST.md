@@ -539,6 +539,11 @@ ja-JP: 添丁の伝説
 zh-TW: 聖劍傳說3 TRIALS of MANA  
 ja-JP: 聖剣伝説3 TRIALS of MANA  
 
+## Utawarerumono Past and Present Rediscovered  
+[Utawarerumono: Past and Present Rediscovered (Steam)](https://store.steampowered.com/app/4264260/_/)  
+zh-TW: 受讚頌者 循白之證  
+ja-JP: うたわれるもの 白への道標  
+
 ## Voice of Cards The Forsaken Maiden  
 [Voice of Cards: The Forsaken Maiden (Steam)](https://store.steampowered.com/app/1748660/Voice_of_Cards_The_Forsaken_Maiden/)  
 ja-JP: Voice of Cards できそこないの巫女  
