@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CheatTable CheatEngineTableVersion="45">
+<CheatTable CheatEngineTableVersion="51">
   <CheatEntries>
     <CheatEntry>
       <ID>10</ID>
@@ -16,7 +16,7 @@ LuaCall(cycleFullCompact(nil,false))
     <CheatEntry>
       <ID>247</ID>
       <Description>"Enable (enable twice)"</Description>
-      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <Options moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
@@ -412,7 +412,6 @@ lib_burst_generated.burst.initialize.statics.9890403cf2b9966f01e12d8b0afbb57e_av
         <CheatEntry>
           <ID>1039</ID>
           <Description>"Get HP"</Description>
-          <Options moHideChildren="1"/>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{ Game   : CoreKeeper.exe
   Version: 
@@ -683,6 +682,2186 @@ lib_burst_generated.burst.initialize.statics.d955aac4ce3e12722037e6821f29e8fc_av
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
+      <ID>1060</ID>
+      <Description>"Enable mono"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$asm}
+{
+define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+
+registersymbol(ResourceManagerClearItemCountsProc)
+}
+
+{$lua}
+if syntaxcheck then return end
+-- 📏 SafeMonoDestroy: Clean up all Mono-related state
+if _G.SafeMonoDestroy == nil then
+  _G.SafeMonoDestroy = function()
+    print("🪚 SafeMonoDestroy: Begin cleanup...")
+
+    -- 1. Stop symbol enumeration thread if running
+    if monoSymbolEnum then
+      print("🚬 Terminating monoSymbolEnum thread...")
+      pcall(function()
+        monoSymbolEnum.terminate()
+        if not monoSymbolEnum.waitfor(3000) then
+          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
+        end
+        monoSymbolEnum.destroy()
+        monoSymbolEnum = nil
+      end)
+    end
+
+    -- 2. Stop progressbar timer
+    if monoSymbolList and monoSymbolList.progressbar then
+      monoSymbolList.progressbar.OnTimer = nil
+    end
+
+    -- 3. Unlock pipe (try unlock even if uncertain)
+    print("🔓 Attempting to unlock pipe...")
+    pcall(function()
+      if monopipe and monopipe.unlock then
+        monopipe.unlock()
+      end
+    end)
+
+    -- 4. Delay before destroy to let MonoCollector finish its work
+    print("⌛ Waiting before destroy (sleep 250ms)...")
+    sleep(250)  -- let it flush pipe state
+
+    -- 5. Destroy main pipe
+    local t0 = os.clock()
+    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
+
+    pcall(function()
+      if monopipe then
+        monopipe.destroy()
+        monopipe = nil
+      end
+    end)
+
+    local t1 = os.clock()
+    print(string.format("👻 monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
+
+
+    -- 6. Destroy symbol list
+    if monoSymbolList then
+      monoSymbolList.destroy()
+      monoSymbolList = nil
+    end
+
+    -- 7. Destroy event pipe if exists
+    if monoeventpipe then
+      monoeventpipe.destroy()
+      monoeventpipe = nil
+    end
+
+    print("👻 SafeMonoDestroy: Cleanup complete.")
+  end
+end
+
+-- 列出指定 class 中、同名方法的所有 overload，回傳詳盡資訊（不註冊符號）
+if _G.mono_listMethodsByName == nil then
+  _G.mono_listMethodsByName = function(namespace, classname, methodname)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Class not found: %s.%s", namespace, classname))
+      return {}
+    end
+
+    local mtds = mono_class_enumMethods(cls)
+    if not mtds then
+      print(string.format("💔 No methods in: %s.%s", namespace, classname))
+      return {}
+    end
+
+    local out = {}
+    local cnt = 0
+    for _, v in ipairs(mtds) do
+      if v.name == methodname then
+        local entry = { name = v.name, method = v.method }
+
+        -- 參數/回傳型別（用 CE 提供的 parameters API，比較穩）
+        local okP, p = pcall(mono_method_get_parameters, v.method)
+        if okP and p and p.parameters then
+          entry.params = p.parameters         -- array of {typename=..., name=...}
+          entry.paramnames = {}
+          for i, pi in ipairs(p.parameters) do
+            entry.paramnames[i] = pi.name
+          end
+          entry.returntype = p.returntype and p.returntype.name or nil
+        else
+          -- 後備：某些版本 mono_method_getSignature 可能回傳字串或多返回值
+          local okS, a, b, c = pcall(mono_method_getSignature, v.method)
+          if okS then
+            -- 嘗試相容 ijm_mtd_by_sig 的 (params, paramnames, returntype)
+            entry.params      = a
+            entry.paramnames  = b
+            entry.returntype  = c
+            entry.signature   = type(a) == "string" and a or nil
+          end
+        end
+
+        -- 編譯 JIT 取得地址
+        local addr = mono_compile_method(v.method)
+        entry.address = addr
+
+        cnt = cnt + 1
+        out[cnt] = entry
+      end
+    end
+
+    print(string.format("🔎 Found %d overload(s) for %s.%s.%s", cnt, namespace, classname, methodname))
+    return out
+  end
+end
+
+-- 產生欄位 offset 對照表（若 CE 版本支援欄位列舉/offset 取得）
+if _G.mono_offsetsTable == nil then
+  _G.mono_offsetsTable = function(cacheTable, classname, namespace, opts)
+    -- 行為與 ijm_offset_table 類似：若已有表且非空就直接回傳
+    if cacheTable and type(cacheTable) == "table" then
+      local hasAny = next(cacheTable) ~= nil
+      if hasAny then return cacheTable end
+    end
+
+    local t = {}
+    local cls = mono_findClass(namespace or "", classname)
+    if not cls then
+      print(string.format("💔 Class not found: %s.%s", namespace or "", classname))
+      return t
+    end
+
+    -- 嘗試列舉欄位
+    local fields = nil
+    if mono_class_enumFields then
+      local okF, res = pcall(mono_class_enumFields, cls)
+      if okF then fields = res end
+    end
+
+    if not fields or #fields == 0 then
+      print("⚠ 無法列舉欄位（當前 CE/Mono 外掛可能不支援 mono_class_enumFields）。")
+      return t
+    end
+
+    for _, f in ipairs(fields) do
+      local fname = f.name or ("&lt;noname_"..tostring(_).."&gt;")
+      local off = nil
+      if mono_field_get_offset then
+        local okO, o = pcall(mono_field_get_offset, f.field)
+        if okO then off = o end
+      end
+      t[fname] = off
+    end
+
+    -- 若需要標註是 Mono 單例/IL2CPP Enum 等，可透過 opts 設定，這裡僅示意保留
+    if opts and opts.meta then t.__meta = opts.meta end
+
+    return t
+  end
+end
+
+--[[
+Example: 
+PlayerDataC     = _G.mono_offsetsTable(PlayerDataC,     "PlayerData",     "")
+HeroControllerC = _G.mono_offsetsTable(HeroControllerC, "HeroController", "")
+GameManagerC    = _G.mono_offsetsTable(GameManagerC,    "GameManager",    "")
+HealthManagerC  = _G.mono_offsetsTable(HealthManagerC,  "HealthManager",  "")
+GameplayC       = _G.mono_offsetsTable(GameplayC,       "Gameplay",       "GlobalSettings")
+--]]
+
+-- 📏 Register symbol by parameter type array (exact match)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local p = mono_method_get_parameters(m.method)
+        local matched = true
+	
+        if #p.parameters ~= #paramTypes then
+          matched = false
+        else
+          for i = 1, #paramTypes do
+            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Method found but failed to compile.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+-- 📏 Register symbol by partial signature match (overload-safe, with excludes and match info)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
+      return
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("💔 Error: No methods found in %s.%s", namespace, classname))
+      return
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local sig = mono_method_getSignature(m.method)
+        local matched = true
+
+        -- Check required substrings
+        for _, kw in ipairs(sigContains) do
+          if not string.find(sig, kw, 1, true) then
+            matched = false
+            break
+          end
+        end
+
+        -- Check excluded substrings (if given)
+        if matched and sigExcludes then
+          for _, ex in ipairs(sigExcludes) do
+            if string.find(sig, ex, 1, true) then
+              matched = false
+              break
+            end
+          end
+        end
+
+        if matched then
+          local addr = mono_compile_method(m.method)
+          if addr == 0 then
+            print("💔 Error: Signature matched but failed to compile method.")
+            return
+          end
+          registerSymbol(symbolname, addr)
+          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+          print(string.format("🔎 Matched Signature: %s", sig))
+          return
+        end
+      end
+    end
+
+    print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
+  end
+end
+
+
+-- 📏 Register symbol by simple method name (first match)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = mono_findMethod(namespace, classname, methodname)
+    if m == nil or m == 0 then
+      print(string.format("💔 Error: Method not found - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    local addr = mono_compile_method(m)
+    if addr == 0 then
+      print(string.format("💔 Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
+      return
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
+  end
+end
+
+-- 🌀 Attach Mono if needed
+local pid = getOpenedProcessID()
+if pid == 0 then
+  print("⚠ Warning: No process is currently open.")
+  return
+end
+
+if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
+
+if monopipe == nil or _G.lastMonoPID ~= pid then
+  if monopipe ~= nil then
+    pcall(_G.SafeMonoDestroy)
+  end
+  pcall(LaunchMonoDataCollector)
+  _G.lastMonoPID = pid
+end
+
+-- ⚡ Example usage - Register Mono methods to CE symbol table
+-- These functions compile (JIT) a Mono method and register it as a CE symbol
+
+-- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+-- Description: Registers the first matched method with given name.
+-- ⚠ Use this only when there's no overload (or you're fine with the first one).
+-- Params:
+--   symbolname: The name you want to register (used in CE as a label)
+--   namespace:  Mono namespace of the class (can be "" if none)
+--   classname:  Class name that contains the method
+--   methodname: Method name to find (first match will be used)
+-- Example:
+
+--_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
+
+
+-- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+-- Description: Registers a method that exactly matches the provided parameter types.
+-- Use this when there are multiple overloads of a method.
+-- Params:
+--   symbolname: The name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (exact match)
+--   paramTypes: Array of expected parameter type strings (must match count &amp; order)
+--               These are matched using `string.find`, so partial match is allowed.
+-- Example:
+--   UseAbility(string idAct, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+-- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+-- Description: Registers the method whose signature contains all given substrings.
+-- Flexible, and suitable when exact type names vary or signature format is uncertain.
+-- Params:
+--   symbolname: The symbol name to register
+--   namespace:  Mono namespace
+--   classname:  Class name
+--   methodname: Method name (will scan all overloads)
+--   sigContains: Array of strings that should all appear in the method signature
+--                e.g., { "Act", "Card", "Point", "bool" }
+--   sigExcludes: Signatures to exclude
+-- Example:
+--   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  {"Item"},      -- sigContains
+  {"List"}       -- sigExcludes
+)
+
+Signatures above:
+System.Collections.Generic.List&lt;Item&gt; 
+Item 
+
+** Both have "Item" but first one have "List"
+--]]
+
+--[[
+
+Type Mapping (for overload filtering)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+
+--]]
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+--pcall(_G.SafeMonoDestroy)
+{$asm}
+//unregistersymbol(*)
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>1063</ID>
+          <Description>"Get player controller"</Description>
+          <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/06/08
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GHET_CONTROLLER,PlayerController:ManagedUpdate+13C,PlayerController:ManagedUpdate+226,?? 63 ?? FC 05 00 00 85 ?? 0F 85 ?? ?? ?? ?? ?? 85)
+// raw AOB: 89 85 8C FD FF FF 48 B8 A8 9E 07 16 43 02 00 00 48 8B 00 48 8B 80 D0 00 00 00 48 8B C8 83 39 00 48 8B 50 48 48 8B 8D 88 FD FF FF 48 8D AD 00 00 00 00 49 BB 40 A9 CA 12 45 02 00 00 41 FF D3 89 85 20 F8 FF FF 4C 8B F0 85 C0 0F 84 ?? ?? ?? ?? 44 89 B6 A4 05 00 00 48 63 86 FC 05 00 00 85 C0 0F 85 ?? ?? ?? ?? 48 85 F6 0F 84 ?? ?? ?? ?? 48 8D 86 D4 00 00 00 48 63 08 89 8D 90 FD FF FF 48 63 40 04 89 85 94 FD FF FF 48 B8 A8 9E 07 16 43 02 00 00 48 8B 00 48 8B 80 D0 00 00 00 48 8B C8 83 39 00 4C 8B 40 48 48 8B CD
+// injection point AOB: ?? 63 ?? FC 05 00 00 85 ?? 0F 85 ?? ?? ?? ?? ?? 85 ?? 0F 84 ?? ?? ?? ?? ?? 8D ?? D4 00 00 00 ?? 63 ?? 89 ?? ?? ?? ?? ?? ?? 63 ?? 04 89 ?? ?? ?? ?? ?? ?? ?? A8 9E 07 16 43 02 00 00 ?? 8B ?? ?? 8B ?? D0 00 00 00 ?? 8B ?? 83 ?? 00 ?? 8B ?? 48 ?? 8B
+alloc(newmem,$1000,INJECT_GHET_CONTROLLER)
+
+alloc(INJECT_GHET_CONTROLLERo, $7)
+
+label(code)
+label(return)
+label(ptrCapture_INJECT_GHET_CONTROLLER_211206)
+
+INJECT_GHET_CONTROLLERo:
+  readmem(INJECT_GHET_CONTROLLER, $7)
+
+newmem:
+  // **** Begin Auto script: AddressCapture
+  // mode=Single
+  // Address Capture: publish base pointer
+  mov [ptrCapture_INJECT_GHET_CONTROLLER_211206], rsi
+  // **** End Auto script: AddressCapture
+
+
+code:
+  // movsxd  rax,dword ptr [rsi+000005FC]
+  reassemble(INJECT_GHET_CONTROLLER)
+  jmp return
+  align 10 cc
+  ptrCapture_INJECT_GHET_CONTROLLER_211206:
+  dq 0
+
+INJECT_GHET_CONTROLLER:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GHET_CONTROLLER INJECT_GHET_CONTROLLERo ptrCapture_INJECT_GHET_CONTROLLER_211206)
+
+[DISABLE]
+
+INJECT_GHET_CONTROLLER:
+  readmem(INJECT_GHET_CONTROLLERo, $7)
+
+unregistersymbol(INJECT_GHET_CONTROLLER INJECT_GHET_CONTROLLERo ptrCapture_INJECT_GHET_CONTROLLER_211206)
+dealloc(newmem)
+dealloc(INJECT_GHET_CONTROLLERo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: PlayerController:ManagedUpdate+1b3
+
+PlayerController:ManagedUpdate+15c: 89 85 8C FD FF FF                  - mov [rbp-00000274],eax
+PlayerController:ManagedUpdate+162: 48 B8 A8 9E 07 16 43 02 00 00      - mov rax,0000024316079EA8
+PlayerController:ManagedUpdate+16c: 48 8B 00                           - mov rax,[rax]
+PlayerController:ManagedUpdate+16f: 48 8B 80 D0 00 00 00               - mov rax,[rax+000000D0]
+PlayerController:ManagedUpdate+176: 48 8B C8                           - mov rcx,rax
+PlayerController:ManagedUpdate+179: 83 39 00                           - cmp dword ptr [rcx],00
+PlayerController:ManagedUpdate+17c: 48 8B 50 48                        - mov rdx,[rax+48]
+PlayerController:ManagedUpdate+180: 48 8B 8D 88 FD FF FF               - mov rcx,[rbp-00000278]
+PlayerController:ManagedUpdate+187: 48 8D AD 00 00 00 00               - lea rbp,[rbp+00000000]
+PlayerController:ManagedUpdate+18e: 49 BB 40 A9 CA 12 45 02 00 00      - mov r11,0000024512CAA940
+PlayerController:ManagedUpdate+198: 41 FF D3                           - call r11
+PlayerController:ManagedUpdate+19b: 89 85 20 F8 FF FF                  - mov [rbp-000007E0],eax
+PlayerController:ManagedUpdate+1a1: 4C 8B F0                           - mov r14,rax
+PlayerController:ManagedUpdate+1a4: 85 C0                              - test eax,eax
+PlayerController:ManagedUpdate+1a6: 0F 84 07 00 00 00                  - je PlayerController:ManagedUpdate+1b3
+PlayerController:ManagedUpdate+1ac: 44 89 B6 A4 05 00 00               - mov [rsi+000005A4],r14d
+// ---------- INJECTING HERE ----------
+PlayerController:ManagedUpdate+1b3: 48 63 86 FC 05 00 00               - movsxd  rax,dword ptr [rsi+000005FC]
+// ---------- DONE INJECTING  ----------
+PlayerController:ManagedUpdate+1ba: 85 C0                              - test eax,eax
+PlayerController:ManagedUpdate+1bc: 0F 85 6E 00 00 00                  - jne PlayerController:ManagedUpdate+230
+PlayerController:ManagedUpdate+1c2: 48 85 F6                           - test rsi,rsi
+PlayerController:ManagedUpdate+1c5: 0F 84 B5 2C 00 00                  - je PlayerController:ManagedUpdate+2e80
+PlayerController:ManagedUpdate+1cb: 48 8D 86 D4 00 00 00               - lea rax,[rsi+000000D4]
+PlayerController:ManagedUpdate+1d2: 48 63 08                           - movsxd  rcx,dword ptr [rax]
+PlayerController:ManagedUpdate+1d5: 89 8D 90 FD FF FF                  - mov [rbp-00000270],ecx
+PlayerController:ManagedUpdate+1db: 48 63 40 04                        - movsxd  rax,dword ptr [rax+04]
+PlayerController:ManagedUpdate+1df: 89 85 94 FD FF FF                  - mov [rbp-0000026C],eax
+PlayerController:ManagedUpdate+1e5: 48 B8 A8 9E 07 16 43 02 00 00      - mov rax,0000024316079EA8
+PlayerController:ManagedUpdate+1ef: 48 8B 00                           - mov rax,[rax]
+PlayerController:ManagedUpdate+1f2: 48 8B 80 D0 00 00 00               - mov rax,[rax+000000D0]
+PlayerController:ManagedUpdate+1f9: 48 8B C8                           - mov rcx,rax
+PlayerController:ManagedUpdate+1fc: 83 39 00                           - cmp dword ptr [rcx],00
+PlayerController:ManagedUpdate+1ff: 4C 8B 40 48                        - mov r8,[rax+48]
+PlayerController:ManagedUpdate+203: 48 8B CD                           - mov rcx,rbp
+}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1064</ID>
+              <Description>""#1""</Description>
+              <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>FF8080</Color>
+              <VariableType>8 Bytes</VariableType>
+              <Address>ptrCapture_INJECT_GHET_CONTROLLER_211206</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>0</ID>
+                  <Description>"Pug.Other!PlayerController"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+0</Address>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>110</ID>
+                      <Description>"hasXScaler"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+C8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>111</ID>
+                      <Description>"hasShadow"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+C9</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>112</ID>
+                      <Description>"hasAnimator"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+CA</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>113</ID>
+                      <Description>"hasInteractable"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+CB</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>114</ID>
+                      <Description>"useSharedTransformAnimations"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+CC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>115</ID>
+                      <Description>"previousPaint"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+D0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>117</ID>
+                      <Description>"variationOverride"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+DC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>118</ID>
+                      <Description>"variationOverrideUpdateCount"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+E0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>119</ID>
+                      <Description>"pugMapPosX"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+E4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>120</ID>
+                      <Description>"pugMapPosZ"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>121</ID>
+                      <Description>"width"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+EC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>122</ID>
+                      <Description>"height"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>123</ID>
+                      <Description>"appearInMapUI"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+F4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>124</ID>
+                      <Description>"colorInMap"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+F8</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>125</ID>
+                          <Description>"r"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>126</ID>
+                          <Description>"g"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>127</ID>
+                          <Description>"b"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>128</ID>
+                          <Description>"a"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+C</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>129</ID>
+                      <Description>"onlyEnableAnimatorTemporarilyWhenPlayingAnimation"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+108</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>130</ID>
+                      <Description>"animatorTemporaryDisableTimer"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+10C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>131</ID>
+                      <Description>"lastAnim"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+110</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>132</ID>
+                      <Description>"lastNonDeathAnim"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+114</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>133</ID>
+                      <Description>"hasOverriddenAnim"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+118</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>134</ID>
+                      <Description>"&lt;isHidden&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+119</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>135</ID>
+                      <Description>"deathTimer"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+11C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>136</ID>
+                      <Description>"interactableDefaultPosition"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+120</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>137</ID>
+                      <Description>"interactableDefaultRotation"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+12C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>138</ID>
+                      <Description>"hasFlashable"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+13C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>139</ID>
+                      <Description>"hasConditions"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+13D</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>140</ID>
+                      <Description>"hasDamageEffect"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+13E</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>141</ID>
+                      <Description>"damageEffectTrigger"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+140</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>142</ID>
+                      <Description>"hasDisableableParticles"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+144</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>143</ID>
+                      <Description>"&lt;hasHealth&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+145</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>144</ID>
+                      <Description>"&lt;isEnemy&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+146</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>145</ID>
+                      <Description>"previousHealth"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+148</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>146</ID>
+                      <Description>"&lt;WorldPosition&gt;k__BackingField"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+14C</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>147</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>148</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>149</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>150</ID>
+                      <Description>"hasLocalToWorld"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+158</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>151</ID>
+                      <Description>"currentFacingVector"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+15C</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>152</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>153</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>154</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>155</ID>
+                      <Description>"normalizedFacingVector"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+168</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>156</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>157</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>158</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>159</ID>
+                      <Description>"animatedMovementVector"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+174</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>160</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>161</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>162</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>163</ID>
+                      <Description>"hasAnimationOrientationCD"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+180</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>164</ID>
+                      <Description>"orientationY"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+184</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>165</ID>
+                      <Description>"m_spriteObjectOrientation"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+188</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>166</ID>
+                      <Description>"m_prevSpriteObjectOrientation"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+18C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>167</ID>
+                      <Description>"m_spriteObjectOrientationHash"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+190</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>168</ID>
+                      <Description>"cachedLastSpriteSheetObjectID"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+194</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>169</ID>
+                      <Description>"cachedLastSpriteSheetVariation"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+198</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>170</ID>
+                      <Description>"transparentColor"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+19C</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>171</ID>
+                          <Description>"r"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>172</ID>
+                          <Description>"g"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>173</ID>
+                          <Description>"b"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>174</ID>
+                          <Description>"a"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+C</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>184</ID>
+                      <Description>"currentPortal"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Pointer</VariableType>
+                      <Address>+1D8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>191</ID>
+                      <Description>"&lt;networkName&gt;k__BackingField"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+1F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1193</ID>
+                      <Description>"isLocal"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+5A0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1194</ID>
+                      <Description>"currentBiome"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+5A4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1195</ID>
+                      <Description>"isInSafeZone"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+5A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1196</ID>
+                      <Description>"lastLocalGodModeState"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+5A9</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1197</ID>
+                      <Description>"clientInput"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+5AA</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1198</ID>
+                      <Description>"spawningFromCoreFinished"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+5EE</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1199</ID>
+                      <Description>"mouseUIInputWasDone"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+5EF</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1200</ID>
+                      <Description>"currentSheetStandBeingPlayedAt"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+5F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1201</ID>
+                      <Description>"&lt;initialized&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+5F8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1202</ID>
+                      <Description>"&lt;playerIndex&gt;k__BackingField"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+5FC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1203</ID>
+                      <Description>"&lt;platform&gt;k__BackingField"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+600</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1204</ID>
+                      <Description>"lastPoppedUIInputAction"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+604</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1205</ID>
+                      <Description>"pugDatabase"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+6E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1206</ID>
+                      <Description>"lootTableBank"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+6F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1207</ID>
+                      <Description>"hasDisabledInputBecauseLoading"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+6F8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1208</ID>
+                      <Description>"hasRemovedLoginImmunity"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+6F9</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1209</ID>
+                      <Description>"belongsToLayer"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+6FA</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1210</ID>
+                      <Description>"collidesWithLayer"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+71A</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1211</ID>
+                      <Description>"damagesLayer"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+73A</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1212</ID>
+                      <Description>"movementSpeed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+75C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1213</ID>
+                      <Description>"noClipMovementSpeedMultipler"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+760</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1214</ID>
+                      <Description>"targetMovementVelocity"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+764</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1215</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1216</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1217</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1218</ID>
+                      <Description>"targetingDirection"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+770</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1219</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1220</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1221</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1222</ID>
+                      <Description>"lastEffectiveSteerDir"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+77C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1223</ID>
+                      <Description>"facingDirection"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+77D</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1224</ID>
+                      <Description>"aimDirection"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+780</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1225</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1226</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1227</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1228</ID>
+                      <Description>"equippedSlotIndex"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+78C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1229</ID>
+                      <Description>"lastUsedSlotIndex"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+790</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1230</ID>
+                      <Description>"hotbarStartIndex"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+794</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1231</ID>
+                      <Description>"hotbarEndIndex"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+798</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1232</ID>
+                      <Description>"previousMouseObject"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+79C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1233</ID>
+                      <Description>"stopPlayingInstrument"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+7B0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1234</ID>
+                      <Description>"&lt;visuallyEquippedContainedObject&gt;k__BackingField"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+7B4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1235</ID>
+                      <Description>"visuallyEquippedSlotType"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+7C8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1236</ID>
+                      <Description>"animatedFishingRodSinkPosition"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+7CC</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1237</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1238</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1239</ID>
+                      <Description>"animatedLineIsBeingPulled"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+7D4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1240</ID>
+                      <Description>"defaultEyeEmissive"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+7D8</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1241</ID>
+                          <Description>"r"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1242</ID>
+                          <Description>"g"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1243</ID>
+                          <Description>"b"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1244</ID>
+                          <Description>"a"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+C</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1245</ID>
+                      <Description>"redGlowEyeEmissive"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+7E8</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1246</ID>
+                          <Description>"r"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1247</ID>
+                          <Description>"g"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1248</ID>
+                          <Description>"b"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1249</ID>
+                          <Description>"a"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+C</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1250</ID>
+                      <Description>"ghostColor"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+7F8</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1251</ID>
+                          <Description>"r"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1252</ID>
+                          <Description>"g"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1253</ID>
+                          <Description>"b"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1254</ID>
+                          <Description>"a"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+C</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1255</ID>
+                      <Description>"showHitArea"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+808</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1256</ID>
+                      <Description>"activeCustomization"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+810</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1257</ID>
+                      <Description>"activeCustomizationTriggerCount"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+918</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1258</ID>
+                      <Description>"prevLookLikeGhost"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+91C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1259</ID>
+                      <Description>"onSlime"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+91D</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1260</ID>
+                      <Description>"onOrangeSlime"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+91E</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1261</ID>
+                      <Description>"onAcid"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+91F</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1262</ID>
+                      <Description>"onPoisonSlime"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+920</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1263</ID>
+                      <Description>"onSlipperySlime"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+921</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1264</ID>
+                      <Description>"onWood"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+922</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1265</ID>
+                      <Description>"onGrass"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+923</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1266</ID>
+                      <Description>"onChrysalis"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+924</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1267</ID>
+                      <Description>"onMoss"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+925</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1268</ID>
+                      <Description>"onStone"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+926</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1269</ID>
+                      <Description>"onFlesh"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+927</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1270</ID>
+                      <Description>"onSand"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+928</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1271</ID>
+                      <Description>"onOasis"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+929</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1272</ID>
+                      <Description>"onBeach"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+92A</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1273</ID>
+                      <Description>"onClay"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+92B</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1274</ID>
+                      <Description>"onMold"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+92C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1275</ID>
+                      <Description>"onDirt"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+92D</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1276</ID>
+                      <Description>"onMetal"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+92E</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1277</ID>
+                      <Description>"onRoses"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+92F</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1278</ID>
+                      <Description>"onGlass"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+930</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1279</ID>
+                      <Description>"onMeadow"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+931</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1280</ID>
+                      <Description>"onRobotScrap"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+932</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1281</ID>
+                      <Description>"onOil"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+933</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1282</ID>
+                      <Description>"_anyInventoryOrMapWasActiveThisFrame"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+934</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1283</ID>
+                      <Description>"_playerInputBlockedThisFrame"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+935</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1284</ID>
+                      <Description>"previousMouseScreenPosition"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+938</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1285</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1286</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1287</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1288</ID>
+                      <Description>"swappedTorchFromIndex"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+944</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1289</ID>
+                      <Description>"slotSwapWithMouseCooldownTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+948</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1290</ID>
+                      <Description>"greatWallIsShakingAndRumbling"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+95C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1291</ID>
+                      <Description>"greatWallEmissiveSoundHasPlayed"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+95D</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1292</ID>
+                      <Description>"greatWallHasBeenLowered"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+95E</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1293</ID>
+                      <Description>"greatWallShakeTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+960</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1294</ID>
+                      <Description>"nearbyEmissiveAndLowerWallBlend"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+974</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1295</ID>
+                      <Description>"&lt;playerCanInteractWithGreatWall&gt;k__BackingField"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+978</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1296</ID>
+                      <Description>"playerNearbyTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+97C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1297</ID>
+                      <Description>"canDoHandEmote"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+990</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1298</ID>
+                      <Description>"isPlayingInteractFlash"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+991</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1299</ID>
+                      <Description>"checkUndiscoveredItemsTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+994</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1300</ID>
+                      <Description>"lineTensionSmoothTimer"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+9A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1301</ID>
+                      <Description>"sinkHeightFromFishHooking"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+9AC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1302</ID>
+                      <Description>"rippleTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+9B0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1303</ID>
+                      <Description>"thisIsGoingToTakeAWhileEmoteTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+9C4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1304</ID>
+                      <Description>"thisIsGoingToTakeAWhileLastDamageTick"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+9D8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1305</ID>
+                      <Description>"_windupSoundsPlaying"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+9DC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1306</ID>
+                      <Description>"_warmupSFXPlaying"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+9DD</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1307</ID>
+                      <Description>"_warmupMaxSFXPlaying"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+9DE</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1308</ID>
+                      <Description>"_warmupEndSFXPlaying"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+9DF</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1309</ID>
+                      <Description>"_amassValue"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+9E0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1310</ID>
+                      <Description>"_amassValuePrevious"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+9E4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1311</ID>
+                      <Description>"_isSleepingAndHasAppliedQualitySleep"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+9E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1312</ID>
+                      <Description>"_previousQualitySleepRemoveTick"</Description>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>8 Bytes</VariableType>
+                      <Address>+9EC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1313</ID>
+                      <Description>"lastReceivedConditionsAmount"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+9F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1314</ID>
+                      <Description>"conditionsSaveTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+9F4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1315</ID>
+                      <Description>"lastReceivedLockedObjectsAmount"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A08</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1316</ID>
+                      <Description>"lockedObjectsSaveTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A0C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1317</ID>
+                      <Description>"blinkTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A20</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1318</ID>
+                      <Description>"srOffSetPos"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A34</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1319</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1320</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1321</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1322</ID>
+                      <Description>"defaultSROffSetPos"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A40</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1323</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1324</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1325</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1326</ID>
+                      <Description>"srOffSetRot"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A4C</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1327</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1328</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1329</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1330</ID>
+                          <Description>"w"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+C</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1331</ID>
+                      <Description>"&lt;activeEquipmentPreset&gt;k__BackingField"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A5C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1332</ID>
+                      <Description>"_checkedManaTime"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Float</VariableType>
+                      <Address>+A60</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1333</ID>
+                      <Description>"_checkedShouldShowManaLastValue"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+A64</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1334</ID>
+                      <Description>"_hidePlayer"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+A65</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1335</ID>
+                      <Description>"defaultHelmOffsetInitialized"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+A66</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1336</ID>
+                      <Description>"defaultHelmOffset"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A68</Address>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>1337</ID>
+                          <Description>"x"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+0</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1338</ID>
+                          <Description>"y"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+4</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>1339</ID>
+                          <Description>"z"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Float</VariableType>
+                          <Address>+8</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1340</ID>
+                      <Description>"isDyingOrDead"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+A74</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1341</ID>
+                      <Description>"hungerEmoteTimer"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+A78</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>1342</ID>
+                      <Description>"previousHunger"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A8C</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>501</ID>
       <Description>"*** Core Keeper 1.0.1.11  /  https://opencheattables.com  /  CE 7.5+ ***"</Description>
       <Options moHideChildren="1"/>
@@ -741,6 +2920,384 @@ lib_burst_generated.burst.initialize.statics.d955aac4ce3e12722037e6821f29e8fc_av
     </CheatEntry>
   </CheatEntries>
   <UserdefinedSymbols/>
+  <Structures StructVersion="2">
+    <Structure Name="SlimeBlob" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
+      <Elements>
+        <Element Offset="16" Vartype="Pointer" Bytesize="8" OffsetHex="00000010" Description="m_CachedPtr" DisplayMethod="unsigned integer"/>
+        <Element Offset="24" Vartype="Pointer" Bytesize="8" OffsetHex="00000018" Description="m_CancellationTokenSource" DisplayMethod="unsigned integer"/>
+        <Element Offset="32" Vartype="Pointer" Bytesize="8" OffsetHex="00000020" Description="_pool" DisplayMethod="unsigned integer"/>
+        <Element Offset="40" Vartype="Pointer" Bytesize="8" OffsetHex="00000028" Description="XScaler" DisplayMethod="unsigned integer"/>
+        <Element Offset="48" Vartype="Pointer" Bytesize="8" OffsetHex="00000030" Description="shadow" DisplayMethod="unsigned integer"/>
+        <Element Offset="56" Vartype="Pointer" Bytesize="8" OffsetHex="00000038" Description="indirectLightEmitters" DisplayMethod="unsigned integer"/>
+        <Element Offset="64" Vartype="Pointer" Bytesize="8" OffsetHex="00000040" Description="animator" DisplayMethod="unsigned integer"/>
+        <Element Offset="72" Vartype="Pointer" Bytesize="8" OffsetHex="00000048" Description="interactable" DisplayMethod="unsigned integer"/>
+        <Element Offset="80" Vartype="Pointer" Bytesize="8" OffsetHex="00000050" Description="spriteObjects" DisplayMethod="unsigned integer"/>
+        <Element Offset="88" Vartype="Pointer" Bytesize="8" OffsetHex="00000058" Description="reskinOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="96" Vartype="Pointer" Bytesize="8" OffsetHex="00000060" Description="paintableOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="104" Vartype="Pointer" Bytesize="8" OffsetHex="00000068" Description="soundOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="112" Vartype="Pointer" Bytesize="8" OffsetHex="00000070" Description="particleOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="120" Vartype="Pointer" Bytesize="8" OffsetHex="00000078" Description="objectVariants" DisplayMethod="unsigned integer"/>
+        <Element Offset="128" Vartype="Pointer" Bytesize="8" OffsetHex="00000080" Description="spritesToRandomlyFlip" DisplayMethod="unsigned integer"/>
+        <Element Offset="136" Vartype="Pointer" Bytesize="8" OffsetHex="00000088" Description="gameObjectsToRandomlyFlip" DisplayMethod="unsigned integer"/>
+        <Element Offset="144" Vartype="Pointer" Bytesize="8" OffsetHex="00000090" Description="optionalHealthBar" DisplayMethod="unsigned integer"/>
+        <Element Offset="152" Vartype="Pointer" Bytesize="8" OffsetHex="00000098" Description="optionalLightOptimizer" DisplayMethod="unsigned integer"/>
+        <Element Offset="160" Vartype="Pointer" Bytesize="8" OffsetHex="000000A0" Description="conditionEffectsHandler" DisplayMethod="unsigned integer"/>
+        <Element Offset="168" Vartype="Pointer" Bytesize="8" OffsetHex="000000A8" Description="conditionsEffectsSettings" DisplayMethod="unsigned integer"/>
+        <Element Offset="176" Vartype="Pointer" Bytesize="8" OffsetHex="000000B0" Description="outlineControllers" DisplayMethod="unsigned integer"/>
+        <Element Offset="184" Vartype="Pointer" Bytesize="8" OffsetHex="000000B8" Description="flashable" DisplayMethod="unsigned integer"/>
+        <Element Offset="192" Vartype="Pointer" Bytesize="8" OffsetHex="000000C0" Description="netEcbSystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="200" Vartype="Byte" Bytesize="1" OffsetHex="000000C8" Description="hasXScaler" DisplayMethod="unsigned integer"/>
+        <Element Offset="201" Vartype="Byte" Bytesize="1" OffsetHex="000000C9" Description="hasShadow" DisplayMethod="unsigned integer"/>
+        <Element Offset="202" Vartype="Byte" Bytesize="1" OffsetHex="000000CA" Description="hasAnimator" DisplayMethod="unsigned integer"/>
+        <Element Offset="203" Vartype="Byte" Bytesize="1" OffsetHex="000000CB" Description="hasInteractable" DisplayMethod="unsigned integer"/>
+        <Element Offset="204" Vartype="Byte" Bytesize="1" OffsetHex="000000CC" Description="useSharedTransformAnimations" DisplayMethod="unsigned integer"/>
+        <Element Offset="208" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000D0" Description="previousPaint" DisplayMethod="unsigned integer"/>
+        <Element Offset="212" Vartype="Pointer" Bytesize="8" OffsetHex="000000D4" Description="&lt;entity&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="220" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000DC" Description="variationOverride" DisplayMethod="unsigned integer"/>
+        <Element Offset="224" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000E0" Description="variationOverrideUpdateCount" DisplayMethod="unsigned integer"/>
+        <Element Offset="228" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000E4" Description="pugMapPosX" DisplayMethod="unsigned integer"/>
+        <Element Offset="232" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000E8" Description="pugMapPosZ" DisplayMethod="unsigned integer"/>
+        <Element Offset="236" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000EC" Description="width" DisplayMethod="unsigned integer"/>
+        <Element Offset="240" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000F0" Description="height" DisplayMethod="unsigned integer"/>
+        <Element Offset="244" Vartype="Byte" Bytesize="1" OffsetHex="000000F4" Description="appearInMapUI" DisplayMethod="unsigned integer"/>
+        <Element Offset="248" Vartype="Pointer" Bytesize="8" OffsetHex="000000F8" Description="colorInMap" DisplayMethod="unsigned integer"/>
+        <Element Offset="264" Vartype="Byte" Bytesize="1" OffsetHex="00000108" Description="onlyEnableAnimatorTemporarilyWhenPlayingAnimation" DisplayMethod="unsigned integer"/>
+        <Element Offset="268" Vartype="Float" Bytesize="4" OffsetHex="0000010C" Description="animatorTemporaryDisableTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="272" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000110" Description="lastAnim" DisplayMethod="unsigned integer"/>
+        <Element Offset="276" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000114" Description="lastNonDeathAnim" DisplayMethod="unsigned integer"/>
+        <Element Offset="280" Vartype="Byte" Bytesize="1" OffsetHex="00000118" Description="hasOverriddenAnim" DisplayMethod="unsigned integer"/>
+        <Element Offset="281" Vartype="Byte" Bytesize="1" OffsetHex="00000119" Description="&lt;isHidden&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="284" Vartype="Float" Bytesize="4" OffsetHex="0000011C" Description="deathTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="288" Vartype="Pointer" Bytesize="8" OffsetHex="00000120" Description="interactableDefaultPosition" DisplayMethod="unsigned integer"/>
+        <Element Offset="300" Vartype="Pointer" Bytesize="8" OffsetHex="0000012C" Description="interactableDefaultRotation" DisplayMethod="unsigned integer"/>
+        <Element Offset="316" Vartype="Byte" Bytesize="1" OffsetHex="0000013C" Description="hasFlashable" DisplayMethod="unsigned integer"/>
+        <Element Offset="317" Vartype="Byte" Bytesize="1" OffsetHex="0000013D" Description="hasConditions" DisplayMethod="unsigned integer"/>
+        <Element Offset="318" Vartype="Byte" Bytesize="1" OffsetHex="0000013E" Description="hasDamageEffect" DisplayMethod="unsigned integer"/>
+        <Element Offset="320" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000140" Description="damageEffectTrigger" DisplayMethod="unsigned integer"/>
+        <Element Offset="324" Vartype="Byte" Bytesize="1" OffsetHex="00000144" Description="hasDisableableParticles" DisplayMethod="unsigned integer"/>
+        <Element Offset="325" Vartype="Byte" Bytesize="1" OffsetHex="00000145" Description="&lt;hasHealth&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="326" Vartype="Byte" Bytesize="1" OffsetHex="00000146" Description="&lt;isEnemy&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="328" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000148" Description="previousHealth" DisplayMethod="unsigned integer"/>
+        <Element Offset="332" Vartype="Pointer" Bytesize="8" OffsetHex="0000014C" Description="&lt;WorldPosition&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="344" Vartype="Byte" Bytesize="1" OffsetHex="00000158" Description="hasLocalToWorld" DisplayMethod="unsigned integer"/>
+        <Element Offset="348" Vartype="Pointer" Bytesize="8" OffsetHex="0000015C" Description="currentFacingVector" DisplayMethod="unsigned integer"/>
+        <Element Offset="360" Vartype="Pointer" Bytesize="8" OffsetHex="00000168" Description="normalizedFacingVector" DisplayMethod="unsigned integer"/>
+        <Element Offset="372" Vartype="Pointer" Bytesize="8" OffsetHex="00000174" Description="animatedMovementVector" DisplayMethod="unsigned integer"/>
+        <Element Offset="384" Vartype="Byte" Bytesize="1" OffsetHex="00000180" Description="hasAnimationOrientationCD" DisplayMethod="unsigned integer"/>
+        <Element Offset="388" Vartype="Float" Bytesize="4" OffsetHex="00000184" Description="orientationY" DisplayMethod="unsigned integer"/>
+        <Element Offset="392" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000188" Description="m_spriteObjectOrientation" DisplayMethod="unsigned integer"/>
+        <Element Offset="396" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000018C" Description="m_prevSpriteObjectOrientation" DisplayMethod="unsigned integer"/>
+        <Element Offset="400" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000190" Description="m_spriteObjectOrientationHash" DisplayMethod="unsigned integer"/>
+        <Element Offset="404" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000194" Description="cachedLastSpriteSheetObjectID" DisplayMethod="unsigned integer"/>
+        <Element Offset="408" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000198" Description="cachedLastSpriteSheetVariation" DisplayMethod="unsigned integer"/>
+        <Element Offset="412" Vartype="Pointer" Bytesize="8" OffsetHex="0000019C" Description="transparentColor" DisplayMethod="unsigned integer"/>
+      </Elements>
+    </Structure>
+    <Structure Name="PlayerController" AutoFill="0" AutoCreate="1" DefaultHex="0" AutoDestroy="0" DoNotSaveLocal="0" RLECompression="1" AutoCreateStructsize="4096">
+      <Elements>
+        <Element Offset="16" Vartype="Pointer" Bytesize="8" OffsetHex="00000010" Description="m_CachedPtr" DisplayMethod="unsigned integer"/>
+        <Element Offset="24" Vartype="Pointer" Bytesize="8" OffsetHex="00000018" Description="m_CancellationTokenSource" DisplayMethod="unsigned integer"/>
+        <Element Offset="32" Vartype="Pointer" Bytesize="8" OffsetHex="00000020" Description="_pool" DisplayMethod="unsigned integer"/>
+        <Element Offset="40" Vartype="Pointer" Bytesize="8" OffsetHex="00000028" Description="XScaler" DisplayMethod="unsigned integer"/>
+        <Element Offset="48" Vartype="Pointer" Bytesize="8" OffsetHex="00000030" Description="shadow" DisplayMethod="unsigned integer"/>
+        <Element Offset="56" Vartype="Pointer" Bytesize="8" OffsetHex="00000038" Description="indirectLightEmitters" DisplayMethod="unsigned integer"/>
+        <Element Offset="64" Vartype="Pointer" Bytesize="8" OffsetHex="00000040" Description="animator" DisplayMethod="unsigned integer"/>
+        <Element Offset="72" Vartype="Pointer" Bytesize="8" OffsetHex="00000048" Description="interactable" DisplayMethod="unsigned integer"/>
+        <Element Offset="80" Vartype="Pointer" Bytesize="8" OffsetHex="00000050" Description="spriteObjects" DisplayMethod="unsigned integer"/>
+        <Element Offset="88" Vartype="Pointer" Bytesize="8" OffsetHex="00000058" Description="reskinOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="96" Vartype="Pointer" Bytesize="8" OffsetHex="00000060" Description="paintableOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="104" Vartype="Pointer" Bytesize="8" OffsetHex="00000068" Description="soundOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="112" Vartype="Pointer" Bytesize="8" OffsetHex="00000070" Description="particleOptions" DisplayMethod="unsigned integer"/>
+        <Element Offset="120" Vartype="Pointer" Bytesize="8" OffsetHex="00000078" Description="objectVariants" DisplayMethod="unsigned integer"/>
+        <Element Offset="128" Vartype="Pointer" Bytesize="8" OffsetHex="00000080" Description="spritesToRandomlyFlip" DisplayMethod="unsigned integer"/>
+        <Element Offset="136" Vartype="Pointer" Bytesize="8" OffsetHex="00000088" Description="gameObjectsToRandomlyFlip" DisplayMethod="unsigned integer"/>
+        <Element Offset="144" Vartype="Pointer" Bytesize="8" OffsetHex="00000090" Description="optionalHealthBar" DisplayMethod="unsigned integer"/>
+        <Element Offset="152" Vartype="Pointer" Bytesize="8" OffsetHex="00000098" Description="optionalLightOptimizer" DisplayMethod="unsigned integer"/>
+        <Element Offset="160" Vartype="Pointer" Bytesize="8" OffsetHex="000000A0" Description="conditionEffectsHandler" DisplayMethod="unsigned integer"/>
+        <Element Offset="168" Vartype="Pointer" Bytesize="8" OffsetHex="000000A8" Description="conditionsEffectsSettings" DisplayMethod="unsigned integer"/>
+        <Element Offset="176" Vartype="Pointer" Bytesize="8" OffsetHex="000000B0" Description="outlineControllers" DisplayMethod="unsigned integer"/>
+        <Element Offset="184" Vartype="Pointer" Bytesize="8" OffsetHex="000000B8" Description="flashable" DisplayMethod="unsigned integer"/>
+        <Element Offset="192" Vartype="Pointer" Bytesize="8" OffsetHex="000000C0" Description="netEcbSystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="200" Vartype="Byte" Bytesize="1" OffsetHex="000000C8" Description="hasXScaler" DisplayMethod="unsigned integer"/>
+        <Element Offset="201" Vartype="Byte" Bytesize="1" OffsetHex="000000C9" Description="hasShadow" DisplayMethod="unsigned integer"/>
+        <Element Offset="202" Vartype="Byte" Bytesize="1" OffsetHex="000000CA" Description="hasAnimator" DisplayMethod="unsigned integer"/>
+        <Element Offset="203" Vartype="Byte" Bytesize="1" OffsetHex="000000CB" Description="hasInteractable" DisplayMethod="unsigned integer"/>
+        <Element Offset="204" Vartype="Byte" Bytesize="1" OffsetHex="000000CC" Description="useSharedTransformAnimations" DisplayMethod="unsigned integer"/>
+        <Element Offset="208" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000D0" Description="previousPaint" DisplayMethod="unsigned integer"/>
+        <Element Offset="212" Vartype="Pointer" Bytesize="8" OffsetHex="000000D4" Description="&lt;entity&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="220" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000DC" Description="variationOverride" DisplayMethod="unsigned integer"/>
+        <Element Offset="224" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000E0" Description="variationOverrideUpdateCount" DisplayMethod="unsigned integer"/>
+        <Element Offset="228" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000E4" Description="pugMapPosX" DisplayMethod="unsigned integer"/>
+        <Element Offset="232" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000E8" Description="pugMapPosZ" DisplayMethod="unsigned integer"/>
+        <Element Offset="236" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000EC" Description="width" DisplayMethod="unsigned integer"/>
+        <Element Offset="240" Vartype="4 Bytes" Bytesize="4" OffsetHex="000000F0" Description="height" DisplayMethod="unsigned integer"/>
+        <Element Offset="244" Vartype="Byte" Bytesize="1" OffsetHex="000000F4" Description="appearInMapUI" DisplayMethod="unsigned integer"/>
+        <Element Offset="248" Vartype="Pointer" Bytesize="8" OffsetHex="000000F8" Description="colorInMap" DisplayMethod="unsigned integer"/>
+        <Element Offset="264" Vartype="Byte" Bytesize="1" OffsetHex="00000108" Description="onlyEnableAnimatorTemporarilyWhenPlayingAnimation" DisplayMethod="unsigned integer"/>
+        <Element Offset="268" Vartype="Float" Bytesize="4" OffsetHex="0000010C" Description="animatorTemporaryDisableTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="272" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000110" Description="lastAnim" DisplayMethod="unsigned integer"/>
+        <Element Offset="276" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000114" Description="lastNonDeathAnim" DisplayMethod="unsigned integer"/>
+        <Element Offset="280" Vartype="Byte" Bytesize="1" OffsetHex="00000118" Description="hasOverriddenAnim" DisplayMethod="unsigned integer"/>
+        <Element Offset="281" Vartype="Byte" Bytesize="1" OffsetHex="00000119" Description="&lt;isHidden&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="284" Vartype="Float" Bytesize="4" OffsetHex="0000011C" Description="deathTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="288" Vartype="Pointer" Bytesize="8" OffsetHex="00000120" Description="interactableDefaultPosition" DisplayMethod="unsigned integer"/>
+        <Element Offset="300" Vartype="Pointer" Bytesize="8" OffsetHex="0000012C" Description="interactableDefaultRotation" DisplayMethod="unsigned integer"/>
+        <Element Offset="316" Vartype="Byte" Bytesize="1" OffsetHex="0000013C" Description="hasFlashable" DisplayMethod="unsigned integer"/>
+        <Element Offset="317" Vartype="Byte" Bytesize="1" OffsetHex="0000013D" Description="hasConditions" DisplayMethod="unsigned integer"/>
+        <Element Offset="318" Vartype="Byte" Bytesize="1" OffsetHex="0000013E" Description="hasDamageEffect" DisplayMethod="unsigned integer"/>
+        <Element Offset="320" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000140" Description="damageEffectTrigger" DisplayMethod="unsigned integer"/>
+        <Element Offset="324" Vartype="Byte" Bytesize="1" OffsetHex="00000144" Description="hasDisableableParticles" DisplayMethod="unsigned integer"/>
+        <Element Offset="325" Vartype="Byte" Bytesize="1" OffsetHex="00000145" Description="&lt;hasHealth&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="326" Vartype="Byte" Bytesize="1" OffsetHex="00000146" Description="&lt;isEnemy&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="328" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000148" Description="previousHealth" DisplayMethod="unsigned integer"/>
+        <Element Offset="332" Vartype="Pointer" Bytesize="8" OffsetHex="0000014C" Description="&lt;WorldPosition&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="344" Vartype="Byte" Bytesize="1" OffsetHex="00000158" Description="hasLocalToWorld" DisplayMethod="unsigned integer"/>
+        <Element Offset="348" Vartype="Pointer" Bytesize="8" OffsetHex="0000015C" Description="currentFacingVector" DisplayMethod="unsigned integer"/>
+        <Element Offset="360" Vartype="Pointer" Bytesize="8" OffsetHex="00000168" Description="normalizedFacingVector" DisplayMethod="unsigned integer"/>
+        <Element Offset="372" Vartype="Pointer" Bytesize="8" OffsetHex="00000174" Description="animatedMovementVector" DisplayMethod="unsigned integer"/>
+        <Element Offset="384" Vartype="Byte" Bytesize="1" OffsetHex="00000180" Description="hasAnimationOrientationCD" DisplayMethod="unsigned integer"/>
+        <Element Offset="388" Vartype="Float" Bytesize="4" OffsetHex="00000184" Description="orientationY" DisplayMethod="unsigned integer"/>
+        <Element Offset="392" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000188" Description="m_spriteObjectOrientation" DisplayMethod="unsigned integer"/>
+        <Element Offset="396" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000018C" Description="m_prevSpriteObjectOrientation" DisplayMethod="unsigned integer"/>
+        <Element Offset="400" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000190" Description="m_spriteObjectOrientationHash" DisplayMethod="unsigned integer"/>
+        <Element Offset="404" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000194" Description="cachedLastSpriteSheetObjectID" DisplayMethod="unsigned integer"/>
+        <Element Offset="408" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000198" Description="cachedLastSpriteSheetVariation" DisplayMethod="unsigned integer"/>
+        <Element Offset="412" Vartype="Pointer" Bytesize="8" OffsetHex="0000019C" Description="transparentColor" DisplayMethod="unsigned integer"/>
+        <Element Offset="432" Vartype="Pointer" Bytesize="8" OffsetHex="000001B0" Description="groundFog" DisplayMethod="unsigned integer"/>
+        <Element Offset="440" Vartype="Pointer" Bytesize="8" OffsetHex="000001B8" Description="fog" DisplayMethod="unsigned integer"/>
+        <Element Offset="448" Vartype="Pointer" Bytesize="8" OffsetHex="000001C0" Description="footStepTransform" DisplayMethod="unsigned integer"/>
+        <Element Offset="456" Vartype="Pointer" Bytesize="8" OffsetHex="000001C8" Description="extraLootAtStartTable" DisplayMethod="unsigned integer"/>
+        <Element Offset="464" Vartype="Pointer" Bytesize="8" OffsetHex="000001D0" Description="rolePerksTable" DisplayMethod="unsigned integer"/>
+        <Element Offset="472" Vartype="Pointer" Bytesize="8" OffsetHex="000001D8" Description="currentPortal" DisplayMethod="unsigned integer"/>
+        <Element Offset="480" Vartype="Pointer" Bytesize="8" OffsetHex="000001E0" Description="&lt;playerName&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="488" Vartype="Pointer" Bytesize="8" OffsetHex="000001E8" Description="unfilteredPlayerName" DisplayMethod="unsigned integer"/>
+        <Element Offset="496" Vartype="Pointer" Bytesize="8" OffsetHex="000001F0" Description="&lt;networkName&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="504" Vartype="Pointer" Bytesize="8" OffsetHex="000001F8" Description="&lt;platformID&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="512" Vartype="Pointer" Bytesize="8" OffsetHex="00000200" Description="queuedUIInputActions" DisplayMethod="unsigned integer"/>
+        <Element Offset="520" Vartype="Pointer" Bytesize="8" OffsetHex="00000208" Description="&lt;_inputModule&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="528" Vartype="Pointer" Bytesize="8" OffsetHex="00000210" Description="playerCommandSystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="536" Vartype="Pointer" Bytesize="8" OffsetHex="00000218" Description="pugMapSystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="544" Vartype="Pointer" Bytesize="8" OffsetHex="00000220" Description="querySystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="552" Vartype="Pointer" Bytesize="8" OffsetHex="00000228" Description="updateGraphicalObjectTransformSystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="560" Vartype="Pointer" Bytesize="8" OffsetHex="00000230" Description="entityPrespawnSystem" DisplayMethod="unsigned integer"/>
+        <Element Offset="568" Vartype="Pointer" Bytesize="8" OffsetHex="00000238" Description="runDust" DisplayMethod="unsigned integer"/>
+        <Element Offset="576" Vartype="Pointer" Bytesize="8" OffsetHex="00000240" Description="&lt;equipmentSlots&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="584" Vartype="Pointer" Bytesize="8" OffsetHex="00000248" Description="&lt;activeInventoryHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="592" Vartype="Pointer" Bytesize="8" OffsetHex="00000250" Description="&lt;activeBuyInventoryHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="600" Vartype="Pointer" Bytesize="8" OffsetHex="00000258" Description="&lt;activeCattle&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="608" Vartype="Pointer" Bytesize="8" OffsetHex="00000260" Description="_activePet" DisplayMethod="unsigned integer"/>
+        <Element Offset="616" Vartype="Pointer" Bytesize="8" OffsetHex="00000268" Description="&lt;activeWorldLabel&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="624" Vartype="Pointer" Bytesize="8" OffsetHex="00000270" Description="_filteringBuilding" DisplayMethod="unsigned integer"/>
+        <Element Offset="632" Vartype="Pointer" Bytesize="8" OffsetHex="00000278" Description="previousInventoryObjects" DisplayMethod="unsigned integer"/>
+        <Element Offset="640" Vartype="Pointer" Bytesize="8" OffsetHex="00000280" Description="instrumentHandler" DisplayMethod="unsigned integer"/>
+        <Element Offset="648" Vartype="Pointer" Bytesize="8" OffsetHex="00000288" Description="&lt;activeCraftingHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="656" Vartype="Pointer" Bytesize="8" OffsetHex="00000290" Description="&lt;playerCraftingHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="664" Vartype="Pointer" Bytesize="8" OffsetHex="00000298" Description="&lt;sellSlotsHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="672" Vartype="Pointer" Bytesize="8" OffsetHex="000002A0" Description="&lt;equipmentHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="680" Vartype="Pointer" Bytesize="8" OffsetHex="000002A8" Description="&lt;vanitySlotsHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="688" Vartype="Pointer" Bytesize="8" OffsetHex="000002B0" Description="&lt;trashCanHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="696" Vartype="Pointer" Bytesize="8" OffsetHex="000002B8" Description="&lt;upgradeSlotHandler&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="704" Vartype="Pointer" Bytesize="8" OffsetHex="000002C0" Description="carryableHandle" DisplayMethod="unsigned integer"/>
+        <Element Offset="712" Vartype="Pointer" Bytesize="8" OffsetHex="000002C8" Description="carryableSwingItemSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="720" Vartype="Pointer" Bytesize="8" OffsetHex="000002D0" Description="carryableSwingItemSkinSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="728" Vartype="Pointer" Bytesize="8" OffsetHex="000002D8" Description="carryableRangeItemSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="736" Vartype="Pointer" Bytesize="8" OffsetHex="000002E0" Description="carryableRangeItemSkinSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="744" Vartype="Pointer" Bytesize="8" OffsetHex="000002E8" Description="carryableShieldItemSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="752" Vartype="Pointer" Bytesize="8" OffsetHex="000002F0" Description="carryableShieldItemSkinSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="760" Vartype="Pointer" Bytesize="8" OffsetHex="000002F8" Description="instrumentSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="768" Vartype="Pointer" Bytesize="8" OffsetHex="00000300" Description="instrumentSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="776" Vartype="Pointer" Bytesize="8" OffsetHex="00000308" Description="carryablePlaceItemSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="784" Vartype="Pointer" Bytesize="8" OffsetHex="00000310" Description="carryablePlaceItemColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="792" Vartype="Pointer" Bytesize="8" OffsetHex="00000318" Description="carryableBigSpearItemSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="800" Vartype="Pointer" Bytesize="8" OffsetHex="00000320" Description="carryableBigSwingItemSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="808" Vartype="Pointer" Bytesize="8" OffsetHex="00000328" Description="carryableDrillToolSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="816" Vartype="Pointer" Bytesize="8" OffsetHex="00000330" Description="carryableBigSpearItemSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="824" Vartype="Pointer" Bytesize="8" OffsetHex="00000338" Description="carryableBigSwingItemSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="832" Vartype="Pointer" Bytesize="8" OffsetHex="00000340" Description="carryableDrillToolSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="840" Vartype="Pointer" Bytesize="8" OffsetHex="00000348" Description="carryableTorch" DisplayMethod="unsigned integer"/>
+        <Element Offset="848" Vartype="Pointer" Bytesize="8" OffsetHex="00000350" Description="carryableFishingRodSprite" DisplayMethod="unsigned integer"/>
+        <Element Offset="856" Vartype="Pointer" Bytesize="8" OffsetHex="00000358" Description="carryableFishingRodSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="864" Vartype="Pointer" Bytesize="8" OffsetHex="00000360" Description="fishingRodLine" DisplayMethod="unsigned integer"/>
+        <Element Offset="872" Vartype="Pointer" Bytesize="8" OffsetHex="00000368" Description="fishingRodLineDefaultGradient" DisplayMethod="unsigned integer"/>
+        <Element Offset="880" Vartype="Pointer" Bytesize="8" OffsetHex="00000370" Description="fishingRodLineGradientOverrides" DisplayMethod="unsigned integer"/>
+        <Element Offset="888" Vartype="Pointer" Bytesize="8" OffsetHex="00000378" Description="fishingRodSink" DisplayMethod="unsigned integer"/>
+        <Element Offset="896" Vartype="Pointer" Bytesize="8" OffsetHex="00000380" Description="fishingRodLoot" DisplayMethod="unsigned integer"/>
+        <Element Offset="904" Vartype="Pointer" Bytesize="8" OffsetHex="00000388" Description="carryableEffects" DisplayMethod="unsigned integer"/>
+        <Element Offset="912" Vartype="Pointer" Bytesize="8" OffsetHex="00000390" Description="defaultmaterial" DisplayMethod="unsigned integer"/>
+        <Element Offset="920" Vartype="Pointer" Bytesize="8" OffsetHex="00000398" Description="ghostMaterial" DisplayMethod="unsigned integer"/>
+        <Element Offset="928" Vartype="Pointer" Bytesize="8" OffsetHex="000003A0" Description="flashableComponent" DisplayMethod="unsigned integer"/>
+        <Element Offset="936" Vartype="Pointer" Bytesize="8" OffsetHex="000003A8" Description="flashableEyesComponent" DisplayMethod="unsigned integer"/>
+        <Element Offset="944" Vartype="Pointer" Bytesize="8" OffsetHex="000003B0" Description="srContainer" DisplayMethod="unsigned integer"/>
+        <Element Offset="952" Vartype="Pointer" Bytesize="8" OffsetHex="000003B8" Description="srOffset" DisplayMethod="unsigned integer"/>
+        <Element Offset="960" Vartype="Pointer" Bytesize="8" OffsetHex="000003C0" Description="aimUI" DisplayMethod="unsigned integer"/>
+        <Element Offset="968" Vartype="Pointer" Bytesize="8" OffsetHex="000003C8" Description="attackFX" DisplayMethod="unsigned integer"/>
+        <Element Offset="976" Vartype="Pointer" Bytesize="8" OffsetHex="000003D0" Description="hitAreaBoxSR" DisplayMethod="unsigned integer"/>
+        <Element Offset="984" Vartype="Pointer" Bytesize="8" OffsetHex="000003D8" Description="hitAreaSR" DisplayMethod="unsigned integer"/>
+        <Element Offset="992" Vartype="Pointer" Bytesize="8" OffsetHex="000003E0" Description="hitAreaSpriteCone45" DisplayMethod="unsigned integer"/>
+        <Element Offset="1000" Vartype="Pointer" Bytesize="8" OffsetHex="000003E8" Description="hitAreaSpriteCone90" DisplayMethod="unsigned integer"/>
+        <Element Offset="1008" Vartype="Pointer" Bytesize="8" OffsetHex="000003F0" Description="hitAreaSpriteCone135" DisplayMethod="unsigned integer"/>
+        <Element Offset="1016" Vartype="Pointer" Bytesize="8" OffsetHex="000003F8" Description="hitAreaSpriteCone180" DisplayMethod="unsigned integer"/>
+        <Element Offset="1024" Vartype="Pointer" Bytesize="8" OffsetHex="00000400" Description="hitAreaSpriteCone270" DisplayMethod="unsigned integer"/>
+        <Element Offset="1032" Vartype="Pointer" Bytesize="8" OffsetHex="00000408" Description="hitAreaSpriteCircle" DisplayMethod="unsigned integer"/>
+        <Element Offset="1040" Vartype="Pointer" Bytesize="8" OffsetHex="00000410" Description="hitAreaSpriteRectangle" DisplayMethod="unsigned integer"/>
+        <Element Offset="1048" Vartype="Pointer" Bytesize="8" OffsetHex="00000418" Description="customizationTable" DisplayMethod="unsigned integer"/>
+        <Element Offset="1096" Vartype="Pointer" Bytesize="8" OffsetHex="00000448" Description="bodySkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1104" Vartype="Pointer" Bytesize="8" OffsetHex="00000450" Description="skinColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1112" Vartype="Pointer" Bytesize="8" OffsetHex="00000458" Description="hairSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1120" Vartype="Pointer" Bytesize="8" OffsetHex="00000460" Description="hairColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1128" Vartype="Pointer" Bytesize="8" OffsetHex="00000468" Description="hairShadeSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1136" Vartype="Pointer" Bytesize="8" OffsetHex="00000470" Description="hairShadeColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1144" Vartype="Pointer" Bytesize="8" OffsetHex="00000478" Description="eyesSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1152" Vartype="Pointer" Bytesize="8" OffsetHex="00000480" Description="eyesColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1160" Vartype="Pointer" Bytesize="8" OffsetHex="00000488" Description="pantsSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1168" Vartype="Pointer" Bytesize="8" OffsetHex="00000490" Description="pantsColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1176" Vartype="Pointer" Bytesize="8" OffsetHex="00000498" Description="shirtSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1184" Vartype="Pointer" Bytesize="8" OffsetHex="000004A0" Description="shirtColorReplacer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1192" Vartype="Pointer" Bytesize="8" OffsetHex="000004A8" Description="helmSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1200" Vartype="Pointer" Bytesize="8" OffsetHex="000004B0" Description="breastArmorSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1208" Vartype="Pointer" Bytesize="8" OffsetHex="000004B8" Description="pantsArmorSkin" DisplayMethod="unsigned integer"/>
+        <Element Offset="1216" Vartype="Pointer" Bytesize="8" OffsetHex="000004C0" Description="nameText" DisplayMethod="unsigned integer"/>
+        <Element Offset="1224" Vartype="Pointer" Bytesize="8" OffsetHex="000004C8" Description="nameTextOutline" DisplayMethod="unsigned integer"/>
+        <Element Offset="1232" Vartype="Pointer" Bytesize="8" OffsetHex="000004D0" Description="_prevName" DisplayMethod="unsigned integer"/>
+        <Element Offset="1240" Vartype="Pointer" Bytesize="8" OffsetHex="000004D8" Description="acidLoop" DisplayMethod="unsigned integer"/>
+        <Element Offset="1248" Vartype="Pointer" Bytesize="8" OffsetHex="000004E0" Description="teleportEffect" DisplayMethod="unsigned integer"/>
+        <Element Offset="1256" Vartype="Pointer" Bytesize="8" OffsetHex="000004E8" Description="teleportSprites" DisplayMethod="unsigned integer"/>
+        <Element Offset="1264" Vartype="Pointer" Bytesize="8" OffsetHex="000004F0" Description="castAudio" DisplayMethod="unsigned integer"/>
+        <Element Offset="1272" Vartype="Pointer" Bytesize="8" OffsetHex="000004F8" Description="gainTalentEffect" DisplayMethod="unsigned integer"/>
+        <Element Offset="1280" Vartype="Pointer" Bytesize="8" OffsetHex="00000500" Description="coreWallParticles" DisplayMethod="unsigned integer"/>
+        <Element Offset="1288" Vartype="Pointer" Bytesize="8" OffsetHex="00000508" Description="dashEffect" DisplayMethod="unsigned integer"/>
+        <Element Offset="1296" Vartype="Pointer" Bytesize="8" OffsetHex="00000510" Description="specialWeaponHandler" DisplayMethod="unsigned integer"/>
+        <Element Offset="1304" Vartype="Pointer" Bytesize="8" OffsetHex="00000518" Description="greatWallHeightCurve" DisplayMethod="unsigned integer"/>
+        <Element Offset="1312" Vartype="Pointer" Bytesize="8" OffsetHex="00000520" Description="greatWallEmissiveCurve" DisplayMethod="unsigned integer"/>
+        <Element Offset="1320" Vartype="Pointer" Bytesize="8" OffsetHex="00000528" Description="greatWallParticlesCurve" DisplayMethod="unsigned integer"/>
+        <Element Offset="1328" Vartype="Pointer" Bytesize="8" OffsetHex="00000530" Description="warmupCurve" DisplayMethod="unsigned integer"/>
+        <Element Offset="1336" Vartype="Pointer" Bytesize="8" OffsetHex="00000538" Description="slackingFishingLineCurve" DisplayMethod="unsigned integer"/>
+        <Element Offset="1344" Vartype="Pointer" Bytesize="8" OffsetHex="00000540" Description="throwingFishingLineCurve" DisplayMethod="unsigned integer"/>
+        <Element Offset="1352" Vartype="Pointer" Bytesize="8" OffsetHex="00000548" Description="reelAudio" DisplayMethod="unsigned integer"/>
+        <Element Offset="1360" Vartype="Pointer" Bytesize="8" OffsetHex="00000550" Description="struggleAudio" DisplayMethod="unsigned integer"/>
+        <Element Offset="1368" Vartype="Pointer" Bytesize="8" OffsetHex="00000558" Description="_windupSoundEffects" DisplayMethod="unsigned integer"/>
+        <Element Offset="1376" Vartype="Pointer" Bytesize="8" OffsetHex="00000560" Description="_warmupSFX" DisplayMethod="unsigned integer"/>
+        <Element Offset="1384" Vartype="Pointer" Bytesize="8" OffsetHex="00000568" Description="_warmupMaxSFX" DisplayMethod="unsigned integer"/>
+        <Element Offset="1392" Vartype="Pointer" Bytesize="8" OffsetHex="00000570" Description="_warmupEndSFX" DisplayMethod="unsigned integer"/>
+        <Element Offset="1400" Vartype="Pointer" Bytesize="8" OffsetHex="00000578" Description="_amassSoundEffects" DisplayMethod="unsigned integer"/>
+        <Element Offset="1408" Vartype="Pointer" Bytesize="8" OffsetHex="00000580" Description="tulipPositionsArray" DisplayMethod="unsigned integer"/>
+        <Element Offset="1416" Vartype="Pointer" Bytesize="8" OffsetHex="00000588" Description="inventoryCache" DisplayMethod="unsigned integer"/>
+        <Element Offset="1424" Vartype="Pointer" Bytesize="8" OffsetHex="00000590" Description="leashPoints" DisplayMethod="unsigned integer"/>
+        <Element Offset="1432" Vartype="Pointer" Bytesize="8" OffsetHex="00000598" Description="&lt;smoothFollowEntity&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="1440" Vartype="Byte" Bytesize="1" OffsetHex="000005A0" Description="isLocal" DisplayMethod="unsigned integer"/>
+        <Element Offset="1444" Vartype="4 Bytes" Bytesize="4" OffsetHex="000005A4" Description="currentBiome" DisplayMethod="unsigned integer"/>
+        <Element Offset="1448" Vartype="Byte" Bytesize="1" OffsetHex="000005A8" Description="isInSafeZone" DisplayMethod="unsigned integer"/>
+        <Element Offset="1449" Vartype="Byte" Bytesize="1" OffsetHex="000005A9" Description="lastLocalGodModeState" DisplayMethod="unsigned integer"/>
+        <Element Offset="1450" Vartype="Pointer" Bytesize="8" OffsetHex="000005AA" Description="clientInput" DisplayMethod="unsigned integer"/>
+        <Element Offset="1518" Vartype="Byte" Bytesize="1" OffsetHex="000005EE" Description="spawningFromCoreFinished" DisplayMethod="unsigned integer"/>
+        <Element Offset="1519" Vartype="Byte" Bytesize="1" OffsetHex="000005EF" Description="mouseUIInputWasDone" DisplayMethod="unsigned integer"/>
+        <Element Offset="1520" Vartype="Pointer" Bytesize="8" OffsetHex="000005F0" Description="currentSheetStandBeingPlayedAt" DisplayMethod="unsigned integer"/>
+        <Element Offset="1528" Vartype="Byte" Bytesize="1" OffsetHex="000005F8" Description="&lt;initialized&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="1532" Vartype="4 Bytes" Bytesize="4" OffsetHex="000005FC" Description="&lt;playerIndex&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="1536" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000600" Description="&lt;platform&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="1540" Vartype="Pointer" Bytesize="8" OffsetHex="00000604" Description="lastPoppedUIInputAction" DisplayMethod="unsigned integer"/>
+        <Element Offset="1768" Vartype="Pointer" Bytesize="8" OffsetHex="000006E8" Description="pugDatabase" DisplayMethod="unsigned integer"/>
+        <Element Offset="1776" Vartype="Pointer" Bytesize="8" OffsetHex="000006F0" Description="lootTableBank" DisplayMethod="unsigned integer"/>
+        <Element Offset="1784" Vartype="Byte" Bytesize="1" OffsetHex="000006F8" Description="hasDisabledInputBecauseLoading" DisplayMethod="unsigned integer"/>
+        <Element Offset="1785" Vartype="Byte" Bytesize="1" OffsetHex="000006F9" Description="hasRemovedLoginImmunity" DisplayMethod="unsigned integer"/>
+        <Element Offset="1786" Vartype="Pointer" Bytesize="8" OffsetHex="000006FA" Description="belongsToLayer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1818" Vartype="Pointer" Bytesize="8" OffsetHex="0000071A" Description="collidesWithLayer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1850" Vartype="Pointer" Bytesize="8" OffsetHex="0000073A" Description="damagesLayer" DisplayMethod="unsigned integer"/>
+        <Element Offset="1884" Vartype="Float" Bytesize="4" OffsetHex="0000075C" Description="movementSpeed" DisplayMethod="unsigned integer"/>
+        <Element Offset="1888" Vartype="Float" Bytesize="4" OffsetHex="00000760" Description="noClipMovementSpeedMultipler" DisplayMethod="unsigned integer"/>
+        <Element Offset="1892" Vartype="Pointer" Bytesize="8" OffsetHex="00000764" Description="targetMovementVelocity" DisplayMethod="unsigned integer"/>
+        <Element Offset="1904" Vartype="Pointer" Bytesize="8" OffsetHex="00000770" Description="targetingDirection" DisplayMethod="unsigned integer"/>
+        <Element Offset="1916" Vartype="Pointer" Bytesize="8" OffsetHex="0000077C" Description="lastEffectiveSteerDir" DisplayMethod="unsigned integer"/>
+        <Element Offset="1917" Vartype="Pointer" Bytesize="8" OffsetHex="0000077D" Description="facingDirection" DisplayMethod="unsigned integer"/>
+        <Element Offset="1920" Vartype="Pointer" Bytesize="8" OffsetHex="00000780" Description="aimDirection" DisplayMethod="unsigned integer"/>
+        <Element Offset="1932" Vartype="4 Bytes" Bytesize="4" OffsetHex="0000078C" Description="equippedSlotIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="1936" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000790" Description="lastUsedSlotIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="1940" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000794" Description="hotbarStartIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="1944" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000798" Description="hotbarEndIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="1948" Vartype="Pointer" Bytesize="8" OffsetHex="0000079C" Description="previousMouseObject" DisplayMethod="unsigned integer"/>
+        <Element Offset="1968" Vartype="Byte" Bytesize="1" OffsetHex="000007B0" Description="stopPlayingInstrument" DisplayMethod="unsigned integer"/>
+        <Element Offset="1972" Vartype="Pointer" Bytesize="8" OffsetHex="000007B4" Description="&lt;visuallyEquippedContainedObject&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="1992" Vartype="4 Bytes" Bytesize="4" OffsetHex="000007C8" Description="visuallyEquippedSlotType" DisplayMethod="unsigned integer"/>
+        <Element Offset="1996" Vartype="Pointer" Bytesize="8" OffsetHex="000007CC" Description="animatedFishingRodSinkPosition" DisplayMethod="unsigned integer"/>
+        <Element Offset="2004" Vartype="Byte" Bytesize="1" OffsetHex="000007D4" Description="animatedLineIsBeingPulled" DisplayMethod="unsigned integer"/>
+        <Element Offset="2008" Vartype="Pointer" Bytesize="8" OffsetHex="000007D8" Description="defaultEyeEmissive" DisplayMethod="unsigned integer"/>
+        <Element Offset="2024" Vartype="Pointer" Bytesize="8" OffsetHex="000007E8" Description="redGlowEyeEmissive" DisplayMethod="unsigned integer"/>
+        <Element Offset="2040" Vartype="Pointer" Bytesize="8" OffsetHex="000007F8" Description="ghostColor" DisplayMethod="unsigned integer"/>
+        <Element Offset="2056" Vartype="Byte" Bytesize="1" OffsetHex="00000808" Description="showHitArea" DisplayMethod="unsigned integer"/>
+        <Element Offset="2064" Vartype="Pointer" Bytesize="8" OffsetHex="00000810" Description="activeCustomization" DisplayMethod="unsigned integer"/>
+        <Element Offset="2328" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000918" Description="activeCustomizationTriggerCount" DisplayMethod="unsigned integer"/>
+        <Element Offset="2332" Vartype="Byte" Bytesize="1" OffsetHex="0000091C" Description="prevLookLikeGhost" DisplayMethod="unsigned integer"/>
+        <Element Offset="2333" Vartype="Byte" Bytesize="1" OffsetHex="0000091D" Description="onSlime" DisplayMethod="unsigned integer"/>
+        <Element Offset="2334" Vartype="Byte" Bytesize="1" OffsetHex="0000091E" Description="onOrangeSlime" DisplayMethod="unsigned integer"/>
+        <Element Offset="2335" Vartype="Byte" Bytesize="1" OffsetHex="0000091F" Description="onAcid" DisplayMethod="unsigned integer"/>
+        <Element Offset="2336" Vartype="Byte" Bytesize="1" OffsetHex="00000920" Description="onPoisonSlime" DisplayMethod="unsigned integer"/>
+        <Element Offset="2337" Vartype="Byte" Bytesize="1" OffsetHex="00000921" Description="onSlipperySlime" DisplayMethod="unsigned integer"/>
+        <Element Offset="2338" Vartype="Byte" Bytesize="1" OffsetHex="00000922" Description="onWood" DisplayMethod="unsigned integer"/>
+        <Element Offset="2339" Vartype="Byte" Bytesize="1" OffsetHex="00000923" Description="onGrass" DisplayMethod="unsigned integer"/>
+        <Element Offset="2340" Vartype="Byte" Bytesize="1" OffsetHex="00000924" Description="onChrysalis" DisplayMethod="unsigned integer"/>
+        <Element Offset="2341" Vartype="Byte" Bytesize="1" OffsetHex="00000925" Description="onMoss" DisplayMethod="unsigned integer"/>
+        <Element Offset="2342" Vartype="Byte" Bytesize="1" OffsetHex="00000926" Description="onStone" DisplayMethod="unsigned integer"/>
+        <Element Offset="2343" Vartype="Byte" Bytesize="1" OffsetHex="00000927" Description="onFlesh" DisplayMethod="unsigned integer"/>
+        <Element Offset="2344" Vartype="Byte" Bytesize="1" OffsetHex="00000928" Description="onSand" DisplayMethod="unsigned integer"/>
+        <Element Offset="2345" Vartype="Byte" Bytesize="1" OffsetHex="00000929" Description="onOasis" DisplayMethod="unsigned integer"/>
+        <Element Offset="2346" Vartype="Byte" Bytesize="1" OffsetHex="0000092A" Description="onBeach" DisplayMethod="unsigned integer"/>
+        <Element Offset="2347" Vartype="Byte" Bytesize="1" OffsetHex="0000092B" Description="onClay" DisplayMethod="unsigned integer"/>
+        <Element Offset="2348" Vartype="Byte" Bytesize="1" OffsetHex="0000092C" Description="onMold" DisplayMethod="unsigned integer"/>
+        <Element Offset="2349" Vartype="Byte" Bytesize="1" OffsetHex="0000092D" Description="onDirt" DisplayMethod="unsigned integer"/>
+        <Element Offset="2350" Vartype="Byte" Bytesize="1" OffsetHex="0000092E" Description="onMetal" DisplayMethod="unsigned integer"/>
+        <Element Offset="2351" Vartype="Byte" Bytesize="1" OffsetHex="0000092F" Description="onRoses" DisplayMethod="unsigned integer"/>
+        <Element Offset="2352" Vartype="Byte" Bytesize="1" OffsetHex="00000930" Description="onGlass" DisplayMethod="unsigned integer"/>
+        <Element Offset="2353" Vartype="Byte" Bytesize="1" OffsetHex="00000931" Description="onMeadow" DisplayMethod="unsigned integer"/>
+        <Element Offset="2354" Vartype="Byte" Bytesize="1" OffsetHex="00000932" Description="onRobotScrap" DisplayMethod="unsigned integer"/>
+        <Element Offset="2355" Vartype="Byte" Bytesize="1" OffsetHex="00000933" Description="onOil" DisplayMethod="unsigned integer"/>
+        <Element Offset="2356" Vartype="Byte" Bytesize="1" OffsetHex="00000934" Description="_anyInventoryOrMapWasActiveThisFrame" DisplayMethod="unsigned integer"/>
+        <Element Offset="2357" Vartype="Byte" Bytesize="1" OffsetHex="00000935" Description="_playerInputBlockedThisFrame" DisplayMethod="unsigned integer"/>
+        <Element Offset="2360" Vartype="Pointer" Bytesize="8" OffsetHex="00000938" Description="previousMouseScreenPosition" DisplayMethod="unsigned integer"/>
+        <Element Offset="2372" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000944" Description="swappedTorchFromIndex" DisplayMethod="unsigned integer"/>
+        <Element Offset="2376" Vartype="Pointer" Bytesize="8" OffsetHex="00000948" Description="slotSwapWithMouseCooldownTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2396" Vartype="Byte" Bytesize="1" OffsetHex="0000095C" Description="greatWallIsShakingAndRumbling" DisplayMethod="unsigned integer"/>
+        <Element Offset="2397" Vartype="Byte" Bytesize="1" OffsetHex="0000095D" Description="greatWallEmissiveSoundHasPlayed" DisplayMethod="unsigned integer"/>
+        <Element Offset="2398" Vartype="Byte" Bytesize="1" OffsetHex="0000095E" Description="greatWallHasBeenLowered" DisplayMethod="unsigned integer"/>
+        <Element Offset="2400" Vartype="Pointer" Bytesize="8" OffsetHex="00000960" Description="greatWallShakeTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2420" Vartype="Float" Bytesize="4" OffsetHex="00000974" Description="nearbyEmissiveAndLowerWallBlend" DisplayMethod="unsigned integer"/>
+        <Element Offset="2424" Vartype="Byte" Bytesize="1" OffsetHex="00000978" Description="&lt;playerCanInteractWithGreatWall&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="2428" Vartype="Pointer" Bytesize="8" OffsetHex="0000097C" Description="playerNearbyTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2448" Vartype="Byte" Bytesize="1" OffsetHex="00000990" Description="canDoHandEmote" DisplayMethod="unsigned integer"/>
+        <Element Offset="2449" Vartype="Byte" Bytesize="1" OffsetHex="00000991" Description="isPlayingInteractFlash" DisplayMethod="unsigned integer"/>
+        <Element Offset="2452" Vartype="Pointer" Bytesize="8" OffsetHex="00000994" Description="checkUndiscoveredItemsTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2472" Vartype="Float" Bytesize="4" OffsetHex="000009A8" Description="lineTensionSmoothTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2476" Vartype="Float" Bytesize="4" OffsetHex="000009AC" Description="sinkHeightFromFishHooking" DisplayMethod="unsigned integer"/>
+        <Element Offset="2480" Vartype="Pointer" Bytesize="8" OffsetHex="000009B0" Description="rippleTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2500" Vartype="Pointer" Bytesize="8" OffsetHex="000009C4" Description="thisIsGoingToTakeAWhileEmoteTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2520" Vartype="Pointer" Bytesize="8" OffsetHex="000009D8" Description="thisIsGoingToTakeAWhileLastDamageTick" DisplayMethod="unsigned integer"/>
+        <Element Offset="2524" Vartype="Byte" Bytesize="1" OffsetHex="000009DC" Description="_windupSoundsPlaying" DisplayMethod="unsigned integer"/>
+        <Element Offset="2525" Vartype="Byte" Bytesize="1" OffsetHex="000009DD" Description="_warmupSFXPlaying" DisplayMethod="unsigned integer"/>
+        <Element Offset="2526" Vartype="Byte" Bytesize="1" OffsetHex="000009DE" Description="_warmupMaxSFXPlaying" DisplayMethod="unsigned integer"/>
+        <Element Offset="2527" Vartype="Byte" Bytesize="1" OffsetHex="000009DF" Description="_warmupEndSFXPlaying" DisplayMethod="unsigned integer"/>
+        <Element Offset="2528" Vartype="4 Bytes" Bytesize="4" OffsetHex="000009E0" Description="_amassValue" DisplayMethod="unsigned integer"/>
+        <Element Offset="2532" Vartype="4 Bytes" Bytesize="4" OffsetHex="000009E4" Description="_amassValuePrevious" DisplayMethod="unsigned integer"/>
+        <Element Offset="2536" Vartype="Byte" Bytesize="1" OffsetHex="000009E8" Description="_isSleepingAndHasAppliedQualitySleep" DisplayMethod="unsigned integer"/>
+        <Element Offset="2540" Vartype="Pointer" Bytesize="8" OffsetHex="000009EC" Description="_previousQualitySleepRemoveTick" DisplayMethod="unsigned integer"/>
+        <Element Offset="2544" Vartype="4 Bytes" Bytesize="4" OffsetHex="000009F0" Description="lastReceivedConditionsAmount" DisplayMethod="unsigned integer"/>
+        <Element Offset="2548" Vartype="Pointer" Bytesize="8" OffsetHex="000009F4" Description="conditionsSaveTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2568" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000A08" Description="lastReceivedLockedObjectsAmount" DisplayMethod="unsigned integer"/>
+        <Element Offset="2572" Vartype="Pointer" Bytesize="8" OffsetHex="00000A0C" Description="lockedObjectsSaveTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2592" Vartype="Pointer" Bytesize="8" OffsetHex="00000A20" Description="blinkTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2612" Vartype="Pointer" Bytesize="8" OffsetHex="00000A34" Description="srOffSetPos" DisplayMethod="unsigned integer"/>
+        <Element Offset="2624" Vartype="Pointer" Bytesize="8" OffsetHex="00000A40" Description="defaultSROffSetPos" DisplayMethod="unsigned integer"/>
+        <Element Offset="2636" Vartype="Pointer" Bytesize="8" OffsetHex="00000A4C" Description="srOffSetRot" DisplayMethod="unsigned integer"/>
+        <Element Offset="2652" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000A5C" Description="&lt;activeEquipmentPreset&gt;k__BackingField" DisplayMethod="unsigned integer"/>
+        <Element Offset="2656" Vartype="Float" Bytesize="4" OffsetHex="00000A60" Description="_checkedManaTime" DisplayMethod="unsigned integer"/>
+        <Element Offset="2660" Vartype="Byte" Bytesize="1" OffsetHex="00000A64" Description="_checkedShouldShowManaLastValue" DisplayMethod="unsigned integer"/>
+        <Element Offset="2661" Vartype="Byte" Bytesize="1" OffsetHex="00000A65" Description="_hidePlayer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2662" Vartype="Byte" Bytesize="1" OffsetHex="00000A66" Description="defaultHelmOffsetInitialized" DisplayMethod="unsigned integer"/>
+        <Element Offset="2664" Vartype="Pointer" Bytesize="8" OffsetHex="00000A68" Description="defaultHelmOffset" DisplayMethod="unsigned integer"/>
+        <Element Offset="2676" Vartype="Byte" Bytesize="1" OffsetHex="00000A74" Description="isDyingOrDead" DisplayMethod="unsigned integer"/>
+        <Element Offset="2680" Vartype="Pointer" Bytesize="8" OffsetHex="00000A78" Description="hungerEmoteTimer" DisplayMethod="unsigned integer"/>
+        <Element Offset="2700" Vartype="4 Bytes" Bytesize="4" OffsetHex="00000A8C" Description="previousHunger" DisplayMethod="unsigned integer"/>
+      </Elements>
+    </Structure>
+  </Structures>
   <LuaScript>AddressList.Header.OnSectionClick = nil
 IDs = {501, 182, 365, 364, 165, 168, 178, 3, 186, 184, 367, 368, 167,
        }
