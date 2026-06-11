@@ -1,0 +1,700 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="52">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>113</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>100</ID>
+      <Description>"GWorld → Rotate view"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not AOBScanModuleUE then
+  function AOBScanModuleUE(moduleName, signature)
+    local baseAddr = nil
+    local maxAddr = 0
+    local modList
+    synchronize(function()
+      modList = enumModules()
+    end)
+    for _, mod in ipairs(modList) do
+      if string.lower(mod.Name) == string.lower(moduleName) then
+        baseAddr = mod.Address
+        maxAddr = baseAddr + mod.Size
+        break
+      end
+    end
+    if not baseAddr then return nil end
+    local ms = createMemScan()
+    synchronize(function()
+      ms.firstScan(soExactValue, vtByteArray, nil, signature,
+        nil, baseAddr, maxAddr, '+X-C-W', fsmNotAligned, '1', true, true, false, false)
+    end)
+    ms.waitTillDone()
+    local results = createFoundList(ms)
+    results.initialize()
+    local addr
+    synchronize(function()
+      if results.getCount() &gt; 0 then
+        addr = results[0]
+      end
+    end)
+    results.destroy()
+    ms.destroy()
+    return addr
+  end
+end
+registerLuaFunctionHighlight('AOBScanModuleUE')
+
+if not closeLuaEngine then
+  function closeLuaEngine()
+    synchronize(function()
+      getLuaEngine().Close()
+    end)
+  end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+local AOBs = {
+  {name='GWorld → gworld_addr_1E2B00', aob='89 7C 24 ?? 55 48 8B EC 48 83 EC ?? 48 8B 05 ?? ?? ?? ?? 48 8B D9 48 8D 4D 10 48 8B 50 18 48', pos=15, aoblen=19, symbol='gworld_addr_1E2B00'},
+}
+
+local module_name = process
+
+for _, entry in ipairs(AOBs) do
+  local aob_addr_str = AOBScanModuleUE(module_name, entry.aob)
+  if aob_addr_str then
+    local aob_addr_val = tonumber(aob_addr_str, 16)
+    local offset_addr = aob_addr_val + entry.pos
+    local relative_offset = readInteger(offset_addr, true)
+    local final_addr = relative_offset + aob_addr_val + entry.aoblen
+    synchronize(function()
+      unregisterSymbol(entry.symbol)
+      registerSymbol(entry.symbol, final_addr)
+    end)
+    print(string.format('[SymbolScanner] %s registered at: %X', entry.name, final_addr))
+  else
+    print(string.format('[SymbolScanner] WARNING: AOB scan failed for %s', entry.name))
+  end
+end
+
+closeLuaEngine()
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+unregisterSymbol('gworld_addr_1E2B00')
+closeLuaEngine()
+{$asm}
+      
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>110</ID>
+          <Description>"Increase Yaw value"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local theNodeName = "Yaw"
+local addressList = getAddressList()
+local theNodeRecord = addressList.getMemoryRecordByDescription(theNodeName)
+if theNodeRecord then
+  theNodeRecord.NumericalValue = theNodeRecord.NumericalValue+5
+end
+ 
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+--NO_ACTIVATE
+
+
+{$asm}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>111</ID>
+          <Description>"Decrease Yaw value"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local theNodeName = "Yaw"
+local addressList = getAddressList()
+local theNodeRecord = addressList.getMemoryRecordByDescription(theNodeName)
+if theNodeRecord then
+  theNodeRecord.NumericalValue = theNodeRecord.NumericalValue-5
+
+end
+ 
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+--NO_ACTIVATE
+
+
+{$asm}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>112</ID>
+          <Description>"Reset Yaw value"</Description>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+--NO_ACTIVATE
+if syntaxcheck then return end
+local theNodeName = "Yaw"
+local addressList = getAddressList()
+local theNodeRecord = addressList.getMemoryRecordByDescription(theNodeName)
+if theNodeRecord then
+  theNodeRecord.NumericalValue = 160
+end
+ 
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+
+
+{$asm}
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>101</ID>
+          <Description>"base to Yaw"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>8 Bytes</VariableType>
+          <Address>gworld_addr_1E2B00</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>102</ID>
+              <Description>"OwningGameInstance"</Description>
+              <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>+180</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>103</ID>
+                  <Description>"LocalPlayers [1 x ObjectProperty]"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+38</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>104</ID>
+                      <Description>"[0]"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+0</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>105</ID>
+                          <Description>"PlayerController"</Description>
+                          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                          <ShowAsHex>1</ShowAsHex>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <GroupHeader>1</GroupHeader>
+                          <Address>+30</Address>
+                          <Offsets>
+                            <Offset>0</Offset>
+                          </Offsets>
+                          <CheatEntries>
+                            <CheatEntry>
+                              <ID>106</ID>
+                              <Description>"ControlRotation (Rotator)"</Description>
+                              <ShowAsSigned>0</ShowAsSigned>
+                              <GroupHeader>1</GroupHeader>
+                              <Address>+288</Address>
+                              <CheatEntries>
+                                <CheatEntry>
+                                  <ID>107</ID>
+                                  <Description>"Pitch"</Description>
+                                  <ShowAsSigned>0</ShowAsSigned>
+                                  <VariableType>Float</VariableType>
+                                  <Address>+0</Address>
+                                </CheatEntry>
+                                <CheatEntry>
+                                  <ID>108</ID>
+                                  <Description>"Yaw"</Description>
+                                  <ShowAsSigned>0</ShowAsSigned>
+                                  <VariableType>Float</VariableType>
+                                  <Address>+4</Address>
+                                </CheatEntry>
+                                <CheatEntry>
+                                  <ID>109</ID>
+                                  <Description>"Roll"</Description>
+                                  <ShowAsSigned>0</ShowAsSigned>
+                                  <VariableType>Float</VariableType>
+                                  <Address>+8</Address>
+                                </CheatEntry>
+                              </CheatEntries>
+                            </CheatEntry>
+                          </CheatEntries>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>--[[
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+]]--
+-- **デバッグモードの設定 (デフォルト: 無効)**
+local debugMode = false
+
+-- AOBScanModule関数
+if not AOBScanModule then
+    function AOBScanModule(moduleName, signature, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addr
+        synchronize(function()
+            if results.getCount() &gt; 0 then
+                addr = results[0]
+            end
+        end)
+
+        if addr then
+            if debugMode then print("🔦 AOB found at: 0x" .. addr) end
+        else
+            if debugMode then print("💔 AOB not found in " .. moduleName) end
+        end
+
+        results.destroy()
+        ms.destroy()
+        return addr
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModule')
+
+--[[
+test AOBScanModule()
+local aob_addr_str = AOBScanModule("???.exe", "48 8B 05 ?? ?? ?? ?? 33 ED 48 8B 88", "+X+R")
+if aob_addr_str then
+    print("🔦 Final AOB Address: 0x" .. aob_addr_str)
+else
+    print("💔 AOB not found in ???.exe")
+end
+]]--
+
+-- AOBScanModuleN関数
+if not AOBScanModuleN then
+    function AOBScanModuleN(moduleName, signature, maxResults, scanOptions)
+        local baseAddr = nil
+        local maxAddr = 0
+        local modList
+
+        synchronize(function()
+            modList = enumModules()
+        end)
+
+        for _, mod in ipairs(modList) do
+            if string.lower(mod.Name) == string.lower(moduleName) then
+                baseAddr = mod.Address
+                maxAddr = baseAddr + mod.Size
+                break
+            end
+        end
+
+        if not baseAddr then
+            if debugMode then print("❗ Error: Module " .. moduleName .. " not found!") end
+            return nil
+        end
+
+        if debugMode then
+            print(string.format("✔️ %s Base Address: 0x%X", moduleName, baseAddr))
+            print(string.format("🔬 Scanning Range: 0x%X - 0x%X", baseAddr, maxAddr))
+        end
+
+        local ms = createMemScan()
+
+        synchronize(function()
+            ms.firstScan(
+                soExactValue,
+                vtByteArray,
+                nil,
+                signature,
+                nil,
+                baseAddr,
+                maxAddr,
+                scanOptions or "+X+R",
+                fsmNotAligned,
+                "1",
+                true,
+                true,
+                false,
+                false
+            )
+        end)
+
+        ms.waitTillDone()
+
+        local results = createFoundList(ms)
+        results.initialize()
+
+        local addrs = {}
+        synchronize(function()
+            local count = results.getCount()
+            for i = 0, math.min(maxResults - 1, count - 1) do
+                table.insert(addrs, results[i])
+                if debugMode then
+                    print(string.format("🔦 AOB[%d] found at: 0x%s", i + 1, results[i]))
+                end
+            end
+        end)
+
+        if #addrs == 0 and debugMode then
+            print("💔 AOB not found in " .. moduleName)
+        end
+
+        results.destroy()
+        ms.destroy()
+
+        return addrs
+    end
+end
+
+registerLuaFunctionHighlight('AOBScanModuleN')
+
+
+-- 搜尋並取出最多5筆結果
+--[[
+local list = AOBScanModuleN("GameModule.exe", "12 34 56 ?? 78", 5)
+
+if list then
+    for i, addr in ipairs(list) do
+        print(string.format("地址 %d: 0x%s", i, addr))
+    end
+end
+]]--
+
+
+-- Lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment/script body
+if not onMemRecPostExecute then
+    function onMemRecPostExecute(memoryrecord, newState, succeeded)
+        if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+            synchronize(function()
+                memoryrecord.disableWithoutExecute()
+            end)
+        end
+    end
+end
+
+-- Memory record IDs now allowed to be 'locked'
+IDs = {999999, 9999999}
+
+-- Determine event trigger sequence
+if not contains then
+    function contains(table, val)
+       for i = 1, #table do
+          if table[i] == val then
+             return true
+          end
+       end
+       return false
+    end
+end
+
+if not onMemRecPreExecute then
+    function onMemRecPreExecute(memoryrecord, newstate)
+        if contains(IDs, memoryrecord.ID) and newstate then
+            synchronize(function()
+                if not memoryrecord.OnActivate then
+                    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+                        return false
+                    end
+                end
+            end)
+        end
+    end
+end
+
+-- Utility Functions
+-- Clear lua engine log
+if not clearLuaLog then
+    function clearLuaLog()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+        end)
+    end
+end
+registerLuaFunctionHighlight('clearLuaLog')
+
+-- Close lua engine log
+if not closeLuaEngine then
+    function closeLuaEngine()
+        synchronize(function()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine')
+
+-- Clear lua engine log &amp; close lua engine
+if not closeLuaEngine2 then
+    function closeLuaEngine2()
+        synchronize(function()
+          getLuaEngine().MenuItem5.doClick()
+          getLuaEngine().Close()
+        end)
+    end
+end
+registerLuaFunctionHighlight('closeLuaEngine2')
+
+if not getProcessNameFromPID then
+	function getProcessNameFromPID(pid)
+	  local sl = createStringList()
+	  getProcessList(sl)
+	  local hexPid = string.format("%X", pid):upper()
+
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		local hexid, name = entry:match("^(%x+)%-(.+)$")
+		if hexid and name then
+		  if tonumber(hexid, 16) == pid then
+			return name
+		  end
+		end
+	  end
+	  return "(unknown)"
+	end
+end
+registerLuaFunctionHighlight('getProcessNameFromPID')
+
+if not printProcessInfo then
+	function printProcessInfo()
+	  local pid = getOpenedProcessID()
+	  local name = getProcessNameFromPID(pid)
+	  print(string.format("📎 Attached to process: %s (PID: %d / 0x%X)", name, pid, pid))
+	end
+end
+registerLuaFunctionHighlight('printProcessInfo')
+
+if not dumpProcessListAndFindPID then
+	function dumpProcessListAndFindPID()
+	  local pid = getOpenedProcessID()
+	  print(string.format("💭 Current PID: %d / 0x%X", pid, pid))
+
+	  local sl = createStringList()
+	  getProcessList(sl)
+
+	  print("🧾 Dumping process list:")
+	  for i = 0, sl.Count - 1 do
+		local entry = sl[i]
+		print(string.format("[%d] %s", i, entry))
+
+		-- 嘗試解析並比對 PID
+		local name, hexid = entry:match("(.+)%-(%x+)$")
+		if name and hexid then
+		  local parsed = tonumber(hexid, 16)
+		  if parsed == pid then
+			print("🔦 Match found in process list:")
+			print(string.format("Name: %s | PID: %s (0x%s)", name, parsed, hexid))
+		  end
+		end
+	  end
+	end
+end
+registerLuaFunctionHighlight('dumpProcessListAndFindPID')
+
+if not toHex32 then
+	function toHex32(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 32)) % (1 &lt;&lt; 32) -- 轉成32-bit補數
+		end
+		for i = 1, 8 do -- 32-bit 一共8個hex位
+			local n = num &amp; 0xF -- 取最低4 bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4 bit
+		end
+		return result
+	end
+end
+registerLuaFunctionHighlight('toHex32')
+
+if not toHex then
+	function toHex(num)
+		local hexstr = "0123456789ABCDEF"
+		local result = ""
+		if num &lt; 0 then
+			num = (num + (1 &lt;&lt; 64)) % (1 &lt;&lt; 64)  -- 轉成64-bit補數
+		end
+		for i = 1, 16 do -- 每4 bit 一個 hex字，64-bit總共16個hex位
+			local n = num &amp; 0xF -- 取最低4bit
+			result = hexstr:sub(n + 1, n + 1) .. result
+			num = num &gt;&gt; 4 -- 右移4bit
+		end
+		return result
+	end
+end	
+registerLuaFunctionHighlight('toHex')
+
+synchronize(function() AddressList.Header.OnSectionClick = nil end)
+--[[
+[DISABLE]
+{$lua}
+
+if AOBScanModule then
+    AOBScanModule = nil
+end
+if onMemRecPostExecute then
+    onMemRecPostExecute = nil
+end
+if onMemRecPreExecute then
+    onMemRecPreExecute = nil
+end
+if clearLuaLog then
+    clearLuaLog = nil
+end
+if closeLuaEngine then
+    closeLuaEngine = nil
+end
+if closeLuaEngine2 then
+    closeLuaEngine2 = nil
+end
+]]--
+
+--lua scripts that table checkbox will not be checked with "NO_ACTIVATE" in comment
+function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+</LuaScript>
+</CheatTable>
