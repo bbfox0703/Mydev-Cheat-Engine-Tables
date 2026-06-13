@@ -291,6 +291,11 @@ ja-JP:麻雀 和 -Nagomi-
 zh-TW:貓次郎  
 ja-JP:ニャー次郎  
 
+## MOBILE SUIT GUNDAM SEED BATTLE DESTINY REMASTERED
+[MOBILE SUIT GUNDAM SEED BATTLE DESTINY REMASTERED (Steam)](https://store.steampowered.com/app/1857740/_GUNDAM_SEED/)  
+zh-TW: 機動戰士 GUNDAM SEED 激鬥命運 復刻版  
+ja-JP: 機動戦士ガンダムSEED BATTLE DESTINY REMASTERED
+
 ## Monochrome Mobius Rights and Wrongs Forgotten
 [Monochrome Mobius: Rights and Wrongs Forgotten (Steam)](https://store.steampowered.com/app/1962430/_/)  
 ja-JP: モノクロームメビウス 刻ノ代贖  
