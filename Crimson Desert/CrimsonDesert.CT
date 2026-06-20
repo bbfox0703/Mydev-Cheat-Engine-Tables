@@ -5580,7 +5580,6 @@ if hpRefillTimerAob1 then
   hpRefillTimerAob1.destroy()
   hpRefillTimerAob1 = nil
 end
-
 -- ============================================================
 -- 設定欄位說明
 -- ============================================================
@@ -5597,11 +5596,15 @@ end
 --               (例：max HP * 10 寫回 current HP)
 --   srcType0Datatype : srcType=0 時 source 的資料型別 (vtByte/vtWord/
 --               vtDword/vtQword/vtSingle/vtDouble)，預設同 target
+--   threshold : 比較用的門檻值（選填）。
+--               不設 → 用「來源值」當門檻（舊行為，門檻=回填值）。
+--               有設 → 比較用 threshold、寫入仍用來源值，
+--                      可做到「觸發門檻」與「回填值」分離。
 --   writeMode : 寫入條件，預設 '&lt;'
---                 '&lt;'  current &lt;  source 時寫入（補滿用）
---                 '&lt;=' current &lt;= source 時寫入
---                 '&gt;'  current &gt;  source 時寫入（限制上限用）
---                 '&gt;=' current &gt;= source 時寫入
+--                 '&lt;'  current &lt;  門檻 時寫入（補滿/保底用）
+--                 '&lt;=' current &lt;= 門檻 時寫入
+--                 '&gt;'  current &gt;  門檻 時寫入（限制上限用）
+--                 '&gt;=' current &gt;= 門檻 時寫入
 --                 '==' 或 '='        相等時寫入
 --                 '~=' 或 '!=' 或 '&lt;&gt;' 不相等時寫入（凍結值用）
 --                 '*'  無條件寫入（強制覆寫）
@@ -5615,8 +5618,15 @@ end
 -- [補滿型] 不乘倍數，直接 current = max
 --   { desc = 'HP', srcType = 0, offset = 0x10 },
 --
--- [補滿型] target 自己 &lt; 某值就拉到該值（保底血量 1000）
---   { desc = 'HP', srcType = 1, value = 1000, writeMode = '&lt;' },
+-- [保底型] target 自己 &lt; 某值就拉到該值（門檻=回填值，最單純）
+--   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
+--
+-- [保底型·分離] HP &lt; 100 就直接補到 9999（門檻100、回填9999）
+--   { desc = 'HP', srcType = 1, value = 9999, threshold = 100, writeMode = '&lt;' },
+--
+-- [緊急補滿] HP &lt; 10 才補到 max*10，平時讓它自然消耗
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10,
+--     threshold = 10, writeMode = '&lt;' },
 --
 -- [上限型] 等級超過 99 拉回 99
 --   { desc = 'Level', srcType = 1, value = 99, writeMode = '&gt;' },
@@ -5670,7 +5680,6 @@ local recordConfigs = {
   { desc = 'HP #2_H',  srcType = 0, offset = 0x10, mult = 10 }, -- AOB#2, Horse
   { desc = 'Sta #2_H', srcType = 0, offset = 0x10, mult = 10 }, -- AOB#2, Horse
 }
-
 -- ============================================================
 -- 依 vartype 取得 read/write 函式
 -- ============================================================
@@ -5681,7 +5690,6 @@ end
 local function writeByteValue(addr, v)
   writeBytes(addr, v)
 end
-
 local function getRw(vt)
   if vt == vtByte   then return readByteValue, writeByteValue end
   if vt == vtWord   then return readSmallInteger, writeSmallInteger end
@@ -5691,7 +5699,6 @@ local function getRw(vt)
   if vt == vtDouble then return readDouble, writeDouble end
   return nil, nil
 end
-
 -- ============================================================
 -- 依 writeMode 判斷是否該寫入
 -- ============================================================
@@ -5706,7 +5713,6 @@ local function shouldWrite(curVal, srcVal, mode)
   if mode == '~=' or mode == '!=' or mode == '&lt;&gt;' then return curVal ~= srcVal end
   return false
 end
-
 -- ============================================================
 -- 解析 memoryrecord
 -- ============================================================
@@ -5722,13 +5728,11 @@ local function resolveRecord(al, desc)
   if reader == nil then return nil end
   return { mr = mr, resolved = resolved, vt = vt, reader = reader, writer = writer }
 end
-
 -- ============================================================
 -- 取得 source value
 -- ============================================================
 local function getSourceValue(cfg, target, al)
   local st = cfg.srcType
-
   if st == 0 then
     if cfg.offset == nil then return nil end
     local srcAddr = target.resolved + cfg.offset
@@ -5739,21 +5743,17 @@ local function getSourceValue(cfg, target, al)
     if srcVal == nil then return nil end
     local mult = cfg.mult or 1
     return srcVal * mult
-
   elseif st == 1 then
     if cfg.value == nil then return nil end
     return cfg.value
-
   elseif st == 2 then
     if cfg.value == nil then return nil end
     local srcRec = resolveRecord(al, cfg.value)
     if srcRec == nil then return nil end
     return srcRec.reader(srcRec.resolved)
   end
-
   return nil
 end
-
 -- ============================================================
 -- Timer
 -- ============================================================
@@ -5765,14 +5765,14 @@ hpRefillTimerAob1.OnTimer = function(t)
     pcall(function()
       local target = resolveRecord(al, cfg.desc)
       if target == nil then return end
-
-      local srcVal = getSourceValue(cfg, target, al)
+      local srcVal = getSourceValue(cfg, target, al)   -- 回填值
       if srcVal == nil then return end
-
       local curVal = target.reader(target.resolved)
       if curVal == nil then return end
-
-      if shouldWrite(curVal, srcVal, cfg.writeMode) then
+      -- 比較門檻：有設 threshold 就用 threshold，否則用回填值本身
+      local cmpVal = cfg.threshold
+      if cmpVal == nil then cmpVal = srcVal end
+      if shouldWrite(curVal, cmpVal, cfg.writeMode) then
         target.writer(target.resolved, srcVal)
       end
     end)
@@ -5780,6 +5780,7 @@ hpRefillTimerAob1.OnTimer = function(t)
 end
 hpRefillTimerAob1.Enabled = true
 {$asm}
+
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
