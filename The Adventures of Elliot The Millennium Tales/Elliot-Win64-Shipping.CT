@@ -52,6 +52,395 @@ end
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
+      <ID>350</ID>
+      <Description>"**** Auto fill HP/Oxygen/Shield, if simple data available ****"</Description>
+      <Options moHideChildren="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if hpRefillTimerAob1 then
+  hpRefillTimerAob1.destroy()
+  hpRefillTimerAob1 = nil
+end
+-- ============================================================
+-- 設定欄位說明
+-- ============================================================
+--   desc      : memoryrecord description（必填，寫入目標）
+--   srcType   : 來源類型
+--                 0 = 從 target 位址 + offset 讀取
+--                 1 = 固定值
+--                 2 = 從另一個 memoryrecord 讀取
+--   offset    : srcType=0 時用，target.address + offset 為來源
+--               (offset=0 代表 target 自己本身)
+--   value     : srcType=1 時為固定數值
+--               srcType=2 時為 source memoryrecord 的 description
+--   mult      : srcType=0 時的乘數，預設 1
+--               (例：max HP * 10 寫回 current HP)
+--   srcType0Datatype : srcType=0 時 source 的資料型別 (vtByte/vtWord/
+--               vtDword/vtQword/vtSingle/vtDouble)，預設同 target
+--   threshold : 比較用的門檻值（選填）。
+--               不設 → 用「來源值」當門檻（舊行為，門檻=回填值）。
+--               有設 → 比較用 threshold、寫入仍用來源值，
+--                      可做到「觸發門檻」與「回填值」分離。
+--   writeMode : 寫入條件，預設 '&lt;'
+--                 '&lt;'  current &lt;  門檻 時寫入（補滿/保底用）
+--                 '&lt;=' current &lt;= 門檻 時寫入
+--                 '&gt;'  current &gt;  門檻 時寫入（限制上限用）
+--                 '&gt;=' current &gt;= 門檻 時寫入
+--                 '==' 或 '='        相等時寫入
+--                 '~=' 或 '!=' 或 '&lt;&gt;' 不相等時寫入（凍結值用）
+--                 '*'  無條件寫入（強制覆寫）
+--   ranges    : 區間對應表（選填，設了就忽略 srcType/value/threshold/writeMode）。
+--               依「目前值落在哪個區間」決定寫入值，用於
+--               「位址不固定、靠數值反推是哪個物品」的情況。
+--               格式：
+--                 ranges = {
+--                   { min = 1,  max = 5,  set = 10 },
+--                   { min = 11, max = 25, set = 30 },
+--                 }
+--               規則：找第一個 min&lt;=值&lt;=max 的區間，值≠set 才寫 set。
+--                     區間請勿重疊；不落在任何區間則不動該格。
+-- 【目標比對】三選一（決定這筆設定套用到哪些 record）：
+--   desc      : 單一描述（完全相符；可命中多筆同名）
+--   descList  : 描述清單，例如 {'baseValue','Amt.#1'}（完全相符）
+--   descMatch : Lua pattern，凡描述 string.find 命中者全套用
+--               注意 '.' 在 pattern 要寫成 '%.'，例：'^Amt%.#%d+$'
+--               純子字串比對可用 '^baseValue$'（完全相符）或 'base'（含 base）
+-- 【動作】（與之前相同）：
+--   srcType / offset / value / mult / srcType0Datatype
+--   threshold / writeMode / ranges
+--     ranges = { {min=1,max=5,set=10}, {min=11,max=25,set=30} }
+-- ============================================================
+-- 範例：
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
+--   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
+--   { descMatch = '^Amt%.#%d+$', ranges = {
+--       { min=1, max=5, set=10 }, { min=11, max=25, set=30 } } },
+--   { descList = {'baseValue'}, srcType = 1, value = 10, writeMode = '&lt;' },
+-- ============================================================
+-- ============================================================
+-- 設定範例集（複製到下方 recordConfigs 內使用）
+-- ============================================================
+-- -
+-- [補滿型] HP/MP/Sta 補滿（max 在 +0x10，乘 10 倍寫回 current）
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
+-- -
+-- [補滿型] 不乘倍數，直接 current = max
+--   { desc = 'HP', srcType = 0, offset = 0x10 },
+-- -
+-- [保底型] target 自己 &lt; 某值就拉到該值（門檻=回填值，最單純）
+--   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
+--   { desc = 'Cur. HP 1', srcType = 1, value = 10, writeMode = '&lt;' },
+-- -
+-- [保底型·分離] HP &lt; 100 就直接補到 9999（門檻100、回填9999）
+--   { desc = 'HP', srcType = 1, value = 9999, threshold = 100, writeMode = '&lt;' },
+-- -
+-- [緊急補滿] HP &lt; 10 才補到 max*10，平時讓它自然消耗
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10,
+--     threshold = 10, writeMode = '&lt;' },
+-- -
+-- [上限型] 等級超過 99 拉回 99
+--   { desc = 'Level', srcType = 1, value = 99, writeMode = '&gt;' },
+-- -
+-- [上限型] 物品數量超過 99 拉回 99
+--   { desc = 'Potion', srcType = 1, value = 99, writeMode = '&gt;' },
+-- -
+-- [凍結型] 金錢不等於 99999999 就寫回（防遊戲扣款也防你誤花）
+--   { desc = 'Gold', srcType = 1, value = 99999999, writeMode = '~=' },
+-- -
+-- [凍結型] 技能 CD 不等於 0 就清零
+--   { desc = 'SkillCD', srcType = 1, value = 0, writeMode = '~=' },
+-- -
+-- [強制型] 無條件每 tick 把無敵時間設成 9999
+--   { desc = 'InvincibleTimer', srcType = 1, value = 9999, writeMode = '*' },
+-- -
+-- [鏡像型] CurHP 和 MaxHP 不一致就同步（CurHP = MaxHP）
+--   { desc = 'CurHP', srcType = 2, value = 'MaxHP', writeMode = '~=' },
+-- -
+-- [鏡像型] 把另一個欄位的值乘 2 寫過來（透過 srcType=2，但無倍數）
+--   { desc = 'AttackDisplay', srcType = 2, value = 'AttackBase' },
+--   注意：srcType=2 沒有 mult 參數，需乘倍數請用 srcType=0
+-- -
+-- [指定型別] target 是 vtQword，但 max 在 +0x20 是 vtDword
+--   { desc = 'Mana', srcType = 0, offset = 0x20,
+--     srcType0Datatype = vtDword, mult = 10 },
+-- -
+-- [Float] 移動速度倍率：current &lt; 5.0 時拉到 5.0
+--   { desc = 'MoveSpeed', srcType = 1, value = 5.0, writeMode = '&lt;' },
+-- -
+-- [Byte] 1 byte 的 buff 旗標固定為 1
+--   { desc = 'BuffFlag', srcType = 1, value = 1, writeMode = '~=' },
+-- -
+-- [區間偵測型] 同一格可能是炸彈或弓箭，靠數值判斷後補到各自上限
+--   { desc = 'Amt.#1', ranges = {
+--       { min = 1,  max = 5,  set = 10 },
+--       { min = 11, max = 25, set = 30 },
+--   } },
+-- -
+-- 提醒：threshold 是拿來和 curVal 直接比較的原始數值，如果該 record 是
+-- vtSingle/vtDouble（例如移速倍率），記得 threshold 也寫成浮點數（threshold = 5.0）。
+-- -
+-- ============================================================
+local DEBUG = false   -- 設 true 會在 Enable 時印出每筆設定命中幾個 record
+
+-- ============================================================
+-- 不掃描清單（可改）：這些描述「本身 + 其所有 sub node」一律跳過
+-- ============================================================
+local EXCLUDE_DESCS = {
+  'GWorld → more game data',
+  'Require UE5CEDumper DLL proxy installed',
+}
+
+-- 清單
+
+local recordConfigs = {
+  { desc = 'HP.BaseValue', srcType = 1, value = 9, writeMode = '&lt;' },
+  { desc = 'HP.CurrentValue', srcType = 1, value = 9, writeMode = '&lt;' },
+  { desc = 'OX.BaseValue', srcType = 1, value = 5, writeMode = '&lt;' },
+  { desc = 'OX.CurrentValue', srcType = 1, value = 5, writeMode = '&lt;' },
+  { desc = 'SH.BaseValue', srcType = 1, value = 5, writeMode = '&lt;' },
+  { desc = 'SH.CurrentValue', srcType = 1, value = 5, writeMode = '&lt;' },
+  { desc = 'Chain (Native-C)', srcType = 1, value = 18, writeMode = '&lt;' },
+  -- Amt.#1 .. Amt.#10 全部用同一份區間表（一條搞定）
+  { descMatch = '^Amt%.#%d+$', ranges = {
+      --{ min = 9,  max = 9,  set = 10 },
+      { min = 21, max = 29, set = 30 },
+      { min = 101, max = 199, set = 500 },
+      { min = 1001, max = 4999, set = 10000 },
+  } },
+  -- 所有描述為 baseValue 的，&lt; 10 就回填 10
+  -- { descList = {'baseValue'}, srcType = 1, value = 10, writeMode = '&lt;' },
+}
+-- ============================================================
+-- read/write 函式
+-- ============================================================
+local function readByteValue(addr) return readBytes(addr, 1, false) end
+local function writeByteValue(addr, v) writeBytes(addr, v) end
+local function getRw(vt)
+  if vt == vtByte   then return readByteValue, writeByteValue end
+  if vt == vtWord   then return readSmallInteger, writeSmallInteger end
+  if vt == vtDword  then return readInteger, writeInteger end
+  if vt == vtQword  then return readQword, writeQword end
+  if vt == vtSingle then return readFloat, writeFloat end
+  if vt == vtDouble then return readDouble, writeDouble end
+  return nil, nil
+end
+-- ============================================================
+-- writeMode 判斷
+-- ============================================================
+local function shouldWrite(curVal, srcVal, mode)
+  mode = mode or '&lt;'
+  if mode == '*'  then return true end
+  if mode == '&lt;'  then return curVal &lt;  srcVal end
+  if mode == '&lt;=' then return curVal &lt;= srcVal end
+  if mode == '&gt;'  then return curVal &gt;  srcVal end
+  if mode == '&gt;=' then return curVal &gt;= srcVal end
+  if mode == '==' or mode == '='  then return curVal == srcVal end
+  if mode == '~=' or mode == '!=' or mode == '&lt;&gt;' then return curVal ~= srcVal end
+  return false
+end
+-- ============================================================
+-- 解析單一 MemoryRecord → {resolved, reader, writer, ...}
+-- ============================================================
+local function resolveMR(mr)
+  if mr == nil then return nil end
+  local addr = mr.CurrentAddress
+  if addr == nil then return nil end
+  local resolved = getAddress(addr)
+  if resolved == 0 then return nil end
+  local reader, writer = getRw(mr.Type)
+  if reader == nil then return nil end
+  return { mr = mr, resolved = resolved, vt = mr.Type, reader = reader, writer = writer }
+end
+local function resolveRecord(al, desc)
+  return resolveMR(al.getMemoryRecordByDescription(desc))   -- srcType=2 用，取第一筆
+end
+-- ============================================================
+-- 取得 source value
+-- ============================================================
+local function getSourceValue(cfg, target, al)
+  local st = cfg.srcType
+  if st == 0 then
+    if cfg.offset == nil then return nil end
+    local srcReader = getRw(cfg.srcType0Datatype or target.vt)
+    if srcReader == nil then return nil end
+    local srcVal = srcReader(target.resolved + cfg.offset)
+    if srcVal == nil then return nil end
+    return srcVal * (cfg.mult or 1)
+  elseif st == 1 then
+    return cfg.value
+  elseif st == 2 then
+    if cfg.value == nil then return nil end
+    local srcRec = resolveRecord(al, cfg.value)
+    if srcRec == nil then return nil end
+    return srcRec.reader(srcRec.resolved)
+  end
+  return nil
+end
+-- ============================================================
+-- ranges 模式
+-- ============================================================
+local function applyRanges(cfg, target)
+  local curVal = target.reader(target.resolved)
+  if curVal == nil then return end
+  for _, r in ipairs(cfg.ranges) do
+    if r.min and r.max and r.set
+       and curVal &gt;= r.min and curVal &lt;= r.max then
+      if curVal ~= r.set then target.writer(target.resolved, r.set) end
+      return
+    end
+  end
+end
+-- ============================================================
+-- 目標比對：依 desc / descList / descMatch 收集所有命中的 record
+-- ============================================================
+local function descMatchesCfg(desc, cfg)
+  if cfg.descMatch then
+    return string.find(desc, cfg.descMatch) ~= nil
+  elseif cfg.descList then
+    for _, d in ipairs(cfg.descList) do
+      if desc == d then return true end
+    end
+    return false
+  elseif cfg.desc then
+    return desc == cfg.desc
+  end
+  return false
+end
+local function collectRecords(al, cfg)
+  local recs = {}
+  local n = al.Count
+  for i = 0, n - 1 do
+    local mr = al.getMemoryRecord(i)
+    if mr ~= nil then
+      local d = mr.Description
+      if d ~= nil and descMatchesCfg(d, cfg) then
+        recs[#recs + 1] = mr
+      end
+    end
+  end
+  return recs
+end
+-- ============================================================
+-- Enable 時建快取（descMatch 只在這裡掃一次全表）
+-- ============================================================
+local RESCAN_MS = 6000      -- 每隔多久重掃全表、重建快取（毫秒）
+local targetCache = {}
+local lastScan = 0
+
+local function rebuildCache()
+  local al = getAddressList()
+
+  -- 描述 → set，O(1) 查
+  local excludeRoot = {}
+  for _, d in ipairs(EXCLUDE_DESCS) do excludeRoot[d] = true end
+
+  -- 判斷某 record 是否落在被排除的子樹裡（往上找祖先，memo 快取攤平成 O(1)）
+  local exMemo = {}
+  local function isExcluded(mr)
+    if mr == nil then return false end
+    local id = mr.ID
+    local hit = exMemo[id]
+    if hit ~= nil then return hit end
+    local r
+    local d = mr.Description
+    if d ~= nil and excludeRoot[d] then
+      r = true
+    else
+      r = isExcluded(mr.Parent)     -- 繼承祖先的結果（子節點不管多深都被連帶排除）
+    end
+    exMemo[id] = r
+    return r
+  end
+
+  for ci = 1, #recordConfigs do targetCache[ci] = {} end
+  local n = al.Count
+  for i = 0, n - 1 do
+    local mr = al.getMemoryRecord(i)
+    if mr ~= nil and not isExcluded(mr) then       -- ← 整支被排除子樹直接略過比對
+      local d = mr.Description
+      if d ~= nil then
+        for ci, cfg in ipairs(recordConfigs) do
+          if descMatchesCfg(d, cfg) then
+            local t = targetCache[ci]; t[#t + 1] = mr
+          end
+        end
+      end
+    end
+  end
+
+  if DEBUG then
+    for ci, cfg in ipairs(recordConfigs) do
+      local key = cfg.descMatch or cfg.desc
+        or (cfg.descList and table.concat(cfg.descList, ',')) or '?'
+      print(string.format('[cfg %d] "%s" -&gt; %d', ci, tostring(key), #targetCache[ci]))
+    end
+  end
+end
+
+pcall(rebuildCache)         -- enable 當下先建一次
+lastScan = getTickCount()
+-- ============================================================
+-- Timer
+-- ============================================================
+hpRefillTimerAob1 = createTimer(getMainForm(), false)
+hpRefillTimerAob1.Interval = 900
+hpRefillTimerAob1.OnTimer = function(t)
+  local now = getTickCount()
+  if now - lastScan &gt;= RESCAN_MS then
+    pcall(rebuildCache)     -- 自我修復：啟用順序 / 啟用中改表都能補上
+    lastScan = now
+  end
+  local al = getAddressList()
+  for ci, cfg in ipairs(recordConfigs) do
+    local recs = targetCache[ci]
+    if recs ~= nil then
+      for _, mr in ipairs(recs) do
+        pcall(function()
+          local target = resolveMR(mr)
+          if target == nil then return end          -- 位址沒解出來 → 不寫
+          if cfg.ranges ~= nil then
+            applyRanges(cfg, target)
+            return
+          end
+          local srcVal = getSourceValue(cfg, target, al)
+          if srcVal == nil then return end
+          local curVal = target.reader(target.resolved)
+          if curVal == nil then return end          -- 讀不到 → 不寫
+          local cmpVal = cfg.threshold
+          if cmpVal == nil then cmpVal = srcVal end
+          if shouldWrite(curVal, cmpVal, cfg.writeMode) then   -- 檢查後才寫
+            target.writer(target.resolved, srcVal)
+          end
+        end)
+      end
+    end
+  end
+end
+hpRefillTimerAob1.Enabled = true
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if hpRefillTimerAob1 then
+  hpRefillTimerAob1.Enabled = false
+  hpRefillTimerAob1.destroy()
+  hpRefillTimerAob1 = nil
+end
+{$asm}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>3121</ID>
+          <Description>"Also keep values in Amt.#??"</Description>
+          <Color>8000FF</Color>
+          <GroupHeader>1</GroupHeader>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
       <ID>2981</ID>
       <Description>"GWorld → Simple data"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
@@ -235,224 +624,6 @@ closeLuaEngine()
                       </Offsets>
                       <CheatEntries>
                         <CheatEntry>
-                          <ID>350</ID>
-                          <Description>"**** Auto fill HP/Oxygen/Shield, if data available ****"</Description>
-                          <Options moHideChildren="1"/>
-                          <VariableType>Auto Assembler Script</VariableType>
-                          <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then return end
-if hpRefillTimerAob1 then
-  hpRefillTimerAob1.destroy()
-  hpRefillTimerAob1 = nil
-end
--- ============================================================
--- 設定欄位說明
--- ============================================================
---   desc      : memoryrecord description（必填，寫入目標）
---   srcType   : 來源類型
---                 0 = 從 target 位址 + offset 讀取
---                 1 = 固定值
---                 2 = 從另一個 memoryrecord 讀取
---   offset    : srcType=0 時用，target.address + offset 為來源
---               (offset=0 代表 target 自己本身)
---   value     : srcType=1 時為固定數值
---               srcType=2 時為 source memoryrecord 的 description
---   mult      : srcType=0 時的乘數，預設 1
---               (例：max HP * 10 寫回 current HP)
---   srcType0Datatype : srcType=0 時 source 的資料型別 (vtByte/vtWord/
---               vtDword/vtQword/vtSingle/vtDouble)，預設同 target
---   threshold : 比較用的門檻值（選填）。
---               不設 → 用「來源值」當門檻（舊行為，門檻=回填值）。
---               有設 → 比較用 threshold、寫入仍用來源值，
---                      可做到「觸發門檻」與「回填值」分離。
---   writeMode : 寫入條件，預設 '&lt;'
---                 '&lt;'  current &lt;  門檻 時寫入（補滿/保底用）
---                 '&lt;=' current &lt;= 門檻 時寫入
---                 '&gt;'  current &gt;  門檻 時寫入（限制上限用）
---                 '&gt;=' current &gt;= 門檻 時寫入
---                 '==' 或 '='        相等時寫入
---                 '~=' 或 '!=' 或 '&lt;&gt;' 不相等時寫入（凍結值用）
---                 '*'  無條件寫入（強制覆寫）
--- ============================================================
--- 設定範例集（複製到下方 recordConfigs 內使用）
--- ============================================================
--- -
--- [補滿型] HP/MP/Sta 補滿（max 在 +0x10，乘 10 倍寫回 current）
---   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
--- -
--- [補滿型] 不乘倍數，直接 current = max
---   { desc = 'HP', srcType = 0, offset = 0x10 },
--- -
--- [保底型] target 自己 &lt; 某值就拉到該值（門檻=回填值，最單純）
---   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
---   { desc = 'Cur. HP 1', srcType = 1, value = 10, writeMode = '&lt;' },
--- -
--- [保底型·分離] HP &lt; 100 就直接補到 9999（門檻100、回填9999）
---   { desc = 'HP', srcType = 1, value = 9999, threshold = 100, writeMode = '&lt;' },
--- -
--- [緊急補滿] HP &lt; 10 才補到 max*10，平時讓它自然消耗
---   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10,
---     threshold = 10, writeMode = '&lt;' },
--- -
--- [上限型] 等級超過 99 拉回 99
---   { desc = 'Level', srcType = 1, value = 99, writeMode = '&gt;' },
--- -
--- [上限型] 物品數量超過 99 拉回 99
---   { desc = 'Potion', srcType = 1, value = 99, writeMode = '&gt;' },
--- -
--- [凍結型] 金錢不等於 99999999 就寫回（防遊戲扣款也防你誤花）
---   { desc = 'Gold', srcType = 1, value = 99999999, writeMode = '~=' },
--- -
--- [凍結型] 技能 CD 不等於 0 就清零
---   { desc = 'SkillCD', srcType = 1, value = 0, writeMode = '~=' },
--- -
--- [強制型] 無條件每 tick 把無敵時間設成 9999
---   { desc = 'InvincibleTimer', srcType = 1, value = 9999, writeMode = '*' },
--- -
--- [鏡像型] CurHP 和 MaxHP 不一致就同步（CurHP = MaxHP）
---   { desc = 'CurHP', srcType = 2, value = 'MaxHP', writeMode = '~=' },
--- -
--- [鏡像型] 把另一個欄位的值乘 2 寫過來（透過 srcType=2，但無倍數）
---   { desc = 'AttackDisplay', srcType = 2, value = 'AttackBase' },
---   注意：srcType=2 沒有 mult 參數，需乘倍數請用 srcType=0
--- -
--- [指定型別] target 是 vtQword，但 max 在 +0x20 是 vtDword
---   { desc = 'Mana', srcType = 0, offset = 0x20,
---     srcType0Datatype = vtDword, mult = 10 },
--- -
--- [Float] 移動速度倍率：current &lt; 5.0 時拉到 5.0
---   { desc = 'MoveSpeed', srcType = 1, value = 5.0, writeMode = '&lt;' },
--- -
--- [Byte] 1 byte 的 buff 旗標固定為 1
---   { desc = 'BuffFlag', srcType = 1, value = 1, writeMode = '~=' },
--- -
--- 一個提醒：threshold 是拿來和 curVal 直接比較的原始數值，如果該 record 是
--- vtSingle/vtDouble（例如移速倍率），記得 threshold 也寫成浮點數（threshold = 5.0）。
--- -
--- ============================================================
-local recordConfigs = {
-  { desc = 'HP.BaseValue', srcType = 1, value = 9, writeMode = '&lt;' },
-  { desc = 'HP.CurrentValue', srcType = 1, value = 9, writeMode = '&lt;' },
-  { desc = 'OX.BaseValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'OX.CurrentValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'SH.BaseValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'SH.CurrentValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'Chain (Native-C)', srcType = 1, value = 28, writeMode = '&lt;' },
-}
--- ============================================================
--- 依 vartype 取得 read/write 函式
--- ============================================================
-local function readByteValue(addr)
-  local b = readBytes(addr, 1, false)
-  return b
-end
-local function writeByteValue(addr, v)
-  writeBytes(addr, v)
-end
-local function getRw(vt)
-  if vt == vtByte   then return readByteValue, writeByteValue end
-  if vt == vtWord   then return readSmallInteger, writeSmallInteger end
-  if vt == vtDword  then return readInteger, writeInteger end
-  if vt == vtQword  then return readQword, writeQword end
-  if vt == vtSingle then return readFloat, writeFloat end
-  if vt == vtDouble then return readDouble, writeDouble end
-  return nil, nil
-end
--- ============================================================
--- 依 writeMode 判斷是否該寫入
--- ============================================================
-local function shouldWrite(curVal, srcVal, mode)
-  mode = mode or '&lt;'
-  if mode == '*'  then return true end
-  if mode == '&lt;'  then return curVal &lt;  srcVal end
-  if mode == '&lt;=' then return curVal &lt;= srcVal end
-  if mode == '&gt;'  then return curVal &gt;  srcVal end
-  if mode == '&gt;=' then return curVal &gt;= srcVal end
-  if mode == '==' or mode == '='  then return curVal == srcVal end
-  if mode == '~=' or mode == '!=' or mode == '&lt;&gt;' then return curVal ~= srcVal end
-  return false
-end
--- ============================================================
--- 解析 memoryrecord
--- ============================================================
-local function resolveRecord(al, desc)
-  local mr = al.getMemoryRecordByDescription(desc)
-  if mr == nil then return nil end
-  local addr = mr.CurrentAddress
-  if addr == nil then return nil end
-  local resolved = getAddress(addr)
-  if resolved == 0 then return nil end
-  local vt = mr.Type
-  local reader, writer = getRw(vt)
-  if reader == nil then return nil end
-  return { mr = mr, resolved = resolved, vt = vt, reader = reader, writer = writer }
-end
--- ============================================================
--- 取得 source value
--- ============================================================
-local function getSourceValue(cfg, target, al)
-  local st = cfg.srcType
-  if st == 0 then
-    if cfg.offset == nil then return nil end
-    local srcAddr = target.resolved + cfg.offset
-    local srcVt = cfg.srcType0Datatype or target.vt
-    local srcReader = getRw(srcVt)
-    if srcReader == nil then return nil end
-    local srcVal = srcReader(srcAddr)
-    if srcVal == nil then return nil end
-    local mult = cfg.mult or 1
-    return srcVal * mult
-  elseif st == 1 then
-    if cfg.value == nil then return nil end
-    return cfg.value
-  elseif st == 2 then
-    if cfg.value == nil then return nil end
-    local srcRec = resolveRecord(al, cfg.value)
-    if srcRec == nil then return nil end
-    return srcRec.reader(srcRec.resolved)
-  end
-  return nil
-end
--- ============================================================
--- Timer
--- ============================================================
-hpRefillTimerAob1 = createTimer(getMainForm(), false)
-hpRefillTimerAob1.Interval = 80
-hpRefillTimerAob1.OnTimer = function(t)
-  local al = getAddressList()
-  for _, cfg in ipairs(recordConfigs) do
-    pcall(function()
-      local target = resolveRecord(al, cfg.desc)
-      if target == nil then return end
-      local srcVal = getSourceValue(cfg, target, al)   -- 回填值
-      if srcVal == nil then return end
-      local curVal = target.reader(target.resolved)
-      if curVal == nil then return end
-      -- 比較門檻：有設 threshold 就用 threshold，否則用回填值本身
-      local cmpVal = cfg.threshold
-      if cmpVal == nil then cmpVal = srcVal end
-      if shouldWrite(curVal, cmpVal, cfg.writeMode) then
-        target.writer(target.resolved, srcVal)
-      end
-    end)
-  end
-end
-hpRefillTimerAob1.Enabled = true
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-if hpRefillTimerAob1 then
-  hpRefillTimerAob1.Enabled = false
-  hpRefillTimerAob1.destroy()
-  hpRefillTimerAob1 = nil
-end
-{$asm}
-</AssemblerScript>
-                        </CheatEntry>
-                        <CheatEntry>
                           <ID>2986</ID>
                           <Description>"HealthPoint (GameplayAttributeData)"</Description>
                           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
@@ -536,7 +707,7 @@ end
     </CheatEntry>
     <CheatEntry>
       <ID>3083</ID>
-      <Description>"Get magic stone amount"</Description>
+      <Description>"Get magic stone piece / arrow amount"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -546,49 +717,81 @@ end
 
 [ENABLE]
 
-aobscanmodule(INJECT_GET_MSTONE_PIECE,$process,75 ?? 03 ?? 08 ?? 83 ?? 10)
+aobscanmodule(INJECT_GET_MSTONE_PIECE,$process,75 ?? 03 ?? 08 ?? 83 ?? 10 ?? 3B ?? 75 ??)
 // raw AOB: 75 ?? 48 8B 03 48 8B CB 48 8B 5C 24 30 48 83 C4 20 5F 48 FF A0 08 04 00 00 48 8B 93 E8 0C 00 00 33 C0 4C 63 83 F0 0C 00 00 49 C1 E0 04 4C 03 C2 49 3B D0 74 ?? 48 8B 0F 48 39 0A 75 ?? 03 42 08 48 83 C2 10 49 3B D0 75 ?? 48 8B 5C 24 30 48 83 C4 20 5F C3 CC CC 48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 40 48 8B DA 33 D2 48 89 13
 // injection point AOB: 75 ?? 03 ?? 08 ?? 83 ?? 10 ?? 3B ?? 75 ?? ?? 8B ?? 24 ?? 48 83 C4 20 ?? C3 CC CC ?? 89 ?? 24 ?? ?? 89 ?? 24 ?? ?? 48 83 EC 40 ?? 8B ?? 33 ?? ?? 89
-alloc(newmem,$1000,INJECT_GET_MSTONE_PIECE)
+alloc(newmem,$1000)
+alloc(ptrList_arr_INJECT_GET_MSTONE_PIECE_548700,$A0)
 
-alloc(INJECT_GET_MSTONE_PIECEo, $5)
+alloc(INJECT_GET_MSTONE_PIECEo, $E)
 
 label(code)
 label(return)
-label(i_base_mstone_addr)
+label(ptrList_count_INJECT_GET_MSTONE_PIECE_548700)
 
 INJECT_GET_MSTONE_PIECEo:
-  readmem(INJECT_GET_MSTONE_PIECE, $5)
+  readmem(INJECT_GET_MSTONE_PIECE, $E)
 
 newmem:
 
 code:
   // jne "Elliot-Win64-Shipping.exe"+4F8FA5A
-  reassemble(INJECT_GET_MSTONE_PIECE)
+  // reassemble(INJECT_GET_MSTONE_PIECE)
+  jne short lab_4F8FA5A
 
-  //--------------------------
-  mov [i_base_mstone_addr], rdx
-  //--------------------------
+  // **** Begin Auto script: AddressCapture
+  // mode=List, capacity=10
+  pushfq
+  push r15
+  push r14
+  // Address Capture List
+  mov r15, ptrList_arr_INJECT_GET_MSTONE_PIECE_548700
+  xor r14d, r14d
+dedup_loop_548700:
+  cmp r14d, [ptrList_count_INJECT_GET_MSTONE_PIECE_548700]
+  jge store_new_548700
+  cmp [r15+r14*8], rdx
+  je skip_store_548700
+  inc r14d
+  jmp dedup_loop_548700
+store_new_548700:
+  cmp r14d, #20
+  jge skip_store_548700
+  mov [r15+r14*8], rdx
+  inc dword ptr [ptrList_count_INJECT_GET_MSTONE_PIECE_548700]
+skip_store_548700:
+  pop r14
+  pop r15
+  popfq
+  // **** End Auto script: AddressCapture
+
 
   // add eax,[rdx+08]
   reassemble(INJECT_GET_MSTONE_PIECE+2)
-  jmp return
+  // add rdx,10 ("Elliot-Win64-Shipping.exe"+4F8FA5A)
+lab_4F8FA5A:
+  reassemble(INJECT_GET_MSTONE_PIECE+5)
+  // cmp rdx,r8
+  reassemble(INJECT_GET_MSTONE_PIECE+9)
+  // jne "Elliot-Win64-Shipping.exe"+4F8FA52
+  reassemble(INJECT_GET_MSTONE_PIECE+C)
+  jmp far return
   align 10 cc
-  i_base_mstone_addr:
-  dq 0
+  ptrList_count_INJECT_GET_MSTONE_PIECE_548700:
+  dd 0
 
 INJECT_GET_MSTONE_PIECE:
-  jmp newmem
+  jmp far newmem
 return:
 registersymbol(INJECT_GET_MSTONE_PIECE INJECT_GET_MSTONE_PIECEo)
-registersymbol(i_base_mstone_addr)
+registersymbol(ptrList_arr_INJECT_GET_MSTONE_PIECE_548700 ptrList_count_INJECT_GET_MSTONE_PIECE_548700)
 [DISABLE]
 
 INJECT_GET_MSTONE_PIECE:
-  readmem(INJECT_GET_MSTONE_PIECEo, $5)
+  readmem(INJECT_GET_MSTONE_PIECEo, $E)
 
 unregistersymbol(INJECT_GET_MSTONE_PIECE INJECT_GET_MSTONE_PIECEo)
-unregistersymbol(i_base_mstone_addr)
+unregistersymbol(ptrList_arr_INJECT_GET_MSTONE_PIECE_548700 ptrList_count_INJECT_GET_MSTONE_PIECE_548700)
 dealloc(newmem)
 dealloc(INJECT_GET_MSTONE_PIECEo)
 
@@ -643,12 +846,221 @@ dealloc(INJECT_GET_MSTONE_PIECEo)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>3084</ID>
-          <Description>"amt"</Description>
+          <ID>3111</ID>
+          <Description>"Amt.#1"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
           <VariableType>4 Bytes</VariableType>
-          <Address>i_base_mstone_addr</Address>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3112</ID>
+          <Description>"Amt.#2"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+8</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3113</ID>
+          <Description>"Amt.#3"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+10</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3114</ID>
+          <Description>"Amt.#4"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+18</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3115</ID>
+          <Description>"Amt.#5"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+20</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3116</ID>
+          <Description>"Amt.#6"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+28</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3117</ID>
+          <Description>"Amt.#7"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+30</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3118</ID>
+          <Description>"Amt.#8"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+38</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3120</ID>
+          <Description>"Amt.#9"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+40</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3119</ID>
+          <Description>"Amt.#10"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+48</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3122</ID>
+          <Description>"Amt.#11"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+50</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3123</ID>
+          <Description>"Amt.#12"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+58</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3124</ID>
+          <Description>"Amt.#13"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+60</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3125</ID>
+          <Description>"Amt.#14"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+68</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3126</ID>
+          <Description>"Amt.#15"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+70</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3127</ID>
+          <Description>"Amt.#16"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+78</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3128</ID>
+          <Description>"Amt.#17"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+80</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3129</ID>
+          <Description>"Amt.#18"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+88</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3130</ID>
+          <Description>"Amt.#19"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+90</Address>
+          <Offsets>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>3131</ID>
+          <Description>"Amt.#20"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>FF8080</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>ptrList_arr_INJECT_GET_MSTONE_PIECE_548700+98</Address>
           <Offsets>
             <Offset>8</Offset>
           </Offsets>
