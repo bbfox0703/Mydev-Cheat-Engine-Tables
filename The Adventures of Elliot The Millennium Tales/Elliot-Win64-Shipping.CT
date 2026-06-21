@@ -52,395 +52,6 @@ end
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>350</ID>
-      <Description>"**** Auto fill HP/Oxygen/Shield, if simple data available ****"</Description>
-      <Options moHideChildren="1"/>
-      <VariableType>Auto Assembler Script</VariableType>
-      <AssemblerScript>[ENABLE]
-{$lua}
-if syntaxcheck then return end
-if hpRefillTimerAob1 then
-  hpRefillTimerAob1.destroy()
-  hpRefillTimerAob1 = nil
-end
--- ============================================================
--- 設定欄位說明
--- ============================================================
---   desc      : memoryrecord description（必填，寫入目標）
---   srcType   : 來源類型
---                 0 = 從 target 位址 + offset 讀取
---                 1 = 固定值
---                 2 = 從另一個 memoryrecord 讀取
---   offset    : srcType=0 時用，target.address + offset 為來源
---               (offset=0 代表 target 自己本身)
---   value     : srcType=1 時為固定數值
---               srcType=2 時為 source memoryrecord 的 description
---   mult      : srcType=0 時的乘數，預設 1
---               (例：max HP * 10 寫回 current HP)
---   srcType0Datatype : srcType=0 時 source 的資料型別 (vtByte/vtWord/
---               vtDword/vtQword/vtSingle/vtDouble)，預設同 target
---   threshold : 比較用的門檻值（選填）。
---               不設 → 用「來源值」當門檻（舊行為，門檻=回填值）。
---               有設 → 比較用 threshold、寫入仍用來源值，
---                      可做到「觸發門檻」與「回填值」分離。
---   writeMode : 寫入條件，預設 '&lt;'
---                 '&lt;'  current &lt;  門檻 時寫入（補滿/保底用）
---                 '&lt;=' current &lt;= 門檻 時寫入
---                 '&gt;'  current &gt;  門檻 時寫入（限制上限用）
---                 '&gt;=' current &gt;= 門檻 時寫入
---                 '==' 或 '='        相等時寫入
---                 '~=' 或 '!=' 或 '&lt;&gt;' 不相等時寫入（凍結值用）
---                 '*'  無條件寫入（強制覆寫）
---   ranges    : 區間對應表（選填，設了就忽略 srcType/value/threshold/writeMode）。
---               依「目前值落在哪個區間」決定寫入值，用於
---               「位址不固定、靠數值反推是哪個物品」的情況。
---               格式：
---                 ranges = {
---                   { min = 1,  max = 5,  set = 10 },
---                   { min = 11, max = 25, set = 30 },
---                 }
---               規則：找第一個 min&lt;=值&lt;=max 的區間，值≠set 才寫 set。
---                     區間請勿重疊；不落在任何區間則不動該格。
--- 【目標比對】三選一（決定這筆設定套用到哪些 record）：
---   desc      : 單一描述（完全相符；可命中多筆同名）
---   descList  : 描述清單，例如 {'baseValue','Amt.#1'}（完全相符）
---   descMatch : Lua pattern，凡描述 string.find 命中者全套用
---               注意 '.' 在 pattern 要寫成 '%.'，例：'^Amt%.#%d+$'
---               純子字串比對可用 '^baseValue$'（完全相符）或 'base'（含 base）
--- 【動作】（與之前相同）：
---   srcType / offset / value / mult / srcType0Datatype
---   threshold / writeMode / ranges
---     ranges = { {min=1,max=5,set=10}, {min=11,max=25,set=30} }
--- ============================================================
--- 範例：
---   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
---   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
---   { descMatch = '^Amt%.#%d+$', ranges = {
---       { min=1, max=5, set=10 }, { min=11, max=25, set=30 } } },
---   { descList = {'baseValue'}, srcType = 1, value = 10, writeMode = '&lt;' },
--- ============================================================
--- ============================================================
--- 設定範例集（複製到下方 recordConfigs 內使用）
--- ============================================================
--- -
--- [補滿型] HP/MP/Sta 補滿（max 在 +0x10，乘 10 倍寫回 current）
---   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
--- -
--- [補滿型] 不乘倍數，直接 current = max
---   { desc = 'HP', srcType = 0, offset = 0x10 },
--- -
--- [保底型] target 自己 &lt; 某值就拉到該值（門檻=回填值，最單純）
---   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
---   { desc = 'Cur. HP 1', srcType = 1, value = 10, writeMode = '&lt;' },
--- -
--- [保底型·分離] HP &lt; 100 就直接補到 9999（門檻100、回填9999）
---   { desc = 'HP', srcType = 1, value = 9999, threshold = 100, writeMode = '&lt;' },
--- -
--- [緊急補滿] HP &lt; 10 才補到 max*10，平時讓它自然消耗
---   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10,
---     threshold = 10, writeMode = '&lt;' },
--- -
--- [上限型] 等級超過 99 拉回 99
---   { desc = 'Level', srcType = 1, value = 99, writeMode = '&gt;' },
--- -
--- [上限型] 物品數量超過 99 拉回 99
---   { desc = 'Potion', srcType = 1, value = 99, writeMode = '&gt;' },
--- -
--- [凍結型] 金錢不等於 99999999 就寫回（防遊戲扣款也防你誤花）
---   { desc = 'Gold', srcType = 1, value = 99999999, writeMode = '~=' },
--- -
--- [凍結型] 技能 CD 不等於 0 就清零
---   { desc = 'SkillCD', srcType = 1, value = 0, writeMode = '~=' },
--- -
--- [強制型] 無條件每 tick 把無敵時間設成 9999
---   { desc = 'InvincibleTimer', srcType = 1, value = 9999, writeMode = '*' },
--- -
--- [鏡像型] CurHP 和 MaxHP 不一致就同步（CurHP = MaxHP）
---   { desc = 'CurHP', srcType = 2, value = 'MaxHP', writeMode = '~=' },
--- -
--- [鏡像型] 把另一個欄位的值乘 2 寫過來（透過 srcType=2，但無倍數）
---   { desc = 'AttackDisplay', srcType = 2, value = 'AttackBase' },
---   注意：srcType=2 沒有 mult 參數，需乘倍數請用 srcType=0
--- -
--- [指定型別] target 是 vtQword，但 max 在 +0x20 是 vtDword
---   { desc = 'Mana', srcType = 0, offset = 0x20,
---     srcType0Datatype = vtDword, mult = 10 },
--- -
--- [Float] 移動速度倍率：current &lt; 5.0 時拉到 5.0
---   { desc = 'MoveSpeed', srcType = 1, value = 5.0, writeMode = '&lt;' },
--- -
--- [Byte] 1 byte 的 buff 旗標固定為 1
---   { desc = 'BuffFlag', srcType = 1, value = 1, writeMode = '~=' },
--- -
--- [區間偵測型] 同一格可能是炸彈或弓箭，靠數值判斷後補到各自上限
---   { desc = 'Amt.#1', ranges = {
---       { min = 1,  max = 5,  set = 10 },
---       { min = 11, max = 25, set = 30 },
---   } },
--- -
--- 提醒：threshold 是拿來和 curVal 直接比較的原始數值，如果該 record 是
--- vtSingle/vtDouble（例如移速倍率），記得 threshold 也寫成浮點數（threshold = 5.0）。
--- -
--- ============================================================
-local DEBUG = false   -- 設 true 會在 Enable 時印出每筆設定命中幾個 record
-
--- ============================================================
--- 不掃描清單（可改）：這些描述「本身 + 其所有 sub node」一律跳過
--- ============================================================
-local EXCLUDE_DESCS = {
-  'GWorld → more game data',
-  'Require UE5CEDumper DLL proxy installed',
-}
-
--- 清單
-
-local recordConfigs = {
-  { desc = 'HP.BaseValue', srcType = 1, value = 9, writeMode = '&lt;' },
-  { desc = 'HP.CurrentValue', srcType = 1, value = 9, writeMode = '&lt;' },
-  { desc = 'OX.BaseValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'OX.CurrentValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'SH.BaseValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'SH.CurrentValue', srcType = 1, value = 5, writeMode = '&lt;' },
-  { desc = 'Chain (Native-C)', srcType = 1, value = 18, writeMode = '&lt;' },
-  -- Amt.#1 .. Amt.#10 全部用同一份區間表（一條搞定）
-  { descMatch = '^Amt%.#%d+$', ranges = {
-      --{ min = 9,  max = 9,  set = 10 },
-      { min = 21, max = 29, set = 30 },
-      { min = 101, max = 199, set = 500 },
-      { min = 1001, max = 4999, set = 10000 },
-  } },
-  -- 所有描述為 baseValue 的，&lt; 10 就回填 10
-  -- { descList = {'baseValue'}, srcType = 1, value = 10, writeMode = '&lt;' },
-}
--- ============================================================
--- read/write 函式
--- ============================================================
-local function readByteValue(addr) return readBytes(addr, 1, false) end
-local function writeByteValue(addr, v) writeBytes(addr, v) end
-local function getRw(vt)
-  if vt == vtByte   then return readByteValue, writeByteValue end
-  if vt == vtWord   then return readSmallInteger, writeSmallInteger end
-  if vt == vtDword  then return readInteger, writeInteger end
-  if vt == vtQword  then return readQword, writeQword end
-  if vt == vtSingle then return readFloat, writeFloat end
-  if vt == vtDouble then return readDouble, writeDouble end
-  return nil, nil
-end
--- ============================================================
--- writeMode 判斷
--- ============================================================
-local function shouldWrite(curVal, srcVal, mode)
-  mode = mode or '&lt;'
-  if mode == '*'  then return true end
-  if mode == '&lt;'  then return curVal &lt;  srcVal end
-  if mode == '&lt;=' then return curVal &lt;= srcVal end
-  if mode == '&gt;'  then return curVal &gt;  srcVal end
-  if mode == '&gt;=' then return curVal &gt;= srcVal end
-  if mode == '==' or mode == '='  then return curVal == srcVal end
-  if mode == '~=' or mode == '!=' or mode == '&lt;&gt;' then return curVal ~= srcVal end
-  return false
-end
--- ============================================================
--- 解析單一 MemoryRecord → {resolved, reader, writer, ...}
--- ============================================================
-local function resolveMR(mr)
-  if mr == nil then return nil end
-  local addr = mr.CurrentAddress
-  if addr == nil then return nil end
-  local resolved = getAddress(addr)
-  if resolved == 0 then return nil end
-  local reader, writer = getRw(mr.Type)
-  if reader == nil then return nil end
-  return { mr = mr, resolved = resolved, vt = mr.Type, reader = reader, writer = writer }
-end
-local function resolveRecord(al, desc)
-  return resolveMR(al.getMemoryRecordByDescription(desc))   -- srcType=2 用，取第一筆
-end
--- ============================================================
--- 取得 source value
--- ============================================================
-local function getSourceValue(cfg, target, al)
-  local st = cfg.srcType
-  if st == 0 then
-    if cfg.offset == nil then return nil end
-    local srcReader = getRw(cfg.srcType0Datatype or target.vt)
-    if srcReader == nil then return nil end
-    local srcVal = srcReader(target.resolved + cfg.offset)
-    if srcVal == nil then return nil end
-    return srcVal * (cfg.mult or 1)
-  elseif st == 1 then
-    return cfg.value
-  elseif st == 2 then
-    if cfg.value == nil then return nil end
-    local srcRec = resolveRecord(al, cfg.value)
-    if srcRec == nil then return nil end
-    return srcRec.reader(srcRec.resolved)
-  end
-  return nil
-end
--- ============================================================
--- ranges 模式
--- ============================================================
-local function applyRanges(cfg, target)
-  local curVal = target.reader(target.resolved)
-  if curVal == nil then return end
-  for _, r in ipairs(cfg.ranges) do
-    if r.min and r.max and r.set
-       and curVal &gt;= r.min and curVal &lt;= r.max then
-      if curVal ~= r.set then target.writer(target.resolved, r.set) end
-      return
-    end
-  end
-end
--- ============================================================
--- 目標比對：依 desc / descList / descMatch 收集所有命中的 record
--- ============================================================
-local function descMatchesCfg(desc, cfg)
-  if cfg.descMatch then
-    return string.find(desc, cfg.descMatch) ~= nil
-  elseif cfg.descList then
-    for _, d in ipairs(cfg.descList) do
-      if desc == d then return true end
-    end
-    return false
-  elseif cfg.desc then
-    return desc == cfg.desc
-  end
-  return false
-end
-local function collectRecords(al, cfg)
-  local recs = {}
-  local n = al.Count
-  for i = 0, n - 1 do
-    local mr = al.getMemoryRecord(i)
-    if mr ~= nil then
-      local d = mr.Description
-      if d ~= nil and descMatchesCfg(d, cfg) then
-        recs[#recs + 1] = mr
-      end
-    end
-  end
-  return recs
-end
--- ============================================================
--- Enable 時建快取（descMatch 只在這裡掃一次全表）
--- ============================================================
-local RESCAN_MS = 6000      -- 每隔多久重掃全表、重建快取（毫秒）
-local targetCache = {}
-local lastScan = 0
-
-local function rebuildCache()
-  local al = getAddressList()
-
-  -- 描述 → set，O(1) 查
-  local excludeRoot = {}
-  for _, d in ipairs(EXCLUDE_DESCS) do excludeRoot[d] = true end
-
-  -- 判斷某 record 是否落在被排除的子樹裡（往上找祖先，memo 快取攤平成 O(1)）
-  local exMemo = {}
-  local function isExcluded(mr)
-    if mr == nil then return false end
-    local id = mr.ID
-    local hit = exMemo[id]
-    if hit ~= nil then return hit end
-    local r
-    local d = mr.Description
-    if d ~= nil and excludeRoot[d] then
-      r = true
-    else
-      r = isExcluded(mr.Parent)     -- 繼承祖先的結果（子節點不管多深都被連帶排除）
-    end
-    exMemo[id] = r
-    return r
-  end
-
-  for ci = 1, #recordConfigs do targetCache[ci] = {} end
-  local n = al.Count
-  for i = 0, n - 1 do
-    local mr = al.getMemoryRecord(i)
-    if mr ~= nil and not isExcluded(mr) then       -- ← 整支被排除子樹直接略過比對
-      local d = mr.Description
-      if d ~= nil then
-        for ci, cfg in ipairs(recordConfigs) do
-          if descMatchesCfg(d, cfg) then
-            local t = targetCache[ci]; t[#t + 1] = mr
-          end
-        end
-      end
-    end
-  end
-
-  if DEBUG then
-    for ci, cfg in ipairs(recordConfigs) do
-      local key = cfg.descMatch or cfg.desc
-        or (cfg.descList and table.concat(cfg.descList, ',')) or '?'
-      print(string.format('[cfg %d] "%s" -&gt; %d', ci, tostring(key), #targetCache[ci]))
-    end
-  end
-end
-
-pcall(rebuildCache)         -- enable 當下先建一次
-lastScan = getTickCount()
--- ============================================================
--- Timer
--- ============================================================
-hpRefillTimerAob1 = createTimer(getMainForm(), false)
-hpRefillTimerAob1.Interval = 900
-hpRefillTimerAob1.OnTimer = function(t)
-  local now = getTickCount()
-  if now - lastScan &gt;= RESCAN_MS then
-    pcall(rebuildCache)     -- 自我修復：啟用順序 / 啟用中改表都能補上
-    lastScan = now
-  end
-  local al = getAddressList()
-  for ci, cfg in ipairs(recordConfigs) do
-    local recs = targetCache[ci]
-    if recs ~= nil then
-      for _, mr in ipairs(recs) do
-        pcall(function()
-          local target = resolveMR(mr)
-          if target == nil then return end          -- 位址沒解出來 → 不寫
-          if cfg.ranges ~= nil then
-            applyRanges(cfg, target)
-            return
-          end
-          local srcVal = getSourceValue(cfg, target, al)
-          if srcVal == nil then return end
-          local curVal = target.reader(target.resolved)
-          if curVal == nil then return end          -- 讀不到 → 不寫
-          local cmpVal = cfg.threshold
-          if cmpVal == nil then cmpVal = srcVal end
-          if shouldWrite(curVal, cmpVal, cfg.writeMode) then   -- 檢查後才寫
-            target.writer(target.resolved, srcVal)
-          end
-        end)
-      end
-    end
-  end
-end
-hpRefillTimerAob1.Enabled = true
-{$asm}
-
-[DISABLE]
-{$lua}
-if syntaxcheck then return end
-if hpRefillTimerAob1 then
-  hpRefillTimerAob1.Enabled = false
-  hpRefillTimerAob1.destroy()
-  hpRefillTimerAob1 = nil
-end
-{$asm}
-</AssemblerScript>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>3121</ID>
-          <Description>"Also keep values in Amt.#??"</Description>
-          <Color>8000FF</Color>
-          <GroupHeader>1</GroupHeader>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
       <ID>2981</ID>
       <Description>"GWorld → Simple data"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
@@ -532,7 +143,7 @@ closeLuaEngine()
       <CheatEntries>
         <CheatEntry>
           <ID>2982</ID>
-          <Description>"base"</Description>
+          <Description>"base_all"</Description>
           <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
           <ShowAsHex>1</ShowAsHex>
           <ShowAsSigned>0</ShowAsSigned>
@@ -556,7 +167,7 @@ closeLuaEngine()
               <CheatEntries>
                 <CheatEntry>
                   <ID>3082</ID>
-                  <Description>"MONEY"</Description>
+                  <Description>"cur.MONEY"</Description>
                   <ShowAsSigned>1</ShowAsSigned>
                   <VariableType>8 Bytes</VariableType>
                   <Address>+1E0</Address>
@@ -581,6 +192,29 @@ closeLuaEngine()
                   <ShowAsSigned>0</ShowAsSigned>
                   <VariableType>4 Bytes</VariableType>
                   <Address>+7DC</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>3135</ID>
+                  <Description>"GameWork"</Description>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+D38</Address>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>3133</ID>
+                      <Description>"ArrowMax"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+70</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>3134</ID>
+                      <Description>"BombMax"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+74</Address>
+                    </CheatEntry>
+                  </CheatEntries>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -623,6 +257,453 @@ closeLuaEngine()
                         <Offset>0</Offset>
                       </Offsets>
                       <CheatEntries>
+                        <CheatEntry>
+                          <ID>350</ID>
+                          <Description>"**** Auto fill HP/Oxygen/Shield, if simple data available ****"</Description>
+                          <Options moHideChildren="1"/>
+                          <VariableType>Auto Assembler Script</VariableType>
+                          <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+if hpRefillTimerAob1 then
+  hpRefillTimerAob1.destroy()
+  hpRefillTimerAob1 = nil
+end
+-- ============================================================
+-- 設定欄位說明
+-- ============================================================
+-- 【目標比對】三選一（決定這筆設定套用到哪些 record）：
+--   desc      : 單一描述（完全相符；可命中多筆同名）
+--   descList  : 描述清單，例如 {'baseValue','Amt.#1'}（完全相符）
+--   descMatch : Lua pattern，凡描述 string.find 命中者全套用
+--               注意 '.' 在 pattern 要寫成 '%.'，例：'^Amt%.#%d+$'
+-- 【動作】
+--   srcType   : 0=從 target+offset 讀  1=固定值  2=從另一個 record 讀
+--   offset    : srcType=0 時 target.address+offset 為來源（0=自己）
+--   value     : srcType=1 固定值 / srcType=2 來源 record 的 description
+--   mult      : srcType=0 乘數，預設 1
+--   srcType0Datatype : srcType=0 來源型別，預設同 target
+--   threshold : 比較門檻（選填）。不設→用來源值當門檻；
+--               有設→比較用 threshold、寫入仍用來源值（門檻/回填值分離）
+--   writeMode : '&lt;'(預設) '&lt;=' '&gt;' '&gt;=' '==/=' '~=/!=/&lt;&gt;' '*'(無條件)
+--   ranges    : 區間對應表（設了就忽略 srcType/value/threshold/writeMode）
+--               { {min=1,max=5,set=10}, {min=11,max=25,set=30} }
+--               找第一個 min&lt;=值&lt;=max 的區間，值≠set 才寫；區間勿重疊
+-- 【過場防護】（選填，強烈建議 UE 元件欄位都加）
+--   validMin / validMax : 目前值超出此範圍 → 視為解到別的物件，不寫
+--                         （settle 閘門與此兩項已全域生效）
+-- ============================================================
+-- 範例：
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
+--   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
+--   { descMatch = '^Amt%.#%d+$', ranges = {
+--       { min=1, max=5, set=10 }, { min=11, max=25, set=30 } } },
+--   { descList = {'baseValue'}, srcType = 1, value = 10, writeMode = '&lt;' },
+-- ============================================================
+-- ============================================================
+-- 設定範例集（複製到下方 recordConfigs 內使用）
+-- ============================================================
+-- -
+-- [補滿型] HP/MP/Sta 補滿（max 在 +0x10，乘 10 倍寫回 current）
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10 },
+-- -
+-- [補滿型] 不乘倍數，直接 current = max
+--   { desc = 'HP', srcType = 0, offset = 0x10 },
+-- -
+-- [保底型] target 自己 &lt; 某值就拉到該值（門檻=回填值，最單純）
+--   { desc = 'HP', srcType = 1, value = 10, writeMode = '&lt;' },
+--   { desc = 'Cur. HP 1', srcType = 1, value = 10, writeMode = '&lt;' },
+-- -
+-- [保底型·分離] HP &lt; 100 就直接補到 9999（門檻100、回填9999）
+--   { desc = 'HP', srcType = 1, value = 9999, threshold = 100, writeMode = '&lt;' },
+-- -
+-- [緊急補滿] HP &lt; 10 才補到 max*10，平時讓它自然消耗
+--   { desc = 'HP', srcType = 0, offset = 0x10, mult = 10,
+--     threshold = 10, writeMode = '&lt;' },
+-- -
+-- [上限型] 等級超過 99 拉回 99
+--   { desc = 'Level', srcType = 1, value = 99, writeMode = '&gt;' },
+-- -
+-- [上限型] 物品數量超過 99 拉回 99
+--   { desc = 'Potion', srcType = 1, value = 99, writeMode = '&gt;' },
+-- -
+-- [凍結型] 金錢不等於 99999999 就寫回（防遊戲扣款也防你誤花）
+--   { desc = 'Gold', srcType = 1, value = 99999999, writeMode = '~=' },
+-- -
+-- [凍結型] 技能 CD 不等於 0 就清零
+--   { desc = 'SkillCD', srcType = 1, value = 0, writeMode = '~=' },
+-- -
+-- [強制型] 無條件每 tick 把無敵時間設成 9999
+--   { desc = 'InvincibleTimer', srcType = 1, value = 9999, writeMode = '*' },
+-- -
+-- [鏡像型] CurHP 和 MaxHP 不一致就同步（CurHP = MaxHP）
+--   { desc = 'CurHP', srcType = 2, value = 'MaxHP', writeMode = '~=' },
+-- -
+-- [鏡像型] 把另一個欄位的值乘 2 寫過來（透過 srcType=2，但無倍數）
+--   { desc = 'AttackDisplay', srcType = 2, value = 'AttackBase' },
+--   注意：srcType=2 沒有 mult 參數，需乘倍數請用 srcType=0
+-- -
+-- [指定型別] target 是 vtQword，但 max 在 +0x20 是 vtDword
+--   { desc = 'Mana', srcType = 0, offset = 0x20,
+--     srcType0Datatype = vtDword, mult = 10 },
+-- -
+-- [Float] 移動速度倍率：current &lt; 5.0 時拉到 5.0
+--   { desc = 'MoveSpeed', srcType = 1, value = 5.0, writeMode = '&lt;' },
+-- -
+-- [Byte] 1 byte 的 buff 旗標固定為 1
+--   { desc = 'BuffFlag', srcType = 1, value = 1, writeMode = '~=' },
+-- -
+-- [區間偵測型] 同一格可能是炸彈或弓箭，靠數值判斷後補到各自上限
+--   { desc = 'Amt.#1', ranges = {
+--       { min = 1,  max = 5,  set = 10 },
+--       { min = 11, max = 25, set = 30 },
+--   } },
+-- -
+-- 提醒：threshold 是拿來和 curVal 直接比較的原始數值，如果該 record 是
+-- vtSingle/vtDouble（例如移速倍率），記得 threshold 也寫成浮點數（threshold = 5.0）。
+-- -
+-- ============================================================
+local DEBUG = false        -- true：Enable 時印出每筆 config 命中幾個 record
+
+-- ============================================================
+-- 不掃描清單（可改）：這些描述「本身 + 其所有 sub node」一律跳過
+-- ============================================================
+local EXCLUDE_DESCS = {
+  'GWorld → more game data',
+  'Require UE5CEDumper DLL proxy installed',
+}
+
+-- ============================================================
+-- 過場錨點（可改）：監看「世界指標」= [ANCHOR.base]（過場會變的那顆）。
+--   直接用 readQword 從符號讀，不吃 CE 指標更新延遲；值一變 = 過場開始，
+--   全域暫停寫入，穩定滿 ANCHOR_SETTLE_MS 後重掃一次再恢復。
+--   base 填 GWorld 指標 slot 符號；或改用 { desc='base_all' } 監看其解出位址。
+--   設成 nil 可關閉此機制。
+-- ============================================================
+local ANCHOR = { base = 'gworld_addr_13A179' }
+local ANCHOR_SETTLE_MS = 3000
+
+-- 選填手動全域閘門：值 == equals 時才允許寫入（過場/讀取旗標）
+local GATE = nil
+
+-- ============================================================
+-- 設定清單
+-- ============================================================
+local recordConfigs = {
+  { desc = 'HP.BaseValue',     srcType = 1, value = 9,  writeMode = '&lt;', validMin = 0, validMax = 999 },
+  { desc = 'HP.CurrentValue',  srcType = 1, value = 9,  writeMode = '&lt;', validMin = 0, validMax = 999 },
+  { desc = 'OX.BaseValue',     srcType = 1, value = 5,  writeMode = '&lt;', validMin = 0, validMax = 999 },
+  { desc = 'OX.CurrentValue',  srcType = 1, value = 5,  writeMode = '&lt;', validMin = 0, validMax = 999 },
+  { desc = 'SH.BaseValue',     srcType = 1, value = 5,  writeMode = '&lt;', validMin = 0, validMax = 999 },
+  { desc = 'SH.CurrentValue',  srcType = 1, value = 5,  writeMode = '&lt;', validMin = 0, validMax = 999 },
+  { desc = 'Chain (Native-C)', srcType = 1, value = 18, writeMode = '&lt;', validMin = 0, validMax = 9999 },
+  { desc = 'cur.MONEY', srcType = 1, value = 10000, writeMode = '&lt;', validMin = 0, validMax = 40000 },
+  { descMatch = '^Amt%.#%d+$', validMin = 0, validMax = 99999, ranges = {
+      { min = 8,   max = 9,   set = 20 },
+      { min = 21,   max = 29,   set = 30 },
+      { min = 101,  max = 199,  set = 500 },
+      { min = 1001, max = 4999, set = 10000 },
+  } },
+}
+
+-- ============================================================
+-- read/write 函式
+-- ============================================================
+local function readByteValue(addr) return readBytes(addr, 1, false) end
+local function writeByteValue(addr, v) writeBytes(addr, v) end
+local function getRw(vt)
+  if vt == vtByte   then return readByteValue, writeByteValue end
+  if vt == vtWord   then return readSmallInteger, writeSmallInteger end
+  if vt == vtDword  then return readInteger, writeInteger end
+  if vt == vtQword  then return readQword, writeQword end
+  if vt == vtSingle then return readFloat, writeFloat end
+  if vt == vtDouble then return readDouble, writeDouble end
+  return nil, nil
+end
+
+-- ============================================================
+-- writeMode 判斷
+-- ============================================================
+local function shouldWrite(curVal, srcVal, mode)
+  mode = mode or '&lt;'
+  if mode == '*'  then return true end
+  if mode == '&lt;'  then return curVal &lt;  srcVal end
+  if mode == '&lt;=' then return curVal &lt;= srcVal end
+  if mode == '&gt;'  then return curVal &gt;  srcVal end
+  if mode == '&gt;=' then return curVal &gt;= srcVal end
+  if mode == '==' or mode == '='  then return curVal == srcVal end
+  if mode == '~=' or mode == '!=' or mode == '&lt;&gt;' then return curVal ~= srcVal end
+  return false
+end
+
+-- ============================================================
+-- 解析單一 MemoryRecord（含可讀性檢查，?????/不可讀 → nil，絕不硬寫）
+-- ============================================================
+local function resolveMR(mr)
+  if mr == nil then return nil end
+  local addr = mr.CurrentAddress
+  if addr == nil then return nil end
+  local resolved = getAddress(addr)
+  if resolved == nil or resolved == 0 then return nil end
+  if readBytes(resolved, 1, false) == nil then return nil end
+  local reader, writer = getRw(mr.Type)
+  if reader == nil then return nil end
+  return { mr = mr, resolved = resolved, vt = mr.Type, reader = reader, writer = writer }
+end
+local function resolveRecord(al, desc)
+  return resolveMR(al.getMemoryRecordByDescription(desc))
+end
+
+-- ============================================================
+-- 每葉位址防護（錨點放行後，收尾末端尚未穩定的葉節點）
+-- ============================================================
+local SETTLE_MS = 1000     -- 葉位址變動後要連續穩定這麼久才允許寫入
+local lastAddr = {}
+local stableSince = {}
+local function addrSettled(mr, resolved)
+  local id = mr.ID
+  local now = getTickCount()
+  if lastAddr[id] ~= resolved then
+    lastAddr[id] = resolved
+    stableSince[id] = now
+    return false
+  end
+  return (now - (stableSince[id] or now)) &gt;= SETTLE_MS
+end
+local function valuePlausible(cfg, v)
+  if cfg.validMin ~= nil and v &lt; cfg.validMin then return false end
+  if cfg.validMax ~= nil and v &gt; cfg.validMax then return false end
+  return true
+end
+
+-- ============================================================
+-- 取得 source value
+-- ============================================================
+local function getSourceValue(cfg, target, al)
+  local st = cfg.srcType
+  if st == 0 then
+    if cfg.offset == nil then return nil end
+    local srcReader = getRw(cfg.srcType0Datatype or target.vt)
+    if srcReader == nil then return nil end
+    local srcVal = srcReader(target.resolved + cfg.offset)
+    if srcVal == nil then return nil end
+    return srcVal * (cfg.mult or 1)
+  elseif st == 1 then
+    return cfg.value
+  elseif st == 2 then
+    if cfg.value == nil then return nil end
+    local srcRec = resolveRecord(al, cfg.value)
+    if srcRec == nil then return nil end
+    return srcRec.reader(srcRec.resolved)
+  end
+  return nil
+end
+
+-- ============================================================
+-- ranges 模式（含過場防護）
+-- ============================================================
+local function applyRanges(cfg, target)
+  if not addrSettled(target.mr, target.resolved) then return end
+  local curVal = target.reader(target.resolved)
+  if curVal == nil then return end
+  if not valuePlausible(cfg, curVal) then return end
+  for _, r in ipairs(cfg.ranges) do
+    if r.min and r.max and r.set
+       and curVal &gt;= r.min and curVal &lt;= r.max then
+      if curVal ~= r.set then target.writer(target.resolved, r.set) end
+      return
+    end
+  end
+end
+
+-- ============================================================
+-- 目標比對
+-- ============================================================
+local function descMatchesCfg(desc, cfg)
+  if cfg.descMatch then
+    return string.find(desc, cfg.descMatch) ~= nil
+  elseif cfg.descList then
+    for _, d in ipairs(cfg.descList) do
+      if desc == d then return true end
+    end
+    return false
+  elseif cfg.desc then
+    return desc == cfg.desc
+  end
+  return false
+end
+
+-- ============================================================
+-- 目標快取（定期重建 + 排除子樹）
+-- ============================================================
+local RESCAN_MS = 6000
+local targetCache = {}
+local lastScan = 0
+local function rebuildCache()
+  local al = getAddressList()
+  local excludeRoot = {}
+  for _, d in ipairs(EXCLUDE_DESCS) do excludeRoot[d] = true end
+  local exMemo = {}
+  local function isExcluded(mr)
+    if mr == nil then return false end
+    local id = mr.ID
+    local hit = exMemo[id]
+    if hit ~= nil then return hit end
+    local r
+    local d = mr.Description
+    if d ~= nil and excludeRoot[d] then r = true
+    else r = isExcluded(mr.Parent) end
+    exMemo[id] = r
+    return r
+  end
+  for ci = 1, #recordConfigs do targetCache[ci] = {} end
+  local n = al.Count
+  for i = 0, n - 1 do
+    local mr = al.getMemoryRecord(i)
+    if mr ~= nil and not isExcluded(mr) then
+      local d = mr.Description
+      if d ~= nil then
+        for ci, cfg in ipairs(recordConfigs) do
+          if descMatchesCfg(d, cfg) then
+            local t = targetCache[ci]; t[#t + 1] = mr
+          end
+        end
+      end
+    end
+  end
+  if DEBUG then
+    for ci, cfg in ipairs(recordConfigs) do
+      local key = cfg.descMatch or cfg.desc
+        or (cfg.descList and table.concat(cfg.descList, ',')) or '?'
+      print(string.format('[cfg %d] "%s" -&gt; %d', ci, tostring(key), #targetCache[ci]))
+    end
+  end
+end
+pcall(rebuildCache)
+lastScan = getTickCount()
+
+-- ============================================================
+-- 過場錨點：偵測「世界指標」變動 → 暫停，穩定夠久 → 重掃放行
+-- ============================================================
+local lastAnchorKey = nil
+local anchorChangedAt = 0
+local inTransition = false
+local function readAnchor(al)
+  if ANCHOR == nil then return nil end
+  if ANCHOR.base ~= nil then
+    local ok, baseAddr = pcall(getAddress, ANCHOR.base)   -- 符號 → slot 位址（靜態）
+    if not ok or baseAddr == nil or baseAddr == 0 then return nil end
+    local wp = readQword(baseAddr)                         -- [slot] = 當前世界指標（會變）
+    if wp == nil or wp == 0 then return nil end
+    return wp
+  else
+    local a = resolveRecord(al, ANCHOR.desc)
+    if a == nil then return nil end
+    return a.resolved                                       -- base_all 的解出位址
+  end
+end
+local function anchorReady(al)
+  if ANCHOR == nil then return true end
+  local now = getTickCount()
+  local key = readAnchor(al)
+  if key == nil then inTransition = true; return false end  -- 讀不到/null → 過場中
+  if key ~= lastAnchorKey then
+    lastAnchorKey = key
+    anchorChangedAt = now
+    inTransition = true
+    return false
+  end
+  if (now - anchorChangedAt) &lt; ANCHOR_SETTLE_MS then return false end
+  if inTransition then
+    pcall(rebuildCache); lastScan = now                     -- 過場結束 → 重掃一次再放行
+    inTransition = false
+  end
+  return true
+end
+-- 初始化錨點（避免 enable 後白等一輪）
+do
+  local al = getAddressList()
+  local k = readAnchor(al)
+  if k ~= nil then
+    lastAnchorKey = k
+    anchorChangedAt = getTickCount() - ANCHOR_SETTLE_MS
+  end
+end
+
+-- ============================================================
+-- Timer
+-- ============================================================
+hpRefillTimerAob1 = createTimer(getMainForm(), false)
+hpRefillTimerAob1.Interval = 500
+hpRefillTimerAob1.OnTimer = function(t)
+  local al = getAddressList()
+
+  -- ★過場錨點：世界指標變動 → 整輪暫停（並於恢復時重掃）
+  if not anchorReady(al) then return end
+
+  -- 穩定狀態下的定期重掃（自我修復結構變動）
+  local now = getTickCount()
+  if now - lastScan &gt;= RESCAN_MS then
+    pcall(rebuildCache); lastScan = now
+  end
+
+  -- 選填手動閘門
+  if GATE ~= nil then
+    local g = resolveRecord(al, GATE.desc)
+    if g == nil then return end
+    local gv = g.reader(g.resolved)
+    if gv == nil or gv ~= GATE.equals then return end
+  end
+
+  for ci, cfg in ipairs(recordConfigs) do
+    local recs = targetCache[ci]
+    if recs ~= nil then
+      for _, mr in ipairs(recs) do
+        pcall(function()
+          local target = resolveMR(mr)
+          if target == nil then return end
+          if cfg.ranges ~= nil then
+            applyRanges(cfg, target)
+            return
+          end
+          if not addrSettled(target.mr, target.resolved) then return end
+          local srcVal = getSourceValue(cfg, target, al)
+          if srcVal == nil then return end
+          local curVal = target.reader(target.resolved)
+          if curVal == nil then return end
+          if not valuePlausible(cfg, curVal) then return end
+          local cmpVal = cfg.threshold
+          if cmpVal == nil then cmpVal = srcVal end
+          if shouldWrite(curVal, cmpVal, cfg.writeMode) then
+            target.writer(target.resolved, srcVal)
+          end
+        end)
+      end
+    end
+  end
+end
+hpRefillTimerAob1.Enabled = true
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if hpRefillTimerAob1 then
+  hpRefillTimerAob1.Enabled = false
+  hpRefillTimerAob1.destroy()
+  hpRefillTimerAob1 = nil
+end
+{$asm}
+</AssemblerScript>
+                          <CheatEntries>
+                            <CheatEntry>
+                              <ID>3121</ID>
+                              <Description>"Also keep values in Amt.#??"</Description>
+                              <Color>8000FF</Color>
+                              <GroupHeader>1</GroupHeader>
+                            </CheatEntry>
+                          </CheatEntries>
+                        </CheatEntry>
                         <CheatEntry>
                           <ID>2986</ID>
                           <Description>"HealthPoint (GameplayAttributeData)"</Description>
@@ -704,6 +785,261 @@ closeLuaEngine()
           </CheatEntries>
         </CheatEntry>
       </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3132</ID>
+      <Description>"↓Enable amount monitor below (auto-reactive)↓"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if rearmWatchTimer then
+  rearmWatchTimer.Enabled = false
+  rearmWatchTimer.destroy()
+  rearmWatchTimer = nil
+end
+
+local DEBUG = false
+
+-- ============================================================
+-- CONFIG
+-- ============================================================
+-- 每組 pair：
+--   a = 監看來源 record 描述（A，例：Amt.#1 = magic stone piece）
+--   b = 要 disable/enable 的「父項 activator」描述（例：Get magic stone piece）
+--   detect            = 失效判定（range / readable / sentinel / custom）
+--   requireSeenValid  = true(預設)：A 先有效過一次才會 arm（擋 lazy 值的啟動初期）
+--   rearmOncePerValid = true(預設)：re-arm 後重置 seen → 一個有效週期只 kick 一次
+--                       （A 是 lazy/觸發後才出現的值，務必 true，否則會無限 toggle）
+--   bReady            = B 就緒判定（'always'(建議) / 'addr' / function）
+--   minRearmGapMs     = 兩次 re-arm 最短間隔（毫秒；省略用全域預設）
+local PAIRS = {
+  { a = 'Amt.#1', b = 'Get magic stone piece',
+    detect            = { mode = 'range', min = 0, max = 9999999 },
+    requireSeenValid  = true,
+    rearmOncePerValid = true,
+    bReady            = 'always' },
+}
+
+local REARM_SEQUENCE = {
+  { action = 'disable', wait = 500 },
+  { action = 'enable',  wait = 500 },
+  { action = 'enable',  wait = 0   },
+}
+
+local CHECK_INTERVAL_MS = 200
+local SETTLE_MS         = 1000
+local TICK_MS           = 100
+local RESCAN_MS         = 5000
+local BYPASS_LOG_MS     = 2000
+local MIN_REARM_GAP_MS  = 3000   -- 全域 re-arm 冷卻（保險，防止猛 toggle）
+
+-- ============================================================
+-- 讀取函式
+-- ============================================================
+local function getReader(vt)
+  if vt == vtByte   then return function(a) return readBytes(a, 1, false) end end
+  if vt == vtWord   then return readSmallInteger end
+  if vt == vtDword  then return readInteger end
+  if vt == vtQword  then return readQword end
+  if vt == vtSingle then return readFloat end
+  if vt == vtDouble then return readDouble end
+  return nil
+end
+
+local function rawRead(mr)
+  if mr == nil then return nil, 'no-mr' end
+  local addr = mr.CurrentAddress
+  if addr == nil then return nil, 'no-addr' end
+  local resolved
+  local ok = pcall(function() resolved = getAddress(addr) end)
+  if not ok or resolved == nil or resolved == 0 then return nil, 'unresolved' end
+  local reader = getReader(mr.Type)
+  if reader == nil then return nil, 'no-reader' end
+  local v
+  local ok2 = pcall(function() v = reader(resolved) end)
+  if not ok2 or v == nil then return nil, 'unreadable' end
+  return v, nil
+end
+
+local function isInvalid(detect, value, readErr)
+  local mode = detect.mode or 'range'
+  if mode == 'readable' then
+    return value == nil
+  elseif mode == 'range' then
+    if value == nil then return true end
+    if detect.min and value &lt; detect.min then return true end
+    if detect.max and value &gt; detect.max then return true end
+    return false
+  elseif mode == 'sentinel' then
+    if value == nil then return detect.brokenIfUnreadable ~= false end
+    for _, sv in ipairs(detect.sentinels or {}) do
+      if value == sv then return true end
+    end
+    return false
+  elseif mode == 'custom' then
+    local ok, r = pcall(detect.fn, value, readErr)
+    return ok and r == true
+  end
+  return false
+end
+
+local function setB(bMR, active)
+  if bMR == nil then return end
+  pcall(function() bMR.Active = active end)
+end
+
+-- ============================================================
+-- B 就緒判定
+-- ============================================================
+local function defaultBReady(bMR)
+  if bMR == nil then return false end
+  local addr = bMR.CurrentAddress
+  if addr == nil then return false end
+  local resolved
+  local ok = pcall(function() resolved = getAddress(addr) end)
+  if not ok or resolved == nil or resolved == 0 then return false end
+  return true
+end
+
+local function bReadyResolver(p)
+  local v = p.bReady
+  if v == 'always' then return function() return true end end
+  if v == 'addr' or v == nil then return defaultBReady end
+  if type(v) == 'function' then return v end
+  return defaultBReady
+end
+
+local function normDetect(p)
+  if p.detect then return p.detect end
+  return { mode = 'range', min = p.min, max = p.max }
+end
+
+-- ============================================================
+-- 快取
+-- ============================================================
+local cache = {}
+local function rebuildCache()
+  local al = getAddressList()
+  for i, p in ipairs(PAIRS) do
+    cache[i] = {
+      aMR         = al.getMemoryRecordByDescription(p.a),
+      bMR         = al.getMemoryRecordByDescription(p.b),
+      detect      = normDetect(p),
+      bReady      = bReadyResolver(p),
+      requireSeen = (p.requireSeenValid ~= false),
+      rearmOnce   = (p.rearmOncePerValid ~= false),
+      minGap      = p.minRearmGapMs or MIN_REARM_GAP_MS,
+    }
+  end
+end
+
+local pst = {}
+for i = 1, #PAIRS do
+  pst[i] = { mode = 'idle', step = 0, nextTime = 0, resumeAt = 0,
+             seen = false, lastRearm = 0, lastBypassLog = 0 }
+end
+
+pcall(rebuildCache)
+local now0      = getTickCount()
+local lastScan  = now0
+local lastCheck = 0
+
+-- ============================================================
+-- Timer
+-- ============================================================
+rearmWatchTimer = createTimer(getMainForm(), false)
+rearmWatchTimer.Interval = TICK_MS
+rearmWatchTimer.OnTimer = function(t)
+  local now = getTickCount()
+
+  if now - lastScan &gt;= RESCAN_MS then
+    pcall(rebuildCache)
+    lastScan = now
+  end
+
+  -- (1) 推進 re-arm 序列 / settle
+  for i = 1, #PAIRS do
+    local s = pst[i]
+    local c = cache[i]
+    if c then
+      if s.mode == 'seq' and now &gt;= s.nextTime then
+        local def = REARM_SEQUENCE[s.step]
+        if def then
+          if     def.action == 'disable' then setB(c.bMR, false)
+          elseif def.action == 'enable'  then setB(c.bMR, true)  end
+          if DEBUG then
+            print(('[pair %d] step %d/%d: %s'):format(i, s.step, #REARM_SEQUENCE, def.action))
+          end
+          s.nextTime = now + (def.wait or 0)
+          s.step = s.step + 1
+          if s.step &gt; #REARM_SEQUENCE then
+            s.mode = 'settle'; s.resumeAt = now + SETTLE_MS
+          end
+        else
+          s.mode = 'settle'; s.resumeAt = now + SETTLE_MS
+        end
+      elseif s.mode == 'settle' and now &gt;= s.resumeAt then
+        s.mode = 'idle'
+      end
+    end
+  end
+
+  -- (2) 偵測 A（節流到 CHECK_INTERVAL_MS）
+  if now - lastCheck &gt;= CHECK_INTERVAL_MS then
+    lastCheck = now
+    for i = 1, #PAIRS do
+      local s = pst[i]
+      local c = cache[i]
+      if c and s.mode == 'idle' then
+        local v, err = rawRead(c.aMR)
+        local invalid = isInvalid(c.detect, v, err)
+
+        if not invalid then
+          if not s.seen then
+            s.seen = true
+            if DEBUG then print(('[pair %d] A "%s" 有效 → armed'):format(i, PAIRS[i].a)) end
+          end
+        else
+          local gateSeen = (not c.requireSeen) or s.seen
+          local cooling  = (now - s.lastRearm) &lt; c.minGap
+          if gateSeen and c.bReady(c.bMR) and not cooling then
+            s.mode = 'seq'; s.step = 1; s.nextTime = now
+            s.lastRearm = now
+            if c.rearmOnce then s.seen = false end   -- 重置：等 A 重新有效才會再 arm
+            if DEBUG then
+              print(('[pair %d] A "%s" 失效(v=%s,err=%s) → re-arm B "%s"')
+                :format(i, PAIRS[i].a, tostring(v), tostring(err), PAIRS[i].b))
+            end
+          else
+            if DEBUG and (now - s.lastBypassLog &gt;= BYPASS_LOG_MS) then
+              s.lastBypassLog = now
+              local why = (not gateSeen) and 'A尚未有效過(lazy未觸發)'
+                       or cooling and '冷卻中'
+                       or 'B未就緒'
+              print(('[pair %d] A 失效但 bypass（%s）'):format(i, why))
+            end
+          end
+        end
+      end
+    end
+  end
+end
+rearmWatchTimer.Enabled = true
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if rearmWatchTimer then
+  rearmWatchTimer.Enabled = false
+  rearmWatchTimer.destroy()
+  rearmWatchTimer = nil
+end
+{$asm}
+
+</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>3083</ID>
