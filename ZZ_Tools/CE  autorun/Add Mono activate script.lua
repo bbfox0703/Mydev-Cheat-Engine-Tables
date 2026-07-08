@@ -62,12 +62,12 @@ if _G.SafeMonoDestroy == nil then
     end
 
     -- 3. Unlock pipe (try unlock even if uncertain)
-    print("🔓 Attempting to unlock pipe...")
-    pcall(function()
-      if monopipe and monopipe.unlock then
-        monopipe.unlock()
-      end
-    end)
+    -- print("🔓 Attempting to unlock pipe...")
+    -- pcall(function()
+    --   if monopipe and monopipe.unlock then
+    --     monopipe.unlock()
+    --   end
+    -- end)
 
     -- 4. Delay before destroy to let MonoCollector finish its work
     print("⌛ Waiting before destroy (sleep 250ms)...")
