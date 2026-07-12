@@ -30,356 +30,235 @@ end
 local monoEnableScript = [==[
 [ENABLE]
 {$asm}
-{
-define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
-
-registersymbol(ResourceManagerClearItemCountsProc)
-}
+  //-------------------------------------------------------------------
+  // 【參考備忘】AA 端 registersymbol 的寫法
+  // 目前整段被 { } 包住 = AA 註解,不會執行。
+  // 日後真的要在 AA 端定義符號時,把它搬出來用。
+  //
+  // 注意:define 只是純文字取代,define(X, "A.B") 之後 X 會被展開成
+  // 帶引號的 "A.B",registersymbol(X) 拿到的並不是位址。
+  // 要把 mono 方法變成 CE 符號,請用下面 {$lua} 的 registerSymbol()。
+  //-------------------------------------------------------------------
+  // define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+  // registersymbol(ResourceManagerClearItemCountsProc)
 
 {$lua}
 if syntaxcheck then return end
--- 📏 SafeMonoDestroy: Clean up all Mono-related state
-if _G.SafeMonoDestroy == nil then
-  _G.SafeMonoDestroy = function()
-    print("🪚 SafeMonoDestroy: Begin cleanup...")
 
-    -- 1. Stop symbol enumeration thread if running
-    if monoSymbolEnum then
-      print("🚬 Terminating monoSymbolEnum thread...")
-      pcall(function()
-        monoSymbolEnum.terminate()
-        if not monoSymbolEnum.waitfor(3000) then
-          print("⚠ Timeout: monoSymbolEnum didn't terminate in time")
-        end
-        monoSymbolEnum.destroy()
-        monoSymbolEnum = nil
-      end)
-    end
-
-    -- 2. Stop progressbar timer
-    if monoSymbolList and monoSymbolList.progressbar then
-      monoSymbolList.progressbar.OnTimer = nil
-    end
-
-    -- 3. Unlock pipe (try unlock even if uncertain)
-    -- print("🔓 Attempting to unlock pipe...")
-    -- pcall(function()
-    --   if monopipe and monopipe.unlock then
-    --     monopipe.unlock()
-    --   end
-    -- end)
-
-    -- 4. Delay before destroy to let MonoCollector finish its work
-    print("⌛ Waiting before destroy (sleep 250ms)...")
-    sleep(250)  -- let it flush pipe state
-
-    -- 5. Destroy main pipe
-    local t0 = os.clock()
-    print(string.format("🚨 Destroying monopipe，This may take several minutes (or longer)👺👺👺... [Start: %.3fs]", t0))
-
-    pcall(function()
-      if monopipe then
-        monopipe.destroy()
-        monopipe = nil
-      end
-    end)
-
-    local t1 = os.clock()
-    print(string.format("👻 monopipe.destroy() completed [End: %.3fs | Duration: %.3fs]", t1, t1 - t0))
-
-
-    -- 6. Destroy symbol list
-    if monoSymbolList then
-      monoSymbolList.destroy()
-      monoSymbolList = nil
-    end
-
-    -- 7. Destroy event pipe if exists
-    if monoeventpipe then
-      monoeventpipe.destroy()
-      monoeventpipe = nil
-    end
-
-    print("👻 SafeMonoDestroy: Cleanup complete.")
-  end
-end
-
--- 列出指定 class 中、同名方法的所有 overload，回傳詳盡資訊（不註冊符號）
-if _G.mono_listMethodsByName == nil then
-  _G.mono_listMethodsByName = function(namespace, classname, methodname)
-    local cls = mono_findClass(namespace, classname)
-    if not cls then
-      print(string.format("💔 Class not found: %s.%s", namespace, classname))
-      return {}
-    end
-
-    local mtds = mono_class_enumMethods(cls)
-    if not mtds then
-      print(string.format("💔 No methods in: %s.%s", namespace, classname))
-      return {}
-    end
-
-    local out = {}
-    local cnt = 0
-    for _, v in ipairs(mtds) do
-      if v.name == methodname then
-        local entry = { name = v.name, method = v.method }
-
-        -- 參數/回傳型別（用 CE 提供的 parameters API，比較穩）
-        local okP, p = pcall(mono_method_get_parameters, v.method)
-        if okP and p and p.parameters then
-          entry.params = p.parameters         -- array of {typename=..., name=...}
-          entry.paramnames = {}
-          for i, pi in ipairs(p.parameters) do
-            entry.paramnames[i] = pi.name
-          end
-          entry.returntype = p.returntype and p.returntype.name or nil
-        else
-          -- 後備：某些版本 mono_method_getSignature 可能回傳字串或多返回值
-          local okS, a, b, c = pcall(mono_method_getSignature, v.method)
-          if okS then
-            -- 嘗試相容 ijm_mtd_by_sig 的 (params, paramnames, returntype)
-            entry.params      = a
-            entry.paramnames  = b
-            entry.returntype  = c
-            entry.signature   = type(a) == "string" and a or nil
-          end
-        end
-
-        -- 編譯 JIT 取得地址
-        local addr = mono_compile_method(v.method)
-        entry.address = addr
-
-        cnt = cnt + 1
-        out[cnt] = entry
-      end
-    end
-
-    print(string.format("🔎 Found %d overload(s) for %s.%s.%s", cnt, namespace, classname, methodname))
-    return out
-  end
-end
-
--- 產生欄位 offset 對照表（若 CE 版本支援欄位列舉/offset 取得）
-if _G.mono_offsetsTable == nil then
-  _G.mono_offsetsTable = function(cacheTable, classname, namespace, opts)
-    -- 行為與 ijm_offset_table 類似：若已有表且非空就直接回傳
-    if cacheTable and type(cacheTable) == "table" then
-      local hasAny = next(cacheTable) ~= nil
-      if hasAny then return cacheTable end
-    end
-
-    local t = {}
-    local cls = mono_findClass(namespace or "", classname)
-    if not cls then
-      print(string.format("💔 Class not found: %s.%s", namespace or "", classname))
-      return t
-    end
-
-    -- 嘗試列舉欄位
-    local fields = nil
-    if mono_class_enumFields then
-      local okF, res = pcall(mono_class_enumFields, cls)
-      if okF then fields = res end
-    end
-
-    if not fields or #fields == 0 then
-      print("⚠ 無法列舉欄位（當前 CE/Mono 外掛可能不支援 mono_class_enumFields）。")
-      return t
-    end
-
-    for _, f in ipairs(fields) do
-      local fname = f.name or ("<noname_"..tostring(_)..">")
-      local off = nil
-      if mono_field_get_offset then
-        local okO, o = pcall(mono_field_get_offset, f.field)
-        if okO then off = o end
-      end
-      t[fname] = off
-    end
-
-    -- 若需要標註是 Mono 單例/IL2CPP Enum 等，可透過 opts 設定，這裡僅示意保留
-    if opts and opts.meta then t.__meta = opts.meta end
-
-    return t
-  end
-end
-
---[[
-Example: 
-PlayerDataC     = _G.mono_offsetsTable(PlayerDataC,     "PlayerData",     "")
-HeroControllerC = _G.mono_offsetsTable(HeroControllerC, "HeroController", "")
-GameManagerC    = _G.mono_offsetsTable(GameManagerC,    "GameManager",    "")
-HealthManagerC  = _G.mono_offsetsTable(HealthManagerC,  "HealthManager",  "")
-GameplayC       = _G.mono_offsetsTable(GameplayC,       "Gameplay",       "GlobalSettings")
---]]
-
--- 📏 Register symbol by parameter type array (exact match)
-if _G.mono_registerSymbolEx == nil then
-  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
-    local cls = mono_findClass(namespace, classname)
-    if not cls then
-      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
-      return
-    end
-
-    local methods = mono_class_enumMethods(cls)
-    for _, m in ipairs(methods) do
-      if m.name == methodname then
-        local p = mono_method_get_parameters(m.method)
-        local matched = true
-	
-        if #p.parameters ~= #paramTypes then
-          matched = false
-        else
-          for i = 1, #paramTypes do
-            if not string.find(p.parameters[i].typename, paramTypes[i], 1, true) then
-              matched = false
-              break
-            end
-          end
-        end
-
-        if matched then
-          local addr = mono_compile_method(m.method)
-          if addr == 0 then
-            print("💔 Error: Method found but failed to compile.")
-            return
-          end
-          registerSymbol(symbolname, addr)
-          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
-          return
-        end
-      end
-    end
-
-    print(string.format("💔 Error: No matching method found - %s.%s.%s", namespace, classname, methodname))
-  end
-end
-
--- 📏 Register symbol by partial signature match (overload-safe, with excludes and match info)
-if _G.mono_registerSymbolBySignatureMatch == nil then
-  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
-    local cls = mono_findClass(namespace, classname)
-    if not cls then
-      print(string.format("💔 Error: Class not found - %s.%s", namespace, classname))
-      return
-    end
-
-    local methods = mono_class_enumMethods(cls)
-    if not methods then
-      print(string.format("💔 Error: No methods found in %s.%s", namespace, classname))
-      return
-    end
-
-    for _, m in ipairs(methods) do
-      if m.name == methodname then
-        local sig = mono_method_getSignature(m.method)
-        local matched = true
-
-        -- Check required substrings
-        for _, kw in ipairs(sigContains) do
-          if not string.find(sig, kw, 1, true) then
-            matched = false
-            break
-          end
-        end
-
-        -- Check excluded substrings (if given)
-        if matched and sigExcludes then
-          for _, ex in ipairs(sigExcludes) do
-            if string.find(sig, ex, 1, true) then
-              matched = false
-              break
-            end
-          end
-        end
-
-        if matched then
-          local addr = mono_compile_method(m.method)
-          if addr == 0 then
-            print("💔 Error: Signature matched but failed to compile method.")
-            return
-          end
-          registerSymbol(symbolname, addr)
-          print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
-          print(string.format("🔎 Matched Signature: %s", sig))
-          return
-        end
-      end
-    end
-
-    print(string.format("💔 Error: No matching signature found - %s.%s.%s", namespace, classname, methodname))
-  end
-end
-
-
--- 📏 Register symbol by simple method name (first match)
-if _G.mono_registerSymbol == nil then
-  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
-    local m = mono_findMethod(namespace, classname, methodname)
-    if m == nil or m == 0 then
-      print(string.format("💔 Error: Method not found - %s.%s.%s", namespace, classname, methodname))
-      return
-    end
-
-    local addr = mono_compile_method(m)
-    if addr == 0 then
-      print(string.format("💔 Error: Could not compile method - %s.%s.%s", namespace, classname, methodname))
-      return
-    end
-
-    registerSymbol(symbolname, addr)
-    print(string.format("🪧 Symbol registered: %s = %X", symbolname, addr))
-  end
-end
-
--- 🌀 Attach Mono if needed
+--=====================================================================
+-- 🌀 Mono attach
+--
+-- ⚠ 這裡刻意「不」呼叫 monopipe.destroy() / monopipe.unlock()。
+--    原本的 SafeMonoDestroy 會觸發兩個 CE error:
+--
+--    1) CriticalSection leave without enter
+--       monopipe 內部用 critical section 保護 pipe I/O,lock/unlock 必須成對。
+--       CE 內建的 mono_* 函式自己已經 lock→做事→unlock 平衡完畢,
+--       計數本來就是 0。額外呼叫一次 unlock() 會讓計數變負。
+--
+--    2) Do not call libmono.terminate from external threads
+--       libmono 的 terminate/destroy 路徑有 thread guard,只允許 CE 主執行緒。
+--       AA 的 {$lua} 區塊不保證跑在主執行緒(table 自動啟用、timer 觸發時尤其如此),
+--       而且這個錯誤是 CE 自己彈的 dialog,pcall 攔不到。
+--
+--    舊 process 結束後 pipe 本來就失效,丟棄參考讓 CE / GC 處理即可,
+--    不需要(也不應該)手動 teardown。
+--=====================================================================
 local pid = getOpenedProcessID()
 if pid == 0 then
-  print("⚠ Warning: No process is currently open.")
+  print("Warning: No process is currently open.")
   return
 end
 
 if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
 
-if monopipe == nil or _G.lastMonoPID ~= pid then
-  if monopipe ~= nil then
-    pcall(_G.SafeMonoDestroy)
-  end
-  pcall(LaunchMonoDataCollector)
+if _G.lastMonoPID ~= pid then
+  -- 換 process:只丟棄參考,不 destroy
+  --monopipe       = nil
+  --monoSymbolList = nil
+  --monoeventpipe  = nil
   _G.lastMonoPID = pid
 end
 
--- ⚡ Example usage - Register Mono methods to CE symbol table
--- These functions compile (JIT) a Mono method and register it as a CE symbol
+--if monopipe == nil then
+LaunchMonoDataCollector()
+--end
 
--- 🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
--- Description: Registers the first matched method with given name.
--- ⚠ Use this only when there's no overload (or you're fine with the first one).
--- Params:
---   symbolname: The name you want to register (used in CE as a label)
---   namespace:  Mono namespace of the class (can be "" if none)
---   classname:  Class name that contains the method
---   methodname: Method name to find (first match will be used)
--- Example:
-
---_G.mono_registerSymbol("MyAttack", "Game.Logic", "BattleManager", "Attack")
---_G.mono_registerSymbol("UseAbility_Any", "Elin", "Chara", "UseAbility")
+if monopipe == nil then
+  print("LaunchMonoDataCollector failed(Target may not be Mono / IL2CPP process)")
+  return
+end
 
 
--- 🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
--- Description: Registers a method that exactly matches the provided parameter types.
--- Use this when there are multiple overloads of a method.
--- Params:
---   symbolname: The name to register
---   namespace:  Mono namespace
---   classname:  Class name
---   methodname: Method name (exact match)
---   paramTypes: Array of expected parameter type strings (must match count & order)
---               These are matched using `string.find`, so partial match is allowed.
--- Example:
---   UseAbility(string idAct, Card tc, Point pos, bool pt)
+--=====================================================================
+-- 🔧 共用比對核心
+--    三個對外 API 都走這裡,避免重複的 enumMethods / compile / register 邏輯。
+--
+--    opts:
+--      opts.params   = { "System.String", "Card", ... }
+--                      參數型別陣列。數量與順序需相符,型別用子字串比對。
+--      opts.contains = { "Act", "Point" }   signature 必須全部包含
+--      opts.excludes = { "List" }           signature 不可包含任一
+--      (三者皆不給 = 取第一個同名方法)
+--
+--    回傳:method handle, signature 字串
+--=====================================================================
+if _G.mono_matchMethod == nil then
+  _G.mono_matchMethod = function(namespace, classname, methodname, opts)
+    opts = opts or {}
+
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("Error: Class not found - %s.%s", namespace, classname))
+      return nil
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("Error: No methods found in %s.%s", namespace, classname))
+      return nil
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local matched = true
+        local sig = nil
+
+        -- (a) 參數型別陣列比對
+        if matched and opts.params then
+          local okP, p = pcall(mono_method_get_parameters, m.method)
+          if not okP or not p or not p.parameters or #p.parameters ~= #opts.params then
+            matched = false
+          else
+            for i = 1, #opts.params do
+              if not string.find(p.parameters[i].typename, opts.params[i], 1, true) then
+                matched = false
+                break
+              end
+            end
+          end
+        end
+
+        -- (b) signature 關鍵字包含 / 排除
+        if matched and (opts.contains or opts.excludes) then
+          local okS, s = pcall(mono_method_getSignature, m.method)
+          sig = (okS and type(s) == "string") and s or ""
+
+          for _, kw in ipairs(opts.contains or {}) do
+            if not string.find(sig, kw, 1, true) then
+              matched = false
+              break
+            end
+          end
+
+          if matched then
+            for _, ex in ipairs(opts.excludes or {}) do
+              if string.find(sig, ex, 1, true) then
+                matched = false
+                break
+              end
+            end
+          end
+        end
+
+        if matched then
+          return m.method, sig
+        end
+      end
+    end
+
+    print(string.format("Error: No matching method - %s.%s.%s", namespace, classname, methodname))
+    return nil
+  end
+end
+
+
+-- 共用的 compile + register
+if _G.mono_compileAndRegister == nil then
+  _G.mono_compileAndRegister = function(symbolname, method, sig)
+    local addr = mono_compile_method(method)
+    if not addr or addr == 0 then
+      print(string.format("Error: Method found but failed to compile - %s", symbolname))
+      return false
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("Symbol registered: %s = %X", symbolname, addr))
+    if sig and sig ~= "" then
+      print(string.format("Matched Signature: %s", sig))
+    end
+    return true, addr
+  end
+end
+
+
+--=====================================================================
+-- 📏 對外 API(名稱與參數維持不變,舊 script 可直接沿用)
+--=====================================================================
+
+-- 🔹 1. 用方法名註冊(取第一個同名方法)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = _G.mono_matchMethod(namespace, classname, methodname)
+    if not m then return false end
+    return _G.mono_compileAndRegister(symbolname, m)
+  end
+end
+
+-- 🔹 2. 用參數型別陣列註冊(overload 精確比對)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local m = _G.mono_matchMethod(namespace, classname, methodname, { params = paramTypes })
+    if not m then return false end
+    return _G.mono_compileAndRegister(symbolname, m)
+  end
+end
+
+-- 🔹 3. 用 signature 關鍵字註冊(包含 / 排除)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+    local m, sig = _G.mono_matchMethod(namespace, classname, methodname, {
+      contains = sigContains,
+      excludes = sigExcludes,
+    })
+    if not m then return false end
+    return _G.mono_compileAndRegister(symbolname, m, sig)
+  end
+end
+
+
+--=====================================================================
+-- ⚡ 使用範例 —— 把 Mono 方法註冊成 CE 符號
+--    這些函式會 JIT 編譯 Mono 方法,取得實體位址後註冊為 CE label,
+--    之後 {$asm} 區塊就能直接用該名稱做 code injection。
+--=====================================================================
+
+--[[---------------------------------------------------------------------
+🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+
+   取第一個同名方法。
+   ⚠ 只在「確定沒有 overload」或「第一個就是你要的」時使用。
+
+   symbolname : 要註冊的 CE 符號名(之後在 AA 當 label 用)
+   namespace  : Mono namespace(沒有的話填 "")
+   classname  : 類別名稱
+   methodname : 方法名稱(第一個 match 即採用)
+-----------------------------------------------------------------------]]
+
+--_G.mono_registerSymbol("MyAttack",       "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin",       "Chara",         "UseAbility")
+
+
+--[[---------------------------------------------------------------------
+🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+
+   用「參數型別陣列」比對,適合有多個 overload 的情況。
+
+   paramTypes : 預期的參數型別字串陣列,數量與順序都必須相符。
+                內部用 string.find(plain) 比對,所以允許部分字串。
+
+   目標方法:UseAbility(string idAct, Card tc, Point pos, bool pt)
+-----------------------------------------------------------------------]]
 
 --[[
 _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
@@ -388,40 +267,36 @@ _G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
 --]]
 
 
--- 🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
--- Description: Registers the method whose signature contains all given substrings.
--- Flexible, and suitable when exact type names vary or signature format is uncertain.
--- Params:
---   symbolname: The symbol name to register
---   namespace:  Mono namespace
---   classname:  Class name
---   methodname: Method name (will scan all overloads)
---   sigContains: Array of strings that should all appear in the method signature
---                e.g., { "Act", "Card", "Point", "bool" }
---   sigExcludes: Signatures to exclude
--- Example:
---   Will match method like: UseAbility(Act a, Card tc, Point pos, bool pt)
+--[[---------------------------------------------------------------------
+🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname,
+                                          methodname, sigContains, sigExcludes)
+
+   用 signature 關鍵字比對。當型別名稱寫法不確定、或 signature 格式有出入時最好用。
+
+   sigContains : signature 必須「全部包含」的字串陣列
+   sigExcludes : signature 「不可包含」的字串陣列(可省略)
+
+   目標方法:UseAbility(Act a, Card tc, Point pos, bool pt)
+-----------------------------------------------------------------------]]
 
 --[[
 _G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
   "Act", "Card", "Point", "bool"
 })
 
+-- 排除的實際用途:兩個 overload 的 signature 分別是
+--     System.Collections.Generic.List<Item>
+--     Item
+-- 兩者都含 "Item",但第一個多了 "List",所以用 excludes 排掉。
 _G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
-  {"Item"},      -- sigContains
-  {"List"}       -- sigExcludes
+  { "Item" },   -- sigContains
+  { "List" }    -- sigExcludes
 )
-
-Signatures above:
-System.Collections.Generic.List<Item> 
-Item 
-
-** Both have "Item" but first one have "List"
 --]]
 
---[[
 
-Type Mapping (for overload filtering)
+--[[---------------------------------------------------------------------
+型別對照(overload 過濾用)
 -------------------------------------
 String      System.String        C#: string
 int         System.Int32         C#: int
@@ -432,14 +307,56 @@ Color       UnityEngine.Color
 Point       (Game defined)
 Card        (Game defined)
 Act         (Game defined)
+-----------------------------------------------------------------------]]
 
---]]
+
+--=====================================================================
+-- 👇 實際註冊寫在這裡
+--=====================================================================
+--_G.mono_registerSymbol("ResourceManagerClearItemCounts", "", "ResourceManager", "ClearItemCounts")
+
+
+{$asm}
+//---------------------------------------------------------------------
+// Code injection 寫在這裡。
+// 上面 Lua 註冊的符號可直接當 label 使用,例如:
+//
+//   alloc(newmem,$400,ResourceManagerClearItemCounts)
+//   label(code)
+//   label(return)
+//
+//   newmem:
+//     jmp return
+//
+//   code:
+//     // ← CE 模板產生的 original code
+//     jmp return
+//
+//   ResourceManagerClearItemCounts:
+//     jmp newmem
+//   return:
+//---------------------------------------------------------------------
+
+
 [DISABLE]
+{$asm}
+//---------------------------------------------------------------------
+// 還原 code injection
+//
+//   ResourceManagerClearItemCounts:
+//     db XX XX XX XX XX     // ← original bytes
+//
+//   dealloc(newmem)
+//---------------------------------------------------------------------
+
 {$lua}
 if syntaxcheck then return end
---pcall(_G.SafeMonoDestroy)
-{$asm}
-//unregistersymbol(*)
+
+-- 只反註冊自己註冊過的符號,不要用 unregistersymbol(*),
+-- 那會把同一張表其他 script 的符號一起清掉。
+--pcall(unregisterSymbol, "ResourceManagerClearItemCounts")
+
+-- ⚠ 不要在這裡呼叫 SafeMonoDestroy / monopipe.destroy(),原因見 [ENABLE] 開頭說明。
 
 ]==]
 
