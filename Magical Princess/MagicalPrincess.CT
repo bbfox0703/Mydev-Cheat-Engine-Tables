@@ -1,0 +1,1876 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable UsesMono="1" CheatEngineTableVersion="52">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>486</ID>
+      <Description>"Toggle Compact View"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+if not toggleCompactView then
+    function toggleCompactView(sender, forceEnable)
+        local isCompactMode = not (compactViewMenuItem.Caption == 'Compact View Mode')
+        if forceEnable ~= nil then
+            isCompactMode = not forceEnable
+        end
+
+        synchronize(function()
+            compactViewMenuItem.Caption = isCompactMode and 'Compact View Mode' or 'Full View Mode'
+            getMainForm().Splitter1.Visible = isCompactMode
+            getMainForm().Panel4.Visible    = isCompactMode
+            getMainForm().Panel5.Visible    = isCompactMode
+        end)
+    end
+end
+
+if not createCompactViewMenu then
+    function createCompactViewMenu()
+        if isCompactMenuCreated then return end
+
+        synchronize(function()
+            local mainMenu = getMainForm().Menu.Items
+            compactViewMenuItem = createMenuItem(mainMenu)
+            compactViewMenuItem.Caption = 'Compact View Mode'
+            compactViewMenuItem.OnClick = toggleCompactView
+            mainMenu.add(compactViewMenuItem)
+        end)
+
+        isCompactMenuCreated = true
+    end
+end
+
+createCompactViewMenu()
+toggleCompactView(nil, true)
+
+[DISABLE]
+{$lua}
+if toggleCompactView then
+    toggleCompactView(nil, false)
+end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>501</ID>
+      <Description>"Enable mono"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$asm}
+  //-------------------------------------------------------------------
+  // 【參考備忘】AA 端 registersymbol 的寫法
+  // 目前整段被 { } 包住 = AA 註解,不會執行。
+  // 日後真的要在 AA 端定義符號時,把它搬出來用。
+  //
+  // 注意:define 只是純文字取代,define(X, "A.B") 之後 X 會被展開成
+  // 帶引號的 "A.B",registersymbol(X) 拿到的並不是位址。
+  // 要把 mono 方法變成 CE 符號,請用下面 {$lua} 的 registerSymbol()。
+  //-------------------------------------------------------------------
+  // define(ResourceManagerClearItemCountsProc, "ResourceManager.ClearItemCounts")
+  // registersymbol(ResourceManagerClearItemCountsProc)
+
+{$lua}
+if syntaxcheck then return end
+
+--=====================================================================
+-- 🌀 Mono attach
+--
+-- ⚠ 這裡刻意「不」呼叫 monopipe.destroy() / monopipe.unlock()。
+--    原本的 SafeMonoDestroy 會觸發兩個 CE error:
+--
+--    1) CriticalSection leave without enter
+--       monopipe 內部用 critical section 保護 pipe I/O,lock/unlock 必須成對。
+--       CE 內建的 mono_* 函式自己已經 lock→做事→unlock 平衡完畢,
+--       計數本來就是 0。額外呼叫一次 unlock() 會讓計數變負。
+--
+--    2) Do not call libmono.terminate from external threads
+--       libmono 的 terminate/destroy 路徑有 thread guard,只允許 CE 主執行緒。
+--       AA 的 {$lua} 區塊不保證跑在主執行緒(table 自動啟用、timer 觸發時尤其如此),
+--       而且這個錯誤是 CE 自己彈的 dialog,pcall 攔不到。
+--
+--    舊 process 結束後 pipe 本來就失效,丟棄參考讓 CE / GC 處理即可,
+--    不需要(也不應該)手動 teardown。
+--=====================================================================
+local pid = getOpenedProcessID()
+if pid == 0 then
+  print("Warning: No process is currently open.")
+  return
+end
+
+if _G.lastMonoPID == nil then _G.lastMonoPID = -1 end
+
+if _G.lastMonoPID ~= pid then
+  -- 換 process:只丟棄參考,不 destroy
+  --monopipe       = nil
+  --monoSymbolList = nil
+  --monoeventpipe  = nil
+  _G.lastMonoPID = pid
+end
+
+--if monopipe == nil then
+LaunchMonoDataCollector()
+--end
+
+if monopipe == nil then
+  print("LaunchMonoDataCollector failed(Target may not be Mono / IL2CPP process)")
+  return
+end
+
+
+--=====================================================================
+-- 🔧 共用比對核心
+--    三個對外 API 都走這裡,避免重複的 enumMethods / compile / register 邏輯。
+--
+--    opts:
+--      opts.params   = { "System.String", "Card", ... }
+--                      參數型別陣列。數量與順序需相符,型別用子字串比對。
+--      opts.contains = { "Act", "Point" }   signature 必須全部包含
+--      opts.excludes = { "List" }           signature 不可包含任一
+--      (三者皆不給 = 取第一個同名方法)
+--
+--    回傳:method handle, signature 字串
+--=====================================================================
+if _G.mono_matchMethod == nil then
+  _G.mono_matchMethod = function(namespace, classname, methodname, opts)
+    opts = opts or {}
+
+    local cls = mono_findClass(namespace, classname)
+    if not cls then
+      print(string.format("Error: Class not found - %s.%s", namespace, classname))
+      return nil
+    end
+
+    local methods = mono_class_enumMethods(cls)
+    if not methods then
+      print(string.format("Error: No methods found in %s.%s", namespace, classname))
+      return nil
+    end
+
+    for _, m in ipairs(methods) do
+      if m.name == methodname then
+        local matched = true
+        local sig = nil
+
+        -- (a) 參數型別陣列比對
+        if matched and opts.params then
+          local okP, p = pcall(mono_method_get_parameters, m.method)
+          if not okP or not p or not p.parameters or #p.parameters ~= #opts.params then
+            matched = false
+          else
+            for i = 1, #opts.params do
+              if not string.find(p.parameters[i].typename, opts.params[i], 1, true) then
+                matched = false
+                break
+              end
+            end
+          end
+        end
+
+        -- (b) signature 關鍵字包含 / 排除
+        if matched and (opts.contains or opts.excludes) then
+          local okS, s = pcall(mono_method_getSignature, m.method)
+          sig = (okS and type(s) == "string") and s or ""
+
+          for _, kw in ipairs(opts.contains or {}) do
+            if not string.find(sig, kw, 1, true) then
+              matched = false
+              break
+            end
+          end
+
+          if matched then
+            for _, ex in ipairs(opts.excludes or {}) do
+              if string.find(sig, ex, 1, true) then
+                matched = false
+                break
+              end
+            end
+          end
+        end
+
+        if matched then
+          return m.method, sig
+        end
+      end
+    end
+
+    print(string.format("Error: No matching method - %s.%s.%s", namespace, classname, methodname))
+    return nil
+  end
+end
+
+
+-- 共用的 compile + register
+if _G.mono_compileAndRegister == nil then
+  _G.mono_compileAndRegister = function(symbolname, method, sig)
+    local addr = mono_compile_method(method)
+    if not addr or addr == 0 then
+      print(string.format("Error: Method found but failed to compile - %s", symbolname))
+      return false
+    end
+
+    registerSymbol(symbolname, addr)
+    print(string.format("Symbol registered: %s = %X", symbolname, addr))
+    if sig and sig ~= "" then
+      print(string.format("Matched Signature: %s", sig))
+    end
+    return true, addr
+  end
+end
+
+
+--=====================================================================
+-- 📏 對外 API(名稱與參數維持不變,舊 script 可直接沿用)
+--=====================================================================
+
+-- 🔹 1. 用方法名註冊(取第一個同名方法)
+if _G.mono_registerSymbol == nil then
+  _G.mono_registerSymbol = function(symbolname, namespace, classname, methodname)
+    local m = _G.mono_matchMethod(namespace, classname, methodname)
+    if not m then return false end
+    return _G.mono_compileAndRegister(symbolname, m)
+  end
+end
+
+-- 🔹 2. 用參數型別陣列註冊(overload 精確比對)
+if _G.mono_registerSymbolEx == nil then
+  _G.mono_registerSymbolEx = function(symbolname, namespace, classname, methodname, paramTypes)
+    local m = _G.mono_matchMethod(namespace, classname, methodname, { params = paramTypes })
+    if not m then return false end
+    return _G.mono_compileAndRegister(symbolname, m)
+  end
+end
+
+-- 🔹 3. 用 signature 關鍵字註冊(包含 / 排除)
+if _G.mono_registerSymbolBySignatureMatch == nil then
+  _G.mono_registerSymbolBySignatureMatch = function(symbolname, namespace, classname, methodname, sigContains, sigExcludes)
+    local m, sig = _G.mono_matchMethod(namespace, classname, methodname, {
+      contains = sigContains,
+      excludes = sigExcludes,
+    })
+    if not m then return false end
+    return _G.mono_compileAndRegister(symbolname, m, sig)
+  end
+end
+
+
+--=====================================================================
+-- ⚡ 使用範例 —— 把 Mono 方法註冊成 CE 符號
+--    這些函式會 JIT 編譯 Mono 方法,取得實體位址後註冊為 CE label,
+--    之後 {$asm} 區塊就能直接用該名稱做 code injection。
+--=====================================================================
+
+--[[---------------------------------------------------------------------
+🔹 1. mono_registerSymbol(symbolname, namespace, classname, methodname)
+
+   取第一個同名方法。
+   ⚠ 只在「確定沒有 overload」或「第一個就是你要的」時使用。
+
+   symbolname : 要註冊的 CE 符號名(之後在 AA 當 label 用)
+   namespace  : Mono namespace(沒有的話填 "")
+   classname  : 類別名稱
+   methodname : 方法名稱(第一個 match 即採用)
+-----------------------------------------------------------------------]]
+
+--_G.mono_registerSymbol("MyAttack",       "Game.Logic", "BattleManager", "Attack")
+--_G.mono_registerSymbol("UseAbility_Any", "Elin",       "Chara",         "UseAbility")
+
+
+--[[---------------------------------------------------------------------
+🔹 2. mono_registerSymbolEx(symbolname, namespace, classname, methodname, paramTypes)
+
+   用「參數型別陣列」比對,適合有多個 overload 的情況。
+
+   paramTypes : 預期的參數型別字串陣列,數量與順序都必須相符。
+                內部用 string.find(plain) 比對,所以允許部分字串。
+
+   目標方法:UseAbility(string idAct, Card tc, Point pos, bool pt)
+-----------------------------------------------------------------------]]
+
+--[[
+_G.mono_registerSymbolEx("UseAbility_Exact", "Elin", "Chara", "UseAbility", {
+  "System.String", "Card", "Point", "System.Boolean"
+})
+--]]
+
+
+--[[---------------------------------------------------------------------
+🔹 3. mono_registerSymbolBySignatureMatch(symbolname, namespace, classname,
+                                          methodname, sigContains, sigExcludes)
+
+   用 signature 關鍵字比對。當型別名稱寫法不確定、或 signature 格式有出入時最好用。
+
+   sigContains : signature 必須「全部包含」的字串陣列
+   sigExcludes : signature 「不可包含」的字串陣列(可省略)
+
+   目標方法:UseAbility(Act a, Card tc, Point pos, bool pt)
+-----------------------------------------------------------------------]]
+
+--[[
+_G.mono_registerSymbolBySignatureMatch("UseAbility_Act", "Elin", "Chara", "UseAbility", {
+  "Act", "Card", "Point", "bool"
+})
+
+-- 排除的實際用途:兩個 overload 的 signature 分別是
+--     System.Collections.Generic.List&lt;Item&gt;
+--     Item
+-- 兩者都含 "Item",但第一個多了 "List",所以用 excludes 排掉。
+_G.mono_registerSymbolBySignatureMatch("GetItemCount_Item", "Assembly-CSharp", "ItemStorage", "GetItemCount",
+  { "Item" },   -- sigContains
+  { "List" }    -- sigExcludes
+)
+--]]
+
+
+--[[---------------------------------------------------------------------
+型別對照(overload 過濾用)
+-------------------------------------
+String      System.String        C#: string
+int         System.Int32         C#: int
+float       System.Single        C#: float
+bool        System.Boolean       C#: bool
+Vector3     UnityEngine.Vector3
+Color       UnityEngine.Color
+Point       (Game defined)
+Card        (Game defined)
+Act         (Game defined)
+-----------------------------------------------------------------------]]
+
+
+--=====================================================================
+-- 👇 實際註冊寫在這裡
+--=====================================================================
+--_G.mono_registerSymbol("ResourceManagerClearItemCounts", "", "ResourceManager", "ClearItemCounts")
+
+
+{$asm}
+//---------------------------------------------------------------------
+// Code injection 寫在這裡。
+// 上面 Lua 註冊的符號可直接當 label 使用,例如:
+//
+//   alloc(newmem,$400,ResourceManagerClearItemCounts)
+//   label(code)
+//   label(return)
+//
+//   newmem:
+//     jmp return
+//
+//   code:
+//     // ← CE 模板產生的 original code
+//     jmp return
+//
+//   ResourceManagerClearItemCounts:
+//     jmp newmem
+//   return:
+//---------------------------------------------------------------------
+
+
+[DISABLE]
+{$asm}
+//---------------------------------------------------------------------
+// 還原 code injection
+//
+//   ResourceManagerClearItemCounts:
+//     db XX XX XX XX XX     // ← original bytes
+//
+//   dealloc(newmem)
+//---------------------------------------------------------------------
+
+{$lua}
+if syntaxcheck then return end
+
+-- 只反註冊自己註冊過的符號,不要用 unregistersymbol(*),
+-- 那會把同一張表其他 script 的符號一起清掉。
+--pcall(unregisterSymbol, "ResourceManagerClearItemCounts")
+
+-- ⚠ 不要在這裡呼叫 SafeMonoDestroy / monopipe.destroy(),原因見 [ENABLE] 開頭說明。
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>487</ID>
+          <Description>"Get Stats"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/07/07
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_STATS,ItemBaloon:ShowParamList+FD,ItemBaloon:ShowParamList+1E9,83 ?? 00 66 90 49 BB ?? ?? ?? ?? ?? ?? ?? ?? 41)
+// raw AOB: 74 ?? 48 8B 85 A8 FE FF FF 4C 8B 40 30 48 8B CB 48 BA C0 FE 30 41 04 02 00 00 48 8D AD 00 00 00 00 49 BB A0 FD E9 5B 04 02 00 00 41 FF D3 48 8B D8 49 BA 18 2C 24 00 06 02 00 00 48 8D 64 24 00 90 49 BB F0 B0 F5 5B 06 02 00 00 41 FF D3 48 8B C8 48 8B D3 83 38 00 66 90 49 BB 60 38 AE 5B 04 02 00 00 41 FF D3 48 8B F8 45 33 FF E9 ?? ?? ?? ?? 66 90 48 8B CF 49 8B D7 83 3F 00 48 8D 64 24 00 49 BB 22 38 AE 5B 04 02 00 00 41 FF D3 48 8B C8 48 C7 44 24 20 00 00 00 00 48 C7 44 24 28 FF FF FF FF 48 C7 44 24 30 00 00 00 00
+// injection point AOB: 83 ?? 00 66 90 ?? ?? 60 38 AE 5B 04 02 00 00 ?? FF ?? ?? 8B ?? ?? 33 ?? E9 ?? ?? ?? ?? 66 90 ?? 8B ?? ?? 8B ?? 83 ?? 00 ?? 8D ?? ?? ?? ?? ?? 22 38 AE 5B 04 02 00 00 ?? FF ?? ?? 8B ?? ?? C7 ?? ?? ?? 00 00 00 00 ?? C7 ?? ?? ?? FF FF FF FF ?? C7 ?? ?? ?? 00 00 00 00
+alloc(newmem,$1000,INJECT_GET_STATS)
+
+alloc(INJECT_GET_STATSo, $5)
+
+label(code)
+label(return)
+label(ptrCapture_INJECT_GET_STATS_515935)
+
+INJECT_GET_STATSo:
+  readmem(INJECT_GET_STATS, $5)
+
+newmem:
+  // **** Begin Auto script: AddressCapture
+  // mode=Single
+  // Address Capture: publish base pointer
+  mov [ptrCapture_INJECT_GET_STATS_515935], rax
+  // **** End Auto script: AddressCapture
+
+
+code:
+  // cmp dword ptr [rax],00
+  reassemble(INJECT_GET_STATS)
+  // nop 2
+  reassemble(INJECT_GET_STATS+3)
+  jmp return
+  align 10 cc
+  ptrCapture_INJECT_GET_STATS_515935:
+  dq 0
+
+INJECT_GET_STATS:
+  jmp newmem
+return:
+registersymbol(INJECT_GET_STATS INJECT_GET_STATSo ptrCapture_INJECT_GET_STATS_515935)
+
+[DISABLE]
+
+INJECT_GET_STATS:
+  readmem(INJECT_GET_STATSo, $5)
+
+unregistersymbol(INJECT_GET_STATS INJECT_GET_STATSo ptrCapture_INJECT_GET_STATS_515935)
+dealloc(newmem)
+dealloc(INJECT_GET_STATSo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: ItemBaloon:ShowParamList+171
+
+ItemBaloon:ShowParamList+11d: 74 2F                              - je ItemBaloon:ShowParamList+14e
+ItemBaloon:ShowParamList+11f: 48 8B 85 A8 FE FF FF               - mov rax,[rbp-00000158]
+ItemBaloon:ShowParamList+126: 4C 8B 40 30                        - mov r8,[rax+30]
+ItemBaloon:ShowParamList+12a: 48 8B CB                           - mov rcx,rbx
+ItemBaloon:ShowParamList+12d: 48 BA C0 FE 30 41 04 02 00 00      - mov rdx,000002044130FEC0
+ItemBaloon:ShowParamList+137: 48 8D AD 00 00 00 00               - lea rbp,[rbp+00000000]
+ItemBaloon:ShowParamList+13e: 49 BB A0 FD E9 5B 04 02 00 00      - mov r11,000002045BE9FDA0
+ItemBaloon:ShowParamList+148: 41 FF D3                           - call r11
+ItemBaloon:ShowParamList+14b: 48 8B D8                           - mov rbx,rax
+ItemBaloon:ShowParamList+14e: 49 BA 18 2C 24 00 06 02 00 00      - mov r10,0000020600242C18
+ItemBaloon:ShowParamList+158: 48 8D 64 24 00                     - lea rsp,[rsp+00]
+ItemBaloon:ShowParamList+15d: 90                                 - nop
+ItemBaloon:ShowParamList+15e: 49 BB F0 B0 F5 5B 06 02 00 00      - mov r11,000002065BF5B0F0
+ItemBaloon:ShowParamList+168: 41 FF D3                           - call r11
+ItemBaloon:ShowParamList+16b: 48 8B C8                           - mov rcx,rax
+ItemBaloon:ShowParamList+16e: 48 8B D3                           - mov rdx,rbx
+// ---------- INJECTING HERE ----------
+ItemBaloon:ShowParamList+171: 83 38 00                           - cmp dword ptr [rax],00
+// ---------- DONE INJECTING  ----------
+ItemBaloon:ShowParamList+174: 66 90                              - nop 2
+ItemBaloon:ShowParamList+176: 49 BB 60 38 AE 5B 04 02 00 00      - mov r11,000002045BAE3860
+ItemBaloon:ShowParamList+180: 41 FF D3                           - call r11
+ItemBaloon:ShowParamList+183: 48 8B F8                           - mov rdi,rax
+ItemBaloon:ShowParamList+186: 45 33 FF                           - xor r15d,r15d
+ItemBaloon:ShowParamList+189: E9 30 01 00 00                     - jmp ItemBaloon:ShowParamList+2be
+ItemBaloon:ShowParamList+18e: 66 90                              - nop 2
+ItemBaloon:ShowParamList+190: 48 8B CF                           - mov rcx,rdi
+ItemBaloon:ShowParamList+193: 49 8B D7                           - mov rdx,r15
+ItemBaloon:ShowParamList+196: 83 3F 00                           - cmp dword ptr [rdi],00
+ItemBaloon:ShowParamList+199: 48 8D 64 24 00                     - lea rsp,[rsp+00]
+ItemBaloon:ShowParamList+19e: 49 BB 22 38 AE 5B 04 02 00 00      - mov r11,000002045BAE3822
+ItemBaloon:ShowParamList+1a8: 41 FF D3                           - call r11
+ItemBaloon:ShowParamList+1ab: 48 8B C8                           - mov rcx,rax
+ItemBaloon:ShowParamList+1ae: 48 C7 44 24 20 00 00 00 00         - mov qword ptr [rsp+20],00000000
+ItemBaloon:ShowParamList+1b7: 48 C7 44 24 28 FF FF FF FF         - mov qword ptr [rsp+28],FFFFFFFFFFFFFFFF
+}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>490</ID>
+              <Description>"Usage: open stats menu"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>489</ID>
+              <Description>"Addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>ptrCapture_INJECT_GET_STATS_515935</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>3</ID>
+                  <Description>"status"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>+40</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>355</ID>
+                      <Description>"period"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+38</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>356</ID>
+                      <Description>"stress"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+3C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>357</ID>
+                      <Description>"money"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+40</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>358</ID>
+                      <Description>"moneyGetTotal"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+44</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>359</ID>
+                      <Description>"blackCoin"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>360</ID>
+                      <Description>"blackCoinGettedFromDice"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>361</ID>
+                      <Description>"activePower"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>362</ID>
+                      <Description>"goodAction"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+54</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>363</ID>
+                      <Description>"badAction"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+58</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>364</ID>
+                      <Description>"gbBalance"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+5C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>365</ID>
+                      <Description>"fatherFavarite"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+60</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>366</ID>
+                      <Description>"reputation"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+64</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>367</ID>
+                      <Description>"acClass"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+68</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>368</ID>
+                      <Description>"skillPoint"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+6C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>369</ID>
+                      <Description>"equipCloth"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+70</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>370</ID>
+                      <Description>"equipClothLooks"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+74</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>371</ID>
+                      <Description>"equipWeapon"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+78</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>372</ID>
+                      <Description>"equipArmor"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+7C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>373</ID>
+                      <Description>"levelPhysical"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+80</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>374</ID>
+                      <Description>"levelIntelligence"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+84</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>375</ID>
+                      <Description>"levelCharm"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+88</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>376</ID>
+                      <Description>"levelSense"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+8C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>377</ID>
+                      <Description>"levelBattle"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+90</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>378</ID>
+                      <Description>"levelArts"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+94</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>379</ID>
+                      <Description>"levelMagic"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+98</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>380</ID>
+                      <Description>"fatherFavLevel"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+9C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>381</ID>
+                      <Description>"valuePhysical"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>382</ID>
+                      <Description>"valueIntelligence"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>383</ID>
+                      <Description>"valueCharm"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>384</ID>
+                      <Description>"valueSense"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+AC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>385</ID>
+                      <Description>"phyKinryoku"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+B0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>386</ID>
+                      <Description>"phySeimei"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+B4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>387</ID>
+                      <Description>"phyKonjyo"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+B8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>388</ID>
+                      <Description>"phyBinsho"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+BC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>389</ID>
+                      <Description>"intBungaku"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+C0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>390</ID>
+                      <Description>"intSanjyutsu"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+C4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>391</ID>
+                      <Description>"intMajyutsu"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+C8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>392</ID>
+                      <Description>"intShinkou"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+CC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>393</ID>
+                      <Description>"chaBibou"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+D0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>394</ID>
+                      <Description>"chaShakou"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+D4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>395</ID>
+                      <Description>"chaReigi"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+D8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>396</ID>
+                      <Description>"chaDoutoku"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+DC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>397</ID>
+                      <Description>"senSouzou"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+E0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>398</ID>
+                      <Description>"senSousaku"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+E4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>399</ID>
+                      <Description>"senOnkan"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>400</ID>
+                      <Description>"senBikan"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+EC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>401</ID>
+                      <Description>"btlExp"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>402</ID>
+                      <Description>"battlePosition"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+F4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>403</ID>
+                      <Description>"isUnlockSkillPhysical"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+F8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>404</ID>
+                      <Description>"isUnlockSkillIntelligence"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+F9</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>405</ID>
+                      <Description>"isUnlockSkillCharm"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+FA</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>406</ID>
+                      <Description>"isUnlockSkillSense"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+FB</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>407</ID>
+                      <Description>"activePowerMax"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+FC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>408</ID>
+                      <Description>"activePowerMaxChildhood"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+100</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>409</ID>
+                      <Description>"salaryRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+104</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>410</ID>
+                      <Description>"phyRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+108</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>411</ID>
+                      <Description>"intRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+10C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>412</ID>
+                      <Description>"chaRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+110</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>413</ID>
+                      <Description>"senRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+114</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>414</ID>
+                      <Description>"buyPriceRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+118</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>415</ID>
+                      <Description>"salePriceRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+11C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>416</ID>
+                      <Description>"aliceProtect"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+120</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>417</ID>
+                      <Description>"daySteal"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+124</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>418</ID>
+                      <Description>"battleRecovery"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+128</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>419</ID>
+                      <Description>"successBoost"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+12C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>420</ID>
+                      <Description>"actStatusRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+130</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>421</ID>
+                      <Description>"talkFavRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+134</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>422</ID>
+                      <Description>"dateFavRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+138</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>423</ID>
+                      <Description>"presentFavRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+13C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>424</ID>
+                      <Description>"talkFavPlus"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+140</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>425</ID>
+                      <Description>"dateFavPlus"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+144</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>426</ID>
+                      <Description>"presentFavPlus"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+148</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>427</ID>
+                      <Description>"activityFavPlus"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+14C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>428</ID>
+                      <Description>"dateGold"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+150</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>429</ID>
+                      <Description>"stressMonthRecover"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+154</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>430</ID>
+                      <Description>"stressSleepRecoverPlus"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+158</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>431</ID>
+                      <Description>"stressFatherRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+15C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>432</ID>
+                      <Description>"fesScoreBonus"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+160</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>433</ID>
+                      <Description>"curriculumSessions"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+164</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>434</ID>
+                      <Description>"stealRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+168</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>435</ID>
+                      <Description>"stressFullCutRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+16C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>436</ID>
+                      <Description>"foodDoubleRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+170</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>437</ID>
+                      <Description>"battleItemRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+174</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>438</ID>
+                      <Description>"battleMoneyRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+178</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>439</ID>
+                      <Description>"sfBlackCoinRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+17C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>440</ID>
+                      <Description>"gabageDoubleRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+180</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>441</ID>
+                      <Description>"nightActivePowerUp"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+184</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>442</ID>
+                      <Description>"productDoubleRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+188</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>443</ID>
+                      <Description>"gutsHP"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+18C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>444</ID>
+                      <Description>"renameStart"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+190</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>445</ID>
+                      <Description>"carryOverWear"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+194</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>446</ID>
+                      <Description>"isLoseRedMoonLastMonth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+198</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>447</ID>
+                      <Description>"canCraft"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+19C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>448</ID>
+                      <Description>"canVacation"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1A0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>449</ID>
+                      <Description>"stressFatherAdd"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1A4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>450</ID>
+                      <Description>"stressVacationRate"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1A8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>451</ID>
+                      <Description>"craftAddRateF"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1AC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>452</ID>
+                      <Description>"countSteal"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1B0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>453</ID>
+                      <Description>"countStealSuccess"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1B4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>454</ID>
+                      <Description>"countHospitalVisit"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1B8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>455</ID>
+                      <Description>"countEnemyDestroy"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1BC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>456</ID>
+                      <Description>"countFamilyTrip"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1C0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>457</ID>
+                      <Description>"countBlackCoin"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1C4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>458</ID>
+                      <Description>"countBoughtWear"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1C8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>459</ID>
+                      <Description>"countRedMoonBattleJoined"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1CC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>460</ID>
+                      <Description>"countWinMagicContest"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1D0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>461</ID>
+                      <Description>"countWinSwordContest"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1D4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>462</ID>
+                      <Description>"countWinGambleContest"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1D8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>463</ID>
+                      <Description>"countWinDanceContest"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1DC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>464</ID>
+                      <Description>"countWinArtContest"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1E0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>465</ID>
+                      <Description>"countAliceHealMagic"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1E4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>466</ID>
+                      <Description>"isLastAllianceBattleAction"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1E8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>467</ID>
+                      <Description>"isTryLastBoss"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1EC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>468</ID>
+                      <Description>"isDestroyLastBoss"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1ED</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>469</ID>
+                      <Description>"isOpenResearchCurse"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1EE</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>470</ID>
+                      <Description>"isOpenLabyrinth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1EF</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>471</ID>
+                      <Description>"isChallengeLabyrinth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F0</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>472</ID>
+                      <Description>"isDestroyOrphelia"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F1</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>473</ID>
+                      <Description>"isStartMonth"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F2</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>474</ID>
+                      <Description>"isHomeLeave"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F3</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>475</ID>
+                      <Description>"isStressSafe"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F4</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>476</ID>
+                      <Description>"isFinishRedMoonBattle"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F5</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>477</ID>
+                      <Description>"isFinishRedMoonCentral"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F6</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>478</ID>
+                      <Description>"isHistoryUpdate"</Description>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <VariableType>Byte</VariableType>
+                      <Address>+1F7</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>479</ID>
+                      <Description>"diceCharaCurrent"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1F8</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>480</ID>
+                      <Description>"diceBetMin"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+1FC</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>481</ID>
+                      <Description>"diceBetUnit"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+200</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>482</ID>
+                      <Description>"diceBetMax"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+204</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>483</ID>
+                      <Description>"diceEnemyLevel"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+208</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>484</ID>
+                      <Description>"locationCheckLastLoveEvent"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+20C</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>496</ID>
+          <Description>"Get skills"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/07/07
+}
+
+[ENABLE]
+
+aobscanregion(INJECT_GET_SKILL,MenuSkillPanel:OnPanelButtonFocus+52,MenuSkillPanel:OnPanelButtonFocus+133,?? 63 ?? 48 ?? 8B ?? 85 ?? 0F)
+// raw AOB: 48 89 45 E0 48 8B 4E 20 48 8B 46 28 48 89 44 24 20 48 BA E0 FF 30 41 04 02 00 00 49 B8 E0 FF 30 41 04 02 00 00 49 B9 E0 FF 30 41 04 02 00 00 48 8D 64 24 00 49 BB 10 84 F4 48 06 02 00 00 41 FF D3 48 8B D0 48 8B 45 E0 48 8B C8 48 8B 00 FF 90 60 04 00 00 48 8B 8F 80 00 00 00 48 63 46 48 48 8B F9 85 C0 0F 84 ?? ?? ?? ?? 48 8B 46 40 44 0F B6 78 15 EB ?? 45 33 FF 48 8B CF 49 8B D7 83 3F 00 66 66 90 49 BB 90 BE F5 5B 06 02 00 00 41 FF D3 48 8B 75 E8 48 8B 7D F0 4C 8B 7D F8 48 8D 65 00
+// injection point AOB: ?? 63 ?? 48 ?? 8B ?? 85 ?? 0F 84 ?? ?? ?? ?? ?? 8B ?? 40 ?? 0F B6 ?? 15 EB ?? ?? 33 ?? ?? 8B ?? ?? 8B ?? 83 ?? 00 66 66 90 ?? ?? 90 BE F5 5B 06 02 00 00 ?? FF ?? ?? 8B ?? ?? ?? 8B ?? ?? ?? 8B ?? ?? ?? 8D
+alloc(newmem,$1000,INJECT_GET_SKILL)
+
+alloc(INJECT_GET_SKILLo, $7)
+
+label(code)
+label(return)
+label(ptrCapture_INJECT_GET_SKILL_745105)
+
+INJECT_GET_SKILLo:
+  readmem(INJECT_GET_SKILL, $7)
+
+newmem:
+  // **** Begin Auto script: AddressCapture
+  // mode=Single
+  // Address Capture: publish base pointer
+  mov [ptrCapture_INJECT_GET_SKILL_745105], rsi
+  // **** End Auto script: AddressCapture
+
+
+code:
+  // movsxd  rax,dword ptr [rsi+48]
+  reassemble(INJECT_GET_SKILL)
+  // mov rdi,rcx
+  reassemble(INJECT_GET_SKILL+4)
+  jmp return
+  align 10 cc
+  ptrCapture_INJECT_GET_SKILL_745105:
+  dq 0
+
+INJECT_GET_SKILL:
+  jmp newmem
+  nop 2
+return:
+registersymbol(INJECT_GET_SKILL INJECT_GET_SKILLo ptrCapture_INJECT_GET_SKILL_745105)
+
+[DISABLE]
+
+INJECT_GET_SKILL:
+  readmem(INJECT_GET_SKILLo, $7)
+
+unregistersymbol(INJECT_GET_SKILL INJECT_GET_SKILLo ptrCapture_INJECT_GET_SKILL_745105)
+dealloc(newmem)
+dealloc(INJECT_GET_SKILLo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: MenuSkillPanel:OnPanelButtonFocus+cd
+
+MenuSkillPanel:OnPanelButtonFocus+72: 48 89 45 E0                        - mov [rbp-20],rax
+MenuSkillPanel:OnPanelButtonFocus+76: 48 8B 4E 20                        - mov rcx,[rsi+20]
+MenuSkillPanel:OnPanelButtonFocus+7a: 48 8B 46 28                        - mov rax,[rsi+28]
+MenuSkillPanel:OnPanelButtonFocus+7e: 48 89 44 24 20                     - mov [rsp+20],rax
+MenuSkillPanel:OnPanelButtonFocus+83: 48 BA E0 FF 30 41 04 02 00 00      - mov rdx,000002044130FFE0
+MenuSkillPanel:OnPanelButtonFocus+8d: 49 B8 E0 FF 30 41 04 02 00 00      - mov r8,000002044130FFE0
+MenuSkillPanel:OnPanelButtonFocus+97: 49 B9 E0 FF 30 41 04 02 00 00      - mov r9,000002044130FFE0
+MenuSkillPanel:OnPanelButtonFocus+a1: 48 8D 64 24 00                     - lea rsp,[rsp+00]
+MenuSkillPanel:OnPanelButtonFocus+a6: 49 BB 10 84 F4 48 06 02 00 00      - mov r11,0000020648F48410
+MenuSkillPanel:OnPanelButtonFocus+b0: 41 FF D3                           - call r11
+MenuSkillPanel:OnPanelButtonFocus+b3: 48 8B D0                           - mov rdx,rax
+MenuSkillPanel:OnPanelButtonFocus+b6: 48 8B 45 E0                        - mov rax,[rbp-20]
+MenuSkillPanel:OnPanelButtonFocus+ba: 48 8B C8                           - mov rcx,rax
+MenuSkillPanel:OnPanelButtonFocus+bd: 48 8B 00                           - mov rax,[rax]
+MenuSkillPanel:OnPanelButtonFocus+c0: FF 90 60 04 00 00                  - call qword ptr [rax+00000460]
+MenuSkillPanel:OnPanelButtonFocus+c6: 48 8B 8F 80 00 00 00               - mov rcx,[rdi+00000080]
+// ---------- INJECTING HERE ----------
+MenuSkillPanel:OnPanelButtonFocus+cd: 48 63 46 48                        - movsxd  rax,dword ptr [rsi+48]
+// ---------- DONE INJECTING  ----------
+MenuSkillPanel:OnPanelButtonFocus+d1: 48 8B F9                           - mov rdi,rcx
+MenuSkillPanel:OnPanelButtonFocus+d4: 85 C0                              - test eax,eax
+MenuSkillPanel:OnPanelButtonFocus+d6: 0F 84 0B 00 00 00                  - je MenuSkillPanel:OnPanelButtonFocus+e7
+MenuSkillPanel:OnPanelButtonFocus+dc: 48 8B 46 40                        - mov rax,[rsi+40]
+MenuSkillPanel:OnPanelButtonFocus+e0: 44 0F B6 78 15                     - movzx r15d,byte ptr [rax+15]
+MenuSkillPanel:OnPanelButtonFocus+e5: EB 03                              - jmp MenuSkillPanel:OnPanelButtonFocus+ea
+MenuSkillPanel:OnPanelButtonFocus+e7: 45 33 FF                           - xor r15d,r15d
+MenuSkillPanel:OnPanelButtonFocus+ea: 48 8B CF                           - mov rcx,rdi
+MenuSkillPanel:OnPanelButtonFocus+ed: 49 8B D7                           - mov rdx,r15
+MenuSkillPanel:OnPanelButtonFocus+f0: 83 3F 00                           - cmp dword ptr [rdi],00
+MenuSkillPanel:OnPanelButtonFocus+f3: 66 66 90                           - nop 3
+MenuSkillPanel:OnPanelButtonFocus+f6: 49 BB 90 BE F5 5B 06 02 00 00      - mov r11,000002065BF5BE90
+MenuSkillPanel:OnPanelButtonFocus+100: 41 FF D3                           - call r11
+MenuSkillPanel:OnPanelButtonFocus+103: 48 8B 75 E8                        - mov rsi,[rbp-18]
+MenuSkillPanel:OnPanelButtonFocus+107: 48 8B 7D F0                        - mov rdi,[rbp-10]
+MenuSkillPanel:OnPanelButtonFocus+10b: 4C 8B 7D F8                        - mov r15,[rbp-08]
+}
+
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>499</ID>
+              <Description>"Usage: open skills menu"</Description>
+              <Color>8000FF</Color>
+              <GroupHeader>1</GroupHeader>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>498</ID>
+              <Description>"Addr"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>ptrCapture_INJECT_GET_SKILL_745105</Address>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>492</ID>
+                  <Description>"[0]"</Description>
+                  <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                  <ShowAsHex>1</ShowAsHex>
+                  <ShowAsSigned>0</ShowAsSigned>
+                  <GroupHeader>1</GroupHeader>
+                  <Address>ptrCapture_INJECT_GET_SKILL_745105</Address>
+                  <Offsets>
+                    <Offset>0</Offset>
+                  </Offsets>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>493</ID>
+                      <Description>"nameKey"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+10</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>494</ID>
+                          <Description>"length (int32)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+10</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>495</ID>
+                          <Description>"chars (UTF-16)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>String</VariableType>
+                          <Length>64</Length>
+                          <Unicode>1</Unicode>
+                          <CodePage>0</CodePage>
+                          <ZeroTerminate>1</ZeroTerminate>
+                          <Address>+14</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>4</ID>
+                      <Description>"name"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+18</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>5</ID>
+                          <Description>"length (int32)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+10</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>6</ID>
+                          <Description>"chars (UTF-16)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>String</VariableType>
+                          <Length>64</Length>
+                          <Unicode>1</Unicode>
+                          <CodePage>0</CodePage>
+                          <ZeroTerminate>1</ZeroTerminate>
+                          <Address>+14</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>7</ID>
+                      <Description>"descKey"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+20</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>8</ID>
+                          <Description>"length (int32)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+10</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>9</ID>
+                          <Description>"chars (UTF-16)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>String</VariableType>
+                          <Length>64</Length>
+                          <Unicode>1</Unicode>
+                          <CodePage>0</CodePage>
+                          <ZeroTerminate>1</ZeroTerminate>
+                          <Address>+14</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>10</ID>
+                      <Description>"desc"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+28</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>11</ID>
+                          <Description>"length (int32)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+10</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>12</ID>
+                          <Description>"chars (UTF-16)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>String</VariableType>
+                          <Length>64</Length>
+                          <Unicode>1</Unicode>
+                          <CodePage>0</CodePage>
+                          <ZeroTerminate>1</ZeroTerminate>
+                          <Address>+14</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>13</ID>
+                      <Description>"gift"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+30</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>14</ID>
+                          <Description>"length (int32)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+10</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>15</ID>
+                          <Description>"chars (UTF-16)"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>String</VariableType>
+                          <Length>64</Length>
+                          <Unicode>1</Unicode>
+                          <CodePage>0</CodePage>
+                          <ZeroTerminate>1</ZeroTerminate>
+                          <Address>+14</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>16</ID>
+                      <Description>"nextOpen"</Description>
+                      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+38</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>17</ID>
+                          <Description>"_items"</Description>
+                          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+                          <ShowAsHex>1</ShowAsHex>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <GroupHeader>1</GroupHeader>
+                          <Address>+10</Address>
+                          <Offsets>
+                            <Offset>0</Offset>
+                          </Offsets>
+                          <CheatEntries>
+                            <CheatEntry>
+                              <ID>18</ID>
+                              <Description>"[0]"</Description>
+                              <ShowAsSigned>1</ShowAsSigned>
+                              <VariableType>4 Bytes</VariableType>
+                              <Address>+20</Address>
+                            </CheatEntry>
+                            <CheatEntry>
+                              <ID>19</ID>
+                              <Description>"[1]"</Description>
+                              <ShowAsSigned>1</ShowAsSigned>
+                              <VariableType>4 Bytes</VariableType>
+                              <Address>+24</Address>
+                            </CheatEntry>
+                            <CheatEntry>
+                              <ID>20</ID>
+                              <Description>"[2]"</Description>
+                              <ShowAsSigned>1</ShowAsSigned>
+                              <VariableType>4 Bytes</VariableType>
+                              <Address>+28</Address>
+                            </CheatEntry>
+                            <CheatEntry>
+                              <ID>21</ID>
+                              <Description>"[3]"</Description>
+                              <ShowAsSigned>1</ShowAsSigned>
+                              <VariableType>4 Bytes</VariableType>
+                              <Address>+2C</Address>
+                            </CheatEntry>
+                          </CheatEntries>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>22</ID>
+                      <Description>"data"</Description>
+                      <Options moDeactivateChildrenAsWell="1"/>
+                      <ShowAsHex>1</ShowAsHex>
+                      <ShowAsSigned>0</ShowAsSigned>
+                      <GroupHeader>1</GroupHeader>
+                      <Address>+40</Address>
+                      <Offsets>
+                        <Offset>0</Offset>
+                      </Offsets>
+                      <CheatEntries>
+                        <CheatEntry>
+                          <ID>23</ID>
+                          <Description>"skillId"</Description>
+                          <ShowAsSigned>1</ShowAsSigned>
+                          <VariableType>4 Bytes</VariableType>
+                          <Address>+10</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>24</ID>
+                          <Description>"isOpened"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Byte</VariableType>
+                          <Address>+14</Address>
+                        </CheatEntry>
+                        <CheatEntry>
+                          <ID>25</ID>
+                          <Description>"isLearned"</Description>
+                          <ShowAsSigned>0</ShowAsSigned>
+                          <VariableType>Byte</VariableType>
+                          <Address>+15</Address>
+                        </CheatEntry>
+                      </CheatEntries>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>26</ID>
+                      <Description>"skillId"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+48</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>27</ID>
+                      <Description>"category"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+4C</Address>
+                    </CheatEntry>
+                    <CheatEntry>
+                      <ID>28</ID>
+                      <Description>"position"</Description>
+                      <ShowAsSigned>1</ShowAsSigned>
+                      <VariableType>4 Bytes</VariableType>
+                      <Address>+50</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <Comments>Info about this table:
+</Comments>
+  <LuaScript>function onMemRecPostExecute(memoryrecord, newState, succeeded )
+    if memoryrecord.Type == vtAutoAssembler and memoryrecord.Script:find("NO_ACTIVATE") and newState and succeeded then
+        memoryrecord.disableWithoutExecute()
+    end
+end
+
+IDs = { 9999999  }
+
+function contains(table, val)
+   local i = 0
+   for i=1, #table do
+      if table[i] == val then
+         return true
+      end
+   end
+   return false
+end
+
+
+function onMemRecPreExecute(memoryrecord, newstate)
+    if contains(IDs, memoryrecord.ID) and newstate then
+	    memoryrecord.OnActivate = function(memoryrecord, before, currentstate)
+		    return false
+	    end
+    end
+end
+
+AddressList.Header.OnSectionClick = nil
+
+</LuaScript>
+</CheatTable>
