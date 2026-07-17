@@ -270,6 +270,11 @@ ja-JP: けものフレンズ Cellien May Cry
 ## Kingdom Two Crowns  
 [Kingdom Two Crowns (Steam)](https://store.steampowered.com/app/701160/Kingdom_Two_Crowns/)  
 
+## Kyoto Xanadu
+[KYOTO XANADU -the Blooming Phantom- (Steam)](https://store.steampowered.com/app/4449410/_/)
+zh-TW: 亰都幻都 -櫻花幻舞-  
+ja-JP: 亰都ザナドゥ -桜花幻舞-   
+
 ## Langrisser I & II  
 [Langrisser I & II (Steam)](https://store.steampowered.com/app/1060220/Langrisser_I__II/)  
 zh-TW:夢幻模擬戰 I & II  
