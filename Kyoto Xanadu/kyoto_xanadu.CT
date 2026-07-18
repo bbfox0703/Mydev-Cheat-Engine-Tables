@@ -31,6 +31,8 @@ synchronize(function()
   getLuaEngine().Close()
 end)
 
+
+
 local enableBattleScripts = {
   1, -- "Battle: damage multiplier"
   4, -- "Toggle Compact View"
@@ -45,13 +47,14 @@ local enableBattleScripts = {
   32, -- "Enable in game achievement progress / GET AP &amp; FP"
   154, -- "Equip consumables: count no change"
   166, -- "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)"
+  214, -- "Contribution multiplier"
+  216, -- "Auto fill AP/FP/AP (Free)/Money"
   27, -- "#1"
   153, -- "#2"
   155, -- "#0"
   156, -- "#3"
   158, -- "GET AP &amp; FP"
   180, -- "Get data in counter"
-  214, -- contribution
 }
 local addressList = getAddressList()
 synchronize(function()
@@ -92,7 +95,8 @@ local disableBattleScripts = {
   153, -- "#2"
   33, -- "GET_ACHIEVEMENTS"
   27, -- "#1"
-  214, -- contribution
+  216, -- "Auto fill AP/FP/AP (Free)/Money"
+  214, -- "Contribution multiplier"
   166, -- "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)"
   154, -- "Equip consumables: count no change"
   32, -- "Enable in game achievement progress / GET AP &amp; FP"
@@ -121,6 +125,7 @@ end)
 synchronize(function() getLuaEngine().Close() end)
 -- Comments:
 -- ID: 4, Description: "Toggle Compact View", Depth: 0
+-- ID: 216, Description: "Auto fill AP/FP/AP (Free)/Money", Depth: 0
 -- ID: 1, Description: "Battle: damage multiplier", Depth: 0
 -- ID: 8, Description: "Get money", Depth: 0
 -- ID: 12, Description: "Browse item and set amount", Depth: 0
@@ -134,6 +139,7 @@ synchronize(function() getLuaEngine().Close() end)
 -- ID: 21, Description: "inf. learning CP", Depth: 0
 -- ID: 23, Description: "inf. shoorting gauge", Depth: 0
 -- ID: 25, Description: "inf. soul gauge", Depth: 0
+-- ID: 214, Description: "Contribution multiplier", Depth: 0
 -- ID: 29, Description: "Get ether", Depth: 0
 --   ID: 180, Description: "Get data in counter", Depth: 1
 -- ID: 32, Description: "Enable in game achievement progress / GET AP &amp; FP", Depth: 0
@@ -202,6 +208,229 @@ toggleCompactView(nil, true)
 if toggleCompactView then
     toggleCompactView(nil, false)
 end
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>216</ID>
+      <Description>"Auto fill AP/FP/AP (Free)/Money"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if syntaxcheck then return end
+
+-- ============ AOBMaker Auto-Refresh Value ============
+-- Periodically rewrites the records below by their per-record conditions.
+-- Edit CONFIG / recordConfigs below; AOBMaker can re-open this script to change settings.
+-- Per-address settle + optional anchor pause reduce pointer-map CTD risk during zoning.
+
+-- @AOBMAKER:AUTO_REFRESH v1
+local CONFIG = {
+  name = "1",
+  intervalMs = 500,
+  settleMs = 1000,
+  anchorSymbol = nil,
+  anchorSettleMs = 6000,
+  lookupById = true,
+}
+local recordConfigs = {
+  { id = 9, desc = "money", targetType = "vtDword", srcType = 1, value = 50000, writeMode = "&lt;", threshold = 10000 },
+  { id = 159, desc = "AP", targetType = "vtDword", srcType = 1, value = 1, writeMode = "&lt;" },
+  { id = 160, desc = "AP (free)", targetType = "vtDword", srcType = 1, value = 6, writeMode = "&lt;" },
+  { id = 162, desc = "FP", targetType = "vtDword", srcType = 1, value = 1, writeMode = "&lt;" },
+  { id = 176, desc = "智 (Wisdom)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
+  { id = 177, desc = "勇 (Courage)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
+  { id = 178, desc = "仁 (Benevolence)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
+}
+-- @AOBMAKER:END
+
+---- GENERATED CODE (do not edit below) ----
+
+-- vt dispatch (read/write by CE vt constant)
+local function ar_readByVt(vt, addr)
+  if addr == nil then return nil end
+  if vt == vtByte then return readBytes(addr, 1, false)
+  elseif vt == vtWord then return readSmallInteger(addr)
+  elseif vt == vtQword then return readQword(addr)
+  elseif vt == vtSingle then return readFloat(addr)
+  elseif vt == vtDouble then return readDouble(addr)
+  else return readInteger(addr) end
+end
+local function ar_writeByVt(vt, addr, v)
+  if vt == vtByte then writeBytes(addr, v)
+  elseif vt == vtWord then writeSmallInteger(addr, v)
+  elseif vt == vtQword then writeQword(addr, v)
+  elseif vt == vtSingle then writeFloat(addr, v)
+  elseif vt == vtDouble then writeDouble(addr, v)
+  else writeInteger(addr, v) end
+end
+local ar_VT = { vtByte = vtByte, vtWord = vtWord, vtDword = vtDword, vtQword = vtQword, vtSingle = vtSingle, vtDouble = vtDouble }
+local function ar_vtOf(name) return ar_VT[name] or vtDword end
+
+-- Custom-type aware read/write. CE custom types (mr.CustomTypeName) carry a
+-- ConvertRoutine, so the raw bytes are NOT the display value (e.g. a tag in the
+-- top bits). Go through mr.Value, which applies the type's convert/convert-back.
+-- Standard types keep the fast typed path.
+local function ar_isCustom(mr)
+  return mr ~= nil and mr.CustomTypeName ~= nil and mr.CustomTypeName ~= ''
+end
+local function ar_readMr(mr, resolved, vt)
+  if ar_isCustom(mr) then return tonumber(mr.Value) end
+  return ar_readByVt(vt, resolved)
+end
+local function ar_writeMr(mr, resolved, vt, v)
+  if ar_isCustom(mr) then mr.Value = tostring(v) else ar_writeByVt(vt, resolved, v) end
+end
+
+local function ar_shouldWrite(cur, cmp, mode)
+  if mode == '*' then return true end
+  if mode == '&lt;' then return cur &lt; cmp end
+  if mode == '&lt;=' then return cur &lt;= cmp end
+  if mode == '&gt;' then return cur &gt; cmp end
+  if mode == '&gt;=' then return cur &gt;= cmp end
+  if mode == '==' or mode == '=' then return cur == cmp end
+  if mode == '~=' or mode == '!=' or mode == '&lt;&gt;' then return cur ~= cmp end
+  return false
+end
+
+local ar_al = getAddressList()
+local function ar_findRecord(id, desc)
+  local mr = nil
+  if CONFIG.lookupById and id ~= nil and id &gt;= 0 then mr = ar_al.getMemoryRecordByID(id) end
+  if mr == nil and desc ~= nil and desc ~= '' then mr = ar_al.getMemoryRecordByDescription(desc) end
+  return mr
+end
+
+-- Resolve a record's live effective address; nil when unreadable (never hardwrite ?????).
+local function ar_resolve(mr)
+  if mr == nil then return nil end
+  local a = mr.CurrentAddress
+  if a == nil then return nil end
+  local r = getAddress(a)
+  if r == nil or r == 0 then return nil end
+  if readBytes(r, 1, false) == nil then return nil end
+  return r
+end
+
+-- Per-address settle gate: address must be stable for settleMs before any write.
+local ar_lastAddr, ar_stableSince = {}, {}
+local function ar_settled(key, resolved)
+  local now = getTickCount()
+  if ar_lastAddr[key] ~= resolved then
+    ar_lastAddr[key] = resolved
+    ar_stableSince[key] = now
+    return false
+  end
+  return (now - (ar_stableSince[key] or now)) &gt;= CONFIG.settleMs
+end
+
+local function ar_plausible(cfg, v)
+  if cfg.validMin ~= nil and v &lt; cfg.validMin then return false end
+  if cfg.validMax ~= nil and v &gt; cfg.validMax then return false end
+  return true
+end
+
+local function ar_sourceValue(cfg, resolved)
+  local st = cfg.srcType
+  if st == 1 then
+    return cfg.value
+  elseif st == 0 then
+    if cfg.offset == nil then return nil end
+    local sv = ar_readByVt(ar_vtOf(cfg.srcDataType or cfg.targetType), resolved + cfg.offset)
+    if sv == nil then return nil end
+    return sv * (cfg.mult or 1)
+  elseif st == 2 then
+    local smr = ar_findRecord(cfg.mirrorId, cfg.mirrorDesc)
+    local sa = ar_resolve(smr)
+    if sa == nil then return nil end
+    return ar_readMr(smr, sa, smr.Type)   -- custom-aware mirror read
+  end
+  return nil
+end
+
+local function ar_applyRanges(cfg, mr, tvt, resolved)
+  local cur = ar_readMr(mr, resolved, tvt)
+  if cur == nil then return end
+  if not ar_plausible(cfg, cur) then return end
+  for _, r in ipairs(cfg.ranges) do
+    if cur &gt;= r.min and cur &lt;= r.max then
+      if cur ~= r.set then ar_writeMr(mr, resolved, tvt, r.set) end
+      return
+    end
+  end
+end
+
+-- Anchor (zoning) transition pause: world pointer changed -&gt; pause all writes,
+-- resume only after it stays stable for anchorSettleMs.
+local ar_lastAnchor, ar_anchorAt, ar_inTransition = nil, 0, false
+local function ar_anchorReady()
+  if CONFIG.anchorSymbol == nil then return true end
+  local now = getTickCount()
+  local ok, base = pcall(getAddress, CONFIG.anchorSymbol)
+  local key = (ok and base ~= nil and base ~= 0) and readQword(base) or nil
+  if key == nil then ar_inTransition = true; return false end
+  if key ~= ar_lastAnchor then
+    ar_lastAnchor = key; ar_anchorAt = now; ar_inTransition = true; return false
+  end
+  if (now - ar_anchorAt) &lt; CONFIG.anchorSettleMs then return false end
+  ar_inTransition = false
+  return true
+end
+if CONFIG.anchorSymbol ~= nil then
+  local ok, base = pcall(getAddress, CONFIG.anchorSymbol)
+  if ok and base ~= nil and base ~= 0 then
+    ar_lastAnchor = readQword(base)
+    ar_anchorAt = getTickCount() - CONFIG.anchorSettleMs
+  end
+end
+
+local function ar_tick()
+  if not ar_anchorReady() then return end
+  for _, cfg in ipairs(recordConfigs) do
+    pcall(function()
+      local tvt = ar_vtOf(cfg.targetType)
+      local mr = ar_findRecord(cfg.id, cfg.desc)
+      local resolved = ar_resolve(mr)
+      if resolved == nil then return end
+      if not ar_settled(mr.ID, resolved) then return end
+      if cfg.ranges ~= nil then
+        ar_applyRanges(cfg, mr, tvt, resolved)
+        return
+      end
+      local srcVal = ar_sourceValue(cfg, resolved)
+      if srcVal == nil then return end
+      local curVal = ar_readMr(mr, resolved, tvt)
+      if curVal == nil then return end
+      if not ar_plausible(cfg, curVal) then return end
+      local cmpVal = cfg.threshold
+      if cmpVal == nil then cmpVal = srcVal end
+      if ar_shouldWrite(curVal, cmpVal, cfg.writeMode) then
+        ar_writeMr(mr, resolved, tvt, srcVal)
+      end
+    end)
+  end
+end
+
+if _aobmakerAutoRefresh_n1 then _aobmakerAutoRefresh_n1.destroy(); _aobmakerAutoRefresh_n1 = nil end
+_aobmakerAutoRefresh_n1 = createTimer(getMainForm(), false)
+_aobmakerAutoRefresh_n1.Interval = CONFIG.intervalMs
+_aobmakerAutoRefresh_n1.OnTimer = function(t) ar_tick() end
+_aobmakerAutoRefresh_n1.Enabled = true
+print("[AOBMaker] Auto-Refresh Value started.")
+synchronize(function() getLuaEngine().Close() end)
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+if _aobmakerAutoRefresh_n1 then
+  _aobmakerAutoRefresh_n1.Enabled = false
+  _aobmakerAutoRefresh_n1.destroy()
+  _aobmakerAutoRefresh_n1 = nil
+end
+print("[AOBMaker] Auto-Refresh Value stopped.")
+synchronize(function() getLuaEngine().Close() end)
+{$asm}
+
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
@@ -308,7 +537,7 @@ skip_mult_457442:
   vf_mult_friend_457442:
   dd (float)0.85
   vf_mult_foe_457442:
-  dd (float)1.50
+  dd (float)1.0
   i_last_hp_addr:
   dq 0
   i_min_hp:
