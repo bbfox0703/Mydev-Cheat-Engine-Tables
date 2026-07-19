@@ -2,17 +2,88 @@
 <CheatTable CheatEngineTableVersion="52">
   <CheatEntries>
     <CheatEntry>
-      <ID>164</ID>
+      <ID>0</ID>
       <Description>"Toggle Scripts"</Description>
       <Color>0080FF</Color>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript Async="1">[ENABLE]
 {$lua}
-if (syntaxcheck) then return end
-synchronize(function()
-  getLuaEngine().menuItem5.doClick()
-  getLuaEngine().Close()
-end)
+if syntaxcheck then return end
+
+-- ============ AOBMaker 一括切り替え ============
+-- 有効化時に下記レコード (CE レコード ID) を一括で ON、無効化時に一括で OFF にします。
+-- 下記 CONFIG / enableList / disableList を編集可能；AOBMaker はこのスクリプトを再読込して選択を変更できます。
+-- 対象：kyoto_xanadu.exe
+
+-- @AOBMAKER:AA_TOGGLE v1
+local CONFIG = {
+  name = "1",
+  uid = "9A1E",
+  stepDelayMs = 30,
+  closeLuaEngine = true,
+  processName = "kyoto_xanadu.exe",
+  moduleName = "kyoto_xanadu.exe",
+  includeAttach = true,
+}
+local enableList = {
+  { id = 1, desc = "Toggle Compact View" },
+  { id = 2, desc = "Auto fill AP/FP/AP (Free)/Money" },
+  { id = 3, desc = "Battle: damage multiplier" },
+  { id = 8, desc = "Get money" },
+  { id = 11, desc = "Browse item and set amount" },
+  { id = 14, desc = "Potion avail count: no change" },
+  { id = 15, desc = "Equip consumables: count no change" },
+  { id = 20, desc = "Fast potion CD" },
+  { id = 21, desc = "inf. learning CP" },
+  { id = 22, desc = "inf. shoorting gauge" },
+  { id = 23, desc = "inf. buff for buff dur. &gt; 89 secs" },
+  { id = 24, desc = "inf. soul accel gauge" },
+  { id = 25, desc = "EXP multiplier" },
+  { id = 27, desc = "秘連撃 / Secret Flurry multiplier" },
+  { id = 29, desc = "Contribution multiplier" },
+  { id = 31, desc = "Get 幻素 / ether" },
+  { id = 34, desc = "Enable in game achievement progress / GET AP &amp; FP" },
+  { id = 131, desc = "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)" },
+  { id = 16, desc = "#0" },
+  { id = 17, desc = "#1" },
+  { id = 18, desc = "#2" },
+  { id = 19, desc = "#3" },
+  { id = 32, desc = "Get data in counter" },
+  { id = 35, desc = "GET AP &amp; FP" },
+}
+local disableList = {
+  { id = 42, desc = "GET_ACHIEVEMENTS" },
+  { id = 35, desc = "GET AP &amp; FP" },
+  { id = 32, desc = "Get data in counter" },
+  { id = 19, desc = "#3" },
+  { id = 18, desc = "#2" },
+  { id = 17, desc = "#1" },
+  { id = 16, desc = "#0" },
+  { id = 131, desc = "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)" },
+  { id = 34, desc = "Enable in game achievement progress / GET AP &amp; FP" },
+  { id = 31, desc = "Get 幻素 / ether" },
+  { id = 29, desc = "Contribution multiplier" },
+  { id = 27, desc = "秘連撃 / Secret Flurry multiplier" },
+  { id = 25, desc = "EXP multiplier" },
+  { id = 24, desc = "inf. soul accel gauge" },
+  { id = 23, desc = "inf. buff for buff dur. &gt; 89 secs" },
+  { id = 22, desc = "inf. shoorting gauge" },
+  { id = 21, desc = "inf. learning CP" },
+  { id = 20, desc = "Fast potion CD" },
+  { id = 15, desc = "Equip consumables: count no change" },
+  { id = 14, desc = "Potion avail count: no change" },
+  { id = 11, desc = "Browse item and set amount" },
+  { id = 8, desc = "Get money" },
+  { id = 3, desc = "Battle: damage multiplier" },
+  { id = 2, desc = "Auto fill AP/FP/AP (Free)/Money" },
+  { id = 1, desc = "Toggle Compact View" },
+  { id = 0, desc = "Toggle Scripts" },
+}
+-- @AOBMAKER:END
+
+---- GENERATED CODE (do not edit below) ----
+
+-- 任意の自動アタッチ補助：下のブロックのコメントを外すと先にゲームプロセスを開きます。
 
 -- attach process
 local processName = "kyoto_xanadu.exe"
@@ -32,136 +103,75 @@ synchronize(function()
 end)
 
 
-
-local enableBattleScripts = {
-  1, -- "Battle: damage multiplier"
-  4, -- "Toggle Compact View"
-  8, -- "Get money"
-  12, -- "Browse item and set amount"
-  18, -- "Potion avail count: no change"
-  19, -- "Fast potion CD"
-  21, -- "inf. learning CP"
-  23, -- "inf. shoorting gauge"
-  25, -- "inf. soul gauge"
-  29, -- "Get ether"
-  32, -- "Enable in game achievement progress / GET AP &amp; FP"
-  154, -- "Equip consumables: count no change"
-  166, -- "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)"
-  214, -- "Contribution multiplier"
-  216, -- "Auto fill AP/FP/AP (Free)/Money"
-  27, -- "#1"
-  153, -- "#2"
-  155, -- "#0"
-  156, -- "#3"
-  158, -- "GET AP &amp; FP"
-  180, -- "Get data in counter"
-}
-local addressList = getAddressList()
-synchronize(function()
-  for _, id in ipairs(enableBattleScripts) do
-    local memRec = addressList.getMemoryRecordByID(id)
-    if memRec and not memRec.Active then
-      memRec.Active = true
-      sleep(30)
+local function at_apply(list, active, stepMs)
+  local al = getAddressList()
+  for _, e in ipairs(list) do
+    local mr = al.getMemoryRecordByID(e.id)
+    if mr ~= nil and mr.Active ~= active then
+      mr.Active = active
+      if stepMs ~= nil and stepMs &gt; 0 then sleep(stepMs) end
     end
-    addressList.refresh()
   end
-end)
-synchronize(function() getLuaEngine().Close() end)
+  al.refresh()
+end
+synchronize(function() at_apply(enableList, true, CONFIG.stepDelayMs) end)
+print("[AOBMaker] AA Toggle enabled.")
+if CONFIG.closeLuaEngine then synchronize(function() getLuaEngine().Close() end) end
+{$asm}
+
 [DISABLE]
 {$lua}
-if (syntaxcheck) then return end
-synchronize(function()
-  getLuaEngine().menuItem5.doClick()
-  getLuaEngine().Close()
-end)
+if syntaxcheck then return end
 
-local disableBattleScripts = {
-  141, -- "#70-#79"
-  130, -- "#60-#69"
-  119, -- "#50-#59"
-  108, -- "#40-#49"
-  97, -- "#30-#39"
-  86, -- "#20-#29"
-  75, -- "#10-#19"
-  64, -- "#00-#09"
-  180, -- "Get data in counter"
-  175, -- "EXP"
-  171, -- "Earned"
-  168, -- "Available"
-  158, -- "GET AP &amp; FP"
-  156, -- "#3"
-  155, -- "#0"
-  153, -- "#2"
-  33, -- "GET_ACHIEVEMENTS"
-  27, -- "#1"
-  216, -- "Auto fill AP/FP/AP (Free)/Money"
-  214, -- "Contribution multiplier"
-  166, -- "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)"
-  154, -- "Equip consumables: count no change"
-  32, -- "Enable in game achievement progress / GET AP &amp; FP"
-  29, -- "Get ether"
-  25, -- "inf. soul gauge"
-  23, -- "inf. shoorting gauge"
-  21, -- "inf. learning CP"
-  19, -- "Fast potion CD"
-  18, -- "Potion avail count: no change"
-  12, -- "Browse item and set amount"
-  8, -- "Get money"
-  4, -- "Toggle Compact View"
-  1, -- "Battle: damage multiplier"
+local disableList = {
+  { id = 42, desc = "GET_ACHIEVEMENTS" },
+  { id = 35, desc = "GET AP &amp; FP" },
+  { id = 32, desc = "Get data in counter" },
+  { id = 19, desc = "#3" },
+  { id = 18, desc = "#2" },
+  { id = 17, desc = "#1" },
+  { id = 16, desc = "#0" },
+  { id = 131, desc = "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)" },
+  { id = 34, desc = "Enable in game achievement progress / GET AP &amp; FP" },
+  { id = 31, desc = "Get 幻素 / ether" },
+  { id = 29, desc = "Contribution multiplier" },
+  { id = 27, desc = "秘連撃 / Secret Flurry multiplier" },
+  { id = 25, desc = "EXP multiplier" },
+  { id = 24, desc = "inf. soul accel gauge" },
+  { id = 23, desc = "inf. buff for buff dur. &gt; 89 secs" },
+  { id = 22, desc = "inf. shoorting gauge" },
+  { id = 21, desc = "inf. learning CP" },
+  { id = 20, desc = "Fast potion CD" },
+  { id = 15, desc = "Equip consumables: count no change" },
+  { id = 14, desc = "Potion avail count: no change" },
+  { id = 11, desc = "Browse item and set amount" },
+  { id = 8, desc = "Get money" },
+  { id = 3, desc = "Battle: damage multiplier" },
+  { id = 2, desc = "Auto fill AP/FP/AP (Free)/Money" },
+  { id = 1, desc = "Toggle Compact View" },
+  { id = 0, desc = "Toggle Scripts" },
 }
-local addressList = getAddressList()
-synchronize(function()
-  for _, id in ipairs(disableBattleScripts) do
-    local memRec = addressList.getMemoryRecordByID(id)
-    if memRec and memRec.Active then
-      memRec.Active = false
-      sleep(30)
+
+local function at_apply(list, active, stepMs)
+  local al = getAddressList()
+  for _, e in ipairs(list) do
+    local mr = al.getMemoryRecordByID(e.id)
+    if mr ~= nil and mr.Active ~= active then
+      mr.Active = active
+      if stepMs ~= nil and stepMs &gt; 0 then sleep(stepMs) end
     end
-    addressList.refresh()
   end
-end)
+  al.refresh()
+end
+synchronize(function() at_apply(disableList, false, 30) end)
+print("[AOBMaker] AA Toggle disabled.")
 synchronize(function() getLuaEngine().Close() end)
--- Comments:
--- ID: 4, Description: "Toggle Compact View", Depth: 0
--- ID: 216, Description: "Auto fill AP/FP/AP (Free)/Money", Depth: 0
--- ID: 1, Description: "Battle: damage multiplier", Depth: 0
--- ID: 8, Description: "Get money", Depth: 0
--- ID: 12, Description: "Browse item and set amount", Depth: 0
--- ID: 18, Description: "Potion avail count: no change", Depth: 0
--- ID: 154, Description: "Equip consumables: count no change", Depth: 0
---   ID: 155, Description: "#0", Depth: 1
---   ID: 27, Description: "#1", Depth: 1
---   ID: 153, Description: "#2", Depth: 1
---   ID: 156, Description: "#3", Depth: 1
--- ID: 19, Description: "Fast potion CD", Depth: 0
--- ID: 21, Description: "inf. learning CP", Depth: 0
--- ID: 23, Description: "inf. shoorting gauge", Depth: 0
--- ID: 25, Description: "inf. soul gauge", Depth: 0
--- ID: 214, Description: "Contribution multiplier", Depth: 0
--- ID: 29, Description: "Get ether", Depth: 0
---   ID: 180, Description: "Get data in counter", Depth: 1
--- ID: 32, Description: "Enable in game achievement progress / GET AP &amp; FP", Depth: 0
---   ID: 158, Description: "GET AP &amp; FP", Depth: 1
---   ID: 33, Description: "GET_ACHIEVEMENTS", Depth: 1
---     ID: 64, Description: "#00-#09", Depth: 2
---     ID: 75, Description: "#10-#19", Depth: 2
---     ID: 86, Description: "#20-#29", Depth: 2
---     ID: 97, Description: "#30-#39", Depth: 2
---     ID: 108, Description: "#40-#49", Depth: 2
---     ID: 119, Description: "#50-#59", Depth: 2
---     ID: 130, Description: "#60-#69", Depth: 2
---     ID: 141, Description: "#70-#79", Depth: 2
--- ID: 166, Description: "Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)", Depth: 0
---   ID: 168, Description: "Available", Depth: 1
---   ID: 171, Description: "Earned", Depth: 1
---   ID: 175, Description: "EXP", Depth: 1
+{$asm}
 
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>4</ID>
+      <ID>1</ID>
       <Description>"Toggle Compact View"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -211,7 +221,7 @@ end
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>216</ID>
+      <ID>2</ID>
       <Description>"Auto fill AP/FP/AP (Free)/Money"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>[ENABLE]
@@ -234,12 +244,12 @@ local CONFIG = {
 }
 local recordConfigs = {
   { id = 9, desc = "money", targetType = "vtDword", srcType = 1, value = 50000, writeMode = "&lt;", threshold = 10000 },
-  { id = 159, desc = "AP", targetType = "vtDword", srcType = 1, value = 1, writeMode = "&lt;" },
-  { id = 160, desc = "AP (free)", targetType = "vtDword", srcType = 1, value = 6, writeMode = "&lt;" },
-  { id = 162, desc = "FP", targetType = "vtDword", srcType = 1, value = 1, writeMode = "&lt;" },
-  { id = 176, desc = "智 (Wisdom)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
-  { id = 177, desc = "勇 (Courage)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
-  { id = 178, desc = "仁 (Benevolence)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
+  { id = 36, desc = "AP", targetType = "vtDword", srcType = 1, value = 1, writeMode = "&lt;" },
+  { id = 37, desc = "AP (free)", targetType = "vtDword", srcType = 1, value = 6, writeMode = "&lt;" },
+  { id = 39, desc = "FP", targetType = "vtDword", srcType = 1, value = 1, writeMode = "&lt;" },
+  { id = 141, desc = "智 (Wisdom)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
+  { id = 142, desc = "勇 (Courage)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
+  { id = 143, desc = "仁 (Benevolence)", targetType = "vtDword", srcType = 1, value = 200, writeMode = "&lt;" },
 }
 -- @AOBMAKER:END
 
@@ -434,7 +444,7 @@ synchronize(function() getLuaEngine().Close() end)
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>1</ID>
+      <ID>3</ID>
       <Description>"Battle: damage multiplier"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -656,7 +666,7 @@ kyoto_xanadu.exe+6CA02: C3                                 - ret
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>5</ID>
+          <ID>4</ID>
           <Description>"Last"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -667,7 +677,7 @@ kyoto_xanadu.exe+6CA02: C3                                 - ret
           </Offsets>
         </CheatEntry>
         <CheatEntry>
-          <ID>6</ID>
+          <ID>5</ID>
           <Description>"min. HP (0=auto set)"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -675,7 +685,7 @@ kyoto_xanadu.exe+6CA02: C3                                 - ret
           <Address>i_min_hp</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>2</ID>
+          <ID>6</ID>
           <Description>"to player"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -683,7 +693,7 @@ kyoto_xanadu.exe+6CA02: C3                                 - ret
           <Address>vf_mult_friend_457442</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>3</ID>
+          <ID>7</ID>
           <Description>"to enemy"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -837,7 +847,7 @@ kyoto_xanadu.exe+4294B4: EB 92                              - jmp short kyoto_xa
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>12</ID>
+      <ID>11</ID>
       <Description>"Browse item and set amount"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -1302,7 +1312,7 @@ kyoto_xanadu.exe+9AE44: 00 CC                              - add ah,cl
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>13</ID>
+          <ID>12</ID>
           <Description>"Cur. amt must &gt;="</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -1310,7 +1320,7 @@ kyoto_xanadu.exe+9AE44: 00 CC                              - add ah,cl
           <Address>i_min_item_amt_thres</Address>
         </CheatEntry>
         <CheatEntry>
-          <ID>14</ID>
+          <ID>13</ID>
           <Description>"set amt to"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -1320,7 +1330,7 @@ kyoto_xanadu.exe+9AE44: 00 CC                              - add ah,cl
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>18</ID>
+      <ID>14</ID>
       <Description>"Potion avail count: no change"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -1416,13 +1426,13 @@ kyoto_xanadu.exe+26671D: 49 3B C1                           - cmp rax,r9
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>154</ID>
+      <ID>15</ID>
       <Description>"Equip consumables: count no change"</Description>
       <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
       <GroupHeader>1</GroupHeader>
       <CheatEntries>
         <CheatEntry>
-          <ID>155</ID>
+          <ID>16</ID>
           <Description>"#0"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{
@@ -1492,7 +1502,7 @@ kyoto_xanadu.exe+26669B: 41 3B C0                           - cmp eax,r8d
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>27</ID>
+          <ID>17</ID>
           <Description>"#1"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{
@@ -1562,7 +1572,7 @@ kyoto_xanadu.exe+2666C0: 41 3B C0                           - cmp eax,r8d
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>153</ID>
+          <ID>18</ID>
           <Description>"#2"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{
@@ -1631,7 +1641,7 @@ kyoto_xanadu.exe+2666E5: 41 3B C0                           - cmp eax,r8d
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>156</ID>
+          <ID>19</ID>
           <Description>"#3"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{
@@ -1703,7 +1713,7 @@ kyoto_xanadu.exe+2666FE: CC                                 - int 3
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>19</ID>
+      <ID>20</ID>
       <Description>"Fast potion CD"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -1891,7 +1901,7 @@ kyoto_xanadu.exe+3CA305: B9 48 00 00 00                     - mov ecx,00000048
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>23</ID>
+      <ID>22</ID>
       <Description>"inf. shoorting gauge"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -1964,8 +1974,107 @@ kyoto_xanadu.exe+197C49: 48 8B D9                           - mov rbx,rcx
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>25</ID>
-      <Description>"inf. soul gauge"</Description>
+      <ID>23</ID>
+      <Description>"inf. buff for buff dur. &gt; 89 secs"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/07/19
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_2526,$process,F3 0F 5C ?? F3 ?? 0F 11 ?? 18 E9)
+// raw AOB: F6 C1 0A 0F 85 ?? ?? ?? ?? 4D 8B 42 30 41 0F B7 50 10 F6 C2 02 75 ?? 48 8B 05 ?? ?? ?? ?? F6 80 10 01 00 00 02 0F 85 ?? ?? ?? ?? F6 C2 01 0F 84 ?? ?? ?? ?? F6 C1 01 74 ?? F3 41 0F 10 42 18 0F 2F C6 76 ?? F3 0F 5C C6 F3 41 0F 11 42 18 E9 ?? ?? ?? ?? 45 33 C0 41 89 6A 18 41 8B D1 48 8B CB E8 ?? ?? ?? ?? 84 C0 0F 84 ?? ?? ?? ?? 8B D7 48 8D 4B 08 48 C1 E2 06 48 03 93 08 05 00 00 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? F3 41 0F 10 40 18 F6 C1 04
+// injection point AOB: F3 0F 5C ?? F3 ?? 0F 11 ?? 18 E9 ?? ?? ?? ?? ?? 33 ?? ?? 89 ?? 18 ?? 8B ?? ?? 8B ?? E8 ?? ?? ?? ?? 84 ?? 0F 84 ?? ?? ?? ?? 8B ?? ?? 8D ?? 08 ?? C1 ?? 06 ?? 03 ?? 08 05 00 00 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? F3 ?? 0F 10 ?? 18 F6 ?? 04
+alloc(newmem,$1000,INJECT_2526)
+
+alloc(INJECTo_2526, $A)
+
+label(code)
+label(return)
+
+INJECTo_2526:
+  readmem(INJECT_2526, $A)
+
+newmem:
+  vmovss xmm15, [vf_90]
+  vmovss xmm14, [r10+1C]
+  vucomiss xmm14, xmm15
+  jbe short code
+  movss xmm0, xmm14
+
+code:
+  // subss xmm0,xmm6
+  reassemble(INJECT_2526)
+  // movss [r10+18],xmm0
+  reassemble(INJECT_2526+4)
+  jmp return
+  align 10 cc
+  vf_90:
+  dd (float)89
+
+INJECT_2526:
+  jmp newmem
+  nop 5
+return:
+registersymbol(INJECT_2526 INJECTo_2526)
+
+[DISABLE]
+
+INJECT_2526:
+  readmem(INJECTo_2526, $A)
+
+unregistersymbol(INJECT_2526 INJECTo_2526)
+dealloc(newmem)
+dealloc(INJECTo_2526)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kyoto_xanadu.exe+509A2
+
+kyoto_xanadu.exe+5095E: F6 C1 0A                           - test cl,0A
+kyoto_xanadu.exe+50961: 0F 85 03 01 00 00                  - jne kyoto_xanadu.exe+50A6A
+kyoto_xanadu.exe+50967: 4D 8B 42 30                        - mov r8,[r10+30]
+kyoto_xanadu.exe+5096B: 41 0F B7 50 10                     - movzx edx,word ptr [r8+10]
+kyoto_xanadu.exe+50970: F6 C2 02                           - test dl,02
+kyoto_xanadu.exe+50973: 75 14                              - jne kyoto_xanadu.exe+50989
+kyoto_xanadu.exe+50975: 48 8B 05 8C D3 B1 00               - mov rax,[kyoto_xanadu.exe+B6DD08]
+kyoto_xanadu.exe+5097C: F6 80 10 01 00 00 02               - test byte ptr [rax+00000110],02
+kyoto_xanadu.exe+50983: 0F 85 E1 00 00 00                  - jne kyoto_xanadu.exe+50A6A
+kyoto_xanadu.exe+50989: F6 C2 01                           - test dl,01
+kyoto_xanadu.exe+5098C: 0F 84 D8 00 00 00                  - je kyoto_xanadu.exe+50A6A
+kyoto_xanadu.exe+50992: F6 C1 01                           - test cl,01
+kyoto_xanadu.exe+50995: 74 4F                              - je kyoto_xanadu.exe+509E6
+kyoto_xanadu.exe+50997: F3 41 0F 10 42 18                  - movss xmm0,[r10+18]
+kyoto_xanadu.exe+5099D: 0F 2F C6                           - comiss xmm0,xmm6
+kyoto_xanadu.exe+509A0: 76 0F                              - jna kyoto_xanadu.exe+509B1
+// ---------- INJECTING HERE ----------
+kyoto_xanadu.exe+509A2: F3 0F 5C C6                        - subss xmm0,xmm6
+// ---------- DONE INJECTING  ----------
+kyoto_xanadu.exe+509A6: F3 41 0F 11 42 18                  - movss [r10+18],xmm0
+kyoto_xanadu.exe+509AC: E9 B9 00 00 00                     - jmp kyoto_xanadu.exe+50A6A
+kyoto_xanadu.exe+509B1: 45 33 C0                           - xor r8d,r8d
+kyoto_xanadu.exe+509B4: 41 89 6A 18                        - mov [r10+18],ebp
+kyoto_xanadu.exe+509B8: 41 8B D1                           - mov edx,r9d
+kyoto_xanadu.exe+509BB: 48 8B CB                           - mov rcx,rbx
+kyoto_xanadu.exe+509BE: E8 2D F9 FF FF                     - call kyoto_xanadu.exe+502F0
+kyoto_xanadu.exe+509C3: 84 C0                              - test al,al
+kyoto_xanadu.exe+509C5: 0F 84 9F 00 00 00                  - je kyoto_xanadu.exe+50A6A
+kyoto_xanadu.exe+509CB: 8B D7                              - mov edx,edi
+kyoto_xanadu.exe+509CD: 48 8D 4B 08                        - lea rcx,[rbx+08]
+kyoto_xanadu.exe+509D1: 48 C1 E2 06                        - shl rdx,06
+kyoto_xanadu.exe+509D5: 48 03 93 08 05 00 00               - add rdx,[rbx+00000508]
+kyoto_xanadu.exe+509DC: E8 7F 0E 00 00                     - call kyoto_xanadu.exe+51860
+kyoto_xanadu.exe+509E1: E9 82 00 00 00                     - jmp kyoto_xanadu.exe+50A68
+kyoto_xanadu.exe+509E6: F3 41 0F 10 40 18                  - movss xmm0,[r8+18]
+}
+
+
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"inf. soul accel gauge"</Description>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
   Generated by AOBMaker,  bbfox@https://opencheattables.com
@@ -2034,7 +2143,243 @@ kyoto_xanadu.exe+190831: 41 0F 28 73 E0                     - movaps xmm6,[r11-2
 </AssemblerScript>
     </CheatEntry>
     <CheatEntry>
-      <ID>214</ID>
+      <ID>25</ID>
+      <Description>"EXP multiplier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/07/19
+}
+
+[ENABLE]
+
+aobscanmodule(INJECT_5773,$process,03 ?? 3B ?? ?? ?? 78 00 00 00 0F)
+// raw AOB: 48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 56 41 57 48 83 EC 20 8B 29 8B DA 8B D5 41 B8 78 00 00 00 4C 8B F1 E8 ?? ?? ?? ?? 41 8B 56 08 8B F8 45 8B 7E 04 03 D3 3B D0 41 B8 78 00 00 00 0F 4C FA 33 DB 85 FF 8B D5 0F 48 FB E8 ?? ?? ?? ?? 3B F8 0F 4C C7 85 C0 0F 48 C3 41 89 46 08 90 44 8D 43 01 8B F3 8B D5 41 8B D8
+// injection point AOB: 03 ?? 3B ?? ?? ?? 78 00 00 00 0F 4C ?? 33 ?? 85 ?? 8B ?? 0F 48 ?? E8 ?? ?? ?? ?? 3B ?? 0F 4C ?? 85 ?? 0F 48 ?? ?? 89 ?? 08 90 ?? 8D ?? 01 8B ?? 8B ?? ?? 8B
+alloc(newmem,$1000,INJECT_5773)
+
+alloc(INJECTo_5773, $A)
+
+label(code)
+label(return)
+label(vf_mult_882620)
+
+INJECTo_5773:
+  readmem(INJECT_5773, $A)
+
+newmem:
+  // **** Begin Auto script: Multiplier
+  // value=1.1, rule=R2_RegReg, template=P1_IntToFloat, NegDeltaCheck
+  test ebx, ebx
+  jle skip_mult_882620
+  // Multiplier: delta in ebx
+  vmovss xmm15, [vf_mult_882620]
+  vcvtsi2ss xmm14, xmm14, ebx
+  vmulss xmm14, xmm14, xmm15
+  vcvtss2si ebx, xmm14
+skip_mult_882620:
+  // **** End Auto script: Multiplier
+
+
+code:
+  // add edx,ebx
+  reassemble(INJECT_5773)
+  // cmp edx,eax
+  reassemble(INJECT_5773+2)
+  // mov r8d,00000078
+  reassemble(INJECT_5773+4)
+  jmp return
+  align 10 cc
+  vf_mult_882620:
+  dd (float)1.1
+
+INJECT_5773:
+  jmp newmem
+  nop 5
+return:
+registersymbol(INJECT_5773 INJECTo_5773 vf_mult_882620)
+
+[DISABLE]
+
+INJECT_5773:
+  readmem(INJECTo_5773, $A)
+
+unregistersymbol(INJECT_5773 INJECTo_5773 vf_mult_882620)
+dealloc(newmem)
+dealloc(INJECTo_5773)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kyoto_xanadu.exe+6E816
+
+kyoto_xanadu.exe+6E7E0: 48 89 5C 24 08                     - mov [rsp+08],rbx
+kyoto_xanadu.exe+6E7E5: 48 89 6C 24 10                     - mov [rsp+10],rbp
+kyoto_xanadu.exe+6E7EA: 48 89 74 24 18                     - mov [rsp+18],rsi
+kyoto_xanadu.exe+6E7EF: 57                                 - push rdi
+kyoto_xanadu.exe+6E7F0: 41 56                              - push r14
+kyoto_xanadu.exe+6E7F2: 41 57                              - push r15
+kyoto_xanadu.exe+6E7F4: 48 83 EC 20                        - sub rsp,20
+kyoto_xanadu.exe+6E7F8: 8B 29                              - mov ebp,[rcx]
+kyoto_xanadu.exe+6E7FA: 8B DA                              - mov ebx,edx
+kyoto_xanadu.exe+6E7FC: 8B D5                              - mov edx,ebp
+kyoto_xanadu.exe+6E7FE: 41 B8 78 00 00 00                  - mov r8d,00000078
+kyoto_xanadu.exe+6E804: 4C 8B F1                           - mov r14,rcx
+kyoto_xanadu.exe+6E807: E8 84 00 00 00                     - call kyoto_xanadu.exe+6E890
+kyoto_xanadu.exe+6E80C: 41 8B 56 08                        - mov edx,[r14+08]
+kyoto_xanadu.exe+6E810: 8B F8                              - mov edi,eax
+kyoto_xanadu.exe+6E812: 45 8B 7E 04                        - mov r15d,[r14+04]
+// ---------- INJECTING HERE ----------
+kyoto_xanadu.exe+6E816: 03 D3                              - add edx,ebx
+// ---------- DONE INJECTING  ----------
+kyoto_xanadu.exe+6E818: 3B D0                              - cmp edx,eax
+kyoto_xanadu.exe+6E81A: 41 B8 78 00 00 00                  - mov r8d,00000078
+kyoto_xanadu.exe+6E820: 0F 4C FA                           - cmovl edi,edx
+kyoto_xanadu.exe+6E823: 33 DB                              - xor ebx,ebx
+kyoto_xanadu.exe+6E825: 85 FF                              - test edi,edi
+kyoto_xanadu.exe+6E827: 8B D5                              - mov edx,ebp
+kyoto_xanadu.exe+6E829: 0F 48 FB                           - cmovs edi,ebx
+kyoto_xanadu.exe+6E82C: E8 5F 00 00 00                     - call kyoto_xanadu.exe+6E890
+kyoto_xanadu.exe+6E831: 3B F8                              - cmp edi,eax
+kyoto_xanadu.exe+6E833: 0F 4C C7                           - cmovl eax,edi
+kyoto_xanadu.exe+6E836: 85 C0                              - test eax,eax
+kyoto_xanadu.exe+6E838: 0F 48 C3                           - cmovs eax,ebx
+kyoto_xanadu.exe+6E83B: 41 89 46 08                        - mov [r14+08],eax
+kyoto_xanadu.exe+6E83F: 90                                 - nop
+kyoto_xanadu.exe+6E840: 44 8D 43 01                        - lea r8d,[rbx+01]
+kyoto_xanadu.exe+6E844: 8B F3                              - mov esi,ebx
+}
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>26</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_mult_882620</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>27</ID>
+      <Description>"秘連撃 / Secret Flurry multiplier"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Generated by AOBMaker,  bbfox@https://opencheattables.com
+  Date   : 2026/07/19
+}
+
+[ENABLE]
+
+aobscanmodule(Secret_Flurry,$process,F3 0F 58 ?? ?? 03 00 00 00)
+// raw AOB: 74 ?? 45 85 C9 75 ?? F3 0F 10 83 78 07 00 00 0F 2F C2 77 ?? 66 0F 6E C7 0F 5B C0 C7 83 78 07 00 00 CD CC CC 3D F3 0F 59 C1 0F 28 C8 F3 0F 5E CE F3 0F 10 83 74 07 00 00 0F 2F F0 76 ?? 48 8B 05 ?? ?? ?? ?? F3 0F 58 C1 BA 03 00 00 00 F3 0F 11 83 74 07 00 00 48 8B 88 00 01 00 00 48 8B 89 40 01 00 00 E8 ?? ?? ?? ?? F3 0F 10 83 74 07 00 00 0F 2F C6 72 ?? C7 83 74 07 00 00 00 00 C8 42 0F 28 74 24 20 48 8B 5C 24 48 48 83 C4 30 5F C3 CC 48 8B C4 48 89 58 10
+// injection point AOB: F3 0F 58 ?? ?? 03 00 00 00 F3 0F 11 ?? 74 07 00 00 ?? 8B ?? 00 01 00 00 ?? 8B ?? 40 01 00 00 E8 ?? ?? ?? ?? F3 0F 10 ?? 74 07 00 00 0F 2F ?? 72 ?? C7 ?? 74 07 00 00 00 00 C8 42 0F 28 ?? ?? ?? ?? 8B ?? 24 ?? 48 83 C4 30 ?? C3 CC ?? 8B ?? ?? 89 ?? 10
+alloc(newmem,$1000,Secret_Flurry)
+
+alloc(Secret_Flurryo, $9)
+
+label(code)
+label(return)
+label(vf_mult_861622)
+
+Secret_Flurryo:
+  readmem(Secret_Flurry, $9)
+
+newmem:
+  // **** Begin Auto script: Multiplier
+  // value=3.333, rule=R4_FloatDelta, template=P2_FloatDomain, NegDeltaCheck
+  vxorps xmm14, xmm14, xmm14
+  vucomiss xmm1, xmm14
+  jbe skip_mult_861622
+  // Multiplier: delta in xmm1
+  vmovss xmm15, [vf_mult_861622]
+  vmulss xmm1, xmm1, xmm15
+skip_mult_861622:
+  // **** End Auto script: Multiplier
+
+
+code:
+  // addss xmm0,xmm1
+  reassemble(Secret_Flurry)
+  // mov edx,00000003
+  reassemble(Secret_Flurry+4)
+  jmp return
+  align 10 cc
+  vf_mult_861622:
+  dd (float)6.666666
+
+Secret_Flurry:
+  jmp newmem
+  nop 4
+return:
+registersymbol(Secret_Flurry Secret_Flurryo vf_mult_861622)
+
+[DISABLE]
+
+Secret_Flurry:
+  readmem(Secret_Flurryo, $9)
+
+unregistersymbol(Secret_Flurry Secret_Flurryo vf_mult_861622)
+dealloc(newmem)
+dealloc(Secret_Flurryo)
+
+{
+// ORIGINAL CODE - INJECTION POINT: kyoto_xanadu.exe+190B54
+
+kyoto_xanadu.exe+190B10: 74 7D                              - je kyoto_xanadu.exe+190B8F
+kyoto_xanadu.exe+190B12: 45 85 C9                           - test r9d,r9d
+kyoto_xanadu.exe+190B15: 75 29                              - jne kyoto_xanadu.exe+190B40
+kyoto_xanadu.exe+190B17: F3 0F 10 83 78 07 00 00            - movss xmm0,[rbx+00000778]
+kyoto_xanadu.exe+190B1F: 0F 2F C2                           - comiss xmm0,xmm2
+kyoto_xanadu.exe+190B22: 77 6B                              - ja kyoto_xanadu.exe+190B8F
+kyoto_xanadu.exe+190B24: 66 0F 6E C7                        - movd xmm0,edi
+kyoto_xanadu.exe+190B28: 0F 5B C0                           - cvtdq2ps xmm0,xmm0
+kyoto_xanadu.exe+190B2B: C7 83 78 07 00 00 CD CC CC 3D      - mov [rbx+00000778],3DCCCCCD
+kyoto_xanadu.exe+190B35: F3 0F 59 C1                        - mulss xmm0,xmm1
+kyoto_xanadu.exe+190B39: 0F 28 C8                           - movaps xmm1,xmm0
+kyoto_xanadu.exe+190B3C: F3 0F 5E CE                        - divss xmm1,xmm6
+kyoto_xanadu.exe+190B40: F3 0F 10 83 74 07 00 00            - movss xmm0,[rbx+00000774]
+kyoto_xanadu.exe+190B48: 0F 2F F0                           - comiss xmm6,xmm0
+kyoto_xanadu.exe+190B4B: 76 42                              - jna kyoto_xanadu.exe+190B8F
+kyoto_xanadu.exe+190B4D: 48 8B 05 CC D1 9D 00               - mov rax,[kyoto_xanadu.exe+B6DD20]
+// ---------- INJECTING HERE ----------
+kyoto_xanadu.exe+190B54: F3 0F 58 C1                        - addss xmm0,xmm1
+// ---------- DONE INJECTING  ----------
+kyoto_xanadu.exe+190B58: BA 03 00 00 00                     - mov edx,00000003
+kyoto_xanadu.exe+190B5D: F3 0F 11 83 74 07 00 00            - movss [rbx+00000774],xmm0
+kyoto_xanadu.exe+190B65: 48 8B 88 00 01 00 00               - mov rcx,[rax+00000100]
+kyoto_xanadu.exe+190B6C: 48 8B 89 40 01 00 00               - mov rcx,[rcx+00000140]
+kyoto_xanadu.exe+190B73: E8 28 A4 27 00                     - call kyoto_xanadu.exe+40AFA0
+kyoto_xanadu.exe+190B78: F3 0F 10 83 74 07 00 00            - movss xmm0,[rbx+00000774]
+kyoto_xanadu.exe+190B80: 0F 2F C6                           - comiss xmm0,xmm6
+kyoto_xanadu.exe+190B83: 72 0A                              - jb kyoto_xanadu.exe+190B8F
+kyoto_xanadu.exe+190B85: C7 83 74 07 00 00 00 00 C8 42      - mov [rbx+00000774],42C80000
+kyoto_xanadu.exe+190B8F: 0F 28 74 24 20                     - movaps xmm6,[rsp+20]
+kyoto_xanadu.exe+190B94: 48 8B 5C 24 48                     - mov rbx,[rsp+48]
+kyoto_xanadu.exe+190B99: 48 83 C4 30                        - add rsp,30
+kyoto_xanadu.exe+190B9D: 5F                                 - pop rdi
+kyoto_xanadu.exe+190B9E: C3                                 - ret
+kyoto_xanadu.exe+190B9F: CC                                 - int 3
+kyoto_xanadu.exe+190BA0: 48 8B C4                           - mov rax,rsp
+}
+
+
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>28</ID>
+          <Description>"multiplier"</Description>
+          <ShowAsSigned>0</ShowAsSigned>
+          <Color>C08000</Color>
+          <VariableType>Float</VariableType>
+          <Address>vf_mult_861622</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>29</ID>
       <Description>"Contribution multiplier"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2158,7 +2503,7 @@ kyoto_xanadu.exe+1490BB: 74 30                              - je kyoto_xanadu.ex
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>215</ID>
+          <ID>30</ID>
           <Description>"multiplier"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>C08000</Color>
@@ -2168,8 +2513,8 @@ kyoto_xanadu.exe+1490BB: 74 30                              - je kyoto_xanadu.ex
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>29</ID>
-      <Description>"Get ether"</Description>
+      <ID>31</ID>
+      <Description>"Get 幻素 / ether"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
       <AssemblerScript>{
@@ -2269,7 +2614,7 @@ kyoto_xanadu.exe+1E2562: E8 79 21 E4 FF                     - call kyoto_xanadu.
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>180</ID>
+          <ID>32</ID>
           <Description>"Get data in counter"</Description>
           <VariableType>Auto Assembler Script</VariableType>
           <AssemblerScript>{
@@ -2364,7 +2709,7 @@ kyoto_xanadu.exe+34CCA3: E9 DD 00 00 00                     - jmp kyoto_xanadu.e
 </AssemblerScript>
         </CheatEntry>
         <CheatEntry>
-          <ID>30</ID>
+          <ID>33</ID>
           <Description>""#1""</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <Color>FF8080</Color>
@@ -2377,7 +2722,7 @@ kyoto_xanadu.exe+34CCA3: E9 DD 00 00 00                     - jmp kyoto_xanadu.e
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>32</ID>
+      <ID>34</ID>
       <Description>"Enable in game achievement progress / GET AP &amp; FP"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -2460,7 +2805,7 @@ synchronize(function() getLuaEngine().Close() end)
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>158</ID>
+          <ID>35</ID>
           <Description>"GET AP &amp; FP"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -2559,7 +2904,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>159</ID>
+              <ID>36</ID>
               <Description>"AP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2571,7 +2916,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>160</ID>
+              <ID>37</ID>
               <Description>"AP (free)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2583,7 +2928,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>161</ID>
+              <ID>38</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2595,7 +2940,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>162</ID>
+              <ID>39</ID>
               <Description>"FP"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2607,7 +2952,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>163</ID>
+              <ID>40</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2619,7 +2964,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
               </Offsets>
             </CheatEntry>
             <CheatEntry>
-              <ID>213</ID>
+              <ID>41</ID>
               <Description>"??"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -2633,7 +2978,7 @@ kyoto_xanadu.exe+42ABD5: 8B C1                              - mov eax,ecx
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>33</ID>
+          <ID>42</ID>
           <Description>"GET_ACHIEVEMENTS"</Description>
           <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
           <VariableType>Auto Assembler Script</VariableType>
@@ -2759,7 +3104,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
 </AssemblerScript>
           <CheatEntries>
             <CheatEntry>
-              <ID>64</ID>
+              <ID>43</ID>
               <Description>"#00-#09"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -2770,7 +3115,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>65</ID>
+                  <ID>44</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2779,7 +3124,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>66</ID>
+                  <ID>45</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2788,7 +3133,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>67</ID>
+                  <ID>46</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2797,7 +3142,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>68</ID>
+                  <ID>47</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2806,7 +3151,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>69</ID>
+                  <ID>48</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2815,7 +3160,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>70</ID>
+                  <ID>49</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2824,7 +3169,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>71</ID>
+                  <ID>50</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2833,7 +3178,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>72</ID>
+                  <ID>51</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2842,7 +3187,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>73</ID>
+                  <ID>52</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2851,7 +3196,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>74</ID>
+                  <ID>53</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2862,7 +3207,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>75</ID>
+              <ID>54</ID>
               <Description>"#10-#19"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -2873,7 +3218,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>76</ID>
+                  <ID>55</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2882,7 +3227,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>77</ID>
+                  <ID>56</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2891,7 +3236,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>78</ID>
+                  <ID>57</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2900,7 +3245,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>79</ID>
+                  <ID>58</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2909,7 +3254,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>80</ID>
+                  <ID>59</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2918,7 +3263,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>81</ID>
+                  <ID>60</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2927,7 +3272,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>82</ID>
+                  <ID>61</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2936,7 +3281,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>83</ID>
+                  <ID>62</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2945,7 +3290,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>84</ID>
+                  <ID>63</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2954,7 +3299,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>85</ID>
+                  <ID>64</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2965,7 +3310,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>86</ID>
+              <ID>65</ID>
               <Description>"#20-#29"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -2976,7 +3321,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>87</ID>
+                  <ID>66</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2985,7 +3330,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>88</ID>
+                  <ID>67</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -2994,7 +3339,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>89</ID>
+                  <ID>68</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3003,7 +3348,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>90</ID>
+                  <ID>69</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3012,7 +3357,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>91</ID>
+                  <ID>70</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3021,7 +3366,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>92</ID>
+                  <ID>71</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3030,7 +3375,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>93</ID>
+                  <ID>72</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3039,7 +3384,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>94</ID>
+                  <ID>73</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3048,7 +3393,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>95</ID>
+                  <ID>74</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3057,7 +3402,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>96</ID>
+                  <ID>75</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3068,7 +3413,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>97</ID>
+              <ID>76</ID>
               <Description>"#30-#39"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -3079,7 +3424,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>98</ID>
+                  <ID>77</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3088,7 +3433,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>99</ID>
+                  <ID>78</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3097,7 +3442,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>100</ID>
+                  <ID>79</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3106,7 +3451,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>101</ID>
+                  <ID>80</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3115,7 +3460,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>102</ID>
+                  <ID>81</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3124,7 +3469,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>103</ID>
+                  <ID>82</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3133,7 +3478,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>104</ID>
+                  <ID>83</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3142,7 +3487,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>105</ID>
+                  <ID>84</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3151,7 +3496,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>106</ID>
+                  <ID>85</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3160,7 +3505,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>107</ID>
+                  <ID>86</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3171,7 +3516,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>108</ID>
+              <ID>87</ID>
               <Description>"#40-#49"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -3182,7 +3527,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>109</ID>
+                  <ID>88</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3191,7 +3536,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>110</ID>
+                  <ID>89</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3200,7 +3545,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>111</ID>
+                  <ID>90</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3209,7 +3554,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>112</ID>
+                  <ID>91</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3218,7 +3563,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>113</ID>
+                  <ID>92</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3227,7 +3572,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>114</ID>
+                  <ID>93</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3236,7 +3581,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>115</ID>
+                  <ID>94</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3245,7 +3590,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>116</ID>
+                  <ID>95</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3254,7 +3599,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>117</ID>
+                  <ID>96</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3263,7 +3608,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>118</ID>
+                  <ID>97</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3274,7 +3619,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>119</ID>
+              <ID>98</ID>
               <Description>"#50-#59"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -3285,7 +3630,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>120</ID>
+                  <ID>99</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3294,7 +3639,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>121</ID>
+                  <ID>100</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3303,7 +3648,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>122</ID>
+                  <ID>101</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3312,7 +3657,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>123</ID>
+                  <ID>102</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3321,7 +3666,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>124</ID>
+                  <ID>103</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3330,7 +3675,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>125</ID>
+                  <ID>104</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3339,7 +3684,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>126</ID>
+                  <ID>105</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3348,7 +3693,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>127</ID>
+                  <ID>106</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3357,7 +3702,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>128</ID>
+                  <ID>107</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3366,7 +3711,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>129</ID>
+                  <ID>108</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3377,7 +3722,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>130</ID>
+              <ID>109</ID>
               <Description>"#60-#69"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -3388,7 +3733,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>131</ID>
+                  <ID>110</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3397,7 +3742,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>132</ID>
+                  <ID>111</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3406,7 +3751,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>133</ID>
+                  <ID>112</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3415,7 +3760,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>134</ID>
+                  <ID>113</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3424,7 +3769,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>135</ID>
+                  <ID>114</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3433,7 +3778,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>136</ID>
+                  <ID>115</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3442,7 +3787,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>137</ID>
+                  <ID>116</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3451,7 +3796,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>138</ID>
+                  <ID>117</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3460,7 +3805,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>139</ID>
+                  <ID>118</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3469,7 +3814,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>140</ID>
+                  <ID>119</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3480,7 +3825,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </CheatEntries>
             </CheatEntry>
             <CheatEntry>
-              <ID>141</ID>
+              <ID>120</ID>
               <Description>"#70-#79"</Description>
               <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
               <ShowAsSigned>0</ShowAsSigned>
@@ -3491,7 +3836,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
               </Offsets>
               <CheatEntries>
                 <CheatEntry>
-                  <ID>142</ID>
+                  <ID>121</ID>
                   <Description>"#0"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3500,7 +3845,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+0</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>143</ID>
+                  <ID>122</ID>
                   <Description>"#1"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3509,7 +3854,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+4</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>144</ID>
+                  <ID>123</ID>
                   <Description>"#2"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3518,7 +3863,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+8</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>145</ID>
+                  <ID>124</ID>
                   <Description>"#3"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3527,7 +3872,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>146</ID>
+                  <ID>125</ID>
                   <Description>"#4"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3536,7 +3881,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+10</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>147</ID>
+                  <ID>126</ID>
                   <Description>"#5"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3545,7 +3890,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+14</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>148</ID>
+                  <ID>127</ID>
                   <Description>"#6"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3554,7 +3899,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+18</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>149</ID>
+                  <ID>128</ID>
                   <Description>"#7"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3563,7 +3908,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>150</ID>
+                  <ID>129</ID>
                   <Description>"#8"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3572,7 +3917,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
                   <Address>+20</Address>
                 </CheatEntry>
                 <CheatEntry>
-                  <ID>151</ID>
+                  <ID>130</ID>
                   <Description>"#9"</Description>
                   <ShowAsSigned>0</ShowAsSigned>
                   <Color>FF8080</Color>
@@ -3587,7 +3932,7 @@ kyoto_xanadu.exe+23F0E: 4C 8D 0D 3B A4 98 00               - lea r9,[kyoto_xanad
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>166</ID>
+      <ID>131</ID>
       <Description>"Soul pt: 智 勇 仁 (Wisdom, Courage, Benevolence)"</Description>
       <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
       <VariableType>Auto Assembler Script</VariableType>
@@ -3686,7 +4031,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
 </AssemblerScript>
       <CheatEntries>
         <CheatEntry>
-          <ID>168</ID>
+          <ID>132</ID>
           <Description>"Available"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <GroupHeader>1</GroupHeader>
@@ -3696,7 +4041,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
           </Offsets>
           <CheatEntries>
             <CheatEntry>
-              <ID>167</ID>
+              <ID>133</ID>
               <Description>"智 (Wisdom)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3704,7 +4049,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
               <Address>+0</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>169</ID>
+              <ID>134</ID>
               <Description>"勇 (Courage)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3712,7 +4057,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
               <Address>+10</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>170</ID>
+              <ID>135</ID>
               <Description>"仁 (Benevolence)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3722,7 +4067,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>171</ID>
+          <ID>136</ID>
           <Description>"Earned"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <GroupHeader>1</GroupHeader>
@@ -3732,7 +4077,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
           </Offsets>
           <CheatEntries>
             <CheatEntry>
-              <ID>172</ID>
+              <ID>137</ID>
               <Description>"智 (Wisdom)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3740,7 +4085,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
               <Address>+0</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>173</ID>
+              <ID>138</ID>
               <Description>"勇 (Courage)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3748,7 +4093,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
               <Address>+10</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>174</ID>
+              <ID>139</ID>
               <Description>"仁 (Benevolence)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3758,7 +4103,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
-          <ID>175</ID>
+          <ID>140</ID>
           <Description>"EXP"</Description>
           <ShowAsSigned>0</ShowAsSigned>
           <GroupHeader>1</GroupHeader>
@@ -3768,7 +4113,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
           </Offsets>
           <CheatEntries>
             <CheatEntry>
-              <ID>176</ID>
+              <ID>141</ID>
               <Description>"智 (Wisdom)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3776,7 +4121,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
               <Address>+0</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>177</ID>
+              <ID>142</ID>
               <Description>"勇 (Courage)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3784,7 +4129,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
               <Address>+10</Address>
             </CheatEntry>
             <CheatEntry>
-              <ID>178</ID>
+              <ID>143</ID>
               <Description>"仁 (Benevolence)"</Description>
               <ShowAsSigned>0</ShowAsSigned>
               <Color>FF8080</Color>
@@ -3796,7 +4141,7 @@ kyoto_xanadu.exe+D050D: 74 7C                              - je kyoto_xanadu.exe
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>15</ID>
+      <ID>144</ID>
       <Description>"KYOTO XANADU -the Blooming Phantom-  /  https://opencheattables.com"</Description>
       <Color>009700</Color>
       <GroupHeader>1</GroupHeader>
